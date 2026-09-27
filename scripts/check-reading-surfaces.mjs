@@ -114,6 +114,11 @@ const UNALLOCATED_MENTIONS = new Set([
   // arrives with, and each is a statement that the language does not allocate
   // it — the case this list exists for.
   'DUP', 'SWAP', 'DROP', 'ROT',
+  // `+ - * / = < >` were once second spellings of ADD SUB MUL DIV EQ LT GT
+  // and are ordinary names now; the reference names `+` to say so, and writes
+  // `+` and `-` in notation that is not a program — the Playground's radical
+  // display (`1/2 + 1/2√8`) and the remainder formula (`a - floor(a/b)·b`).
+  '+', '-',
   // named once by the recovery clause to say it is retired: `OR-NIL` was the
   // lazy NIL-coalescing directive, replaced by the `BIND` `NIL?` `SELECT` phrase. A
   // reader meeting it in older material needs the clause to say so.

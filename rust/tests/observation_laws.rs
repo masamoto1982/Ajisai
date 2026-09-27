@@ -50,7 +50,7 @@ fn protocol_strings_are_lower_camel_case() {
         "5",
         "TRUE",
         "FALSE",
-        "1 0 /",
+        "1 0 DIV",
         "[ 1 2 3 ]",
         "[ 1 ADD ]",
         "2 SQRT",

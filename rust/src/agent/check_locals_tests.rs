@@ -5,7 +5,7 @@
 #[test]
 fn bound_names_are_not_unknown_words() {
     for source in [
-        "[ 'V' BIND V V LENGTH / ] 'MEAN' DEF",
+        "[ 'V' BIND V V LENGTH DIV ] 'MEAN' DEF",
         "1 'Q' BIND Q",
         "[ 2 7 ] [ 'W' 'B' ] BIND W B ADD",
     ] {

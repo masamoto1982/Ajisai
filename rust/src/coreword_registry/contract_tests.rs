@@ -148,10 +148,11 @@ fn aq_ver_contract_f_mass_contract_projects_the_declared_arity() {
     );
 }
 
-/// An alias reaches the same contract as the Word it names.
+/// A name that is not a Word — a retired symbol spelling included — has no
+/// contract to reach.
 #[test]
-fn aq_ver_contract_f2_mass_contract_canonicalizes_aliases() {
-    assert_eq!(super::mass_contract("+"), super::mass_contract("ADD"));
+fn aq_ver_contract_f2_mass_contract_of_a_non_word_is_dynamic() {
+    assert_eq!(super::mass_contract("+"), super::MassContract::Dynamic);
     assert_eq!(
         super::mass_contract("__AJISAI_NO_SUCH_WORD__"),
         super::MassContract::Dynamic

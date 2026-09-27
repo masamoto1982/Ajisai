@@ -285,7 +285,7 @@ fn apply_exact_arithmetic_schema(
     // Charged once, here, before a route is chosen. Which route runs is an
     // optimization decision and unobservable by LANG.AUTHORITY.FREEDOM; a
     // safety control priced per route made it observable, as the difference
-    // between `2 3 *` and `[ 2 ] 3 *`.
+    // between `2 3 MUL` and `[ 2 ] 3 MUL`.
     if interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let (left, right) = {

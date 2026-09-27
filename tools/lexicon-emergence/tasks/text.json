@@ -35,7 +35,7 @@
     {
       "id": "text.long-words",
       "prompt": "Leave a Vector of the words longer than 3 characters, in their original order (repeats kept).",
-      "reference": "' ' TOKENIZE [ CHARS LENGTH 3 > ] FILTER"
+      "reference": "' ' TOKENIZE [ CHARS LENGTH 3 GT ] FILTER"
     },
     {
       "id": "text.acronym",

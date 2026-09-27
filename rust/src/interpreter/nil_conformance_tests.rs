@@ -292,7 +292,7 @@ async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
     // A NIL that does carry a reason reads back as that reason rather than
     // projecting.
     let mut interp = Interpreter::new();
-    interp.execute("1 0 / NIL-REASON").await.unwrap();
+    interp.execute("1 0 DIV NIL-REASON").await.unwrap();
     let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
     assert!(
         !answer.is_nil(),
@@ -311,7 +311,7 @@ async fn nil_check_answers_rather_than_projecting() {
         ("[ 1 2 ] NIL?", false),
         ("'ab' NIL?", false),
         ("NIL NIL?", true),
-        ("1 0 / NIL?", true),
+        ("1 0 DIV NIL?", true),
     ] {
         let mut interp = Interpreter::new();
         interp

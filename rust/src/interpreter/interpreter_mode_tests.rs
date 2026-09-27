@@ -7,7 +7,7 @@ mod tests {
     #[tokio::test]
     async fn test_consume_mode_default() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 ] [ 2 ] +").await;
+        let result = interp.execute("[ 1 ] [ 2 ] ADD").await;
         assert!(
             result.is_ok(),
             "Default consume mode should work: {:?}",

@@ -23,9 +23,7 @@ fn def_body_tokens_if_literal_precedes_def(
     }
     j += 1;
     match tokens.get(j) {
-        Some(Token::Symbol(s))
-            if crate::core_word_aliases::canonicalize_core_word_name(s).as_ref() == "DEF" =>
-        {
+        Some(Token::Symbol(s)) if crate::word_name::canonical_word_name(s).as_ref() == "DEF" => {
             Some(tokens[start + 1..start + consumed - 1].to_vec())
         }
         _ => None,
@@ -61,13 +59,13 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 /// Looking only at the value itself missed every lifted projection. A Word
 /// lifted over a collection projects per lane (`LANG.COLLECTIONS.LIFT`), so
 /// the absence it produced sits inside the result rather than being the
-/// result: `6 0 /` was traced and `[ 6 ] [ 0 ] /` was not, and `[ 4 -1 ] SQRT`
+/// result: `6 0 DIV` was traced and `[ 6 ] [ 0 ] DIV` was not, and `[ 4 -1 ] SQRT`
 /// never was, though all three project for a reason the Word can name.
 ///
 /// `Literal` is excluded because it is the absence a Word *received*, not one
 /// it made: a `NIL` written in source, and — since a dense lane carries
 /// presence but no reason — any absence that has passed through a tensor. So
-/// `[ 1 NIL 3 ] [ 2 ] *` records nothing, which is right: `*` propagated that
+/// `[ 1 NIL 3 ] [ 2 ] MUL` records nothing, which is right: `MUL` propagated that
 /// NIL, it did not produce it.
 ///
 /// The first reasoned absence in reading order names the event, keeping one
@@ -215,9 +213,6 @@ impl Interpreter {
         while i < execute_tokens.len() {
             if track_source_position {
                 self.current_source_span = self.source_spans.get(start_index + i).copied();
-                // Cleared per token, so a spelling recorded for one token can
-                // never be read against another one's position.
-                self.current_source_word = None;
             }
             match &execute_tokens[i] {
                 Token::Number(literal) => {
@@ -259,15 +254,7 @@ impl Interpreter {
                     continue;
                 }
                 Token::Symbol(s) => {
-                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(s);
-                    // The one place the surface spelling still exists. Kept
-                    // only where it differs from the canonical name and only
-                    // for a top-level token, which is the token the recorded
-                    // position describes; an `Arc` clone, so a dispatch that
-                    // writes the name as it resolves pays nothing.
-                    if track_source_position && canonical.as_ref() != s.as_ref() {
-                        self.current_source_word = Some(std::sync::Arc::clone(s));
-                    }
+                    let canonical = crate::word_name::canonical_word_name(s);
                     {
                         let upper = canonical;
 
@@ -354,7 +341,6 @@ impl Interpreter {
             crate::tokenizer::tokenize_with_spans(code).map_err(AjisaiError::MalformedSource)?;
         self.source_spans = spans;
         self.current_source_span = None;
-        self.current_source_word = None;
         self.check_source_numeric_literals(&tokens)?;
         self.execute_section_core(&tokens, 0)?;
         self.check_fresh_nesting()

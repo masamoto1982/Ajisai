@@ -157,7 +157,6 @@
    "type": "object",
    "required": [
     "name",
-    "aliases",
     "family",
     "stack",
     "nilPolicy",
@@ -176,14 +175,6 @@
     "name": {
      "type": "string",
      "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$"
-    },
-    "aliases": {
-     "type": "array",
-     "items": {
-      "type": "string",
-      "minLength": 1
-     },
-     "uniqueItems": true
     },
     "family": {
      "enum": [

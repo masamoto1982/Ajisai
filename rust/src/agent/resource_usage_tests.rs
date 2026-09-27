@@ -45,10 +45,10 @@ mod resource_usage_tests {
         // so. A user-word call, a fold, and a fold through `MAP` cover the
         // dispatch routes that reach `execute_word_core`.
         for source in [
-            "2 3 / 1 3 / +",
-            "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBLE",
-            "1 20 RANGE 1 [ * ] FOLD",
-            "1 20 RANGE [ [ 2 ] * ] MAP",
+            "2 3 DIV 1 3 DIV ADD",
+            "[ [ 2 ] MUL ] 'DOUBLE' DEF [ 3 ] DOUBLE",
+            "1 20 RANGE 1 [ MUL ] FOLD",
+            "1 20 RANGE [ [ 2 ] MUL ] MAP",
         ] {
             let report = agent_json(source).await;
             assert!(
@@ -63,8 +63,8 @@ mod resource_usage_tests {
     async fn more_work_reports_more_steps() {
         // Not merely non-zero: the number has to move with the work, or it is
         // a constant dressed up as a measurement.
-        let short = steps(&agent_json("1 10 RANGE 1 [ * ] FOLD").await);
-        let long = steps(&agent_json("1 200 RANGE 1 [ * ] FOLD").await);
+        let short = steps(&agent_json("1 10 RANGE 1 [ MUL ] FOLD").await);
+        let long = steps(&agent_json("1 200 RANGE 1 [ MUL ] FOLD").await);
         assert!(
             long > short * 10,
             "twenty times the fold must cost far more steps, got {long} against {short}"
@@ -99,7 +99,7 @@ mod resource_usage_tests {
 
     #[tokio::test]
     async fn numeric_work_is_reported_beside_the_steps() {
-        let report = agent_json("1 20 RANGE 1 [ * ] FOLD").await;
+        let report = agent_json("1 20 RANGE 1 [ MUL ] FOLD").await;
         assert!(
             report["resourceUsage"]["numericWork"]
                 .as_u64()
@@ -167,7 +167,7 @@ mod resource_usage_tests {
         // property: each key is a budget the host declares, so an agent can
         // subtract. A key here with no ceiling behind it would be an optimizer
         // counter in the wrong object.
-        let report = agent_json("1 20 RANGE 1 [ * ] FOLD").await;
+        let report = agent_json("1 20 RANGE 1 [ MUL ] FOLD").await;
         let usage = report["resourceUsage"]
             .as_object()
             .expect("resourceUsage is an object");
@@ -189,7 +189,7 @@ mod resource_usage_tests {
     async fn the_compatibility_alias_agrees_with_the_resource_it_mirrors() {
         // `runtimeMetrics.executionSteps` stays where it was — removing a field
         // is what a schema version is for — and now carries the same reading.
-        let report = agent_json("1 20 RANGE 1 [ * ] FOLD").await;
+        let report = agent_json("1 20 RANGE 1 [ MUL ] FOLD").await;
         assert_eq!(
             report["runtimeMetrics"]["executionSteps"], report["resourceUsage"]["executionSteps"],
             "one counter, however many places report it"

@@ -116,12 +116,12 @@ async function doctor(write) {
   // running something proves it does not.
   steps.push(await step("exact rational arithmetic stays exact", async () => {
     requireThat(backend !== null, "skipped: no execution backend");
-    const result = await backend.compute("2 3 / 1 3 / +");
+    const result = await backend.compute("2 3 DIV 1 3 DIV ADD");
     const [display] = result.stackDisplay ?? [];
     return requireThat(
       result.status === "ok" && display === "1/1",
-      `2 3 / 1 3 / + answered ${result.status} ${JSON.stringify(result.stackDisplay)}`,
-      "2 3 / 1 3 / + = 1/1",
+      `2 3 DIV 1 3 DIV ADD answered ${result.status} ${JSON.stringify(result.stackDisplay)}`,
+      "2 3 DIV 1 3 DIV ADD = 1/1",
     );
   }));
 

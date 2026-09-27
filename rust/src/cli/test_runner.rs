@@ -277,14 +277,14 @@ mod tests {
 
     #[test]
     fn passing_test_with_stack_and_output() {
-        let src = "#@ stack [ 5/1 ]\n#@ output [ 9/1 ]\n[ 9 ] PRINT [ 2 ] [ 3 ] +";
+        let src = "#@ stack [ 5/1 ]\n#@ output [ 9/1 ]\n[ 9 ] PRINT [ 2 ] [ 3 ] ADD";
         let outcome = run_test_source("t", src);
         assert!(outcome.passed(), "failures: {:?}", outcome.failures);
     }
 
     #[test]
     fn stack_mismatch_fails() {
-        let src = "#@ stack [ 6/1 ]\n[ 2 ] [ 3 ] +";
+        let src = "#@ stack [ 6/1 ]\n[ 2 ] [ 3 ] ADD";
         let outcome = run_test_source("t", src);
         assert!(!outcome.passed());
         assert!(outcome.failures[0].contains("stack mismatch"));
@@ -301,7 +301,7 @@ mod tests {
     #[test]
     fn default_status_is_success() {
         // No directives: the program must merely run without error.
-        let outcome = run_test_source("t", "[ 1 ] [ 2 ] +");
+        let outcome = run_test_source("t", "[ 1 ] [ 2 ] ADD");
         assert!(outcome.passed());
     }
 
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn ordinary_comments_are_not_directives() {
         // A plain `#` comment is not a `#@` directive and must be ignored.
-        let outcome = run_test_source("t", "# stack [ 9/9 ]\n#@ stack [ 5/1 ]\n[ 2 ] [ 3 ] +");
+        let outcome = run_test_source("t", "# stack [ 9/9 ]\n#@ stack [ 5/1 ]\n[ 2 ] [ 3 ] ADD");
         assert!(outcome.passed(), "failures: {:?}", outcome.failures);
     }
 }

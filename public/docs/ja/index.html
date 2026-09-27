@@ -566,7 +566,7 @@
                     <h4>3. 大きなコレクションの省略表示</h4>
                     <p class="ref-note">コレクションの要素数が非常に多い場合、Stack領域には先頭部分のみが描画され、末尾に<em>… 199900 more</em>のようなマーカーが付与されます(画面表示は英語です)。このマーカーは画面描画上の都合による注記であり、内部データが切り詰められているわけではありません。スタック上のコレクション自体は完全な状態で保持されており、すべてのワードはデータ全体を参照します。<code>LENGTH</code>も実際の要素数を返します。</p>
                     <h4>4. 記号・トークンの表記</h4>
-                    <p>本書の本文中で灰色の背景が付いているテキストは、すべてAjisaiのトークンを表します。灰色の背景は、その表記が地の文ではなくプログラムコードの一部であることを示しています。なお記号のトークンは、すべて特定のワードの別表記です。<code>+</code>は<code>ADD</code>にあたります。</p>
+                    <p>本書の本文中で灰色の背景が付いているテキストは、すべてAjisaiのトークンを表します。灰色の背景は、その表記が地の文ではなくプログラムコードの一部であることを示しています。なお記号のトークンは、すべて特定のワードの別表記です。<code>ADD</code>は<code>ADD</code>にあたります。</p>
                 </section>
 
                 <section id="tokens" class="ref-page">
@@ -580,12 +580,12 @@
                         <li><code>#</code>がコメントを開始するのは、それがトークンの先頭にあるときだけです。直前のトークンに密着した<code>#</code>はその名前の一部になるため、<code>ADD# メモ</code>はコメント付きの<code>ADD</code>ではなく、<code>ADD#</code>という未定義のワードです。</li>
                     </ul>
                     <p class="ref-note">Ajisaiが意味を与える括弧は<code>[</code> <code>]</code>の1組だけです。ベクトルの括弧で、コードブロックにも同じものを使います。<code>{</code> <code>}</code>や<code>(</code> <code>)</code>に構文上の役割はありません。これらは名前を構成するただの文字なので、単独で書けば「そんなワードは無い」という結果になります。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
-                    <h3>演算子と空白の必要性</h3>
-                    <p>一般的な演算記号もワード(名前)の一種であるため、前後に空白が必要です。<code>2 +</code>は<code>2</code>と<code>+</code>の2つのトークンとして正しく解釈されます。<code>2+</code>は「2+」という1つの名前とみなされ、加算ではなく未定義ワードとしてエラーになります。</p>
+                    <h3>演算ワードと空白の必要性</h3>
+                    <p>演算ワードも名前の一種であるため、前後に空白が必要です。<code>2 ADD</code>は<code>2</code>と<code>ADD</code>の2つのトークンとして正しく解釈されます。<code>2ADD</code>は「2ADD」という1つの名前とみなされ、加算ではなく未定義ワードとしてエラーになります。</p>
                     <p class="ref-note">角括弧<code>[</code> <code>]</code>も同じです。それ自体で1つのワードであり、前後に空白が必要です。<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>という不正なトークンとして拒否されるため、<code>[ 1 2 ] LENGTH</code>と書いてください。</p>
                     <p class="ref-note">Playgroundの<strong>Format</strong>ボタンは、この足りない空白を補います(実行前にも同じ整形が走るため、<code>[1 2 3]</code>はPlaygroundでは<code>[ 1 2 3 ]</code>として実行されます)。整形されるのは編集中のソースだけで、言語の規則がゆるむわけではありません。CLIやMCPに同じソースをそのまま渡せばエラーになります。</p>
-                    <h3>記号ワードとトークン判定</h3>
-                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。記号エイリアスは<code>+ - * / = &lt; &gt;</code>の7つで、いずれも1文字です。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
+                    <h3>記号とトークン判定</h3>
+                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ワードはどれも英語名1つだけで呼ばれ、記号の綴りを持つワードはありません。<code>ADD</code>や<code>LT</code>も通常の名前で、定義しなければ未定義ワードです。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>DIV</code>はただの名前としてパースされます。</p>
                     <h3>コメント</h3>
                     <p><code>#</code>は行末まで続くコメントを開始します。<code>#</code>からその行の末尾までの文字は、トークン化される前に破棄されます。なお、文字列リテラルの中にある<code>#</code>は通常のテキストとして扱われるため、<code>'a # b'</code>は全体で1つの文字列です。</p>
                     <h3>具体例</h3>
@@ -595,8 +595,8 @@
                                 <tr><th>記述</th><th>トークン数</th><th>理由</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>3 4 +</code></td><td class="notes">3トークン</td><td class="notes">空白が各トークンを区切る。<code>+</code>は<code>ADD</code>の記号。</td></tr>
-                                <tr><td><code>3 4+</code></td><td class="notes">2トークン</td><td class="notes"><code>4+</code>全体で1つの名前とみなされ、加算ではなく未定義エラーになる。</td></tr>
+                                <tr><td><code>3 4 ADD</code></td><td class="notes">3トークン</td><td class="notes">空白が各トークンを区切る。</td></tr>
+                                <tr><td><code>3 4ADD</code></td><td class="notes">2トークン</td><td class="notes"><code>4ADD</code>全体で1つの名前とみなされ、加算ではなく未定義エラーになる。</td></tr>
                                 <tr><td><code>[ 1 2 ] LENGTH</code></td><td class="notes">5トークン</td><td class="notes">空白が各トークンを区切る。空白を省いた<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>が不正なトークンとなりエラー。</td></tr>
                             </tbody>
                         </table>
@@ -689,7 +689,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0.5 0.25 +</code></td>
+                                    <td><code>0.5 0.25 ADD</code></td>
                                     <td><code>3/4</code></td>
                                     <td class="notes">小数リテラルは厳密な有理数として計算される。</td>
                                 </tr>
@@ -708,7 +708,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 3 /</code></td>
+                                    <td><code>1 3 DIV</code></td>
                                     <td><code>1/3</code></td>
                                     <td class="notes">除算は厳密な有理数を返し、丸められた浮動小数点になることはない。</td>
                                 </tr>
@@ -727,7 +727,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>2 3 / 1 3 / +</code></td>
+                                    <td><code>2 3 DIV 1 3 DIV ADD</code></td>
                                     <td><code>1/1</code></td>
                                     <td class="notes">\(\frac{2}{3} + \frac{1}{3}\)は厳密に\(1\)になる。</td>
                                 </tr>
@@ -746,7 +746,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1000000000000 1000000000000 *</code></td>
+                                    <td><code>1000000000000 1000000000000 MUL</code></td>
                                     <td><code>1000000000000000000000000/1</code></td>
                                     <td class="notes">任意精度整数は、桁数が大きくなっても浮動小数点にフォールバックしない。</td>
                                 </tr>
@@ -839,7 +839,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 /</code></td>
+                                    <td><code>1 0 DIV</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">ゼロ除算はトラップではなく、理由付きの<code>NIL</code>になる。</td>
                                 </tr>
@@ -858,7 +858,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>NIL 1 +</code></td>
+                                    <td><code>NIL 1 ADD</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">NILは算術をそのまま通り抜け、その理由は追跡可能なまま保たれる。</td>
                                 </tr>
@@ -956,7 +956,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 / NIL?</code></td>
+                                    <td><code>1 0 DIV NIL?</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes"><code>NIL?</code>は最上位の値を消費し、その場所に答えを積む。</td>
                                 </tr>
@@ -975,7 +975,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 / NIL-REASON</code></td>
+                                    <td><code>1 0 DIV NIL-REASON</code></td>
                                     <td><code>'divisionByZero'</code></td>
                                     <td class="notes">理由はプロトコル文字列なので、プログラムは値が欠けている理由によって分岐できる。</td>
                                 </tr>
@@ -1031,7 +1031,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 / 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
                                     <td><code>99/1</code></td>
                                     <td class="notes">不在だったので代わりの値が選ばれる。</td>
                                 </tr>
@@ -1050,7 +1050,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>7 2 / 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>7 2 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
                                     <td><code>7/2</code></td>
                                     <td class="notes">結果が実際の値であるとき、代わりの値は選ばれない。</td>
                                 </tr>
@@ -1067,7 +1067,7 @@
                     <h2>スタックと消費</h2>
                     <p>Ajisaiのワードは、スタックからオペランドを取り出し、結果をスタックへ積み戻します。読み込んだ値は、その場で<strong>必ず消費</strong>されてスタックから取り除かれます。この挙動を変える修飾子はありません。<code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではなく、オペランドを消費します。</p>
                     <h3>同じ値を2回使うには<code>BIND</code></h3>
-                    <p>1つの値を2回以上使いたいときは、<code>BIND</code>で名前を付け、その名前を必要な回数だけ書きます。名前を書くたびに、その値がスタックに積まれます。<code>5 'N' BIND N N 1 +</code>は<code>5/1 6/1</code>になります。Ajisaiには、値の複製や入れ替え、破棄のためだけに用意された専用のワード群はありません。</p>
+                    <p>1つの値を2回以上使いたいときは、<code>BIND</code>で名前を付け、その名前を必要な回数だけ書きます。名前を書くたびに、その値がスタックに積まれます。<code>5 'N' BIND N N 1 ADD</code>は<code>5/1 6/1</code>になります。Ajisaiには、値の複製や入れ替え、破棄のためだけに用意された専用のワード群はありません。</p>
                     <p class="ref-note">補足: Forthのような古典的なスタック指向言語には、値の複製・入れ替え・破棄を担う専用のワード群、いわゆる「スタックシャッフラー」が用意されていることがあります。Ajisaiではその役割を<code>BIND</code>が担います。値が名前で読まれるので、どの値がどこで使われるかが字面から分かります。</p>
                     <h3>ワードは本体に置き換えられる</h3>
                     <p>どの呼び出しも読んだオペランドをちょうど消費するので、自分で定義したワードを、その本体で置き換えて書いても、消費されるオペランドは変わりません。<code>[ 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 DOUBLE</code>と<code>5 2 MUL</code>はどちらも<code>10/1</code>です。ユーザー語を使ったプログラムを、Core語だけの形に展開して確かめられるのは、この性質があるからです。</p>
@@ -1079,7 +1079,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>3 4 +</code></td>
+                                    <td><code>3 4 ADD</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">両方のオペランドが消費され、和が積まれる。</td>
                                 </tr>
@@ -1098,7 +1098,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>5 'N' BIND N N 1 +</code></td>
+                                    <td><code>5 'N' BIND N N 1 ADD</code></td>
                                     <td><code>5/1 6/1</code></td>
                                     <td class="notes">名前を付けた値は、名前を書くたびに積まれる。</td>
                                 </tr>
@@ -1112,20 +1112,20 @@
                 </section>
 
                 <section id="operators" class="ref-page">
-                    <h2>演算子(<code>+ - * /</code>, <code>=</code>, <code>AND</code>)</h2>
+                    <h2>演算子(<code>ADD SUB MUL DIV</code>, <code>EQ</code>, <code>AND</code>)</h2>
                     <h3 id="arithmetic">算術</h3>
-                    <p>算術ワードは、ベクトル同士の要素ごとの演算として機能します。各ワードには正式な英語名が定義されており、演算記号はその糖衣構文です。</p>
+                    <p>算術ワードは、ベクトル同士の要素ごとの演算として機能します。各ワードは英語名1つだけで書き、記号の綴りは持ちません。</p>
                     <h3>算術ワード一覧</h3>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
-                                <tr><th>正式名</th><th>糖衣構文</th><th>意味</th></tr>
+                                <tr><th>ワード</th><th>意味</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>ADD</code></td><td><code>+</code></td><td class="notes">加算</td></tr>
-                                <tr><td><code>SUB</code></td><td><code>-</code></td><td class="notes">減算</td></tr>
-                                <tr><td><code>MUL</code></td><td><code>*</code></td><td class="notes">乗算</td></tr>
-                                <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">厳密な除算</td></tr>
+                                <tr><td><code>ADD</code></td><td class="notes">加算</td></tr>
+                                <tr><td><code>SUB</code></td><td class="notes">減算</td></tr>
+                                <tr><td><code>MUL</code></td><td class="notes">乗算</td></tr>
+                                <tr><td><code>DIV</code></td><td class="notes">厳密な除算</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1133,8 +1133,8 @@
                     <p>ブロードキャストは、単に要素数1のベクトルを拡張するだけの規則ではなく、多次元ベクトルの<strong>軸</strong>全体に適用される一貫した規則です。</p>
                     <ul class="ref-list">
                         <li><strong>軸の対応付け</strong>: 2つのベクトルは最も内側の軸から順に対応付けられます。</li>
-                        <li><strong>長さ1の軸の拡張</strong>: 短いベクトルの届かない軸は長さ1とみなされ、長さ1の軸は相手側の長さに合わせて繰り返し使われます。<code>[ 1 2 3 ] [ 10 ] *</code>は<code>[ 10/1 20/1 30/1 ]</code>に、<code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] *</code>は<code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>になります。</li>
-                        <li><strong>形状の不一致</strong>: 軸の長さが一致せず、どちらも1でない場合はエラーになります。<code>[ 1 2 3 ] [ 10 20 ] *</code>は長さ3と2を対応付けられないため、エラーです。</li>
+                        <li><strong>長さ1の軸の拡張</strong>: 短いベクトルの届かない軸は長さ1とみなされ、長さ1の軸は相手側の長さに合わせて繰り返し使われます。<code>[ 1 2 3 ] [ 10 ] MUL</code>は<code>[ 10/1 20/1 30/1 ]</code>に、<code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] MUL</code>は<code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>になります。</li>
+                        <li><strong>形状の不一致</strong>: 軸の長さが一致せず、どちらも1でない場合はエラーになります。<code>[ 1 2 3 ] [ 10 20 ] MUL</code>は長さ3と2を対応付けられないため、エラーです。</li>
                         <li><strong>スカラーの適用</strong>: スカラー値は軸を必要としません。不揃いなものを含め、ベクトルがどう入れ子になっていてもすべての要素と組み合わさります。</li>
                         <li><strong>矩形条件</strong>: 2つの<em>ベクトル</em>同士がブロードキャストできるのは、両方とも矩形、つまり各軸の長さが揃っているときだけです。</li>
                     </ul>
@@ -1146,7 +1146,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] +</code></td>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] ADD</code></td>
                                     <td><code>[ 5/1 7/1 9/1 ]</code></td>
                                     <td class="notes">要素ごとの加算。</td>
                                 </tr>
@@ -1165,7 +1165,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] [ 10 ] *</code></td>
+                                    <td><code>[ 1 2 3 ] [ 10 ] MUL</code></td>
                                     <td><code>[ 10/1 20/1 30/1 ]</code></td>
                                     <td class="notes">単一要素のベクトルは、もう一方のオペランド全体へブロードキャストされる。</td>
                                 </tr>
@@ -1184,7 +1184,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>7 'A' BIND 3 'B' BIND A A B / FLOOR B * -</code></td>
+                                    <td><code>7 'A' BIND 3 'B' BIND A A B DIV FLOOR B MUL SUB</code></td>
                                     <td><code>1/1</code></td>
                                     <td class="notes">7を3で割った余り。剰余は専用のワードを持たず、<code>a - floor(a/b)·b</code>をそのまま書く。</td>
                                 </tr>
@@ -1258,20 +1258,20 @@
                         </div>
                     </div>
                     <h3>ベクトルへの自動リフティング</h3>
-                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>+</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが<code>NIL</code>になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。この持ち上げは数値演算に限りません。文字列や真偽値など一つの値として読むオペランドを持つワードは、そこにベクトルやRecordを渡すと同じ規則で要素ごとに適用されます(<code>[ 'ab' 'c' ] UPPER</code>は<code>[ 'AB' 'C' ]</code>)。1要素のベクトルも常にベクトルとして扱われ、その要素とは見なされません。</p>
+                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>ADD</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが<code>NIL</code>になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。この持ち上げは数値演算に限りません。文字列や真偽値など一つの値として読むオペランドを持つワードは、そこにベクトルやRecordを渡すと同じ規則で要素ごとに適用されます(<code>[ 'ab' 'c' ] UPPER</code>は<code>[ 'AB' 'C' ]</code>)。1要素のベクトルも常にベクトルとして扱われ、その要素とは見なされません。</p>
 
                     <h3 id="comparison">比較と真偽値</h3>
-                    <p>比較ワードは<code>EQ</code>・<code>LT</code>・<code>GT</code>の3つで、それぞれ1文字の記号<code>=</code>・<code>&lt;</code>・<code>&gt;</code>を持ちます。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値であって、数ではありません。残りの3つの関係は<code>NOT</code>で書きます。「以下」は<code>a b GT NOT</code>、「以上」は<code>a b LT NOT</code>、「等しくない」は<code>a b EQ NOT</code>です。</p>
+                    <p>比較ワードは<code>EQ</code>・<code>LT</code>・<code>GT</code>の3つです。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値であって、数ではありません。残りの3つの関係は<code>NOT</code>で書きます。「以下」は<code>a b GT NOT</code>、「以上」は<code>a b LT NOT</code>、「等しくない」は<code>a b EQ NOT</code>です。</p>
                     <h3>比較ワード一覧</h3>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
-                                <tr><th>正式名</th><th>糖衣構文</th><th>意味</th></tr>
+                                <tr><th>ワード</th><th>意味</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">等しい</td></tr>
-                                <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">より小さい</td></tr>
-                                <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">より大きい</td></tr>
+                                <tr><td><code>EQ</code></td><td class="notes">等しい</td></tr>
+                                <tr><td><code>LT</code></td><td class="notes">より小さい</td></tr>
+                                <tr><td><code>GT</code></td><td class="notes">より大きい</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1355,7 +1355,7 @@
                     <p class="ref-note">比較は、有理数も平方根も含め、ワードが組み立てられるすべての値にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
 
                     <h3 id="logic">論理</h3>
-                    <p>Ajisaiには<code>AND</code>と<code>NOT</code>という2つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。どちらも綴りのまま書き、記号は持ちません。論理和はド・モルガンの法則どおり<code>a NOT b NOT AND NOT</code>と書きます。</p>
+                    <p>Ajisaiには<code>AND</code>と<code>NOT</code>という2つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。どちらも、ほかのワードと同じく綴りのまま書きます。論理和はド・モルガンの法則どおり<code>a NOT b NOT AND NOT</code>と書きます。</p>
                     <h3>NILはそのまま伝わる</h3>
                     <p><code>NIL</code>は真偽の位置では「不明」として読まれ、強いクリーネ論理で合成されます。もう一方のオペランドだけで答えが決まる場合はその答えになり(<code>FALSE</code>を含む<code>AND</code>は<code>FALSE</code>)、決まらない場合は<code>NIL</code>がその理由を保ったまま結果に残ります。</p>
                     <div class="sample">
@@ -2145,7 +2145,7 @@
                 <section id="control" class="ref-page">
                     <h2>制御構文(<code>SELECT</code>, <code>MAP</code>)</h2>
                     <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
-                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
+                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>ADD</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -2159,7 +2159,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <p>したがって<code>[ + ] 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 [ + ] EXEC</code>も同様です。どちらもスタック全体を見るからです。しかし<code>100 [ 1 2 ] [ + ] MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
+                    <p>したがって<code>[ ADD ] 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 [ ADD ] EXEC</code>も同様です。どちらもスタック全体を見るからです。しかし<code>100 [ 1 2 ] [ ADD ] MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
                     <p class="ref-note">「最上位より下にあるものは捨てられる」は読み返しておいてください。これが静かに起こるからです。2つの値を残す述語もそのまま通ります。<code>[ 1 2 3 ] [ 1 GT TRUE ] FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
                     <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] [ 'x' 1 ADD ] MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。自分で定義したワードのところで、この掘り下げは止まります。その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
                     <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。ただしこれは評価の話であって、参照の話ではありません。定義しようとしているワード自身の名前が、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>の内側にしか書かれていなくても、<code>DEF</code>の<a href="#acyclic">非循環規則</a>はそれを検出し、定義そのものを拒否します。</p>
@@ -2310,7 +2310,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] [ 2 / 'M' BIND M FLOOR M = ] FILTER</code></td>
+                                    <td><code>[ 1 2 3 4 ] [ 2 DIV 'M' BIND M FLOOR M EQ ] FILTER</code></td>
                                     <td><code>[ 2/1 4/1 ]</code></td>
                                     <td class="notes">述語がtrueになる要素を残す(ここでは偶数)。</td>
                                 </tr>
@@ -2329,7 +2329,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] [ 0 ] [ + ] FOLD</code></td>
+                                    <td><code>[ 1 2 3 4 ] [ 0 ] [ ADD ] FOLD</code></td>
                                     <td><code>[ 10/1 ]</code></td>
                                     <td class="notes">初期累積値付きで畳み込む：0 + 1 + 2 + 3 + 4。初期値の形が結果の形を決める：ここでは<code>[ 0 ]</code>というベクトルで始めたので、答えもベクトルの<code>[ 10/1 ]</code>になる。裸の<code>0</code>で始めれば答えも裸の<code>10/1</code>。</td>
                                 </tr>
@@ -2351,7 +2351,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] 0 [ + ] SCAN</code></td>
+                                    <td><code>[ 1 2 3 4 ] 0 [ ADD ] SCAN</code></td>
                                     <td><code>[ 1/1 3/1 6/1 10/1 ]</code></td>
                                     <td class="notes">累積和。同じ式を<code>FOLD</code>で書くと最後の<code>10/1</code>だけが返る。</td>
                                 </tr>
@@ -2391,7 +2391,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 3 5 8 ] [ 2 / 'M' BIND M FLOOR M = ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
+                                    <td><code>[ 1 3 5 8 ] [ 2 DIV 'M' BIND M FLOOR M EQ ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] 2 MEMBER?</code>(<code>TRUE</code>)のほうが簡単。</td>
                                 </tr>
@@ -2410,7 +2410,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 4 6 8 ] [ 2 / 'M' BIND M FLOOR M = ] MAP<br>TRUE [ AND ] FOLD</code></td>
+                                    <td><code>[ 2 4 6 8 ] [ 2 DIV 'M' BIND M FLOOR M EQ ] MAP<br>TRUE [ AND ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">「すべての要素が述語を満たすか」。<code>TRUE</code>から<code>AND</code>で畳み込む。</td>
                                 </tr>
@@ -2433,7 +2433,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 0 [ + ] FOLD ] 'PSUM' DEF
+                                    <td><code>[ 0 [ ADD ] FOLD ] 'PSUM' DEF
 [ 3 4 ] PSUM</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">引数はベクトルそのもの。展開するのではなく畳み込む。</td>
@@ -2453,8 +2453,8 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ [ 1 -1 ] * 0 [ + ] FOLD ] 'PDIFF' DEF
-2 5 * 3 2 COLLECT PDIFF</code></td>
+                                    <td><code>[ [ 1 -1 ] MUL 0 [ ADD ] FOLD ] 'PDIFF' DEF
+2 5 MUL 3 2 COLLECT PDIFF</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">非対称なワードは、ブロードキャストで位置に重みを付けてから畳み込む。<code>2 COLLECT</code>は計算済みの2つの値をまとめる。</td>
                                 </tr>
@@ -2469,7 +2469,7 @@ SELECT</code></td>
                     <p class="ref-note">複製のための道具は<a href="#bindings"><code>BIND</code></a>です。値に名前を付ければ、名前を書くたびにその値が積まれるので、どんな種類の値でも必要な回数だけ使えます。</p>
 
                     <h3>データとしてのコード</h3>
-                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>はその両方にとって唯一の括弧であり、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 + ] [ 1 2 + ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
+                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>はその両方にとって唯一の括弧であり、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2478,7 +2478,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 + ] [ 1 2 + ] EQ</code></td>
+                                    <td><code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">構築の経緯は値の一部ではない：<code>EQ</code>には見分けがつかない。</td>
                                 </tr>
@@ -2662,7 +2662,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ [ 10 ] + ] 'ADD10' DEF
+                                    <td><code>[ [ 10 ] ADD ] 'ADD10' DEF
 5 ADD10</code></td>
                                     <td><code>[ 15/1 ]</code></td>
                                     <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
@@ -2682,7 +2682,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 * ] 'DBL' DEF
+                                    <td><code>[ 2 MUL ] 'DBL' DEF
 [ 1 2 3 ] [ DBL ] MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>

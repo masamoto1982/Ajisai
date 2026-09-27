@@ -72,7 +72,7 @@ impl Interpreter {
     /// failure record, a recursion-limit report) run per *User* Word call rather
     /// than per dispatch and ask for one there.
     pub(crate) fn resolve_word_entry(&self, name: &str) -> Option<(Arc<str>, Arc<WordDefinition>)> {
-        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let canonical_name = crate::word_name::canonical_word_name(name);
         let def = self.definition_of(canonical_name.as_ref())?;
         Some((Arc::from(canonical_name.as_ref()), def))
     }
@@ -102,7 +102,7 @@ impl Interpreter {
             let mut dependencies = HashSet::new();
             let mut text_references = HashSet::new();
             for s in crate::interpreter::body_symbols::body_symbol_names(&word_def.body) {
-                let upper_s = crate::core_word_aliases::canonicalize_core_word_name(&s);
+                let upper_s = crate::word_name::canonical_word_name(&s);
                 text_references.insert(upper_s.to_string());
                 if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
                     // Only User Words are dependencies: Core is sealed,

@@ -93,7 +93,7 @@ A partial operation that has no answer produces `NIL` carrying a reason, and the
 call still succeeds:
 
 ```ajisai tool=compute status=ok stack="NIL"
-1 0 /
+1 0 DIV
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
@@ -103,7 +103,7 @@ and answers whether it was absent, which is exactly where `SELECT` reads its
 truth operand, so name the subject once and read it twice:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-1 0 / 'S' BIND [ 99 ] S S NIL? SELECT
+1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT
 ```
 
 `NIL?` asks about the whole value, and a vector holding an absent lane is not
@@ -113,7 +113,7 @@ the others — so the top is still a vector and the fallback is not chosen.
 Recover such a result per lane (`MAP`), not around it:
 
 ```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"
-[ 6 6 ] [ 1 0 ] /
+[ 6 6 ] [ 1 0 ] DIV
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to
@@ -121,7 +121,7 @@ Recover such a result per lane (`MAP`), not around it:
 Rationals are exact and their display is exact too:
 
 ```ajisai tool=compute status=ok stack="1/1"
-2 3 / 1 3 / +
+2 3 DIV 1 3 DIV ADD
 ```
 
 An irrational square root is where display and value part company. On the
@@ -151,11 +151,11 @@ there is no radical to write, and `stackDisplay` is already the whole value.
 
 One caution about the display: it writes the stored form faithfully, so two
 values that *are* equal can be written differently — `8 SQRT` gives
-`sqrt(8)` and `2 SQRT 2 SQRT +` gives `2/1*sqrt(2)`. Never compare these
+`sqrt(8)` and `2 SQRT 2 SQRT ADD` gives `2/1*sqrt(2)`. Never compare these
 strings to decide equality. Ask Ajisai, which decides on the exact value:
 
 ```ajisai tool=compute status=ok stack="TRUE"
-8 SQRT 2 SQRT 2 SQRT + =
+8 SQRT 2 SQRT 2 SQRT ADD EQ
 ```
 
 ## 5. When a name is wrong, the answer says so
@@ -211,9 +211,9 @@ Measured through `resourceUsage.numericWork`, all three of these are `const`:
 
 | program | `numericWork` |
 | --- | --- |
-| `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` | 5 |
-| `2 SQRT 3 SQRT +` | 2048 |
-| `2 SQRT 3 SQRT + 'S' BIND S S *` | 6144 |
+| `[ 1 2 3 4 5 ] [ 0 ] [ ADD ] FOLD` | 5 |
+| `2 SQRT 3 SQRT ADD` | 2048 |
+| `2 SQRT 3 SQRT ADD 'S' BIND S S MUL` | 6144 |
 
 The `numericWork` ceiling is 10,000,000, so an algebraic chain meets it after a
 few thousand additions while a rational one of the same class runs
@@ -274,7 +274,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
 - Named data is a Record, built by `RECORD` from a Vector of keys and a Vector of values: `[ 'x' 'y' ] [ 1 2 ] RECORD`. It is not a Vector and is never code. It displays as `{ 'x' 1/1 'y' 2/1 }`, which is a display, not source: only `[ ]` delimits.
-- Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
+- Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
 - Every Word consumes the operands it reads. To use a value more than once, name it with `BIND` and read the name: `5 'N' BIND N N 1 +` leaves `5 6`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
@@ -305,7 +305,7 @@ built from rationals and `SQRT` decides**: there is no budget, no refinement
 limit, and no undecided outcome.
 
 ```ajisai
-8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
+8 SQRT 2 SQRT 2 SQRT ADD EQ   # √8 vs √2+√2
 ```
 
 → stack `TRUE` (exit 0). Values built through different
@@ -329,17 +329,17 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - Push a number (always inside a vector)
   `[ 42 ]` → stack: `[ 42/1 ]`
 - Exact rational division — no floats, ever
-  `[ 1 ] [ 3 ] /` → stack: `[ 1/3 ]`
+  `[ 1 ] [ 3 ] DIV` → stack: `[ 1/3 ]`
 - Elementwise vector arithmetic
-  `[ 1 2 3 ] [ 4 5 6 ] +` → stack: `[ 5/1 7/1 9/1 ]`
+  `[ 1 2 3 ] [ 4 5 6 ] ADD` → stack: `[ 5/1 7/1 9/1 ]`
 - Scalar broadcast over a vector
-  `[ 5 ] [ 1 2 3 ] *` → stack: `[ 5/1 10/1 15/1 ]`
+  `[ 5 ] [ 1 2 3 ] MUL` → stack: `[ 5/1 10/1 15/1 ]`
 - Remainder: name the operands, then a - b * floor(a/b)
-  `10 'A' BIND 3 'B' BIND A A B / FLOOR B * -` → stack: `1/1`
+  `10 'A' BIND 3 'B' BIND A A B DIV FLOOR B MUL SUB` → stack: `1/1`
 - Comparison pushes a boolean
-  `1 2 <` → stack: `TRUE`
+  `1 2 LT` → stack: `TRUE`
 - Comparison lifts over vectors element-wise
-  `[ 1 2 ] [ 3 1 ] <` → stack: `[ TRUE FALSE ]`
+  `[ 1 2 ] [ 3 1 ] LT` → stack: `[ TRUE FALSE ]`
 - Range: start end, both included
   `0 5 RANGE` → stack: `[ 0/1 1/1 2/1 3/1 4/1 5/1 ]`
 - A stride is a multiplication of a range
@@ -347,15 +347,15 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - Fill a shape with one number: [ shape ] value
   `[ 2 2 ] 7 FILL` → stack: `[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]`
 - MAP with a [ ] code block
-  `0 4 RANGE [ [ 2 ] * ] MAP` → stack: `[ [ 0/1 ] [ 2/1 ] [ 4/1 ] [ 6/1 ] [ 8/1 ] ]`
+  `0 4 RANGE [ [ 2 ] MUL ] MAP` → stack: `[ [ 0/1 ] [ 2/1 ] [ 4/1 ] [ 6/1 ] [ 8/1 ] ]`
 - FILTER keeps matching elements
-  `0 10 RANGE [ 5 > ] FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
+  `0 10 RANGE [ 5 GT ] FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
-  `[ 1 2 3 ] [ 0 ] [ + ] FOLD` → stack: `[ 6/1 ]`
+  `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD` → stack: `[ 6/1 ]`
 - A Record from a Vector of keys and a Vector of values
   `[ 'x' 'y' ] [ 1 2 ] RECORD` → stack: `{ 'x' 1/1 'y' 2/1 }`
 - Define a user word: [ body ] then name, then DEF
-  `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
+  `[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - SELECT: the two candidates, then the truth that chooses between them
   `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT` → prints `[ 'non-negative' ]`
 - SELECT chooses lane by lane, so a whole vector branches at once
@@ -371,22 +371,22 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - Exact square root takes a bare scalar
   `2 SQRT` → stack: `sqrt(2)`
 - A value used twice is named with BIND
-  `5 'N' BIND N N 1 +` → stack: `5/1  6/1`
+  `5 'N' BIND N N 1 ADD` → stack: `5/1  6/1`
 
 ## 7. Common errors — actual CLI output, and the fix
 
 - **Typo / unknown word** — `[ 1 ] ADDD`
   → exit 1, `message: "Unknown word: ADDD"`, `diagnosis: { when: "resolveWord", why: "typoOrUnknownName" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkSpelling`. `diagnosis.candidates: ["ADD","AND"]`.
-  Fix: Grep §9 for the word you meant (here: `+` / `ADD`). Word names are upper-cased automatically.
-- **Stack underflow: operands must be pushed first** — `+`
+  Fix: Grep §9 for the word you meant (here: `ADD`). Word names are upper-cased automatically.
+- **Stack underflow: operands must be pushed first** — `ADD`
   → exit 1, `message: "ADD: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
-  Fix: Push both operands before the operator: `[ 1 ] [ 2 ] +`. Ajisai is postfix; there is no infix form.
-- **FOLD without an initial value** — `[ 1 2 3 ] [ + ] FOLD`
+  Fix: Push both operands before the operator: `[ 1 ] [ 2 ] ADD`. Ajisai is postfix; there is no infix form.
+- **FOLD without an initial value** — `[ 1 2 3 ] [ ADD ] FOLD`
   → exit 1, `message: "FOLD: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
-  Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
+  Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD`.
 - **SELECT takes three operands: both candidates, then the truth** — `[ 'big' ] [ 5 ] [ 3 ] GT SELECT`
   → exit 1, `message: "SELECT: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
@@ -395,7 +395,7 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
   → exit 1, `message: "SELECT: expected a truth value, got Scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.
-- **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
+- **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] ADD`
   → exit 1, `message: "ADD: expected shapes that align, got [2] and [3] (axis 0 is 2 and 3, and neither is 1)"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
@@ -511,18 +511,6 @@ no module system and nothing to import.
 | `ABSENT` | absence | A NIL whose reason the program states: `'rate not quoted' ABSENT NIL?` is `TRUE`. `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong. — e.g. `'rate not quoted' ABSENT` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both. A value that names its own binding, directly or through other bindings, is refused as `selfReferentialDefinition`, the same rule DEF applies (LANG.DICTIONARY.ACYCLIC). — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (`definitionConflict`); a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`. — e.g. `[ 2 MUL ] 'DOUBLE' DEF` |
-| `DEL` | dictionary | Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first. — e.g. `[ 1 ] 'W' DEF 'W' DEL` |
+| `DEL` | dictionary | Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first. — e.g. `[ 1 ] 'W' DEF 'W' DEL` |
 | `DIGEST` | dictionary | The content identity of a Word, or the digest of a value's denotation, as text: `8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ` is `TRUE`. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. — e.g. `[ ADD ] 0 GET DIGEST` |
 | `PRINT` | output | Write a value to the output, consuming it: `42 PRINT` writes `42` and leaves nothing. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT). — e.g. `42 PRINT` |
-| `+` | symbol alias | shorthand for `ADD` |
-| `-` | symbol alias | shorthand for `SUB` |
-| `*` | symbol alias | shorthand for `MUL` |
-| `/` | symbol alias | shorthand for `DIV` |
-| `=` | symbol alias | shorthand for `EQ` |
-| `<` | symbol alias | shorthand for `LT` |
-| `>` | symbol alias | shorthand for `GT` |
-| `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
-| `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
-| `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |
-| `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
-| `'` | literal sugar | STRING-QUOTE — literal delimiter, not a Word |

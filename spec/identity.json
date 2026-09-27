@@ -93,14 +93,6 @@
           "rightWord": "IDB"
         },
         {
-          "id": "aliasSpelling",
-          "note": "A symbolic alias and its canonical Word are one name (LANG.SOURCE.NORMALIZE).",
-          "left": "[ 1 ADD ] 'IDC' DEF",
-          "leftWord": "IDC",
-          "right": "[ 1 + ] 'IDD' DEF",
-          "rightWord": "IDD"
-        },
-        {
           "id": "numericSpelling",
           "note": "A number is its value, not its lexeme (LANG.VALUES.DENOTATION applied inside the body).",
           "left": "[ 1 ADD ] 'IDE' DEF",

@@ -67,7 +67,7 @@ proptest! {
 
     // ── MAP is a functor: identity and composition (fusion) ──
 
-    /// `MAP id = id`: an identity block leaves the vector unchanged.
+    /// `MAP id EQ id`: an identity block leaves the vector unchanged.
     #[test]
     fn map_identity(xs in vec_ne()) {
         let v = vlit(&xs);
@@ -81,8 +81,8 @@ proptest! {
         let v = vlit(&xs);
         assert_law(
             "map-fusion",
-            &format!("{v} [ 2 * ] MAP [ 1 + ] MAP"),
-            &format!("{v} [ 2 * 1 + ] MAP"),
+            &format!("{v} [ 2 MUL ] MAP [ 1 ADD ] MAP"),
+            &format!("{v} [ 2 MUL 1 ADD ] MAP"),
         );
     }
 
@@ -124,8 +124,8 @@ fn filter_is_idempotent() {
     for v in ["[ 1 2 3 4 5 ]", "[ 5 4 3 2 1 ]", "[ 3 1 4 1 5 ]"] {
         assert_law(
             "filter-idempotent",
-            &format!("{v} [ 2 > ] FILTER [ 2 > ] FILTER"),
-            &format!("{v} [ 2 > ] FILTER"),
+            &format!("{v} [ 2 GT ] FILTER [ 2 GT ] FILTER"),
+            &format!("{v} [ 2 GT ] FILTER"),
         );
     }
 }
@@ -135,8 +135,8 @@ fn filter_predicates_commute() {
     for v in ["[ 1 2 3 4 5 ]", "[ 5 4 3 2 1 ]"] {
         assert_law(
             "filter-commute",
-            &format!("{v} [ 2 > ] FILTER [ 4 < ] FILTER"),
-            &format!("{v} [ 4 < ] FILTER [ 2 > ] FILTER"),
+            &format!("{v} [ 2 GT ] FILTER [ 4 LT ] FILTER"),
+            &format!("{v} [ 4 LT ] FILTER [ 2 GT ] FILTER"),
         );
     }
 }

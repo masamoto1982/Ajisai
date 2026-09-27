@@ -28,7 +28,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("1 2 3 +")
+            .execute("1 2 3 ADD")
             .await
             .expect_err("source over the byte ceiling must error");
         assert!(
@@ -167,7 +167,7 @@ mod runtime_limits_tests {
         // A subsequent ordinary program must run cleanly on the same
         // interpreter — no poisoned partial stack.
         interp.set_runtime_limits(RuntimeLimits::default());
-        assert!(interp.execute("2 3 +").await.is_ok());
+        assert!(interp.execute("2 3 ADD").await.is_ok());
         assert_eq!(
             interp.get_stack().last().and_then(|v| v.as_i64()),
             Some(5),
@@ -188,7 +188,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
+            .execute("2 SQRT 3 SQRT ADD 5 SQRT 7 SQRT ADD MUL")
             .await
             .expect_err("a 4-term product past a 3-term ceiling must error");
         assert!(
@@ -209,7 +209,7 @@ mod runtime_limits_tests {
         let mut interp = Interpreter::new();
         assert!(
             interp
-                .execute("2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
+                .execute("2 SQRT 3 SQRT ADD 5 SQRT 7 SQRT ADD MUL")
                 .await
                 .is_ok(),
             "a 4-term algebraic product is ordinary work under default limits"
@@ -228,7 +228,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("2 SQRT 3 SQRT +")
+            .execute("2 SQRT 3 SQRT ADD")
             .await
             .expect_err("exact work past the meter must error");
         assert!(
@@ -251,12 +251,12 @@ mod runtime_limits_tests {
         let mut interp = Interpreter::new();
         assert!(interp.execute("0 5 RANGE").await.is_ok());
         let mut interp2 = Interpreter::new();
-        assert!(interp2.execute("123456789 2 *").await.is_ok());
+        assert!(interp2.execute("123456789 2 MUL").await.is_ok());
         // Ordinary exact arithmetic (√2·√2 = 2, √2+√3) is untouched.
         let mut interp3 = Interpreter::new();
-        assert!(interp3.execute("2 SQRT 2 SQRT *").await.is_ok());
+        assert!(interp3.execute("2 SQRT 2 SQRT MUL").await.is_ok());
         let mut interp4 = Interpreter::new();
-        assert!(interp4.execute("2 SQRT 3 SQRT +").await.is_ok());
+        assert!(interp4.execute("2 SQRT 3 SQRT ADD").await.is_ok());
     }
 
     // ── the work meter prices operand size, not operation count ────────────
@@ -272,7 +272,7 @@ mod runtime_limits_tests {
         let big = "9".repeat(512);
         let mut interp = Interpreter::new();
         interp
-            .execute(&format!("1 {big} * {big} *"))
+            .execute(&format!("1 {big} MUL {big} MUL"))
             .await
             .expect("ordinary big-integer work still succeeds");
         assert!(
@@ -292,8 +292,8 @@ mod runtime_limits_tests {
             interp.execute(source).await.expect("source computes");
             interp.numeric_work_used
         }
-        let narrow = charge("2 3 *").await;
-        let wide = charge(&format!("{} {} *", "9".repeat(2048), "9".repeat(2048))).await;
+        let narrow = charge("2 3 MUL").await;
+        let wide = charge(&format!("{} {} MUL", "9".repeat(2048), "9".repeat(2048))).await;
         assert!(
             wide > narrow * 100,
             "a 2048-digit product must cost far more than a one-digit product, got {wide} vs {narrow}"
@@ -310,7 +310,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute(&format!("1 {big} * {big} *"))
+            .execute(&format!("1 {big} MUL {big} MUL"))
             .await
             .expect_err("a product past the bit ceiling must error");
         assert!(
@@ -330,12 +330,12 @@ mod runtime_limits_tests {
     async fn ordinary_arithmetic_stays_far_below_the_meter() {
         // The meter only earns its place if it is invisible to real programs.
         for source in [
-            "1 3 /",
-            "0.1 0.2 +",
+            "1 3 DIV",
+            "0.1 0.2 ADD",
             "2 SQRT",
-            "[ 1 2 ] 10 +",
-            "8 SQRT 2 SQRT 2 SQRT + =",
-            "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *",
+            "[ 1 2 ] 10 ADD",
+            "8 SQRT 2 SQRT 2 SQRT ADD EQ",
+            "2 SQRT 3 SQRT ADD 5 SQRT 7 SQRT ADD MUL",
         ] {
             let mut interp = Interpreter::new();
             interp

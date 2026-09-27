@@ -8,7 +8,7 @@ mod tests {
     async fn test_simple_addition() {
         let mut interp = Interpreter::new();
 
-        let code = "[ 2 ] [ 3 ] +";
+        let code = "[ 2 ] [ 3 ] ADD";
 
         let result = interp.execute(code).await;
         assert!(
@@ -25,7 +25,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ [ 2 ] [ 3 ] + ] 'ADDTEST' DEF
+[ [ 2 ] [ 3 ] ADD ] 'ADDTEST' DEF
 ADDTEST
 "#;
 
@@ -41,7 +41,7 @@ ADDTEST
     async fn test_default_line_without_colon() {
         let mut interp = Interpreter::new();
 
-        let code = "[ 5 ] [ 3 ] +";
+        let code = "[ 5 ] [ 3 ] ADD";
 
         let result = interp.execute(code).await;
         assert!(
@@ -96,8 +96,8 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ 1 ] [ 2 ] +
-[ 3 ] *
+[ 1 ] [ 2 ] ADD
+[ 3 ] MUL
 "#;
 
         let result = interp.execute(code).await;
@@ -130,8 +130,8 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ 10 ] [ 20 ] +
-[ 5 ] *
+[ 10 ] [ 20 ] ADD
+[ 5 ] MUL
 "#;
 
         let result = interp.execute(code).await;
@@ -163,15 +163,15 @@ ADDTEST
 #[tokio::test]
 async fn numbers_render_as_canonical_fractions_on_stack() {
     // Every number renders as a reduced numerator/denominator, integers
-    // included. Surface literal style is not retained; `0.6 0.8 *` and any
+    // included. Surface literal style is not retained; `0.6 0.8 MUL` and any
     // mixed-style arithmetic therefore display uniformly.
     let cases = [
         ("1", "1/1"),
         ("0.5", "1/2"),
         ("2/1", "2/1"),
         ("4/2", "2/1"),
-        ("0.6 0.8 *", "12/25"),
-        ("3 4 +", "7/1"),
+        ("0.6 0.8 MUL", "12/25"),
+        ("3 4 ADD", "7/1"),
     ];
     for (program, expected) in cases {
         let mut interp = crate::interpreter::Interpreter::new();

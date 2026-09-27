@@ -29,19 +29,19 @@ describe('detectExecutionSurfaceChanges', () => {
         expect(changes.outputChanged).toBe(false);
     });
 
-    it('does NOT flag a dictionary change for `2 3 +` when unchanged user words exist', () => {
+    it('does NOT flag a dictionary change for `2 3 ADD` when unchanged user words exist', () => {
         // Regression: pre/post are read from different sources that can enumerate
         // the same words in different orders; the comparison must be order-insensitive
         // so a pure stack op never pulls the right column to the Words sheet.
         const before = view({
             stack: [],
-            userWords: [word('FOO', '1 2 +'), word('BAR', '3 4 +')]
+            userWords: [word('FOO', '1 2 ADD'), word('BAR', '3 4 ADD')]
         });
         const after = view({
             stack: [num(5)],
             // Same set, different enumeration order (a synced interpreter rebuilds
             // its dictionaries from scratch).
-            userWords: [word('BAR', '3 4 +'), word('FOO', '1 2 +')]
+            userWords: [word('BAR', '3 4 ADD'), word('FOO', '1 2 ADD')]
         });
 
         const changes = detectExecutionSurfaceChanges(before, after, okResult());
@@ -54,7 +54,7 @@ describe('detectExecutionSurfaceChanges', () => {
     it('flags a dictionary change and the user sheet when a word is defined', () => {
         const changes = detectExecutionSurfaceChanges(
             view({ userWords: [] }),
-            view({ userWords: [word('FOO', '1 2 +')] }),
+            view({ userWords: [word('FOO', '1 2 ADD')] }),
             okResult()
         );
         expect(changes.dictionaryChanged).toBe(true);

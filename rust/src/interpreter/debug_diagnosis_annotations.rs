@@ -33,38 +33,6 @@ impl DebugDiagnosis {
         self
     }
 
-    /// Record the alias the program actually wrote, when the Word it resolved
-    /// to is the one that failed.
-    ///
-    /// `1 + 2` reported `where: ADD`, and the only hint that `+` had anything
-    /// to do with it was a generic "check alias canonicalization" line. The
-    /// canonical name has to stay the answer to "which Word failed" — the
-    /// diagnosis classifies its semantic area and algebraic family by it — so
-    /// the spelling is recorded beside it, in the same `key=value` evidence
-    /// channel the source position uses, rather than replacing it.
-    ///
-    /// Only a spelling the alias table maps to this very Word is kept. A name
-    /// that merely differs in case is not an alias and says nothing worth a
-    /// line, and a reverse lookup from the canonical name is never attempted:
-    /// the table is one-directional, and claiming the reader wrote `+` when
-    /// they wrote `ADD` would be the opposite of a diagnosis.
-    pub fn with_source_word(mut self, surface: Option<&str>) -> Self {
-        let (Some(surface), Some(word)) = (surface, self.where_.word.as_deref()) else {
-            return self;
-        };
-        let Some(alias) = crate::core_word_aliases::lookup_core_word_alias(surface) else {
-            return self;
-        };
-        if alias.canonical != Some(word) {
-            return self;
-        }
-        if self.evidence.iter().any(|e| e.starts_with("sourceWord=")) {
-            return self;
-        }
-        self.evidence.push(format!("sourceWord={}", surface));
-        self
-    }
-
     /// Record `word` as a Word the failure happened *inside* — the higher-order
     /// Word whose block raised it, or the User Word whose body did.
     ///

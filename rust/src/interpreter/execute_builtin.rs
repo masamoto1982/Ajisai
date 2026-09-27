@@ -15,7 +15,7 @@ impl Interpreter {
     /// Core word-execution logic (greedy, always): the single entry point
     /// every dispatch route reaches a Word through.
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let canonical_name = crate::word_name::canonical_word_name(name);
         let name = canonical_name.as_ref();
 
         // A local binding is read before the dictionary. Nothing can be in both
@@ -24,8 +24,7 @@ impl Interpreter {
         // cheaper lookup and the more local fact.
         //
         // `name` is already uppercase, so no `to_uppercase()` here or below.
-        // `canonicalize_core_word_name` returns one of three things: an alias's
-        // canonical name (every one in the table is uppercase), the input
+        // `canonical_word_name` returns one of two things: the input
         // unchanged when it is ASCII with no lowercase byte (uppercasing that is
         // the identity), or an owned `to_uppercase()`. `bind_local` keys a scope
         // by `name.to_uppercase()`, so this asks for the key the binding was
@@ -148,7 +147,7 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let canonical = crate::word_name::canonical_word_name(name);
         self.execute_builtin_direct(canonical.as_ref())
     }
 

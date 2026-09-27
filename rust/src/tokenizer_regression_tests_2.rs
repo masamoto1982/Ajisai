@@ -281,7 +281,7 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_greater_than_tokenizes_as_gt_alias() {
+    fn test_greater_than_tokenizes_as_an_ordinary_symbol() {
         let result = tokenize("5 3 >").unwrap();
         assert_eq!(
             result,

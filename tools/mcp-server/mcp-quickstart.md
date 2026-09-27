@@ -93,7 +93,7 @@ A partial operation that has no answer produces `NIL` carrying a reason, and the
 call still succeeds:
 
 ```ajisai tool=compute status=ok stack="NIL"
-1 0 /
+1 0 DIV
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
@@ -103,7 +103,7 @@ and answers whether it was absent, which is exactly where `SELECT` reads its
 truth operand, so name the subject once and read it twice:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-1 0 / 'S' BIND [ 99 ] S S NIL? SELECT
+1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT
 ```
 
 `NIL?` asks about the whole value, and a vector holding an absent lane is not
@@ -113,7 +113,7 @@ the others — so the top is still a vector and the fallback is not chosen.
 Recover such a result per lane (`MAP`), not around it:
 
 ```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"
-[ 6 6 ] [ 1 0 ] /
+[ 6 6 ] [ 1 0 ] DIV
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to
@@ -121,7 +121,7 @@ Recover such a result per lane (`MAP`), not around it:
 Rationals are exact and their display is exact too:
 
 ```ajisai tool=compute status=ok stack="1/1"
-2 3 / 1 3 / +
+2 3 DIV 1 3 DIV ADD
 ```
 
 An irrational square root is where display and value part company. On the
@@ -151,11 +151,11 @@ there is no radical to write, and `stackDisplay` is already the whole value.
 
 One caution about the display: it writes the stored form faithfully, so two
 values that *are* equal can be written differently — `8 SQRT` gives
-`sqrt(8)` and `2 SQRT 2 SQRT +` gives `2/1*sqrt(2)`. Never compare these
+`sqrt(8)` and `2 SQRT 2 SQRT ADD` gives `2/1*sqrt(2)`. Never compare these
 strings to decide equality. Ask Ajisai, which decides on the exact value:
 
 ```ajisai tool=compute status=ok stack="TRUE"
-8 SQRT 2 SQRT 2 SQRT + =
+8 SQRT 2 SQRT 2 SQRT ADD EQ
 ```
 
 ## 5. When a name is wrong, the answer says so
@@ -211,9 +211,9 @@ Measured through `resourceUsage.numericWork`, all three of these are `const`:
 
 | program | `numericWork` |
 | --- | --- |
-| `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` | 5 |
-| `2 SQRT 3 SQRT +` | 2048 |
-| `2 SQRT 3 SQRT + 'S' BIND S S *` | 6144 |
+| `[ 1 2 3 4 5 ] [ 0 ] [ ADD ] FOLD` | 5 |
+| `2 SQRT 3 SQRT ADD` | 2048 |
+| `2 SQRT 3 SQRT ADD 'S' BIND S S MUL` | 6144 |
 
 The `numericWork` ceiling is 10,000,000, so an algebraic chain meets it after a
 few thousand additions while a rational one of the same class runs

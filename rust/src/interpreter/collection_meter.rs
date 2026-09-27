@@ -189,7 +189,7 @@ pub(crate) fn charge_comparison_sort_of(interp: &mut Interpreter, value: &Value)
 /// The one place in either meter that does not charge everything at the
 /// entry, and the reason is a property of the operation rather than an
 /// exception made for it. Arithmetic can pre-charge because the cost of
-/// `a * b` is a function of the operands' *shape*, known before it runs. A
+/// `a MUL b` is a function of the operands' *shape*, known before it runs. A
 /// hash-keyed scan's per-element cost is also a function of shape — hashing
 /// one element visits its leaves once, the same width [`ElementCost::probe`]
 /// already prices for a comparison — but the *count* of elements it will

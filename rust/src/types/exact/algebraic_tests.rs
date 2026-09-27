@@ -78,13 +78,13 @@ fn ring_axioms_hold_over_samples() {
     for a in &pool {
         for b in &pool {
             // Commutativity.
-            assert!(results_equal(&a.add(b), &b.add(a)), "a+b = b+a");
+            assert!(results_equal(&a.add(b), &b.add(a)), "a+b EQ b+a");
             assert!(results_equal(&a.mul(b), &b.mul(a)), "a·b = b·a");
             for c in &pool {
                 // Associativity.
                 let left = add_results(&a.add(b), &as_result(c));
                 let right = add_results(&as_result(a), &b.add(c));
-                assert!(results_equal(&left, &right), "(a+b)+c = a+(b+c)");
+                assert!(results_equal(&left, &right), "(a+b)+c EQ a+(b+c)");
                 let left = mul_results(&a.mul(b), &as_result(c));
                 let right = mul_results(&as_result(a), &b.mul(c));
                 assert!(results_equal(&left, &right), "(a·b)·c = a·(b·c)");

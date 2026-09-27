@@ -169,9 +169,9 @@ mod profile_liveness_tests {
         );
         let mut source = String::new();
         for (index, (left, right)) in PAIRS.iter().take(factors).enumerate() {
-            source.push_str(&format!("{left} SQRT {right} SQRT +"));
+            source.push_str(&format!("{left} SQRT {right} SQRT ADD"));
             if index > 0 {
-                source.push_str(" *");
+                source.push_str(" MUL");
             }
             source.push(' ');
         }
@@ -182,7 +182,7 @@ mod profile_liveness_tests {
     /// and quadratic in the width it reaches by construction.
     fn widening_chain(multiplications: usize) -> String {
         format!(
-            "[ {} * ] 'M' DEF 1{}",
+            "[ {} MUL ] 'M' DEF 1{}",
             "9".repeat(4096),
             " M".repeat(multiplications)
         )

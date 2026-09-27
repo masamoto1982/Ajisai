@@ -2,7 +2,6 @@
   "schemaVersion": 2,
   "generatedFrom": [
     "spec/words.json",
-    "rust/src/core_word_aliases.rs",
     "rust/src/surface_forms.rs"
   ],
   "implementationCatalogValidatedAgainst": [
@@ -15,10 +14,8 @@
     "semanticKernelWords": 48,
     "standardWords": 30,
     "corewords": 78,
-    "aliases": 7,
-    "inputHelpers": 1,
     "surface_forms": 4,
-    "manifestEntries": 90
+    "manifestEntries": 82
   },
   "entries": [
     {
@@ -1417,118 +1414,6 @@
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
-    },
-    {
-      "id": "alias.plus",
-      "kind": "symbol_alias",
-      "surface": "+",
-      "canonical": "ADD",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.plus",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "ADD",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.minus",
-      "kind": "symbol_alias",
-      "surface": "-",
-      "canonical": "SUB",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.minus",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "SUB",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.asterisk",
-      "kind": "symbol_alias",
-      "surface": "*",
-      "canonical": "MUL",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.asterisk",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "MUL",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.slash",
-      "kind": "symbol_alias",
-      "surface": "/",
-      "canonical": "DIV",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.slash",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "DIV",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.equals",
-      "kind": "symbol_alias",
-      "surface": "=",
-      "canonical": "EQ",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.equals",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "EQ",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.less-than",
-      "kind": "symbol_alias",
-      "surface": "<",
-      "canonical": "LT",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.less-than",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "LT",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.greater-than",
-      "kind": "symbol_alias",
-      "surface": ">",
-      "canonical": "GT",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.greater-than",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "GT",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.quote",
-      "kind": "input_helper",
-      "surface": "'",
-      "canonical": "STRING-QUOTE",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.quote",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "STRING-QUOTE",
-      "classification": "Surface"
     },
     {
       "id": "surface.hash",

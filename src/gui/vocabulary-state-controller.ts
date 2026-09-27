@@ -8,7 +8,6 @@ import {
     createWordButtonElement,
     registerBackgroundClickListeners,
 } from './dictionary-element-builders';
-import { isCanonicalCoreWordName } from './core-word-name';
 
 export interface WordInfo {
     readonly name: string;
@@ -63,9 +62,6 @@ const lookupUserWordTooltip = (name: string): string => {
     if (description) return description;
     return window.ajisaiInterpreter?.lookup_word_definition(name) ?? '';
 };
-
-// See core-word-name.ts: the predicate lives beside its spec-driven test so a
-// canonical Word can never be filtered out of the Core sheet again.
 
 /// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
 /// Matched by category, never by the message, which is display text.
@@ -174,20 +170,10 @@ export const createVocabularyManager = (
     const getSortedCoreWords = (): unknown[][] => {
         if (sortedCoreWordsCache) return sortedCoreWordsCache;
 
+        // Every entry is a Core Word under its one name; there is no second
+        // spelling to filter out.
         const coreWords = window.ajisaiInterpreter.collect_core_words_info();
-        const filtered = coreWords.filter(
-            wd =>
-                Array.isArray(wd)
-                && typeof wd[0] === 'string'
-                && isCanonicalCoreWordName(wd[0])
-        );
-
-        const droppedCount = coreWords.length - filtered.length;
-        if (droppedCount > 0) {
-            console.info(`[Vocabulary] Filtered out ${droppedCount} non-canonical core word entries from WASM payload.`);
-        }
-
-        sortedCoreWordsCache = [...filtered].sort((a, b) =>
+        sortedCoreWordsCache = [...coreWords].sort((a, b) =>
             compareWordName(a[0] as string, b[0] as string)
         );
         return sortedCoreWordsCache;

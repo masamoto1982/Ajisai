@@ -20,12 +20,6 @@
       "rationale": "DEF's name-position domain representatives (textShort etc.) all happen to already be well-formed symbol lexemes, so the table never exercises a string that tokenizer::is_symbol_token_lexeme rejects. The empty string is not a name."
     },
     {
-      "id": "protectedWord",
-      "source": "[ 1 ] '+' DEF",
-      "expect": "error:protectedWord",
-      "rationale": "No domain representative is a reserved Core Word alias, so the table never reaches naming_convention_checker::check_reserved_word_name's refusal. '+' is reserved as an alias of ADD."
-    },
-    {
       "id": "protectedWordCore",
       "source": "[ 1 ] 'ADD' DEF",
       "expect": "error:protectedWord",

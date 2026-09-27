@@ -79,7 +79,7 @@ describe('formatAjisaiSource', () => {
     });
 
     test('is idempotent on already-canonical input', () => {
-        const canonical = '[ [ 1 ] [ 2 ] + ] \'ADD12\' DEF';
+        const canonical = '[ [ 1 ] [ 2 ] ADD ] \'ADD12\' DEF';
         expect(formatAjisaiSource(canonical)).toBe(canonical);
     });
 
@@ -179,8 +179,8 @@ describe('formatAjisaiSource line structure', () => {
     });
 
     test('an ordinary vector is not rearranged', () => {
-        expect(formatAjisaiSource('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP'))
-            .toBe('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP');
+        expect(formatAjisaiSource('[ 1 2 ] [ 1 MUL ] MAP [ 2 MUL ] MAP'))
+            .toBe('[ 1 2 ] [ 1 MUL ] MAP [ 2 MUL ] MAP');
     });
 });
 

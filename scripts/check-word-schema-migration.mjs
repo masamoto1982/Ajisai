@@ -4,7 +4,6 @@ const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
 const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
 const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
-const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
 const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
 const language = readFileSync('spec/language-semantics.md', 'utf8');
 const outcomes = JSON.parse(readFileSync('spec/outcomes.json', 'utf8'));
@@ -134,15 +133,6 @@ for (const word of words.entries) {
   // match cannot, a Word folded into a neighbour's arm by mistake.
   if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
     fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);
-  }
-  // Canonical documentation and effects now have one generated spelling.
-  // Aliases remain a separate source-level surface, so reconcile those here.
-  for (const alias of word.aliases) {
-    const aliasPattern = `alias: "${alias}",`;
-    const canonicalPattern = `canonical: Some("${word.name}"),`;
-    const aliasStart = aliasesSource.indexOf(aliasPattern);
-    const aliasBlock = aliasesSource.slice(aliasStart, aliasesSource.indexOf('},', aliasStart));
-    if (aliasStart < 0 || !aliasBlock.includes(canonicalPattern)) fail(`${word.name} alias drift: ${alias}`);
   }
 }
 

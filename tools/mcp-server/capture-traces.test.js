@@ -38,7 +38,7 @@ function scriptedClient(replies) {
 const compute = {
   content: [
     { type: "text", text: "I'll compute that." },
-    { type: "tool_use", id: "t1", name: "compute", input: { source: "1 3 /" } },
+    { type: "tool_use", id: "t1", name: "compute", input: { source: "1 3 DIV" } },
   ],
   stop_reason: "tool_use",
 };
@@ -56,11 +56,11 @@ const positive = await captureCase(client, {
   language: "en",
 });
 assert.deepEqual(positive.selectedTool, "compute");
-assert.deepEqual(positive.arguments, { source: "1 3 /" });
+assert.deepEqual(positive.arguments, { source: "1 3 DIV" });
 assert.deepEqual(positive.observed, { toolCalls: 1, stopReason: "tool_use" });
 assert.deepEqual(
   positive.toolCalls,
-  [{ name: "compute", arguments: { source: "1 3 /" } }],
+  [{ name: "compute", arguments: { source: "1 3 DIV" } }],
   "the whole turn is recorded, not only the call that happened to be first",
 );
 assert.equal(positive.language, "en", "a trace records which asking produced it");
@@ -88,7 +88,7 @@ assert.deepEqual(negative.toolCalls, [], "restraint records an empty turn, not a
 const exploring = scriptedClient([{
   content: [
     { type: "tool_use", id: "l1", name: "word_contract", input: { word: "FLOOR" } },
-    { type: "tool_use", id: "c1", name: "compute", input: { source: "10 'A' BIND 4 'B' BIND A A B / FLOOR B * -" } },
+    { type: "tool_use", id: "c1", name: "compute", input: { source: "10 'A' BIND 4 'B' BIND A A B DIV FLOOR B MUL SUB" } },
   ],
   stop_reason: "tool_use",
 }]);

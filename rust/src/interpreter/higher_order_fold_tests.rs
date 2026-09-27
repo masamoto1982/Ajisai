@@ -26,7 +26,7 @@ mod tests {
     #[tokio::test]
     async fn test_fold_basic() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 2 3 4 ] [ 0 ] [ + ] FOLD").await;
+        let result = interp.execute("[ 1 2 3 4 ] [ 0 ] [ ADD ] FOLD").await;
         assert!(result.is_ok(), "FOLD should succeed: {:?}", result);
         assert_eq!(top_scalar_i64(&interp), 10);
     }
@@ -36,7 +36,7 @@ mod tests {
         // The Vector is data (LANG.FAILURE.PASSTHROUGH): an absent one is the
         // result, not the initial accumulator standing in for an empty fold.
         let mut interp = Interpreter::new();
-        interp.execute("NIL [ 42 ] [ + ] FOLD").await.unwrap();
+        interp.execute("NIL [ 42 ] [ ADD ] FOLD").await.unwrap();
         assert!(interp.stack.last().is_some_and(|v| v.is_nil()));
     }
     /// `&` resolves to the same contract and executor as `AND`

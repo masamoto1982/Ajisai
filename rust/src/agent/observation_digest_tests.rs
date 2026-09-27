@@ -126,12 +126,12 @@ mod observation_digest_tests {
     }
 
     /// The regression this Phase exists to fix: `8 SQRT` keeps the coarse
-    /// basis `{8}`, `2 SQRT 2 SQRT +` keeps `{3}` — equal values with
+    /// basis `{8}`, `2 SQRT 2 SQRT ADD` keeps `{3}` — equal values with
     /// disagreeing `normal_form_terms()` (pitfall A).
     #[tokio::test]
     async fn sqrt_eight_matches_sqrt_two_plus_sqrt_two() {
         let a = digest_field("8 SQRT").await;
-        let b = digest_field("2 SQRT 2 SQRT +").await;
+        let b = digest_field("2 SQRT 2 SQRT ADD").await;
         assert!(a.is_string(), "expected a digest string, got {a}");
         assert_eq!(a, b);
     }
@@ -279,7 +279,7 @@ mod observation_digest_tests {
     /// same every time.
     #[tokio::test]
     async fn digest_is_stable_across_runs() {
-        let source = "[ 1 2 3 ] 1 { + } FOLD";
+        let source = "[ 1 2 3 ] 1 { ADD } FOLD";
         let a = digest_field(source).await;
         let b = digest_field(source).await;
         assert!(a.is_string(), "expected a digest string, got {a}");

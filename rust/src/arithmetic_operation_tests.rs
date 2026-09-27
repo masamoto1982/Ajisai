@@ -214,7 +214,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn add_with_nil_left_yields_nil() {
-        let interp = run("NIL 3 +").await;
+        let interp = run("NIL 3 ADD").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil(), "got {}", stack[0]);
@@ -222,7 +222,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn add_with_nil_right_yields_nil() {
-        let interp = run("3 NIL +").await;
+        let interp = run("3 NIL ADD").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil(), "got {}", stack[0]);
@@ -230,27 +230,27 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn sub_mul_div_with_nil_yield_nil() {
-        let interp = run("NIL 5 -").await;
+        let interp = run("NIL 5 SUB").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 5 *").await;
+        let interp = run("NIL 5 MUL").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 5 /").await;
+        let interp = run("NIL 5 DIV").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
     #[tokio::test]
     async fn div_by_nil_does_not_raise_division_by_zero() {
-        let interp = run("5 NIL /").await;
+        let interp = run("5 NIL DIV").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
     #[tokio::test]
     async fn comparisons_with_nil_yield_nil() {
-        let interp = run("NIL 3 <").await;
+        let interp = run("NIL 3 LT").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL NIL =").await;
+        let interp = run("NIL NIL EQ").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 3 >").await;
+        let interp = run("NIL 3 GT").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL 3 EQ NOT").await;
         assert!(interp.get_stack()[0].is_nil());
@@ -258,9 +258,9 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn divide_then_add_propagates_nil_through_pipeline() {
-        // The scalar law: `10 0 /` projects to NIL, and the NIL survives the
-        // `+` that follows it.
-        let interp = run("10 0 / 1 +").await;
+        // The scalar law: `10 0 DIV` projects to NIL, and the NIL survives the
+        // `ADD` that follows it.
+        let interp = run("10 0 DIV 1 ADD").await;
         let stack = interp.get_stack();
         assert!(
             stack.last().unwrap().is_nil(),
@@ -272,9 +272,9 @@ mod nil_passthrough_tests {
         // (LANG.COLLECTIONS.LIFT): the zero divisor empties its own lane, and
         // the lane -- not the vector around it -- is what carries the NIL
         // onward. This case used to assert the whole value went NIL, which is
-        // the collapse the lane law forbids: `[ 10 ] [ 2 ] /` answers
-        // `[ 5/1 ]`, so `[ 10 ] [ 0 ] /` answers `[ NIL ]`.
-        let interp = run("[ 10 ] [ 0 ] / 1 +").await;
+        // the collapse the lane law forbids: `[ 10 ] [ 2 ] DIV` answers
+        // `[ 5/1 ]`, so `[ 10 ] [ 0 ] DIV` answers `[ NIL ]`.
+        let interp = run("[ 10 ] [ 0 ] DIV 1 ADD").await;
         let stack = interp.get_stack();
         let result = stack.last().unwrap();
         let lanes = result
@@ -289,7 +289,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn a_fallback_can_replace_a_nil_that_passed_through() {
-        let interp = run("10 0 / 1 + 'S' BIND 0 S S NIL? SELECT").await;
+        let interp = run("10 0 DIV 1 ADD 'S' BIND 0 S S NIL? SELECT").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
         assert!(
@@ -350,14 +350,6 @@ mod ai_first_comparison_tests {
     async fn eq_not_returns_false_when_equal() {
         let interp = run("3 3 EQ NOT").await;
         assert!(!bool_of(&interp));
-    }
-
-    // ── symbol-alias parity ──────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn gt_symbol_alias_matches_canonical() {
-        let interp = run("5 3 >").await;
-        assert!(bool_of(&interp));
     }
 
     // ── exact rational comparison ────────────────────────────────────────

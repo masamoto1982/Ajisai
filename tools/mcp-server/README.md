@@ -71,7 +71,7 @@ node index.js --help
 ```
 
 `--doctor` exits 0 when every check passes and 1 when any fails, so it can gate
-a container start or a support request. It computes `2 3 / 1 3 / +` and
+a container start or a support request. It computes `2 3 DIV 1 3 DIV ADD` and
 `2 SQRT` through the selected backend: a server that starts and loads its
 assets but answers wrongly is still broken, and only running something proves
 otherwise. With no arguments the process speaks MCP on stdin/stdout and writes
@@ -167,7 +167,7 @@ flagged `semantics.approximate`, so it looks exact and is not.
 
 The display renders the stored normal form faithfully, which means equal
 values can be written differently: `8 SQRT` gives `sqrt(8)` and
-`2 SQRT 2 SQRT +` gives `2/1*sqrt(2)`, and `=` decides they are the same
+`2 SQRT 2 SQRT ADD` gives `2/1*sqrt(2)`, and `EQ` decides they are the same
 number. Reducing the display would only move the discrepancy, by making the
 string disagree with the `exactTerms` beside it. Comparison decides equality
 here; string comparison does not. `exactTerms` does not appear on a rational
@@ -287,8 +287,8 @@ backend.
 runs `backend/parity-test.js`) runs every golden case and every declared limit
 boundary against both backends and asserts they agree.
 
-`eval/cases.json` is the agent-evaluation corpus: 79 cases (59 positive, 20
-negative), each asked in English and Japanese, so 158 prompts. `npm run eval` executes every case's
+`eval/cases.json` is the agent-evaluation corpus: 78 cases (58 positive, 20
+negative), each asked in English and Japanese, so 156 prompts. `npm run eval` executes every case's
 expected tool call against the real backend. It measures backend semantic
 correctness only; model tool selection and source generation require captured
 model traces and are not claimed by this score.

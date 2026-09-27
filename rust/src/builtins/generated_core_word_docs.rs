@@ -613,7 +613,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "DEL",
         family: "dictionary",
-        summary: "Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
+        summary: "Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
         stack_effect: "[ name ] -> [ ]",
         hover_summary: "DEL — delete user word",
         hover_syntax: "[ 1 ] 'W' DEF 'W' DEL",

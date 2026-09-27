@@ -22,8 +22,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::core_word_aliases::canonicalize_core_word_name;
 use crate::types::{Token, WordDefinition};
+use crate::word_name::canonical_word_name;
 
 use super::Interpreter;
 
@@ -64,7 +64,7 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
         }
         Token::Symbol(s) => {
             bytes.push(b'Y');
-            bytes.extend_from_slice(canonicalize_core_word_name(s).as_bytes());
+            bytes.extend_from_slice(canonical_word_name(s).as_bytes());
         }
         Token::VectorStart => bytes.push(b'['),
         Token::VectorEnd => bytes.push(b']'),
@@ -278,7 +278,7 @@ impl Interpreter {
 
     /// The identity atom for one name a body holds.
     fn symbol_atom(&self, s: &str, def: &WordDefinition, user_set: &HashSet<String>) -> Atom {
-        let canon = canonicalize_core_word_name(s);
+        let canon = canonical_word_name(s);
         match self.resolve_word_entry(&canon) {
             Some((resolved, rdef)) => {
                 if def.dependencies.contains(resolved.as_ref()) {

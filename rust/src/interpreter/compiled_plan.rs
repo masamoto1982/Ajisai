@@ -181,7 +181,7 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
             Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
             Token::Value(value) => CompiledOp::PushLiteral((**value).clone()),
             Token::Symbol(s) => {
-                let upper = crate::core_word_aliases::canonicalize_core_word_name(s);
+                let upper = crate::word_name::canonical_word_name(s);
                 compile_symbol(token, upper.as_ref(), interp)
             }
         };

@@ -67,7 +67,7 @@ mod tests {
     #[tokio::test]
     async fn test_del_without_dependents_succeeds() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await.unwrap();
 
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_ok());
@@ -77,7 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_del_with_dependents_is_refused() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await.unwrap();
         interp
             .execute("[ DOUBLE DOUBLE ] 'QUAD' DEF")
             .await
@@ -99,7 +99,7 @@ mod tests {
     #[tokio::test]
     async fn test_del_succeeds_once_the_dependent_is_gone() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await.unwrap();
         interp
             .execute("[ DOUBLE DOUBLE ] 'QUAD' DEF")
             .await
@@ -113,13 +113,13 @@ mod tests {
     #[tokio::test]
     async fn test_def_with_dependents_is_refused() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await.unwrap();
         interp
             .execute("[ DOUBLE DOUBLE ] 'QUAD' DEF")
             .await
             .unwrap();
 
-        let result = interp.execute("[ [ 3 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ [ 3 ] MUL ] 'DOUBLE' DEF").await;
         let message = result
             .expect_err("redefining a referenced word is refused")
             .to_string();
@@ -400,7 +400,7 @@ mod tests {
         // code, not a data array of source strings.
         let mut interp = Interpreter::new();
         interp
-            .execute("[ [ 2 ] * ] 'DOUBLE' DEF")
+            .execute("[ [ 2 ] MUL ] 'DOUBLE' DEF")
             .await
             .expect("DEF with code-block body should succeed");
         let result = interp.execute("[ 21 ] DOUBLE").await;
@@ -423,10 +423,10 @@ mod tests {
     #[tokio::test]
     async fn test_def_with_multiline_code_block_body() {
         // A multi-line `[ ]` body executes one source line at a time:
-        // `[ 10 ] -> +1 -> *2 = 22`.
+        // `[ 10 ] -> +1 -> *2 EQ 22`.
         let mut interp = Interpreter::new();
         interp
-            .execute("[\n[ 1 ] +\n[ 2 ] *\n] 'INCDOUBLE' DEF")
+            .execute("[\n[ 1 ] ADD\n[ 2 ] MUL\n] 'INCDOUBLE' DEF")
             .await
             .expect("multi-line code-block body should succeed");
         let result = interp.execute("[ 10 ] INCDOUBLE").await;
@@ -449,7 +449,7 @@ mod tests {
         // interpretation: DEF reads exactly the top two positions (name, body).
         let mut interp = Interpreter::new();
         interp
-            .execute("'leftover' [ [ 2 ] * ] 'DOUBLE' DEF")
+            .execute("'leftover' [ [ 2 ] MUL ] 'DOUBLE' DEF")
             .await
             .expect("leftover string must not disturb DEF args");
         // The leftover value is still on the stack, untouched.

@@ -63,7 +63,7 @@ mod value_hash_tests {
         )
     }
 
-    /// `x * y` over the exact tier, for building `2·√3` without a parser.
+    /// `x MUL y` over the exact tier, for building `2·√3` without a parser.
     fn exact_mul(left: &Value, right: &Value) -> Value {
         let (a, b) = (as_exact(left), as_exact(right));
         Value::from_exact_real(a.mul(&b))

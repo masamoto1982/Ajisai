@@ -74,10 +74,10 @@ proptest! {
 /// done by naming it with `BIND`.
 #[test]
 fn a_user_word_call_consumes_its_operands() {
-    assert_eq!(obs("[ 2 * ] 'TWICE' DEF 5 TWICE"), vec!["10/1"]);
-    assert_eq!(obs("[ + ] 'PLUS' DEF 3 5 PLUS"), vec!["8/1"]);
+    assert_eq!(obs("[ 2 MUL ] 'TWICE' DEF 5 TWICE"), vec!["10/1"]);
+    assert_eq!(obs("[ ADD ] 'PLUS' DEF 3 5 PLUS"), vec!["8/1"]);
     assert_eq!(
-        obs("[ 2 * ] 'TWICE' DEF 5 'N' BIND N N TWICE"),
+        obs("[ 2 MUL ] 'TWICE' DEF 5 'N' BIND N N TWICE"),
         vec!["5/1", "10/1"]
     );
 }
@@ -90,7 +90,7 @@ fn a_user_word_call_consumes_its_operands() {
 #[test]
 fn projecting_words_project_onto_nil_for_domain_misses() {
     assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
-    assert_eq!(obs("1 0 /"), vec!["NIL"]);
+    assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
     // GET consumes what it reads (LANG.STACK.CONSUMPTION): both
     // operands leave the stack and the projected NIL is all that remains.
     assert_eq!(obs("[ 1 2 3 ] 9 GET"), vec!["NIL"]);

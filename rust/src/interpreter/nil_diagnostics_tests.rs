@@ -47,7 +47,7 @@ fn top_is_true(interp: &Interpreter) -> bool {
 
 #[tokio::test]
 async fn nil_check_is_true_for_operational_nil_and_consumes_it() {
-    let interp = run("1 0 / NIL?").await;
+    let interp = run("1 0 DIV NIL?").await;
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1, "NIL? consumes the inspected value");
     assert!(top_is_true(&interp), "NIL? on an operational NIL is TRUE");
@@ -102,7 +102,7 @@ async fn nil_reason_survives_a_kleene_word() {
 
 #[tokio::test]
 async fn nil_reason_reports_division_by_zero_protocol_string() {
-    let interp = run("1 0 / NIL-REASON").await;
+    let interp = run("1 0 DIV NIL-REASON").await;
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1, "NIL-REASON consumes the inspected value");
     assert_eq!(
@@ -116,7 +116,7 @@ async fn nil_reason_reports_division_by_zero_protocol_string() {
 /// the `NilReason` enum (`DivisionByZero`).
 #[tokio::test]
 async fn nil_reason_is_protocol_string_not_debug_name() {
-    let interp = run("1 0 / NIL-REASON").await;
+    let interp = run("1 0 DIV NIL-REASON").await;
     let text = top_text(&interp).expect("reason must be Text");
     assert_eq!(text, "divisionByZero");
     assert_ne!(text, format!("{:?}", NilReason::DivisionByZero));

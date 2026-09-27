@@ -50,7 +50,7 @@ mod reflection_words_tests {
         let core = top("[ ADD ] 0 GET DIGEST").await;
         assert_eq!(core.len(), 2 + 1 + 64, "a #-prefixed 64-hex digest, quoted");
         assert_eq!(
-            top("[ ADD ] 0 GET DIGEST [ + ] 0 GET DIGEST EQ").await,
+            top("[ ADD ] 0 GET DIGEST [ ADD ] 0 GET DIGEST EQ").await,
             "TRUE"
         );
         assert_eq!(

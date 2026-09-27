@@ -18,7 +18,6 @@
 use super::ordering_ops::{restore, take_operand};
 use crate::agent::observation_digest::value_digest;
 use crate::builtins::lookup_builtin_spec;
-use crate::core_word_aliases::canonicalize_core_word_name;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::contract_record::{inferred_contract_record, registered_contract_record};
 use crate::interpreter::word_identity::content_digest;
@@ -26,6 +25,7 @@ use crate::interpreter::Interpreter;
 use crate::kernel::generated::generated_word;
 use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
+use crate::word_name::canonical_word_name;
 
 /// Version tag for a sealed Core Word's identity. Core Words have no body to
 /// normalize, so their identity is the digest of the canonical name under a
@@ -44,9 +44,9 @@ fn not_a_symbol(word: &str, got: &str) -> AjisaiError {
     )
 }
 
-/// The name a Symbol resolves under: aliases folded, case folded.
+/// The name a Symbol resolves under: case folded.
 fn canonical_name(symbol: &str) -> String {
-    canonicalize_core_word_name(symbol).into_owned()
+    canonical_word_name(symbol).into_owned()
 }
 
 /// Which tier a canonical name lives in, if any.

@@ -44,7 +44,7 @@ const checkValuesEqual = (left: unknown, right: unknown): boolean => {
 // snapshot and the post-execution read-back can enumerate words in different
 // orders (a synced interpreter rebuilds its dictionaries from scratch), so the
 // set is sorted by fully-qualified name before comparison — otherwise a pure
-// stack op like `2 3 +` would look like a dictionary change whenever any user
+// stack op like `2 3 ADD` would look like a dictionary change whenever any user
 // word exists, and wrongly pull the right column to the Words sheet.
 const normalizeUserWords = (words: readonly UserWord[]): string =>
     stableStringify(

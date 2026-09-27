@@ -171,7 +171,7 @@
         "pattern": "numeric"
       },
       "emits": "Number",
-      "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and '/' is the DIV name for exactly the same reason."
+      "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and a bare '/' is a name for exactly the same reason."
     },
     {
       "id": "symbol",
@@ -187,7 +187,7 @@
     "ebnf": "number = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;\nsign = \"-\" | \"+\" ;\ndigits = ascii digit , { ascii digit } ;\nrational = \"/\" , digits ;\nfraction = \".\" , digits ;\nexponent = ( \"e\" | \"E\" ) , [ sign ] , digits ;",
     "anchored": "The pattern is anchored at both ends: a lexeme that starts as a number but does not end as one is a name, not a malformed number. '1/2/3' and '5.' are names.",
     "notes": [
-      "A sign must be followed by an ASCII digit, which is what leaves a bare '-' free to be the SUB spelling and '+' the ADD spelling.",
+      "A sign must be followed by an ASCII digit, which is what leaves a bare '-' or '+' an ordinary name.",
       "A decimal carries at least one digit on both sides of the point: '0.5' and '5.0' are numbers, '.5' and '5.' are not. The point is therefore never the first or last character of a number, which keeps a lone '.' unambiguously a name.",
       "A rational takes no fraction and no exponent: after the denominator the lexeme must end.",
       "This is the single definition of what text denotes a number. A conversion from Text to a Scalar accepts exactly these lexemes and projects everything else to NIL, so the language has one numeric grammar rather than one per entry point."

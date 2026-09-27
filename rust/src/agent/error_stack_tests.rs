@@ -2,7 +2,7 @@
 //! holding.
 //!
 //! The case these exist for: the work meter refuses
-//! `1 21000 RANGE 1 [ * ] FOLD` and names `numericWork`, but the stack at
+//! `1 21000 RANGE 1 [ MUL ] FOLD` and names `numericWork`, but the stack at
 //! that moment holds a 21,000-element vector and an 81,649-digit partial
 //! product. Serialized in full that is 5.7 MB, which a host response ceiling
 //! turns into "your answer was too big" — the opposite of what the program
@@ -32,7 +32,7 @@ mod error_stack_tests {
     }
 
     /// The source whose refusal used to be unreportable.
-    const RUNAWAY_FOLD: &str = "1 21000 RANGE 1 [ * ] FOLD";
+    const RUNAWAY_FOLD: &str = "1 21000 RANGE 1 [ MUL ] FOLD";
 
     #[tokio::test]
     async fn a_refusal_reports_its_resource_rather_than_its_residue() {
@@ -85,7 +85,7 @@ mod error_stack_tests {
         // The block that was applied is small, so it is still there in full:
         // the budget drops what it must, not everything.
         assert_eq!(
-            report["stackDisplay"][2], "[ * ]",
+            report["stackDisplay"][2], "[ MUL ]",
             "an affordable slot is untouched"
         );
     }
@@ -105,8 +105,8 @@ mod error_stack_tests {
         // The budget must be invisible to the errors an agent actually meets.
         for source in [
             "[ 1 2 3 ] LENGHT",
-            "1 0 / 2 UNKNOWNWORD",
-            "[ 1 2 ] [ 1 2 3 ] +",
+            "1 0 DIV 2 UNKNOWNWORD",
+            "[ 1 2 ] [ 1 2 3 ] ADD",
         ] {
             let report = agent_json(source).await;
             assert_eq!(report["status"], "error", "`{source}` must fail");
@@ -137,9 +137,10 @@ mod error_stack_tests {
     }
 
     /// Eighteen 256-term algebraic values, refused by the work meter.
-    const REPEATED_CASCADE: &str = "[ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * \
-17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * \
-47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C";
+    const REPEATED_CASCADE: &str =
+        "[ 2 SQRT 3 SQRT ADD 5 SQRT 7 SQRT ADD MUL 11 SQRT 13 SQRT ADD MUL \
+17 SQRT 19 SQRT ADD MUL 23 SQRT 29 SQRT ADD MUL 31 SQRT 37 SQRT ADD MUL 41 SQRT 43 SQRT ADD MUL \
+47 SQRT 53 SQRT ADD MUL ] 'C' DEF C C C C C C C C C C C C C C C C C C C";
 
     #[tokio::test]
     async fn eliding_an_algebraic_value_drops_the_part_that_is_large() {

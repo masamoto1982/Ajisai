@@ -51,7 +51,7 @@ const lines = [
     + ` **${tierCount('kernel')}** form the Semantic Kernel and **${tierCount('standard')}** are Standard Words.`
     + ' Every entry below is an ordinary Core Word reached by its plain name; the'
     + ' tier is a design classification, and each Word carries the same contract'
-    + ' detail regardless of it. Aliases and syntax surfaces are listed in'
+    + ' detail regardless of it. Syntax surfaces are listed in'
     + ' [the generated manifest](word-manifest.json) and are not counted here.',
   '',
 ];
@@ -72,7 +72,6 @@ for (const entry of words.entries) {
   lines.push(`- **Effects:** ${entry.effects.length ? entry.effects.map((effect) => `\`${effect}\``).join(', ') : 'none'}`);
   lines.push(`- **Clauses:** ${entry.clauses.map((clause) => `\`${clause}\``).join(', ')}`);
   lines.push(`- **Syntax:** \`${entry.documentation.syntax.replace(/`/g, '\\`')}\``);
-  if (entry.aliases.length) lines.push(`- **Aliases:** ${entry.aliases.map((alias) => `\`${alias}\``).join(', ')}`);
   if (entry.errorWhen.length) lines.push(`- **ERROR conditions:** ${entry.errorWhen.map((condition) => `\`${condition}\``).join(', ')}`);
   lines.push('');
 }

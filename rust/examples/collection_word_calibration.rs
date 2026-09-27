@@ -124,14 +124,14 @@ fn few_distinct(n: usize, d: usize) -> String {
 /// cheap direction for an equality test. The expensive direction is measured by
 /// `wide_few_distinct`.
 fn wide_distinct(n: usize, digits: usize) -> String {
-    format!("1 {n} RANGE {{ {} * }} MAP", "9".repeat(digits))
+    format!("1 {n} RANGE {{ {} MUL }} MAP", "9".repeat(digits))
 }
 
 /// A vector of `n` wide integers with only `d` distinct values, so most
 /// equality tests compare two *equal* wide numbers and cannot exit early.
 fn wide_few_distinct(n: usize, d: usize, digits: usize) -> String {
     format!(
-        "0 {} RANGE {{ {d} MOD 1 + {} * }} MAP",
+        "0 {} RANGE {{ {d} MOD 1 ADD {} MUL }} MAP",
         n - 1,
         "9".repeat(digits)
     )
@@ -150,11 +150,11 @@ fn text_distinct(n: usize) -> String {
 /// equality test starts — so this is the cheap arrangement. `shared_prefix` is
 /// the dear one.
 fn nested(n: usize, k: usize) -> String {
-    format!("0 {} RANGE {{ 1 {k} RANGE + }} MAP", n - 1)
+    format!("0 {} RANGE {{ 1 {k} RANGE ADD }} MAP", n - 1)
 }
 
 /// A vector of `n` nested vectors of `k` elements that agree on the first
-/// `k - 1` positions and differ only in the last.
+/// `k SUB 1` positions and differ only in the last.
 ///
 /// This is the adversarial shape for any price that ignores what is *inside* an
 /// element: every equality test walks the whole element before it can answer,
@@ -166,7 +166,7 @@ fn shared_prefix(n: usize, k: usize) -> String {
     mask[k - 1] = "1";
     let ones = vec!["1"; k];
     format!(
-        "0 {} RANGE {{ [ {} ] * [ {} ] + }} MAP",
+        "0 {} RANGE {{ [ {} ] MUL [ {} ] ADD }} MAP",
         n - 1,
         mask.join(" "),
         ones.join(" ")

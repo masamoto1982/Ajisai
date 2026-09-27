@@ -223,10 +223,9 @@ mod tests {
     // which is the most-travelled path the interpreter has, and neither could
     // produce anything but the name already in hand.
     //
-    // `canonicalize_core_word_name` returns one of three things, and all three
-    // are uppercase: an alias's canonical name (every entry in the table is),
-    // the input unchanged when it is ASCII with no lowercase byte (uppercasing
-    // that is the identity), or an owned `to_uppercase()`. Resolution looks a
+    // `canonical_word_name` returns one of two things, and both are
+    // uppercase: the input unchanged when it is ASCII with no lowercase byte
+    // (uppercasing that is the identity), or an owned `to_uppercase()`. Resolution looks a
     // name up in Core and then in User and answers with the key it looked up —
     // when the dictionary had named tiers and `DICT@WORD` paths it could answer
     // with a different, qualified name, and that is what the returned copy was
@@ -255,8 +254,8 @@ mod tests {
         }
     }
 
-    /// Resolution answers with the canonical name, whatever spelling it was
-    /// asked with — an alias included. This is the invariant that lets the
+    /// Resolution answers with the canonical name, whatever case it was asked
+    /// with. This is the invariant that lets the
     /// resolved name be *shared* rather than copied: there is nothing in it that
     /// the caller's own canonical name does not already say.
     #[tokio::test]
@@ -265,7 +264,6 @@ mod tests {
         define(&mut interp, "INC", "1 ADD");
 
         for (asked, canonical) in [
-            ("+", "ADD"),
             ("add", "ADD"),
             ("ADD", "ADD"),
             ("Add", "ADD"),

@@ -91,7 +91,7 @@ try {
     if (contract.structuredContent?.matches?.[0]?.name !== "MAP") {
       throw new Error("installed package did not expose its packaged Word registry");
     }
-    const computed = await client.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+    const computed = await client.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
     if (computed.structuredContent?.stackDisplay?.[0] !== "1/3") {
       throw new Error("installed package could not compute with neither AJISAI_REPO nor AJISAI_BIN set (WASM backend)");
     }
@@ -127,7 +127,7 @@ try {
     if (tools.tools.length !== 5) {
       throw new Error("the installed bin entry served no tools when launched by name");
     }
-    const computed = await spawned.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+    const computed = await spawned.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
     if (computed.structuredContent?.stackDisplay?.[0] !== "1/3") {
       throw new Error("the installed bin entry did not compute when launched by name");
     }
@@ -171,7 +171,7 @@ try {
     env: { ...process.env, AJISAI_BIN: nativeBin },
   }));
   try {
-    const computed = await native.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+    const computed = await native.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
     if (computed.structuredContent?.mcp?.backend?.kind !== "nativeCli") {
       throw new Error(
         `AJISAI_BIN did not select the native backend (got ${computed.structuredContent?.mcp?.backend?.kind})`,

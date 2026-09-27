@@ -55,12 +55,12 @@ fn literal_vector_shapes_match_interpreter() {
     // Numeric (tensor-promoted), boolean, string,
     // NIL-bearing, nested, and arithmetic-over-literals all agree.
     let cases = [
-        "[ [ 1 2 3 ] [ 4 5 6 ] + ] 'W' DEF W",
+        "[ [ 1 2 3 ] [ 4 5 6 ] ADD ] 'W' DEF W",
         "[ [ TRUE FALSE TRUE ] ] 'W' DEF W",
         "[ [ 'a' 'b' 'c' ] ] 'W' DEF W",
         "[ [ 1 NIL 3 ] ] 'W' DEF W",
         "[ [ [ 1 2 ] [ 3 4 ] ] ] 'W' DEF W",
-        "[ [ 1 2 3 4 ] [ 2 2 2 2 ] * [ 1 1 1 1 ] - ] 'W' DEF W",
+        "[ [ 1 2 3 4 ] [ 2 2 2 2 ] MUL [ 1 1 1 1 ] SUB ] 'W' DEF W",
     ];
     for src in cases {
         assert_on_equals_off(src);
@@ -139,7 +139,7 @@ fn empty_vector_lowers_identically_both_paths() {
 
 #[test]
 fn matches_readme_vector_example() {
-    let rendered = assert_on_equals_off("[ [ 1 2 3 ] [ 4 5 6 ] + ] 'W' DEF W");
+    let rendered = assert_on_equals_off("[ [ 1 2 3 ] [ 4 5 6 ] ADD ] 'W' DEF W");
     assert!(
         rendered.contains("5/1") && rendered.contains("7/1") && rendered.contains("9/1"),
         "expected [ 5/1 7/1 9/1 ], got: {rendered}"

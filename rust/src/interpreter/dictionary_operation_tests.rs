@@ -18,7 +18,7 @@ mod tests {
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
         interp.execute("").await.unwrap();
-        let result = interp.execute("[ [ 1 ] + ] 'GET' DEF").await;
+        let result = interp.execute("[ [ 1 ] ADD ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -33,10 +33,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("").await.unwrap();
 
-        let result1 = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result1 = interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
-        let result2 = interp.execute("[ [ 3 ] * ] 'DOUBLE' DEF").await;
+        let result2 = interp.execute("[ [ 3 ] MUL ] 'DOUBLE' DEF").await;
         assert!(result2.is_ok(), "Overriding user word should succeed");
 
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
@@ -242,7 +242,7 @@ mod tests {
         let builtin_words = vec!["TAKE", "REVERSE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
-            let code = format!("[ [ 1 ] + ] '{}' DEF", word);
+            let code = format!("[ [ 1 ] ADD ] '{}' DEF", word);
             let result = interp.execute(&code).await;
             assert!(
                 result.is_err(),
@@ -289,7 +289,7 @@ mod tests {
     #[tokio::test]
     async fn test_lookup_user_word_loads_def_source() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await.unwrap();
         let _ = interp.collect_output();
         let loaded = match host_lookup(&interp, "DOUBLE") {
             HostLookup::Definition(text) => text,
@@ -331,8 +331,8 @@ mod tests {
 
         let example_words = vec![
             ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
-            ("E4", "C4 5 * 4 /", "純正律 E4"),
+            ("D4", "C4 9 MUL 8 DIV", "純正律 D4"),
+            ("E4", "C4 5 MUL 4 DIV", "純正律 E4"),
         ];
         restore_example_words(&mut interp, &example_words);
 
@@ -396,7 +396,7 @@ mod tests {
 
         let example_words = vec![
             ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
+            ("D4", "C4 9 MUL 8 DIV", "純正律 D4"),
         ];
         restore_example_words(&mut interp, &example_words);
 
@@ -422,7 +422,7 @@ mod tests {
 
         let example_words = vec![
             ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
+            ("D4", "C4 9 MUL 8 DIV", "純正律 D4"),
         ];
         restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
@@ -452,7 +452,7 @@ mod tests {
     async fn test_builtin_symbols_remain_strings_in_vector() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "Code block DEF should work: {:?}",
@@ -476,7 +476,7 @@ mod tests {
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "DEF with vector should succeed: {:?}",
@@ -610,7 +610,7 @@ mod tests {
     async fn a_contract_directive_becomes_the_defined_words_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] ADD ] 'INC' DEF")
             .await
             .unwrap();
         assert_eq!(
@@ -630,7 +630,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
-        interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ADD ] 'INC' DEF").await.unwrap();
         assert_eq!(
             interp.lookup_word_description("INC").as_deref(),
             Some("inputs=1 outputs=1 purity=pure partiality=partial")
@@ -640,7 +640,7 @@ mod tests {
     #[tokio::test]
     async fn a_word_defined_without_a_contract_directive_has_no_description() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ADD ] 'INC' DEF").await.unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
     }
 
@@ -648,10 +648,10 @@ mod tests {
     async fn redefining_without_a_new_directive_drops_the_old_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] ADD ] 'INC' DEF")
             .await
             .unwrap();
-        interp.execute("[ [ 2 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] ADD ] 'INC' DEF").await.unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
     }
 }
