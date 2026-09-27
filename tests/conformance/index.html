@@ -457,6 +457,28 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- A `#` or a quote inside a name is part of that name (LANG.SOURCE.TEXT),
+     and the delimiter check reads the same tokens the scan produced. A
+     text-level pre-pass used to read the `#` as a comment swallowing `]`. -->
+
+<section class="ajisai-case" id="core-glued-comment-character-is-a-name" data-category="core">
+  <h3>A '#' glued inside a name starts no comment, so the vector around it is balanced</h3>
+  <pre class="ajisai-source">[ C# ] LENGTH</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A zero denominator is a source error: the program is refused before it
+     runs, so nothing is printed. -->
+
+<section class="ajisai-case" id="core-zero-denominator-is-a-source-error" data-category="core">
+  <h3>1/0 is refused as source before anything runs, so the PRINT before it never happens</h3>
+  <pre class="ajisai-source">1 PRINT 1/0</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">zero denominator</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-collect-zero-is-empty" data-category="core">
   <h3>COLLECT's count is a non-negative integer, so zero collects nothing and leaves the stack below alone</h3>
   <pre class="ajisai-source">1 0 COLLECT</pre>

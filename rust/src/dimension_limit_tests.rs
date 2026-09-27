@@ -299,4 +299,43 @@ mod dimension_limit_tests {
             assert_eq!(facts.limit, 256, "{word}");
         }
     }
+
+    /// Text spelling a number too large to build meets the numeric-literal
+    /// ceiling at every entry point that reads the numeric grammar: refused as
+    /// source, declined by NUM and JSON-DECODE. Each used to spend minutes
+    /// building `1e99999999`'s hundred-million-digit integer.
+    #[tokio::test]
+    async fn every_reader_of_the_numeric_grammar_meets_the_digit_ceiling() {
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute("1e99999999")
+            .await
+            .expect_err("a literal past the ceiling is refused");
+        assert!(matches!(
+            err,
+            crate::error::AjisaiError::ResourceLimitExceeded {
+                resource: crate::error::ResourceLimit::NumericLiteralDigits,
+                ..
+            }
+        ));
+        for (word, source) in [
+            ("NUM", "'1e99999999' NUM"),
+            ("JSON-DECODE", "'[1e99999999]' JSON-DECODE"),
+        ] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(source)
+                .await
+                .unwrap_or_else(|e| panic!("{word}: {e}"));
+            let top = &interp.get_stack()[0];
+            let facts = top
+                .absence
+                .as_ref()
+                .and_then(|a| a.diagnosis.as_ref())
+                .and_then(|d| d.resource_limit.as_ref())
+                .unwrap_or_else(|| panic!("{word}: the NIL names its ceiling"));
+            assert_eq!(facts.resource, "numericLiteralDigits", "{word}");
+            assert_eq!(facts.observed, Some(100_000_000), "{word}");
+        }
+    }
 }

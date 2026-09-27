@@ -68,6 +68,24 @@ pub(crate) fn nesting_exhausted_nil(word: &str, limit: usize, observed: usize) -
     )
 }
 
+/// The same projection for text that spells a number too large to build: more
+/// digits, counting the exponent's magnitude, than the numeric-literal ceiling
+/// allows a source literal (`tokenizer::denoted_digit_count`). A Word that reads
+/// the numeric grammar out of data declines it, where the same spelling in
+/// source is refused before the program runs.
+pub(crate) fn numeric_literal_exhausted_nil(word: &str, limit: usize, observed: u64) -> Value {
+    exhausted_nil(
+        word,
+        ResourceLimit::NumericLiteralDigits,
+        limit,
+        Some(observed),
+        format!(
+            "{} would build a number of {} digits; numericLiteralDigits is {}",
+            word, observed, limit
+        ),
+    )
+}
+
 fn exhausted_nil(
     word: &str,
     resource: ResourceLimit,

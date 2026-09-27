@@ -324,3 +324,51 @@ fn lexeme_classification_is_total() {
         }
     }
 }
+
+/// The delimiter check reads the tokens the scan produced, so a `#` or a quote
+/// glued inside a name is part of that name there too. A text-level pass that
+/// ran first read `[ C# ] LENGTH` as a comment swallowing the `]` and refused a
+/// balanced program.
+#[test]
+fn a_glued_comment_or_quote_character_does_not_unbalance_delimiters() {
+    for source in ["[ C# ] LENGTH", "[ a'b ] LENGTH", "[ x#y z' ]"] {
+        let tokens = tokenize(source).unwrap_or_else(|e| panic!("{source:?}: {e}"));
+        assert!(
+            tokens.contains(&Token::VectorEnd),
+            "{source:?} must close its vector"
+        );
+    }
+}
+
+/// `n/0` is refused as source, before anything runs — not when the literal is
+/// reached, after the program has already printed.
+#[test]
+fn a_zero_denominator_is_a_source_error() {
+    for source in ["1/0", "-3/000", "[ 1 PRINT 1/0 ]"] {
+        let error = tokenize(source).expect_err(source);
+        assert!(error.contains("zero denominator"), "{source:?}: {error}");
+    }
+    assert!(
+        tokenize("1/01").is_ok(),
+        "a leading zero is not a zero denominator"
+    );
+}
+
+/// The numeric-literal ceiling counts the digits a literal denotes, exponent
+/// included, which is what decides how large an integer the parse builds.
+#[test]
+fn a_literal_denotes_its_written_digits_plus_its_exponent() {
+    use crate::tokenizer::denoted_digit_count;
+    assert_eq!(denoted_digit_count("123"), 3);
+    assert_eq!(denoted_digit_count("-1/2"), 2);
+    assert_eq!(denoted_digit_count("1.5e3"), 5);
+    assert_eq!(denoted_digit_count("1e-5000"), 5001);
+    assert_eq!(denoted_digit_count("1e99999999999999999999999"), u64::MAX);
+}
+
+#[test]
+fn zero_at_any_scale_denotes_only_its_written_digits() {
+    use crate::tokenizer::denoted_digit_count;
+    assert_eq!(denoted_digit_count("0e99999999"), 1);
+    assert_eq!(denoted_digit_count("-0.00e999"), 3);
+}
