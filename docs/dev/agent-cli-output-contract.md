@@ -318,7 +318,7 @@ one-character change to either the source or the profile changes `digest`.
 `runtimeMetrics` is deliberately absent from the bundle for the same reason it
 is absent from `observationDigest`: it is optimizer state, not a fact about
 what the program does (`LANG.AUTHORITY.FREEDOM` — which path ran is
-unobservable). The byte grammar carries its own schema tag (`AJISAI-RECEIPT-1`,
+unobservable). The byte grammar carries its own schema tag (`AJISAI-RECEIPT-2`,
 `rust/src/agent/execution_receipt.rs`), distinct from `observationDigest`'s,
 since a receipt is a superset of a digest and the two must be free to version
 independently.
@@ -449,7 +449,7 @@ compiled-in vocabulary, the failing interpreter's own dictionary, and — for
 `resourceLimit` is `{ resource, limit, observed }` and is present when a
 declared ceiling fired. `resource` is the ceiling's own name
 (`sourceBytes`, `numericLiteralDigits`, `numericWork`, `bigintBits`,
-`algebraicTerms`, `executionSteps`) — the same identifier a host publishes in
+`algebraicTerms`, `nestingDepth`, `executionSteps`) — the same identifier a host publishes in
 its limit profile, so "too big" says what was too big and against what. A size
 ceiling reports `aiDiagnostic.kind: "resourceLimitExceeded"` and
 `recoverability: "reduceWorkOrRaiseLimit"`; the step budget keeps

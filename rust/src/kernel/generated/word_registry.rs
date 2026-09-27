@@ -2665,7 +2665,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_outputs: Arity::Fixed(1),
         operand_roles: &[OperandRole::Leaf],
         nil_policy: NilPolicy::PassthroughThenProject,
-        projection: &["textIsNotJson", "nestingDeeperThanTheMachineHolds"],
+        projection: &["textIsNotJson", "materializationBudgetExceeded"],
         projection_reasons: &["invalidEncoding", "spaceExhausted"],
         partiality: Partiality::Projecting,
         purity: Purity::Pure,

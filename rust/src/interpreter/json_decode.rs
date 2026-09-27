@@ -17,11 +17,11 @@
 //! spells no number; the outcome is never a guess at what was meant.
 //!
 //! Nesting is bounded all the same, by the machine rather than by the
-//! grammar: a value nested past `MAX_NESTING` is well-formed JSON the machine
-//! will not hold (its own value representation walks structure recursively
-//! when it is compared, rendered or released), so such text projects
-//! `spaceExhausted`, the outcome every other materialization past a ceiling
-//! reaches (LANG.MACHINE.LIMITS), not `invalidEncoding`.
+//! grammar: a value nested past the nesting ceiling (`nestingDepth`,
+//! LANG.MACHINE.LIMITS) is well-formed JSON the machine will not hold (its own
+//! value representation walks structure recursively when it is compared,
+//! rendered or released), so such text projects `spaceExhausted`, the outcome
+//! every other materialization past a ceiling reaches, not `invalidEncoding`.
 
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -34,16 +34,12 @@ use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{RecordData, Value};
 
-/// Deepest container nesting one decoded value may hold. Past it the text
-/// is refused as too large, not as malformed.
-pub(crate) const MAX_NESTING: usize = 512;
-
 /// Why text did not decode.
 #[derive(Debug, PartialEq, Eq)]
 enum Reject {
     /// Not exactly one JSON value.
     Malformed,
-    /// One JSON value, nested deeper than `MAX_NESTING`.
+    /// One JSON value, nested deeper than the decoder's `max_nesting`.
     TooDeep,
 }
 
@@ -60,6 +56,9 @@ enum Frame {
 struct Decoder<'a> {
     bytes: &'a [u8],
     pos: usize,
+    /// The nesting ceiling: past it the text is declined as too large, not
+    /// refused as malformed.
+    max_nesting: usize,
 }
 
 impl<'a> Decoder<'a> {
@@ -201,8 +200,9 @@ impl<'a> Decoder<'a> {
         frames: &mut Vec<Frame>,
     ) -> std::result::Result<Option<Value>, Reject> {
         self.skip_whitespace();
+        let max_nesting = self.max_nesting;
         let open = |frames: &mut Vec<Frame>, frame: Frame| {
-            if frames.len() >= MAX_NESTING {
+            if frames.len() >= max_nesting {
                 return Err(Reject::TooDeep);
             }
             frames.push(frame);
@@ -344,9 +344,11 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
         restore(interp, operand);
         return Err(e);
     }
+    let max_nesting = interp.runtime_limits.max_nesting_depth;
     let mut decoder = Decoder {
         bytes: text.as_bytes(),
         pos: 0,
+        max_nesting,
     };
     match decoder.decode() {
         Ok(value) => {
@@ -356,10 +358,15 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
             NilReason::InvalidEncoding,
             Recoverability::Recoverable,
         )),
-        Err(Reject::TooDeep) => interp.stack.push(Value::nil_with_reason(
-            NilReason::SpaceExhausted,
-            Recoverability::Unknown,
-        )),
+        Err(Reject::TooDeep) => {
+            interp
+                .stack
+                .push(crate::interpreter::space_projection::nesting_exhausted_nil(
+                    "JSON-DECODE",
+                    max_nesting,
+                    max_nesting + 1,
+                ))
+        }
     }
     Ok(())
 }
@@ -368,10 +375,13 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
 mod tests {
     use super::*;
 
+    const MAX_NESTING: usize = crate::interpreter::runtime_limits::DEFAULT_MAX_NESTING_DEPTH;
+
     fn decode(text: &str) -> Option<Value> {
         Decoder {
             bytes: text.as_bytes(),
             pos: 0,
+            max_nesting: MAX_NESTING,
         }
         .decode()
         .ok()
@@ -381,6 +391,7 @@ mod tests {
         Decoder {
             bytes: text.as_bytes(),
             pos: 0,
+            max_nesting: MAX_NESTING,
         }
         .decode()
         .err()

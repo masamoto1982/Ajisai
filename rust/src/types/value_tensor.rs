@@ -42,13 +42,13 @@ impl Value {
     pub fn from_int_tensor(numerators: Vec<i64>) -> Self {
         let len = numerators.len();
         let tensor = DenseTensor::from_integers(numerators);
-        Self {
-            data: ValueData::Tensor {
+        Self::new(
+            ValueData::Tensor {
                 data: Arc::new(tensor),
                 shape: Arc::new(vec![len]),
             },
-            absence: None,
-        }
+            None,
+        )
     }
 
     /// Wrap an already-assembled dense tensor, keeping its columns as they are.
@@ -64,13 +64,13 @@ impl Value {
         } else {
             shape
         };
-        Self {
-            data: ValueData::Tensor {
+        Self::new(
+            ValueData::Tensor {
                 data: Arc::new(data),
                 shape: Arc::new(resolved_shape),
             },
-            absence: None,
-        }
+            None,
+        )
     }
 
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
@@ -102,13 +102,13 @@ impl Value {
                 &absences,
             ));
         };
-        Self {
-            data: ValueData::Tensor {
+        Self::new(
+            ValueData::Tensor {
                 data: Arc::new(tensor),
                 shape: Arc::new(resolved_shape),
             },
-            absence: None,
-        }
+            None,
+        )
     }
 
     /// Build a Vector value, promoted to a dense `Tensor` when every leaf is
@@ -121,13 +121,13 @@ impl Value {
                 collected.shape.clone(),
                 collected.absences,
             ) {
-                return Self {
-                    data: ValueData::Tensor {
+                return Self::new(
+                    ValueData::Tensor {
                         data: Arc::new(tensor),
                         shape: Arc::new(collected.shape),
                     },
-                    absence: None,
-                };
+                    None,
+                );
             }
         }
         Self::from_vector(values)

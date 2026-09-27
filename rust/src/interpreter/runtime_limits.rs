@@ -312,6 +312,11 @@ pub struct RuntimeLimits {
     /// Max algebraic-term count of a single continued-fraction / polynomial
     /// value. Consumed by the work meter in the CS5 follow-up.
     pub max_algebraic_terms: usize,
+    /// Max container nesting of one value (`Value::nesting`). Every walk
+    /// over a value — comparing, rendering, hashing, encoding, broadcasting —
+    /// descends one native frame per level, so a value nested past what the
+    /// host's call stack holds would abort the process instead of failing.
+    pub max_nesting_depth: usize,
 }
 
 impl Default for RuntimeLimits {
@@ -324,6 +329,7 @@ impl Default for RuntimeLimits {
             max_collection_work: DEFAULT_MAX_COLLECTION_WORK,
             max_bigint_bits: DEFAULT_MAX_BIGINT_BITS,
             max_algebraic_terms: DEFAULT_MAX_ALGEBRAIC_TERMS,
+            max_nesting_depth: DEFAULT_MAX_NESTING_DEPTH,
         }
     }
 }
@@ -337,6 +343,19 @@ impl RuntimeLimits {
                 resource: ResourceLimit::SourceBytes,
                 limit: self.max_source_bytes as u64,
                 observed: Some(byte_len as u64),
+                progress: None,
+            });
+        }
+        Ok(())
+    }
+
+    /// Reject a value nested more than `max_nesting_depth` containers deep.
+    pub fn check_nesting_depth(&self, nesting: usize) -> Result<()> {
+        if nesting > self.max_nesting_depth {
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::NestingDepth,
+                limit: self.max_nesting_depth as u64,
+                observed: Some(nesting as u64),
                 progress: None,
             });
         }

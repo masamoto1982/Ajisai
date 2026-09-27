@@ -90,7 +90,8 @@ impl Interpreter {
             return match def.generated {
                 Some(word) => self.execute_generated_word(word),
                 None => self.execute_builtin(name),
-            };
+            }
+            .and_then(|()| self.check_fresh_nesting());
         }
 
         // Call-depth guard: catches blown Rust stack before WASM traps. Guards

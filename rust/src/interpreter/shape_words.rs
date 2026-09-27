@@ -190,6 +190,21 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
             "expected a shape: a Vector of non-negative integers",
         ));
     };
+    // A shape's rank is the nesting of the value it builds, so a rank past the
+    // nesting ceiling is declined before the value is built — building it is
+    // itself a walk one native frame per axis (`regroup`) — the way a count
+    // past the materialization ceiling is.
+    let max_nesting = interp.runtime_limits.max_nesting_depth;
+    if shape.len() > max_nesting {
+        interp
+            .stack
+            .push(crate::interpreter::space_projection::nesting_exhausted_nil(
+                "RESHAPE",
+                max_nesting,
+                shape.len(),
+            ));
+        return Ok(());
+    }
 
     let max_materialized = interp.runtime_limits.max_materialized_elements;
     let total = match checked_shape_product(&shape) {

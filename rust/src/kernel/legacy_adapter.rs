@@ -87,10 +87,7 @@ impl From<&KernelValue> for Value {
             KernelValue::Nil(None) => {
                 Value::nil_with_absence(AbsenceMetadata::with_reasonless_unknown())
             }
-            KernelValue::Symbol(name) => Value {
-                data: ValueData::Symbol(Arc::clone(name)),
-                absence: None,
-            },
+            KernelValue::Symbol(name) => Value::new(ValueData::Symbol(Arc::clone(name)), None),
             KernelValue::Record { keys, values } => Value::from_record(
                 RecordData::new(
                     keys.iter().map(Value::from).collect(),
@@ -193,13 +190,13 @@ mod tests {
             vec![2],
         )
         .unwrap();
-        let tensor = Value {
-            data: ValueData::Tensor {
+        let tensor = Value::new(
+            ValueData::Tensor {
                 data: Arc::new(dense),
                 shape: Arc::new(vec![2]),
             },
-            absence: None,
-        };
+            None,
+        );
         let lowered = KernelValue::from(&tensor);
         let expected = KernelValue::Vector(Arc::from([
             KernelValue::Scalar(Scalar::from_fraction(Fraction::from(1_i64))),

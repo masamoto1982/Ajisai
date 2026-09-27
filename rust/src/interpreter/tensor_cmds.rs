@@ -156,6 +156,19 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             "expected a shape: a Vector of non-negative integers",
         ));
     };
+    // The shape's rank is the nesting of the value FILL builds: declined past
+    // the nesting ceiling before building, as RESHAPE does.
+    let max_nesting = interp.runtime_limits.max_nesting_depth;
+    if shape.len() > max_nesting {
+        interp
+            .stack
+            .push(crate::interpreter::space_projection::nesting_exhausted_nil(
+                "FILL",
+                max_nesting,
+                shape.len(),
+            ));
+        return Ok(());
+    }
 
     // Compute the element count with overflow protection and reject anything
     // beyond the materialization cap before allocating. `shape.iter().product()`

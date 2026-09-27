@@ -26,13 +26,13 @@ fn tensor(nums: &[i64], shape: &[usize]) -> Value {
     let fracs: Vec<Fraction> = nums.iter().map(|n| frac(*n)).collect();
     let dense =
         DenseTensor::from_fractions(fracs, shape.to_vec()).expect("rectangular tensor for test");
-    Value {
-        data: ValueData::Tensor {
+    Value::new(
+        ValueData::Tensor {
             data: Arc::new(dense),
             shape: Arc::new(shape.to_vec()),
         },
-        absence: None,
-    }
+        None,
+    )
 }
 
 fn num(numerator: &str, denominator: &str) -> ProtocolValue {
@@ -301,13 +301,13 @@ mod protocol_property_tests {
         let fracs: Vec<Fraction> = nums.iter().map(|n| Fraction::from(*n)).collect();
         let len = fracs.len();
         let dense = DenseTensor::from_fractions(fracs, vec![len]).expect("1d tensor");
-        Value {
-            data: ValueData::Tensor {
+        Value::new(
+            ValueData::Tensor {
                 data: Arc::new(dense),
                 shape: Arc::new(vec![len]),
             },
-            absence: None,
-        }
+            None,
+        )
     }
 
     proptest! {

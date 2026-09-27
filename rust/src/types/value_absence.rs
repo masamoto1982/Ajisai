@@ -36,18 +36,12 @@ impl Value {
 
     #[inline]
     pub fn nil_literal() -> Self {
-        Self {
-            data: ValueData::Nil,
-            absence: Some(AbsenceMetadata::literal()),
-        }
+        Self::new(ValueData::Nil, Some(AbsenceMetadata::literal()))
     }
 
     #[inline]
     pub fn nil_with_absence(absence: AbsenceMetadata) -> Self {
-        Self {
-            data: ValueData::Nil,
-            absence: Some(absence),
-        }
+        Self::new(ValueData::Nil, Some(absence))
     }
 
     #[inline]

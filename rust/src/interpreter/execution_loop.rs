@@ -239,8 +239,12 @@ impl Interpreter {
                     // and pushed exactly like this one) rather than a
                     // variable-length run recognized here — see
                     // `control_cond.rs::op_cond`'s doc comment for why.
-                    let (values, consumed) =
-                        Self::collect_bracketed_with_depth(execute_tokens, i, 1)?;
+                    let (values, consumed) = Self::collect_bracketed_with_depth(
+                        execute_tokens,
+                        i,
+                        1,
+                        &self.runtime_limits,
+                    )?;
                     // A literal immediately followed by `<name> DEF`
                     // is that DEF's body — captured here, as written, for
                     // `op_def` to prefer over re-deriving it from the Value
@@ -353,7 +357,7 @@ impl Interpreter {
         self.current_source_word = None;
         self.check_source_numeric_literals(&tokens)?;
         self.execute_section_core(&tokens, 0)?;
-        Ok(())
+        self.check_fresh_nesting()
     }
 
     /// Enforce the numeric-literal digit ceiling on every `Token::Number`

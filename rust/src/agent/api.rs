@@ -9,6 +9,7 @@ use super::{
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
+use crate::interpreter::runtime_limits::DEFAULT_MAX_NESTING_DEPTH;
 use crate::interpreter::{Interpreter, RuntimeLimits};
 
 /// Tighter internal-cost profile for untrusted, agent-generated programs.
@@ -35,6 +36,7 @@ pub const LOCAL_AGENT_RUNTIME_LIMITS: RuntimeLimits = RuntimeLimits {
     // so `numericWork` always answered first and this limit was a claim rather
     // than a control. See `profile_liveness_tests`.
     max_algebraic_terms: 512,
+    max_nesting_depth: DEFAULT_MAX_NESTING_DEPTH,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

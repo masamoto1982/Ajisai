@@ -317,7 +317,8 @@
       "numericWork",
       "collectionWork",
       "bigintBits",
-      "algebraicTerms"
+      "algebraicTerms",
+      "nestingDepth"
      ],
      "properties": {
       "sourceBytes": {
@@ -361,6 +362,10 @@
        "minimum": 1
       },
       "algebraicTerms": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "nestingDepth": {
        "type": "integer",
        "minimum": 1
       }
@@ -473,6 +478,7 @@
       "collectionWork",
       "bigintBits",
       "algebraicTerms",
+      "nestingDepth",
       "executionSteps"
      ]
     },

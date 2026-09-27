@@ -428,7 +428,7 @@ Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]
 
 ## `FILL`
 
-A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).
+A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects NIL(spaceExhausted).
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
@@ -457,7 +457,7 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 
 ## `RESHAPE`
 
-Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
+Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -965,13 +965,13 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 
 ## `JSON-DECODE`
 
-Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`).
+Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: textIsNotJson,nestingDeeperThanTheMachineHolds → invalidEncoding, spaceExhausted
+- **NIL policy:** `passthroughThenProject`; projection: textIsNotJson,materializationBudgetExceeded → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
