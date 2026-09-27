@@ -77,3 +77,33 @@ export const detectExecutionSurfaceChanges = (
         dictionarySheetId: userWordsChanged ? 'user' : undefined
     };
 };
+
+// Whether a value is a NIL or holds one in some lane.
+const checkHoldsNil = (value: Value | undefined): boolean => {
+    if (!value) return false;
+    if (value.type === 'nil') return true;
+    if (value.type === 'vector' && Array.isArray(value.value)) {
+        return (value.value as Value[]).some(checkHoldsNil);
+    }
+    if (value.type === 'record') {
+        const record = value.value as { keys?: Value[]; values?: Value[] } | null;
+        return [...(record?.keys ?? []), ...(record?.values ?? [])].some(checkHoldsNil);
+    }
+    return false;
+};
+
+// Whether the run left a NIL of its own on the stack — the only NIL a "Why
+// NIL" can be about.
+//
+// The trace names a Word for every NIL left on top of the stack, including one
+// that was already there: on a stack holding an earlier run's NIL,
+// `[ 2 MUL ] 'G' DEF` reports that NIL against DEF. A slot the run did not
+// change still holds what the run was handed, so only a new or changed slot
+// holding a NIL counts.
+export const checkRunLeftOwnNil = (
+    before: ExecutionStateView,
+    after: ExecutionStateView
+): boolean =>
+    after.stack.some((value, index) =>
+        checkHoldsNil(value)
+        && (index >= before.stack.length || !checkValuesEqual(before.stack[index], value)));

@@ -26,6 +26,7 @@ export interface GUIElements {
     readonly mobileDictionarySearch: HTMLInputElement;
     readonly mobileDictionarySearchClearBtn: HTMLButtonElement;
     readonly copyOutputBtn: HTMLButtonElement;
+    readonly runStatus: HTMLElement;
 }
 
 type ElementConstructor<T extends HTMLElement> = {
@@ -69,7 +70,8 @@ export const cacheElements = (): GUIElements => ({
     mobilePanelSelect: requireElement('#mobile-panel-select', HTMLSelectElement),
     mobileDictionarySearch: requireElement('#mobile-dictionary-search', HTMLInputElement),
     mobileDictionarySearchClearBtn: requireElement('#mobile-dictionary-search-clear-btn', HTMLButtonElement),
-    copyOutputBtn: requireElement('#copy-output-btn', HTMLButtonElement)
+    copyOutputBtn: requireElement('#copy-output-btn', HTMLButtonElement),
+    runStatus: requireElement('#run-status', HTMLElement)
 });
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({

@@ -40,7 +40,7 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     'reset: erase the stack and your words, keep the example words → Ctrl+Alt+Enter',
     '',
     'bring back your last program → Ctrl+Up / Ctrl+Down',
-    'stop a running step          → Escape',
+    'stop a run or a step         → Escape',
     '',
     // The dictionary panel writes into this editor, and the space *between* its
     // buttons is a control of its own: a click there types a space, a

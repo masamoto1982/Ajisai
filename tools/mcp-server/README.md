@@ -84,6 +84,7 @@ nothing else there.
 | `compute` | execute source with time, source, output and step limits |
 | `check` | parse, resolve and conservatively verify declared contracts without execution |
 | `infer_contracts` | infer contracts for user-defined Words without execution |
+| `outcomes` | predict, without execution, the finite set of outcome ids a program could produce |
 | `word_contract` | query the complete canonical `spec/words.json` contract registry |
 
 Execution tools accept source text only. Deliberately omitting file-path input
@@ -99,14 +100,22 @@ executing", and read `compute` for what executing it does.
 
 ### Three outcomes, kept distinct
 
-| Ajisai outcome | `status` | `isError` |
-|---|---|---|
-| a value | `ok` | — |
-| `NIL(reason)` | `ok`, with the absence reason | — |
-| language `ERROR` | `error`, with the full diagnosis | — |
-| a failure of the *host* | `hostError` | yes |
+| Ajisai outcome | `status` | `outcome` (compute) | `isError` |
+|---|---|---|---|
+| a value | `ok` | `value` | — |
+| `NIL(reason)` | `ok`, with the absence reason | `nil:<reason>` | — |
+| language `ERROR` | `error`, with the full diagnosis | `error:<category>` | — |
+| a failure of the *host* | `hostError` | — | yes |
 
-All four tools answer with the same envelope (`result.schema.json`, also served
+`outcome` uses the ids of `spec/outcomes.json` — the same ids the `outcomes`
+tool predicts — so a run is checked against its prediction with one membership
+test, and a reasoned absence is told apart from a value without reading the top
+stack node. `outcomes` answers `exact: true` only when it returns a single id:
+an empty program (`value`) or source that does not tokenize or balance its
+brackets (`error:malformedSource`). Every other program, a bare literal
+included, gets a sound superset with `exact: false`.
+
+All five tools answer with the same envelope (`result.schema.json`, also served
 as `ajisai://schema/result`), so one schema describes every result a caller can
 receive and there is no second contract to keep in step.
 
@@ -201,7 +210,7 @@ All execution tools call the same host-neutral Rust agent boundary
 (`rust/src/agent`) through one of two interchangeable backends
 (`tools/mcp-server/backend/`): a native `ajisai` subprocess per call, or the
 same agent code compiled to WASM and run inside a `worker_threads` Worker per
-call. Both return the identical schema-1 envelope — verified case by case in
+call. Both return the identical result envelope — verified case by case in
 `backend/parity-test.js` — so Node never reinterprets command-specific results.
 
 The backend is chosen **once, at startup**, and named in `mcp.backend.kind`
@@ -211,7 +220,7 @@ path, with nothing in the response saying so. Parity is what makes the two
 answers equal; provenance is what would make an unequal one investigable.
 
 Every result also carries `mcp.serverVersion`, `mcp.engineVersion`,
-`mcp.registryDigest` and the applied `mcp.limits`. The two versions are two
+`mcp.assetDigest` and the applied `mcp.limits`. The two versions are two
 separately released components: `serverVersion` is this Node adapter, and
 `engineVersion` is the Ajisai language it speaks for. A saved result used to
 name only the second, so a field missing from an archived envelope could not be
@@ -241,23 +250,26 @@ what they apply, and the divergence is recorded as an explicit
 
 ## Resources
 
-`ajisai://guide/quickstart`, `ajisai://vocabulary`, `ajisai://schema/result`
-and `ajisai://limits`. The `ajisai://words/{name}` template exposes the same
-complete Word contract as `word_contract` without a tool call. Contract lookups
-accept canonical names; their registry digest is calculated from
+`ajisai://guide/quickstart`, `ajisai://vocabulary`, `ajisai://contracts`,
+`ajisai://schema/result` and `ajisai://limits`. `ajisai://contracts` is every
+Word's full contract in one read; `ajisai://vocabulary` is the inventory only —
+each name with its `kind`, `family` and `vocabularyTier`. The
+`ajisai://words/{name}` template exposes the same complete Word contract as
+`word_contract` without a tool call. Word names are case-insensitive, in
+lookups as in programs (`add` runs as `ADD`); the registry digest is calculated from
 the canonical specification, not from a reduced documentation manifest.
 
 `ajisai://guide/quickstart` is an MCP preface (`mcp-quickstart.md`) followed by
 the generated writing protocol (`SKILL.md`), joined by `sync-assets.js`. The
 guide used to be `SKILL.md` alone, which opens on a CLI run loop — `ajisai run
 file --json`, commands a connected client cannot issue — and never says which
-of the four tools to call, so a model that read it first learned the language
+of the tools to call, so a model that read it first learned the language
 before it learned the interface. The preface answers tool selection, result
 branching and the algebraic-value trap in one screen, then hands off. Its own
 examples are executed against the live backend by the self-test, the same
 guarantee the generator gives the half below it.
 
-All four tools declare read-only, non-destructive and idempotent MCP
+All five tools declare read-only, non-destructive and idempotent MCP
 annotations.
 
 ## Development
@@ -349,7 +361,7 @@ never asserted.
 **Model baselines have been captured** and are committed under `eval/traces/`;
 `claude-opus-5-full-corpus.json` and `claude-opus-5-repairs-full-corpus.json`
 are the current full-corpus pair, and `docs/dev/` records what each capture
-found. `npm run eval:capture` drives a real model over the four tools — one
+found. `npm run eval:capture` drives a real model over the server's tools — one
 call per corpus case per language, `tool_choice: auto` so the irrelevant-intent
 cases can correctly produce no call — and writes a
 `model` trace under `eval/traces/`, kept apart from the committed fixtures so no

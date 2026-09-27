@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { detectExecutionSurfaceChanges, type ExecutionStateView } from './execution-surface-changes';
+import {
+    checkRunLeftOwnNil,
+    detectExecutionSurfaceChanges,
+    type ExecutionStateView
+} from './execution-surface-changes';
 import type { ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
 
 const num = (n: number): Value => ({ type: 'number', value: { numerator: String(n), denominator: '1' } } as unknown as Value);
@@ -129,5 +133,43 @@ describe('detectExecutionSurfaceChanges', () => {
     it('reports no stack change for two empty stacks', () => {
         const changes = detectExecutionSurfaceChanges(view(), view(), okResult());
         expect(changes.stackChanged).toBe(false);
+    });
+});
+
+// A "Why NIL" is about a NIL this run left on the stack. The trace also names
+// the Word that merely left an older NIL on top — `[ 2 MUL ] 'G' DEF` on a
+// stack already holding one — which is not this run's to explain.
+describe('checkRunLeftOwnNil', () => {
+    const nil = (reason: string): Value =>
+        ({ type: 'nil', value: null, semantics: { absence: { reason } } } as unknown as Value);
+    const vector = (...elements: Value[]): Value =>
+        ({ type: 'vector', value: elements } as unknown as Value);
+
+    it('sees a NIL the run pushed', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('divisionByZero')] }))).toBe(true);
+    });
+
+    it('sees a NIL the run left below another value', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('divisionByZero'), num(5)] }))).toBe(true);
+    });
+
+    it('sees a NIL lane in a Vector the run produced', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [vector(num(1), nil('divisionByZero'))] }))).toBe(true);
+    });
+
+    it('ignores a NIL the run was handed and left where it was', () => {
+        const before = view({ stack: [nil('divisionByZero')] });
+        const after = view({ stack: [nil('divisionByZero')], userWords: [word('G', '2 MUL')] });
+        expect(checkRunLeftOwnNil(before, after)).toBe(false);
+    });
+
+    it('sees a second NIL pushed on top of an earlier one', () => {
+        const before = view({ stack: [nil('divisionByZero')] });
+        const after = view({ stack: [nil('divisionByZero'), nil('divisionByZero')] });
+        expect(checkRunLeftOwnNil(before, after)).toBe(true);
+    });
+
+    it('reports nothing for a run that left no NIL', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [num(3)] }))).toBe(false);
     });
 });

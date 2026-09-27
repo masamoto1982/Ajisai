@@ -14,56 +14,27 @@
 // assert they agree, rather than trusting the doc comment's claim.
 
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { createBackend } from "./index.js";
 import { suggestWords } from "./word-candidates.js";
 
-const here = dirname(fileURLToPath(import.meta.url));
+// The engine is whichever backend the server itself would answer with — the
+// packaged WASM worker on a fresh clone, a native binary when one is built.
+// Requiring the native one made `npm run selftest` fail on the very checkout
+// the README promises needs no `cargo`; parity-test.js is what shows the two
+// backends give one answer, so asking either is asking the engine.
+const engine = createBackend();
+assert.ok(engine, "no execution backend available to compare word candidates against");
 
-function resolveNativeBin() {
-  if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
-  const repoRoot = process.env.AJISAI_REPO
-    ? resolve(process.env.AJISAI_REPO)
-    : resolve(here, "..", "..");
-  for (const profile of ["debug", "release"]) {
-    const candidate = join(repoRoot, "rust", "target", profile, "ajisai");
-    if (existsSync(candidate)) return candidate;
+async function engineCandidates(word) {
+  // An unknown-word program is a language ERROR — a successful call carrying
+  // the diagnosis whose `candidates` the lookup tool must match.
+  const result = await engine.compute(word);
+  const candidates = result?.diagnosis?.candidates;
+  if (!Array.isArray(candidates)) {
+    throw new Error(`could not read diagnosis.candidates from: ${JSON.stringify(result)}`);
   }
-  return null;
-}
-
-const bin = resolveNativeBin();
-if (!bin) {
-  console.error(
-    "word-candidates parity test requires a built native `ajisai` binary; run " +
-      "`cargo build --manifest-path rust/Cargo.toml --bin ajisai` first, or set AJISAI_BIN.",
-  );
-  process.exit(1);
-}
-
-function nativeCandidates(word) {
-  return new Promise((resolvePromise, reject) => {
-    const child = execFile(
-      bin,
-      ["agent", "compute", "-", "--json"],
-      { encoding: "utf8" },
-      (error, stdout) => {
-        // The engine reports an unknown-word program as a language ERROR,
-        // which exits 1 with the diagnosis JSON on stdout — the same
-        // "successful call, language-level error" shape backend/native-cli.js
-        // relies on.
-        if (error && !(error.code === 1 && stdout)) return reject(error);
-        try {
-          resolvePromise(JSON.parse(stdout).diagnosis.candidates);
-        } catch (parseError) {
-          reject(new Error(`could not read diagnosis.candidates from: ${stdout}\n${parseError}`));
-        }
-      },
-    );
-    child.stdin.end(word, "utf8");
-  });
+  return candidates;
 }
 
 // The same asset file the registry-lookup tool reads in production
@@ -82,7 +53,7 @@ const CASES = ["LENGHT", "MAPP", "FILTR", "PRIN", "ADDD", "SQR", "EXECC", "ZZZZZ
 
 for (const word of CASES) {
   const fromJs = suggestWords(word, registry.entries);
-  const fromEngine = await nativeCandidates(word);
+  const fromEngine = await engineCandidates(word);
   assert.deepEqual(
     fromJs,
     fromEngine,
@@ -91,4 +62,5 @@ for (const word of CASES) {
   );
 }
 
-console.log(`word-candidates parity: ${CASES.length} cases agree with the engine.`);
+console.log(`word-candidates parity: ${CASES.length} cases agree with the engine (${engine.kind}).`);
+process.exit(0);

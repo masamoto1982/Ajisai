@@ -34,11 +34,12 @@ reaching for it exactly where it would have helped. The 78 Words are:
 | naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `FAIL` (raise a declared ERROR) · `PRINT` |
 | reflection | `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's or a block's contract as a Record, inferred without running it; `'cost' GET` before running it) |
 
-**Word names are exact and case-sensitive, and this is the whole list.** Do not
-invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that
-is not here does not exist under another spelling. When unsure, call
+**This is the whole list.** Word names are case-insensitive — `add` runs as
+`ADD`, because every name is canonicalized to upper case — but otherwise exact.
+Do not invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a
+name that is not here does not exist under another spelling. When unsure, call
 `word_contract` — it answers a near miss with `suggestions` — or read
-`ajisai://vocabulary` for every contract at once.
+`ajisai://contracts` for every contract at once.
 
 Out of domain, and not worth a call: transcendental functions, floating point,
 I/O, and anything that is really a program rather than a calculation.
@@ -58,9 +59,10 @@ don't know.
 | a number, a vector, an exact root, a `PRINT` line | `compute` | `source` |
 | to know whether source parses and resolves, without running it | `check` | `source` |
 | the inferred contract of Words *you* defined | `infer_contracts` | `source` |
+| every outcome a program could reach, before running it | `outcomes` | `source` |
 | a built-in Word's contract, or "did I spell it right?" | `word_contract` | `word` |
 
-All four take text, never a file path. To run a file, read it yourself and pass
+All five take text, never a file path. To run a file, read it yourself and pass
 its contents as `source`.
 
 ## 2. Read a result in this order
@@ -68,13 +70,15 @@ its contents as `source`.
 1. **`status`** decides everything else. `ok` — a value. `error` — an *Ajisai*
    error, still an ordinary successful call carrying a full diagnosis.
    `hostError` (with `isError` set) — this server failed, and your program may
-   be fine.
+   be fine. A `compute` result also names its **`outcome`** in the ids
+   `outcomes` predicts: `value`, `nil:<reason>` (a reasoned absence, under
+   `status: ok`) or `error:<category>`.
 2. On `ok`: `stackDisplay` is the final stack bottom→top, `output` holds `PRINT`
    lines, and `stack` is the machine-readable form of the same values. That is
    the general rule and it has exactly one exception: for an irrational square
-   root `stackDisplay` is a *truncated* rendering and the value lives in
-   `semantics.exactTerms` — see §4, which you must read before computing with
-   any `SQRT` result.
+   root `stackDisplay` is an exact but display-only rendering (`sqrt(2)`), and
+   the value to compute with lives in `semantics.exactTerms` — see §4, which you
+   must read before computing with any `SQRT` result.
 3. On `error`: `diagnosis.why` and `.where` locate it; `diagnosis.candidates`
    names the Word you probably meant; `diagnosis.nextChecks[].code` is a stable
    identifier to act on — never match on its display text, which is localized.
@@ -177,7 +181,7 @@ Every result carries the profile it ran under in `mcp.limits`, alongside
 ceiling is a diagnosed outcome, never a hang. The full profile is also readable
 without a tool call at `ajisai://limits`, the result contract at
 `ajisai://schema/result`, every Word's full contract at `ajisai://contracts`,
-and the inventory with its semantic classification at `ajisai://vocabulary`.
+and the inventory — every Word's name and family — at `ajisai://vocabulary`.
 
 ## 7. Budget before you run
 

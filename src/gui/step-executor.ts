@@ -1,14 +1,4 @@
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
-import {
-    createExecutionSnapshot,
-    describeFailedRunOutput,
-    isFailure,
-    syncInterpreterState,
-    resolveExecutionException
-} from './interpreter-execution-utils';
 import { tokenizeWithOffsets, type StepToken } from './step-tokens';
-import { toError } from './to-error';
 
 interface StepState {
     readonly active: boolean;
@@ -23,10 +13,10 @@ export interface StepExecutorCallbacks {
     // is about to run, so following a run never means counting tokens by eye
     // against the source. Called with an empty range when step mode ends.
     readonly highlightSourceRange: (start: number, end: number) => void;
-    readonly showError: (error: Error | string, precedingOutput?: string) => void;
-    readonly showExecutionResult: (result: ExecuteResult) => void;
-    readonly updateDisplays: () => void;
-    readonly saveState: () => Promise<void>;
+    // Run one step's text on the path Run takes, which reports its answer,
+    // diagnosis included, and surfaces what it changed. Resolves whether the
+    // step completed.
+    readonly executeSource: (code: string) => Promise<boolean>;
 }
 
 export interface StepExecutor {
@@ -73,18 +63,12 @@ const formatStepMessage = (
     return `[>] Step ${currentIndex + 1}/${totalSteps}: "${label}" (${remaining} remaining)`;
 };
 
-export const createStepExecutor = (
-    interpreter: AjisaiInterpreter,
-    callbacks: StepExecutorCallbacks
-): StepExecutor => {
+export const createStepExecutor = (callbacks: StepExecutorCallbacks): StepExecutor => {
     const {
         extractEditorValue,
         showInfo,
         highlightSourceRange,
-        showError,
-        showExecutionResult,
-        updateDisplays,
-        saveState
+        executeSource
     } = callbacks;
 
     let state = createInitialState();
@@ -116,9 +100,7 @@ export const createStepExecutor = (
 
         state = createActiveState(tokens);
 
-        showInfo(`[STEP] Step mode: ${tokens.length} steps (Ctrl+Enter to continue)`, true);
-
-        await executeNextToken();
+        await executeNextToken(`[STEP] Step mode: ${tokens.length} steps (Ctrl+Enter to continue)`);
     };
 
     const finish = (): void => {
@@ -126,49 +108,33 @@ export const createStepExecutor = (
         reset();
     };
 
-    const executeNextToken = async (): Promise<void> => {
+    // The status lines are written *after* the step's answer: the answer
+    // replaces the Output area, so a line written ahead of it was erased by
+    // the very step it described.
+    const executeNextToken = async (preface?: string): Promise<void> => {
         const token = state.tokens[state.currentIndex]!;
+        const message = formatStepMessage(state.currentIndex, state.tokens.length, token.text);
 
-        try {
-            // Mark the token before running it, so the highlight always shows
-            // what is *about* to happen rather than what just did.
-            highlightSourceRange(token.start, token.end);
-            showInfo(
-                formatStepMessage(state.currentIndex, state.tokens.length, token.text),
-                false
-            );
+        // Mark the token before running it, so the highlight always shows
+        // what is *about* to happen rather than what just did.
+        highlightSourceRange(token.start, token.end);
 
-            const currentState = createExecutionSnapshot(interpreter);
-            const result = await WORKER_MANAGER.execute(token.text, currentState);
+        const completed = await executeSource(token.text);
 
-            try {
-                syncInterpreterState(interpreter, result);
-            } catch (error) {
-                console.error('[StepExecutor] Failed to sync state:', error);
-                showError(toError(error));
-            }
+        // Aborted while the step was running: `abort` has already ended step
+        // mode and said so.
+        if (!state.active) return;
 
-            if (!isFailure(result)) {
-                showExecutionResult(result);
-            } else {
-                // Same correction Run's error path gets: the `Defined word`
-                // lines a failed step printed do not hold.
-                showError(result.message || 'Unknown error', describeFailedRunOutput(result));
-                reset();
-                updateDisplays();
-                await saveState();
-                return;
-            }
+        if (preface) showInfo(preface, true);
+        showInfo(message, true);
 
-            state = advanceState(state);
-            if (state.currentIndex >= state.tokens.length) finish();
-        } catch (error) {
-            resolveExecutionException('StepExecutor', error, showInfo, showError);
+        if (!completed) {
             reset();
+            return;
         }
 
-        updateDisplays();
-        await saveState();
+        state = advanceState(state);
+        if (state.currentIndex >= state.tokens.length) finish();
     };
 
     const executeStep = async (): Promise<void> => {

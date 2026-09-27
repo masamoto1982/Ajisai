@@ -96,9 +96,6 @@ export class WorkerManager {
             case 'error':
                 task.reject(new Error(message.data));
                 break;
-            case 'aborted':
-                task.reject(new ExecutionAbortedError());
-                break;
         }
         this.completeTask(instance);
     }
@@ -132,13 +129,24 @@ export class WorkerManager {
     }
 
     private handleTaskTimeout(taskId: string): void {
+        this.stopActiveTask(taskId, new ExecutionTimeoutError(EXECUTION_TIMEOUT_MS));
+        this.processQueue();
+    }
+
+    // Stop a running task where it stands. The interpreter runs synchronously
+    // inside its worker, so a message asking it to stop is not read until the
+    // run is over; terminating the worker is the only stop that takes effect.
+    // A terminated worker cannot be reused, so we drop it from the pool and
+    // spawn a replacement immediately to keep the pool size constant. The
+    // wall-clock guard and Abort both stop a task this way.
+    private stopActiveTask(taskId: string, error: Error): void {
         const task = this.activeTasks.get(taskId);
         if (!task) return;
-        task.timeoutHandle = null;
+        if (task.timeoutHandle !== null) {
+            clearTimeout(task.timeoutHandle);
+            task.timeoutHandle = null;
+        }
 
-        // Terminate the worker carrying the runaway task; a terminated
-        // worker cannot be reused, so we drop it from the pool and spawn
-        // a replacement immediately to keep the pool size constant.
         const instance = this.workers.find(w => w.currentTaskId === taskId);
         if (instance) {
             instance.worker.terminate();
@@ -148,10 +156,9 @@ export class WorkerManager {
 
         this.activeTasks.delete(taskId);
 
-        task.reject(new ExecutionTimeoutError(EXECUTION_TIMEOUT_MS));
+        task.reject(error);
 
         this.createWorker();
-        this.processQueue();
     }
 
     private processQueue(): void {
@@ -228,11 +235,8 @@ export class WorkerManager {
         }
         this.taskQueue = [];
 
-        for (const id of this.activeTasks.keys()) {
-            const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
-            if (worker) {
-                worker.postMessage({ type: 'abort', id });
-            }
+        for (const id of [...this.activeTasks.keys()]) {
+            this.stopActiveTask(id, abortError);
         }
     }
 

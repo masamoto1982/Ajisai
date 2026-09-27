@@ -82,9 +82,20 @@ check(
 check(
   "every tool advertises the same structured output contract",
   tools.every(({ outputSchema }) =>
-    outputSchema?.$id === "ajisai://schema/result" &&
+    JSON.stringify(canonicalJson(outputSchema)) === JSON.stringify(canonicalJson(tools[0].outputSchema)) &&
     outputSchema?.required?.includes("status")
   ),
+);
+// One `$id` embedded five times is a duplicate schema to any client that
+// registers compiled validators by `$id`; the embedded copies carry none.
+check(
+  "an embedded output schema carries no $id a validator cache would collide on",
+  tools.every(({ outputSchema }) => !("$id" in (outputSchema ?? {}))) &&
+    (() => {
+      const ajv = new Ajv2020();
+      for (const { outputSchema } of tools) ajv.compile(outputSchema);
+      return true;
+    })(),
 );
 check(
   "the source input schema states the unit its limit is measured in",
@@ -125,7 +136,8 @@ check(
 );
 check(
   "word_contract carries the same provenance as an execution result",
-  contract.structuredContent?.mcp?.registryDigest?.length === 64 &&
+  contract.structuredContent?.mcp?.assetDigest?.length === 64 &&
+    !("registryDigest" in (contract.structuredContent?.mcp ?? {})) &&
     contract.structuredContent?.mcp?.serverVersion === serverVersion() &&
     contract.structuredContent?.suggestions?.length === 0,
 );
@@ -163,6 +175,23 @@ check(
       "ajisai://schema/result",
       "ajisai://vocabulary",
     ]),
+);
+// The vocabulary is the inventory, not the repository's bookkeeping: retired
+// classification axes and source paths served as-is read to an agent as live
+// language concepts.
+const vocabularyResource = JSON.parse(
+  (await client.readResource({ uri: "ajisai://vocabulary" })).contents[0]?.text ?? "{}",
+);
+const registryNames = JSON.parse(readFileSync(new URL("./assets/words.json", import.meta.url), "utf8"))
+  .entries.map(({ name }) => name).sort();
+check(
+  "the vocabulary resource lists every Word, and only name, kind, family and tier",
+  vocabularyResource.wordCount === registryNames.length &&
+    JSON.stringify(vocabularyResource.entries.filter(({ kind }) => kind === "coreword").map(({ name }) => name).sort()) ===
+      JSON.stringify(registryNames) &&
+    vocabularyResource.entries.every((entry) =>
+      Object.keys(entry).every((key) => ["name", "kind", "family", "vocabularyTier"].includes(key))
+    ),
 );
 // Bounding a phrase means joining the bounds of every Word in it, which 65
 // separate `word_contract` probes cannot practically deliver. The bulk read is
@@ -230,7 +259,7 @@ check("quickstart resource reads generated guidance", guideText.includes("Agent 
 // The served guide leads with the MCP interface, not with the CLI run loop the
 // generated protocol opens on. A connected client cannot issue `ajisai run`,
 // and a model that met that first learned the language before learning which
-// of the four tools to call.
+// of the tools to call.
 const [preface] = guideText.split(SKILL_BOUNDARY);
 check(
   "the quickstart opens with MCP tool selection, not the CLI run loop",
@@ -300,7 +329,7 @@ check(
 check(
   "tool output and result resource use the same schema",
   JSON.stringify(canonicalJson(tools.find(({ name }) => name === "compute")?.outputSchema)) ===
-    JSON.stringify(canonicalJson(resultSchema)),
+    JSON.stringify(canonicalJson((({ $id, ...rest }) => rest)(resultSchema))),
 );
 const templates = await client.listResourceTemplates();
 check(
@@ -443,7 +472,7 @@ for (const [label, call] of [
   ["a value", { name: "compute", arguments: { source: "1 3 DIV" } }],
   ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 DIV" } }],
   ["a language error", { name: "compute", arguments: { source: "FROBNICATE" } }],
-  ["a host failure", { name: "compute", arguments: { source: "" } }],
+  ["a host failure", { name: "compute", arguments: { source: 42 } }],
 ]) {
   const observed = await client.callTool(call);
   const text = JSON.parse(observed.content?.[0]?.text ?? "null");
@@ -453,6 +482,36 @@ for (const [label, call] of [
       text.status === observed.structuredContent?.status &&
       (text.status !== "hostError" || typeof text.error?.code === "string") &&
       (text.status !== "error" || typeof text.diagnosis?.why === "string"),
+  );
+}
+
+// A run names its outcome in the ids `outcomes` predicts, so the three
+// results are told apart without reading the top stack node — and a
+// prediction is checked against a run with one `includes`.
+for (const [source, expected] of [
+  ["1 3 DIV", "value"],
+  ["1 0 DIV", "nil:divisionByZero"],
+  ["NIL", "nil:literal"],
+  ["FROBNICATE", "error:unknownWord"],
+  ["1 ADD", "error:stackUnderflow"],
+  ["[ 1 2", "error:malformedSource"],
+]) {
+  const run = await client.callTool({ name: "compute", arguments: { source } });
+  const predicted = await client.callTool({ name: "outcomes", arguments: { source } });
+  check(
+    `compute names the outcome of \`${source}\` as ${expected}, inside the predicted set`,
+    run.structuredContent?.outcome === expected &&
+      validateResult(run.structuredContent) &&
+      predicted.structuredContent?.outcomes?.includes(expected),
+  );
+}
+for (const [source, exact] of [["", true], ["[ 1 2", true], ["42", false], ["1 2 ADD", false]]) {
+  const predicted = await client.callTool({ name: "outcomes", arguments: { source } });
+  check(
+    `outcomes reports exact=${exact} for \`${source}\`, as its description says`,
+    predicted.structuredContent?.exact === exact &&
+      (predicted.structuredContent?.outcomes?.length === 1) === exact &&
+      validateResult(predicted.structuredContent),
   );
 }
 
@@ -478,11 +537,20 @@ check(
   "a host failure message carries no host paths or environment names",
   !/AJISAI_(BIN|REPO)|\/(home|usr|tmp)\//.test(oversized.structuredContent?.error?.message ?? ""),
 );
-const badRequest = await client.callTool({ name: "compute", arguments: { source: "" } });
+const badRequest = await client.callTool({ name: "compute", arguments: { source: 42 } });
 check(
   "an invalid request is a host error, not a language error",
   badRequest.structuredContent?.error?.code === "invalidRequest",
 );
+// Empty source and whitespace-only source are the same empty program; one used
+// to be a host error and the other a value.
+for (const source of ["", "   "]) {
+  const empty = await client.callTool({ name: "compute", arguments: { source } });
+  check(
+    `an empty program (${JSON.stringify(source)}) is a value, not a host error`,
+    empty.structuredContent?.status === "ok" && empty.structuredContent?.outcome === "value",
+  );
+}
 check(
   "every declared host-error code is retryable or not, explicitly",
   Object.values(HOST_ERRORS).every(({ retryable }) => typeof retryable === "boolean") &&

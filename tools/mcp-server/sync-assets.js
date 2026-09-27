@@ -25,7 +25,7 @@ const metadata = `${JSON.stringify({
  *
  * `SKILL.md` opens with a CLI run loop (`ajisai agent compute file`) — commands a
  * connected MCP client cannot issue and has no reason to read about — and says
- * nothing about which of the four tools to call. A model that read it first
+ * nothing about which tool to call. A model that read it first
  * learned the language before learning the interface. The preface answers the
  * interface question in one screen and hands off; the generated half stays
  * verbatim, so its examples remain the ones the generator verified.
