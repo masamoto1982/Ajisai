@@ -2,32 +2,13 @@ import { getPlatform } from '../platform';
 import { GUI_INSTANCE, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
-import type { WasmModule, AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
 declare const __AJISAI_RELEASE_VERSION__: string;
 
-declare global {
-    interface Window {
-        AjisaiWasm: WasmModule;
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
-
-function formatTimestamp(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    const hours = `${date.getHours()}`.padStart(2, '0');
-    const minutes = `${date.getMinutes()}`.padStart(2, '0');
-    return `${year}${month}${day}${hours}${minutes}`;
-}
-
-// Fixed once at load: the build and host-profile labels are written at
-// different moments (the second only after the interpreter is up) and both
-// state this stamp, so deriving it per call would let the fallback branch
-// report two different times for one page.
-const BUILD_TIMESTAMP = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
+// Injected by vite.config.ts (`define`).
+const BUILD_TIMESTAMP = __AJISAI_BUILD_TIMESTAMP__;
 
 const COMPARE_NOTE =
     'Compare against the repository when the Playground disagrees with the specification.';
@@ -250,7 +231,6 @@ export async function initializeApplication(): Promise<void> {
 
         console.log('[Main] Initializing GUI...');
         await GUI_INSTANCE.init();
-        GUI_INSTANCE.updateAllDisplays();
 
         console.log('[Main] Application initialization completed successfully');
     } catch (error) {

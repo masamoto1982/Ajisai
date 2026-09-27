@@ -56,12 +56,6 @@ export interface Persistence {
     readonly importUserWords: () => void;
 }
 
-declare global {
-    interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
-
 const readActiveDictionarySheet = (): string | undefined => {
     const sheetSelect = document.getElementById('dictionary-sheet-select') as HTMLSelectElement | null;
     return sheetSelect?.value || undefined;
@@ -304,7 +298,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const loadExampleWords = async (): Promise<void> => {
         try {
-            await window.ajisaiInterpreter.restore_user_words(EXAMPLE_USER_WORDS);
+            window.ajisaiInterpreter.restore_user_words(EXAMPLE_USER_WORDS);
             await saveCurrentState();
             console.log('Example Words loaded.');
 
@@ -345,7 +339,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 if (state.userWords && state.userWords.length > 0) {
                     const wordsToRestore = state.userWords;
 
-                    await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
+                    window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
                     const notRestored = namesThatDidNotRestore(
                         window.ajisaiInterpreter,
@@ -436,7 +430,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 // after the merge. Words whose identity is unchanged were already
                 // present with identical content and count as deduplicated.
                 const before = collectWordIdentityMap(window.ajisaiInterpreter);
-                await window.ajisaiInterpreter.restore_user_words(importedWords);
+                window.ajisaiInterpreter.restore_user_words(importedWords);
                 const after = collectWordIdentityMap(window.ajisaiInterpreter);
 
                 const notImported = namesThatDidNotRestore(

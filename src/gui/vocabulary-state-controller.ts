@@ -1,5 +1,4 @@
-
-
+import type { CoreWordInfo, UserWordInfo } from '../wasm-interpreter-types';
 import {
     checkWordMatchesFilter,
     compareWordName,
@@ -30,7 +29,7 @@ export interface VocabularyCallbacks {
 
 export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
-    readonly updateUserWords: (userWordsInfo: Array<[string, string, boolean]>) => void;
+    readonly updateUserWords: (userWordsInfo: UserWordInfo[]) => void;
     readonly updateSearchFilter: (filter: string) => void;
 }
 
@@ -44,69 +43,33 @@ export const formatDictionaryTabName = (pathName: string): string => {
     return displayName.endsWith(' Words') ? displayName : `${displayName} Words`;
 };
 
-const createWordInfoFromTuple = (wordData: [string, string, boolean]): WordInfo => ({
-    name: wordData[1],
-    protected: wordData[2] || false
+const createWordInfoFromTuple = ([, name, isProtected]: UserWordInfo): WordInfo => ({
+    name,
+    protected: isProtected
 });
 
-
-const clearElement = (element: HTMLElement): void => {
-    element.innerHTML = '';
-};
-
-/// The tooltip text for a User Word: what its author wrote for a reader, or
-/// its source when nothing was written. Empty when the interpreter has neither,
-/// which leaves the button with no `title` rather than one that says nothing.
-const lookupUserWordTooltip = (name: string): string => {
-    const description = window.ajisaiInterpreter?.lookup_word_description(name) ?? '';
-    if (description) return description;
-    return window.ajisaiInterpreter?.lookup_word_definition(name) ?? '';
-};
+/// The tooltip text for a User Word: what its author wrote for a reader
+/// (`#:contract`), or its source when nothing was written. Empty when the
+/// interpreter has neither.
+const lookupUserWordTooltip = (name: string): string =>
+    window.ajisaiInterpreter.lookup_word_description(name)
+    ?? window.ajisaiInterpreter.lookup_word_definition(name)
+    ?? '';
 
 /// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
 /// Matched by category, never by the message, which is display text.
 const DEPENDENCY_DELETE_CATEGORY = 'definitionConflict';
 
-const createDeleteContextMenuElement = (
-    onDelete: () => void
-): HTMLDivElement => {
+/// A native popover (top-layer placement, light-dismiss on outside click or
+/// Escape), positioned at the cursor by `renderDeleteContextMenu`.
+const createDeleteContextMenuElement = (onDelete: () => void): HTMLDivElement => {
     const menu = document.createElement('div');
-    // Native popover: top-layer placement and light-dismiss (outside click /
-    // Escape) are handled by the browser, so no document-level listeners or
-    // z-index management are needed. `inset: auto; margin: 0` lets the explicit
-    // left/top below position it at the cursor (overriding the popover UA
-    // centering).
+    menu.className = 'context-menu';
     menu.popover = 'auto';
-    Object.assign(menu.style, {
-        position: 'fixed',
-        inset: 'auto',
-        margin: '0',
-        minWidth: '7rem',
-        padding: '0.125rem',
-        backgroundColor: '#ffffff',
-        border: '1px solid #c0c0c0',
-        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
-    } satisfies Partial<CSSStyleDeclaration>);
 
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.textContent = 'Delete';
-    Object.assign(deleteButton.style, {
-        display: 'block',
-        width: '100%',
-        padding: '0.375rem 0.75rem',
-        backgroundColor: 'transparent',
-        color: '#000000',
-        border: 'none',
-        textAlign: 'left',
-        cursor: 'pointer'
-    } satisfies Partial<CSSStyleDeclaration>);
-    deleteButton.addEventListener('mouseenter', () => {
-        deleteButton.style.backgroundColor = '#e8e8e8';
-    });
-    deleteButton.addEventListener('mouseleave', () => {
-        deleteButton.style.backgroundColor = 'transparent';
-    });
     deleteButton.addEventListener('click', (event) => {
         event.stopPropagation();
         onDelete();
@@ -114,7 +77,6 @@ const createDeleteContextMenuElement = (
 
     menu.appendChild(deleteButton);
     document.body.appendChild(menu);
-
     return menu;
 };
 
@@ -123,16 +85,14 @@ export const createVocabularyManager = (
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
-    const deleteContextMenu = createDeleteContextMenuElement(() => {
-        if (!activeContextWordName) {
-            return;
-        }
+    let activeContextWordName: string | null = null;
 
+    const deleteContextMenu = createDeleteContextMenuElement(() => {
+        if (!activeContextWordName) return;
         const selectedWordName = activeContextWordName;
         hideDeleteContextMenu();
-        void confirmAndDeleteWord(selectedWordName);
+        void deleteWord(selectedWordName);
     });
-    let activeContextWordName: string | null = null;
 
     const hideDeleteContextMenu = (): void => {
         if (deleteContextMenu.matches(':popover-open')) deleteContextMenu.hidePopover();
@@ -155,50 +115,30 @@ export const createVocabularyManager = (
         }
     });
 
-    [elements.builtInWordsDisplay, elements.userWordsDisplay].forEach(container => {
+    for (const container of [elements.builtInWordsDisplay, elements.userWordsDisplay]) {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
-    });
-
-
+    }
 
     let searchFilter = '';
-    let cachedUserWords: Array<[string, string, boolean]> = [];
-    // Core words are fixed once WASM is loaded; fetching + canonical-filtering +
-    // sorting them on every search keystroke was pure waste.
-    let sortedCoreWordsCache: unknown[][] | null = null;
+    let cachedUserWords: UserWordInfo[] = [];
+    // Core words are fixed once WASM is loaded, so they are sorted once.
+    let sortedCoreWordsCache: CoreWordInfo[] | null = null;
 
-    const getSortedCoreWords = (): unknown[][] => {
-        if (sortedCoreWordsCache) return sortedCoreWordsCache;
-
-        // Every entry is a Core Word under its one name; there is no second
-        // spelling to filter out.
-        const coreWords = window.ajisaiInterpreter.collect_core_words_info();
-        sortedCoreWordsCache = [...coreWords].sort((a, b) =>
-            compareWordName(a[0] as string, b[0] as string)
-        );
+    const getSortedCoreWords = (): CoreWordInfo[] => {
+        sortedCoreWordsCache ??= [...window.ajisaiInterpreter.collect_core_words_info()]
+            .sort((a, b) => compareWordName(a[0], b[0]));
         return sortedCoreWordsCache;
     };
 
-    // The dictionary has one exportable (User) tier, so every cached word
-    // belongs on this list; no per-dictionary filter is needed.
-    const selectDictionaryWords = (): WordInfo[] =>
-        cachedUserWords.map(createWordInfoFromTuple);
-
     // A referenced word is not deletable, and there is no way to override that:
-    // no Word in the vocabulary forces the delete, so the refusal is final and
-    // the only route is to delete the dependents first. This used to offer a
-    // force delete that re-ran the deletion as `! 'NAME' DEL`; `!` was one of
-    // the symbols retired when every symbol became one character, so accepting
-    // that prompt could only ever report "Unknown word: !". The interpreter
-    // already names the referencing words in its message, so surface it as-is.
+    // the only route is to delete the dependents first. The interpreter names
+    // the referencing words in its message, so it is surfaced as-is.
     const deleteWord = async (wordName: string): Promise<boolean> => {
         try {
             const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
             if (result.status === 'ERROR') {
                 const message = result.message || 'Unknown error';
-                const refusedAsReferenced =
-                    result.aiDiagnostic?.kind === DEPENDENCY_DELETE_CATEGORY;
-                if (refusedAsReferenced) {
+                if (result.aiDiagnostic?.kind === DEPENDENCY_DELETE_CATEGORY) {
                     showInfo?.(message, true);
                 } else {
                     alert(`Failed to delete word: ${message}`);
@@ -216,41 +156,25 @@ export const createVocabularyManager = (
         }
     };
 
-    const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
-        await deleteWord(wordName);
-    };
-
-    const renderBuiltInWordsSorted = (
-        container: HTMLElement
-    ): void => {
-        clearElement(container);
+    const renderBuiltInWordsSorted = (container: HTMLElement): void => {
+        container.replaceChildren();
         container.classList.remove('is-empty');
 
-        const matched = getSortedCoreWords().filter(wd =>
-            checkWordMatchesFilter(wd[0] as string, searchFilter)
+        const matched = getSortedCoreWords().filter(([name]) =>
+            checkWordMatchesFilter(name, searchFilter)
         );
 
         const fragment = document.createDocumentFragment();
-        matched.forEach(wordData => {
-            const name = wordData[0] as string;
-            // The payload is `(name, hover summary, example)` and only the
-            // example was ever read, so hovering `POW` answered `2 10
-            // POW` and left what the Word *is* to a separate lookup the
-            // reader had to know about (Ctrl+Alt+L). The summary is one
-            // authored line per Word, from the same generated docs that
-            // lookup prints, and it was already here.
-            const summary = (wordData[1] as string) || '';
-            const syntaxExample = (wordData[2] as string) || '';
+        for (const [name, summary, syntaxExample] of matched) {
+            // One authored line on what the Word is, then how it is called.
             const hoverText = [summary, syntaxExample].filter(Boolean).join('\n');
-            const button = createWordButtonElement(
+            fragment.appendChild(createWordButtonElement(
                 name,
-                `word-button core`,
+                'word-button core',
                 () => onWordClick(name),
                 hoverText
-            );
-
-            fragment.appendChild(button);
-        });
+            ));
+        }
         container.appendChild(fragment);
 
         if (searchFilter && matched.length === 0) {
@@ -259,57 +183,32 @@ export const createVocabularyManager = (
         }
     };
 
-    const renderUserWordButtons = (
-        container: HTMLElement,
-        words: WordInfo[]
-    ): void => {
-        clearElement(container);
-
+    const renderUserWordButtons = (container: HTMLElement, words: WordInfo[]): void => {
+        container.replaceChildren();
 
         const filteredWords = words.filter(wordInfo =>
             checkWordMatchesFilter(wordInfo.name, searchFilter)
         );
-
-
         const sortedFiltered = [...filteredWords].sort((a, b) =>
             compareWordName(a.name, b.name)
         );
 
         const fragment = document.createDocumentFragment();
-        sortedFiltered.forEach(wordInfo => {
+        for (const wordInfo of sortedFiltered) {
             const className = wordInfo.protected
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
-
-            const button = createWordButtonElement(
+            fragment.appendChild(createWordButtonElement(
                 wordInfo.name,
                 className,
-                // A word is addressed by its bare name: the dictionary has two
-                // tiers and User is one of them, so a `DICT@NAME` prefix
-                // selects nothing and no longer resolves — inserting it wrote
-                // uncallable code into the editor, and looking a word up under
-                // it showed no definition.
                 () => onWordClick(wordInfo.name),
-                // A `#:contract` description is what the word's author wrote
-                // for a reader (SPEC: host affordance, not language semantics)
-                // — prefer it over echoing the body back, the way a Core
-                // Word's tooltip shows a summary rather than its own source.
-                // Fall back to the raw definition when there is none, so a
-                // word with no description reads as it always has.
-                //
-                // Read here rather than on hover, which is where it used to
-                // sit: a tooltip has to carry its text before the pointer
-                // arrives. That is two interpreter lookups per User Word per
-                // render — the Core sheet pays nothing, its text arrives in
-                // the same payload as the name.
+                // Read at render rather than on hover: a tooltip has to carry
+                // its text before the pointer arrives.
                 lookupUserWordTooltip(wordInfo.name),
                 (event) => renderDeleteContextMenu(event, wordInfo.name)
-            );
-
-            fragment.appendChild(button);
-        });
+            ));
+        }
         container.appendChild(fragment);
-
 
         if (searchFilter && words.length > 0 && filteredWords.length === 0) {
             container.classList.add('is-empty');
@@ -328,7 +227,6 @@ export const createVocabularyManager = (
 
     const renderBuiltInWords = (): void => {
         if (!window.ajisaiInterpreter) return;
-
         try {
             renderBuiltInWordsSorted(elements.builtInWordsDisplay);
         } catch (error) {
@@ -336,18 +234,19 @@ export const createVocabularyManager = (
         }
     };
 
-    const updateUserWords = (
-        userWordsInfo: Array<[string, string, boolean]>
-    ): void => {
-        cachedUserWords = userWordsInfo || [];
-        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
+    const renderUserWords = (): void => {
+        renderUserWordButtons(elements.userWordsDisplay, cachedUserWords.map(createWordInfoFromTuple));
+    };
+
+    const updateUserWords = (userWordsInfo: UserWordInfo[]): void => {
+        cachedUserWords = userWordsInfo;
+        renderUserWords();
     };
 
     const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
-
         renderBuiltInWords();
-        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
+        renderUserWords();
     };
 
     return {

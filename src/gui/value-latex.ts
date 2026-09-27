@@ -8,7 +8,7 @@
 // Values without a faithful math reading return `null`, and the caller
 // falls back to the canonical text rendering.
 
-import type { Value, Fraction } from '../wasm-interpreter-types';
+import type { Value, Fraction, ExactTerm } from '../wasm-interpreter-types';
 
 // Beyond this many numeric lanes a matrix stops being readable and the
 // bracket text form is the better surface.
@@ -166,17 +166,10 @@ const vectorToLatex = (elements: Value[]): string | null => {
     return rowsToMatrixLatex(rows);
 };
 
-// The LaTeX reading of a stack value, or `null` when the canonical text
-interface ExactTerm {
-    readonly numerator: string;
-    readonly denominator: string;
-    readonly radicand: string;
-}
-
 // Σ c·√r as typeset mathematics. A coefficient of one is left implicit, the
 // rational term (radicand 1) is drawn as an ordinary fraction, and a negative
 // term joins with a minus rather than `+ -`.
-export const normalFormToLatex = (
+const normalFormToLatex = (
     terms: ReadonlyArray<ExactTerm> | undefined
 ): string | null => {
     if (!terms || terms.length === 0) return null;
@@ -198,15 +191,14 @@ export const normalFormToLatex = (
     return out;
 };
 
+// The LaTeX reading of a stack value, or `null` when the canonical text
 // rendering is the only faithful surface.
 export const valueToLatex = (item: Value): string | null => {
     if (!item || !item.type) return null;
 
     switch (item.type) {
         case 'number': {
-            const semantics = item.semantics as
-                | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
-                | undefined;
+            const semantics = item.semantics;
             // An algebraic irrational carries its exact normal form, and that
             // is what mathematics notation is for: `\sqrt{3}` says the whole
             // value, where the approximation below can only gesture at it.

@@ -6,7 +6,6 @@ import { createDictionarySheetSelector } from './dictionary-sheet-selector';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 import {
     GUIElements,
     cacheElements,
@@ -15,7 +14,6 @@ import {
     extractMobileElements
 } from './gui-dom-cache';
 import {
-    updateHighlights,
     updateEditorPlaceholder,
     applyExecutionAreaState,
     LayoutState,
@@ -26,12 +24,6 @@ import { bindGuiEvents } from './gui-event-bindings';
 import { createGuiLayoutState } from './layout/layout-model';
 import { createLayoutController, LayoutController } from './layout/layout-controller';
 import { createInterpreterClient } from './interpreter/interpreter-client';
-
-declare global {
-    interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
 
 const INTERPRETER_CLIENT = createInterpreterClient();
 
@@ -48,13 +40,6 @@ export const PLAYGROUND_CODE_HASH_MARKER = '#code=';
 export interface GUI {
     readonly init: () => Promise<void>;
     readonly updateAllDisplays: () => void;
-    readonly extractElements: () => GUIElements;
-    readonly extractDisplay: () => Display;
-    readonly extractEditor: () => Editor;
-    readonly extractVocabulary: () => VocabularyManager;
-    readonly extractMobile: () => MobileHandler;
-    readonly extractPersistence: () => Persistence;
-    readonly extractExecutionController: () => ExecutionController;
 }
 
 // The full word list only changes when the vocabulary changes (after an
@@ -120,8 +105,6 @@ export const createGUI = (): GUI => {
         try {
             display.renderStack(INTERPRETER_CLIENT.collectStack());
             vocabulary.updateUserWords(INTERPRETER_CLIENT.collectUserWordsInfo());
-
-            updateHighlights(elements, elements.codeInput.value);
         } catch (error) {
             console.error('Failed to update display:', error);
             display.renderError(new Error('Failed to update display.'));
@@ -142,9 +125,8 @@ export const createGUI = (): GUI => {
         void persistence.saveCurrentState();
     };
 
-    // Reference ページの用例から渡されたコードをエディタへ流し込む。
-    // 受け渡し形式: <playground-url>#code=<encodeURIComponent したソース>
-    // Ruby 公式トップのように、用例をそのまま試せる動線を実現するための入口。
+    // Load a sample handed over by a Reference 「Playgroundで開く」 link (see
+    // PLAYGROUND_CODE_HASH_MARKER) into the editor, once.
     const applyPlaygroundCodeFromUrl = (): void => {
         const marker = PLAYGROUND_CODE_HASH_MARKER;
         const hash = window.location.hash;
@@ -153,9 +135,8 @@ export const createGUI = (): GUI => {
         try {
             const code = decodeURIComponent(hash.slice(marker.length));
             if (code.trim().length === 0) return;
-            // updateValue は入力モードへの切り替えも兼ねる。
             editor.updateValue(code);
-            // 一度流し込んだら URL を綺麗にし、リロード時の再投入を防ぐ。
+            // Strip the fragment so a reload does not load it again.
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
         } catch (error) {
             console.warn('[GUI] Failed to apply playground code from URL:', error);
@@ -209,20 +190,13 @@ export const createGUI = (): GUI => {
         await persistence.init();
 
         editor = createEditor(elements.codeInput, {
-            onContentChange: (content) => updateHighlights(elements, content),
             onSwitchToInputMode: () => layoutController.setArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
-            // One behaviour in both presentations. These three used to be
-            // withheld on mobile, on the reading that a Dictionary tap there is
-            // only ever a lookup: you cannot see the editor from the Dictionary
-            // surface, so inserting into it is not much use. True, but not a
-            // reason to branch — it makes the tap useless, not harmful, and the
-            // guard bought a mode-specific rule in exchange for nothing. The
-            // mobile placeholder has advertised `tap a Dictionary word too`
-            // since it was written.
+            // One behaviour in both presentations, as the mobile placeholder
+            // advertises (`tap a Dictionary word too`).
             onWordClick: (word) => editor.insertWord(word),
             onBackgroundClick: () => editor.insertWord(' '),
             onBackgroundDoubleClick: () => editor.removeLastWord(),
@@ -279,11 +253,8 @@ export const createGUI = (): GUI => {
         updateAllDisplays();
 
         if (restored.activeDictionarySheet) {
-            const targetSheetEl = document.getElementById(`dictionary-sheet-${restored.activeDictionarySheet}`);
-            if (targetSheetEl) {
-                elements.dictionarySheetSelect.value = restored.activeDictionarySheet;
-                doSwitchDictionarySheet(restored.activeDictionarySheet);
-            }
+            elements.dictionarySheetSelect.value = restored.activeDictionarySheet;
+            doSwitchDictionarySheet(restored.activeDictionarySheet);
         }
 
         await initializeWorkers();
@@ -293,17 +264,7 @@ export const createGUI = (): GUI => {
         console.log('[GUI] GUI initialization completed');
     };
 
-    return {
-        init,
-        updateAllDisplays,
-        extractElements: () => elements,
-        extractDisplay: () => display,
-        extractEditor: () => editor,
-        extractVocabulary: () => vocabulary,
-        extractMobile: () => mobile,
-        extractPersistence: () => persistence,
-        extractExecutionController: () => executionController
-    };
+    return { init, updateAllDisplays };
 };
 
 export const GUI_INSTANCE = createGUI();

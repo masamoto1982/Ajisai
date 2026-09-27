@@ -1,7 +1,7 @@
 import type { ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
 
-const stableStringify = (value: unknown): string => JSON.stringify(value ?? null);
+const toJson = (value: unknown): string => JSON.stringify(value ?? null);
 
 // Whether the stack changed, decided without building a string of it.
 //
@@ -47,7 +47,7 @@ const checkValuesEqual = (left: unknown, right: unknown): boolean => {
 // stack op like `2 3 ADD` would look like a dictionary change whenever any user
 // word exists, and wrongly pull the right column to the Words sheet.
 const normalizeUserWords = (words: readonly UserWord[]): string =>
-    stableStringify(
+    toJson(
         [...words]
             .map(word => ({
                 dictionary: word.dictionary ?? null,

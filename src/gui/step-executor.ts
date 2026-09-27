@@ -9,7 +9,7 @@ import {
 } from './interpreter-execution-utils';
 import { tokenizeWithOffsets, type StepToken } from './step-tokens';
 
-export interface StepState {
+interface StepState {
     readonly active: boolean;
     readonly tokens: readonly StepToken[];
     readonly currentIndex: number;
@@ -35,7 +35,6 @@ export interface StepExecutor {
     readonly reset: () => void;
     readonly executeStep: () => Promise<void>;
     readonly abort: () => void;
-    readonly extractState: () => StepState;
 }
 
 const createInitialState = (): StepState => ({
@@ -105,7 +104,6 @@ export const createStepExecutor = (
         }
     };
 
-    const extractState = (): StepState => ({ ...state });
 
     const startStepMode = async (): Promise<void> => {
         const code = extractEditorValue();
@@ -193,7 +191,6 @@ export const createStepExecutor = (
         isActive,
         reset,
         executeStep,
-        abort,
-        extractState
+        abort
     };
 };

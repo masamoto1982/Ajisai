@@ -86,7 +86,7 @@ const MOBILE_EDITOR_PLACEHOLDER = [
 ].join('\n');
 
 export interface LayoutState {
-    /** Last mode passed to `switchArea`. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
+    /** Last mode passed to `setArea`. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
     currentMode: ViewMode;
     /** Desktop left column state. Always 'input' or 'output'. Mobile does not read this. */
     currentLeftMode: ViewMode;
@@ -233,19 +233,7 @@ export const applyExecutionAreaState = (
     syncSelectorState(deps.elements, deps.state.currentLeftMode, deps.state.currentRightMode);
 };
 
-export const updateHighlights = (elements: GUIElements, _content: string): void => {
-    const classes = elements.stackDisplay.classList;
-
-    // A Word takes its operands from the top of the stack and consumes them
-    // (LANG.STACK.CONSUMPTION), so the top item is what the highlight paints.
-    classes.add('highlight-top');
-
-    classes.remove('blink-all');
-    classes.remove('blink-top');
-};
-
 export const updateEditorPlaceholder = (elements: GUIElements, mobile: MobileHandler): void => {
-    if (!elements?.codeInput) return;
     elements.codeInput.placeholder = mobile.isMobile()
         ? MOBILE_EDITOR_PLACEHOLDER
         : DESKTOP_EDITOR_PLACEHOLDER;
