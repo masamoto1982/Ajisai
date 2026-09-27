@@ -4,14 +4,12 @@ import type { ProtocolDiagnosis } from '../wasm-interpreter-types';
 //
 // The `[DIAGNOSIS]` heading, the three numbered questions and the `next:`
 // lines are a presentation contract: a reader learns the shape once and then
-// reads every refusal the same way. That shape used to be written twice — the
-// renderer below, fed by the protocol, and a hand-assembled string literal for
-// the wall-clock timeout, which is the one refusal the interpreter never gets
-// to explain (the playground terminates the worker where it stands, so no
-// diagnosis arrives with the result). The two copies were the same knowledge,
-// not two look-alike blocks: renaming `Q3 why:` or adding a fourth question
-// would have moved one and left the other, and the timeout's copy is the
-// refusal a reader is least likely to have seen before.
+// reads every refusal the same way. The shape is written once, here, so
+// renaming `Q3 why:` or adding a fourth question moves every diagnosis at
+// once — including the wall-clock timeout, the one refusal the interpreter
+// never gets to explain (the playground terminates the worker where it stands,
+// so no diagnosis arrives with the result) and the one a reader is least
+// likely to have seen before.
 //
 // So the timeout builds a `ProtocolDiagnosis` like any other and renders
 // through here. What is genuinely its own — a ceiling with no observed value,
@@ -52,8 +50,7 @@ export const renderDiagnosisReport = (
             ? `, stack depth ${context.stackLenBefore}`
             : '';
     // Where in the source the run was when it failed. The host records it
-    // as evidence — the same `key=value` channel `stackLenBefore` uses —
-    // so nothing about the protocol had to change to carry it.
+    // as evidence — the same `key=value` channel `stackLenBefore` uses.
     const sourceLine = evidenceValue(diagnosis.evidence, 'sourceLine');
     const sourceColumn = evidenceValue(diagnosis.evidence, 'sourceColumn');
     const at = sourceLine
@@ -87,12 +84,10 @@ export const renderDiagnosisReport = (
         ...candidates,
         ...limit,
         ...(context.extraLines ?? []),
-        // One locale per line. Each check carries both, and this used to
-        // print the English heading in front of the Japanese sentence, so
-        // every next-step read as half a message in each language. The
-        // playground's own text is English (`<html lang="en">`), so English
-        // is the side that matches its surroundings; the `ja` half stays in
-        // the protocol for a host that renders in Japanese.
+        // One locale per line. Each check carries both; the playground's own
+        // text is English (`<html lang="en">`), so English is the side that
+        // matches its surroundings, and the `ja` half stays in the protocol
+        // for a host that renders in Japanese.
         ...diagnosis.nextChecks.map((check) => `next: ${check.title.en} - ${check.detail.en}`)
     ].join('\n');
 };

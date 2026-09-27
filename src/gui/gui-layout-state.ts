@@ -24,10 +24,10 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     '',
     'clear the stack, keep your words   → Ctrl+Alt+S',
     'clear this editor, keep everything → Ctrl+Alt+E',
-    // "everything" was not true, and it is the one line here a reader acts on
-    // expecting an empty dictionary: a reset clears the stack and the words you
-    // defined, then seeds the Example Words back (`fullReset` → `loadExampleWords`).
-    // Reading them as leftovers of your own work is the mistake this names.
+    // Reset is the one line here a reader acts on expecting an empty
+    // dictionary: it clears the stack and the words you defined, then seeds
+    // the Example Words back (`fullReset` → `loadExampleWords`). The line says
+    // so, so the seeded words do not read as leftovers of your own work.
     'reset: erase the stack and your words, keep the example words → Ctrl+Alt+Enter',
     '',
     'bring back your last program → Ctrl+Up / Ctrl+Down',
@@ -36,21 +36,19 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     // The dictionary panel writes into this editor, and the space *between* its
     // buttons is a control of its own: a click there types a space, a
     // double-click takes the last word back. Undocumented, it reads as a
-    // misfired click on a word button — which is exactly how it was first
-    // reported.
+    // misfired click on a word button.
     'click a word in the dictionary → write it here',
     'click the space around them    → write a space',
     'double-click that space        → take back the last word'
 ].join('\n');
 
 // The mobile sheet carries the whole touch vocabulary, because on a phone this
-// is the only place it is written down. A bar of labelled buttons was tried
-// instead and cost more than it taught: five controls and an in-flow symbol
-// palette left a 180px editor on a 740px phone, and the editor is the thing
-// the page is for. Prose in the placeholder costs nothing — the editor is
-// empty whenever it shows — so the sheet is where the teaching goes, and it is
-// allowed to be long. It scrolls, and its first four lines are the ones a
-// first-time reader needs.
+// is the only place it is written down. A bar of labelled buttons would take
+// its height out of the editor, and the editor is the thing the page is for.
+// Prose in the placeholder costs nothing — the editor is empty whenever it
+// shows — so the sheet is where the teaching goes, and it is allowed to be
+// long. It scrolls, and its first four lines are the ones a first-time reader
+// needs.
 //
 // Ordered by what a reader reaches for: run it, move between surfaces, fix the
 // text, then what types for you, then the stack's own control. The last block
@@ -59,7 +57,7 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
 //
 // Every line is kept under 27 characters on purpose. A textarea placeholder
 // wraps on width, and a hand-aligned continuation (`'    or the list above'`)
-// lands wherever the wrap leaves it, which on a 360px phone turned a tidy
+// lands wherever the wrap leaves it, which on a 360px phone turns a tidy
 // two-column sheet into ragged prose. Short whole lines wrap nowhere, so the
 // sheet reads the same on every phone from 320px up.
 const MOBILE_EDITOR_PLACEHOLDER = [

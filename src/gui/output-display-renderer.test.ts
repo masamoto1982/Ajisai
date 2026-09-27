@@ -3,11 +3,9 @@
 // A Record crosses the protocol as two aligned arrays of nodes
 // (LANG.OBSERVATION.PROTOCOL), so the panel re-renders it from those arrays
 // rather than receiving the engine's string. Nothing but this test stops the
-// two drifting, and they have drifted before: the panel printed `[]` for an
-// empty Vector where the engine printed `[ ]`, which went unnoticed while a
-// display was not expected to be source. It is now — `[]` is a source error,
-// because a bracket must stand alone (`spec/grammar.json`,
-// `bracketMustStandAlone`).
+// two drifting, and a display is expected to be source: the empty Vector is
+// `[ ]`, because `[]` is a source error — a bracket must stand alone
+// (`spec/grammar.json`, `bracketMustStandAlone`).
 //
 // Every expectation below is a string captured from the engine by running the
 // named program through `ajisai run`, not one written by hand to match the
@@ -81,7 +79,7 @@ describe('a Vector of ordinary values is a literal', () => {
 
 describe('an irrational renders as the engine writes it', () => {
     // Captured from `ajisai agent compute` (`stackDisplay`), with the node's
-    // `semantics.exactTerms` as the input. The panel used to write `√2`.
+    // `semantics.exactTerms` as the input.
     const irrational = (...terms: [string, string, string][]): Node =>
         ({
             type: 'number',

@@ -14,14 +14,11 @@ import type {
 } from '../wasm-interpreter-types';
 import { renderDiagnosisReport } from './diagnosis-report';
 
-// A word is addressed by its bare name. The dictionary has two tiers and User
-// is one of them (LANG.DICTIONARY.RESOLUTION), so there is nothing for a
-// `DICT@NAME` prefix to select and the interpreter no longer resolves one:
-// looking a word up as `USER@FOO` returns null. That null then travelled the
-// whole execution path — `restore_user_words` skips a definition-less word, so
-// the worker ran without the user's words and reported none back, and the
-// post-run sync wiped them from the main interpreter. Every run then looked
-// like a dictionary change and dragged the right column to the Words sheet.
+// Every User word with its definition and description, each looked up by bare
+// name. The dictionary has two tiers and User is one of them
+// (LANG.DICTIONARY.RESOLUTION), so a `DICT@NAME` composite such as `USER@FOO`
+// resolves to null — and `restore_user_words` skips a definition-less word, so
+// a null here would run the worker without the user's words.
 export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
     const userWordsInfo = interpreter.collect_user_words_info();
     return userWordsInfo.map(wordData => ({
@@ -52,8 +49,8 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
 // but each of those printed `Defined word: X` on its way through, and those
 // lines are still in the output the error path shows. A reader who believes
 // them finds out only when `LOOKUP` answers `Unknown word` for something the
-// log says exists; the tester who hit this lost seven definitions that way.
-// The correction goes below them, where it cancels what they claimed.
+// log says exists. The correction goes below them, where it cancels what they
+// claimed.
 export const describeFailedRunOutput = (result: ExecuteResult): string => {
     const output = result.output || '';
     const discarded = result.discardedDictionaryChanges ?? [];
@@ -69,17 +66,15 @@ export const describeFailedRunOutput = (result: ExecuteResult): string => {
 //
 // Every other refusal is built by the interpreter, which knows the Word, the
 // position and the ceiling. This one is not: the playground terminates the
-// worker where it stands, so nothing of the run survives to be diagnosed and
-// the bare sentence was all the reader got. What is knowable here is knowable
-// without the run — which guard fired, that it is the host's and not the
-// language's, and what makes a program fit inside it.
+// worker where it stands, so nothing of the run survives to be diagnosed. What
+// is knowable here is knowable without the run — which guard fired, that it is
+// the host's and not the language's, and what makes a program fit inside it.
 //
 // It is assembled as a `ProtocolDiagnosis` and rendered by
 // `renderDiagnosisReport`, the same way a diagnosis that arrives from the
-// interpreter is: this used to hand-write the `[DIAGNOSIS]` / `Q1` / `next:`
-// lines as literals, which made the reading format two things instead of one.
-// Only the ceiling line is its own, because a wall-clock stop has no observed
-// value to report against the limit and no Word to attribute it to.
+// interpreter is, so the reading format stays one thing. Only the ceiling line
+// is its own, because a wall-clock stop has no observed value to report
+// against the limit and no Word to attribute it to.
 const TIMEOUT_DIAGNOSIS: ProtocolDiagnosis = {
     when: 'hostGuard',
     // `playground` is the host, not a Word: the guard belongs to the page that
@@ -171,8 +166,7 @@ export const resolveExecutionException = (
     showError(error as Error);
     // The one refusal the interpreter never gets to explain: it is stopped from
     // outside, so the diagnosis is written here instead of arriving with the
-    // result. Without it the wall-clock stop was the only error in the
-    // playground that answered with a bare sentence.
+    // result.
     if (error instanceof ExecutionTimeoutError) {
         showInfo(describeTimeoutDiagnosis(error.limitMs), true);
     }

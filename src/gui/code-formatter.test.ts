@@ -79,10 +79,10 @@ describe('formatAjisaiSource', () => {
     });
 
     test('leaves a string glued to a following bracket untouched', () => {
-        // Whitespace is the sole token delimiter now, so `[` no longer closes
-        // a string that runs right into it either — the real tokenizer finds
-        // no real close and reports an unclosed literal, and the formatter
-        // must refuse to reformat rather than confidently splitting off `[1]`.
+        // Whitespace is the sole token delimiter, so `[` does not close a
+        // string that runs right into it — the real tokenizer finds no real
+        // close and reports an unclosed literal, and the formatter must
+        // refuse to reformat rather than confidently splitting off `[1]`.
         expect(formatAjisaiSource("'foo'[1]")).toBe("'foo'[1]");
     });
 
@@ -171,10 +171,9 @@ describe('formatAjisaiSource', () => {
     });
 });
 
-// The formatter adds no line break of its own. It used to split a `COND`'s `|`
-// clauses one per line; `COND` and its clauses are gone, so line structure is
-// now purely the author's — which is what makes the line-break rule of
-// LANG.SOURCE.TEXT safe to leave alone.
+// The formatter adds no line break of its own: line structure is purely the
+// author's, which is what makes the line-break rule of LANG.SOURCE.TEXT safe
+// to leave alone.
 describe('formatAjisaiSource line structure', () => {
     test('a branch written on one line stays on one line', () => {
         const source = "[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT";

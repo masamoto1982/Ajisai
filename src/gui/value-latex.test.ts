@@ -140,11 +140,11 @@ describe('valueToLatex: vectors', () => {
     });
 });
 
-// Adversarial robustness (fuzzing regression): the math view must never throw.
-// A number value whose denominator is zero is malformed / NIL occupancy (it
-// never arises from a canonical number, but can reach the renderer via restored
-// or injected state). `scientificLatex` used to divide by zero on a >=10-digit
-// zero denominator, throwing a RangeError out of the live Stack render.
+// Adversarial robustness: the math view must never throw. A number value whose
+// denominator is zero is malformed / NIL occupancy (it never arises from a
+// canonical number, but can reach the renderer via restored or injected
+// state), and `scientificLatex` must not divide by zero on a >=10-digit zero
+// denominator, which would throw a RangeError out of the live Stack render.
 describe('valueToLatex zero-denominator robustness', () => {
     for (const denom of ['0', '-0', '00', '0000000000', '-0000000000']) {
         for (const numer of ['1', '1234567890', '12345678901', '99999999999999999999']) {

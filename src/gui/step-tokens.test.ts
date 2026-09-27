@@ -43,9 +43,9 @@ describe('tokenizeWithOffsets', () => {
         expect(tokenizeWithOffsets('  \n ')).toEqual([]);
     });
 
-    // The reported defect. `[ 1 ] [ 2 ] ADD` split to `[`, `1`, `]`, … and the
-    // first step alone was `Unclosed '[': expected ']'`, which reset step mode
-    // before anything ran. `[ 42 ]` is the idiomatic scalar, so this was very
+    // `[ 1 ] [ 2 ] ADD` must not split to `[`, `1`, `]`, …: the first step
+    // alone would be `Unclosed '[': expected ']'`, which resets step mode
+    // before anything runs. `[ 42 ]` is the idiomatic scalar, so this is very
     // nearly every real program.
     test('a vector is one step, not a bracket and its contents', () => {
         expect(tokenizeWithOffsets('[ 1 ] [ 2 ] ADD').map((t) => t.text)).toEqual([

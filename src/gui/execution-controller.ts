@@ -70,12 +70,9 @@ export const createExecutionController = (
     /// word (its reference text) or a User word (its reconstructed `DEF`
     /// source, shown as read-only reference rather than loaded for editing).
     ///
-    /// This used to load a User word's `DEF` into the Input area instead, back
-    /// when a lookup was typed on its own throwaway line and running it was
-    /// the trigger — replacing that one line cost nothing. The trigger is now
-    /// `Ctrl+Alt+L` at the cursor, which can be anywhere inside a program
-    /// still being written, so overwriting the Input area here would risk
-    /// unsaved work; Output is the only destination that is always safe.
+    /// The trigger is `Ctrl+Alt+L` at the cursor, which can be anywhere inside
+    /// a program still being written, so overwriting the Input area here would
+    /// risk unsaved work; Output is the only destination that is always safe.
     const lookupWord = (name: string): void => {
         if (!name) return;
         const found = interpreter.resolve_host_lookup(name);
@@ -99,10 +96,8 @@ export const createExecutionController = (
 
     // The word that failed, where in the source it failed, the stack depth at
     // that point, and what to check — written *under* the error rather than
-    // before it. This block used to run first, and `showError` then cleared the
-    // area, so the one message that named the failing word was drawn and
-    // immediately erased: what survived was a bare "Error: Stack underflow"
-    // with nothing to say where.
+    // before it, because `showError` clears the area and would erase anything
+    // drawn ahead of it.
     //
     // Selecting the diagnosis is this controller's job; presenting one belongs
     // to `renderDiagnosisReport`, which every diagnosis in the playground goes

@@ -1,8 +1,7 @@
 // Adversarial robustness for the import-document parser: an imported .json file
 // is fully untrusted, so `parseImportDocument` must honour its `Result` contract
-// (never throw) and only forward well-formed words downstream. Regression for
-// the fuzzing finding that malformed v2 entries (null / name-less / non-string
-// name) threw a TypeError out of the parser.
+// (never throw) and only forward well-formed words downstream, whatever a
+// malformed entry looks like (null / name-less / non-string name).
 
 import { describe, expect, test } from 'vitest';
 import { createExportData, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
@@ -91,13 +90,11 @@ describe('namesThatDidNotRestore', () => {
     });
 });
 
-// Regression for a bug where the export document was filtered by a
-// per-dictionary label sourced from a hidden `<select>` element left over
-// from the module/multi-dictionary era. `collect_user_words_info` reports a
-// constant "USER" label for every word (the dictionary has one exportable
-// tier), so any filter that could disagree with that label silently dropped
-// every word instead of exporting them. `createExportData` no longer
-// filters at all: every User Word it is given comes out.
+// `createExportData` does not filter: every User Word it is given comes out.
+// `collect_user_words_info` reports a constant "USER" label for every word
+// (the dictionary has one exportable tier), so any filter keyed on a
+// dictionary label could disagree with it and silently drop every word
+// instead of exporting them.
 describe('createExportData', () => {
     const fakeInterpreter = (words: string[]): AjisaiInterpreter => ({
         collect_user_words_info: () =>

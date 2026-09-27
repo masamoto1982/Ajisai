@@ -214,10 +214,9 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     // Triple-tap the editor to Run — on mobile the one route, which the Input
     // surface's own text names (spec/gui-semantics.md, rule 4). A gesture that
     // shares its shape with the OS's own paragraph-select must therefore be
-    // deliberate, so a tap here is a
-    // touch that went down and came up in the same place, on its own: the end
-    // of a drag-to-select and one release out of a pinch are not taps, and
-    // before this guard three of either ran the program.
+    // deliberate, so a tap here is a touch that went down and came up in the
+    // same place, on its own: the end of a drag-to-select and one release out
+    // of a pinch are not taps.
     {
         const recognizer = createMultiTapRecognizer({
             intervalMs: MULTI_TAP_INTERVAL_MS,
@@ -281,11 +280,9 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
             // This listener captures and stops propagation, so the editor's own
-            // Escape branch never sees the key: an open suggestion panel could
-            // not be dismissed the way every other editor dismisses one, and the
-            // panel stayed over the code while the user pressed Escape at it.
-            // Dismissing takes priority; Abort still gets Escape whenever there
-            // is no panel to close.
+            // Escape branch never sees the key. Dismissing an open suggestion
+            // panel takes priority; Abort still gets Escape whenever there is
+            // no panel to close.
             if (editor.dismissSuggestions()) {
                 e.preventDefault();
                 e.stopImmediatePropagation();

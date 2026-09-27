@@ -46,7 +46,7 @@ export const registerBackgroundClickListeners = (
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
     if (onBackgroundClick) {
-        // The background is a control too, and nothing on screen said so. The
+        // The background is a control too, so the screen says so: the
         // browser's own tooltip carries the hint, the way a word's description
         // rides on its button. It is set as the pointer arrives rather than
         // once: an empty list ignores background clicks, so it must not
@@ -84,13 +84,9 @@ export const createWordButtonElement = (
     onClick: () => void,
     /**
      * What the word does and an example of using it, shown as the browser's
-     * own tooltip. This used to be a line of text above the list that a
-     * `mouseenter`/`mouseleave` pair wrote into and cleared — a hover display
-     * built by hand, reserving a row of the surface whether or not anything
-     * was being hovered, and re-flowing the list under the pointer every time
-     * its height changed. `title` is the same idea with none of that: the
-     * browser owns the timing, the placement and the dismissal, and the
-     * surface gets its row back.
+     * own tooltip: the browser owns the timing, the placement and the
+     * dismissal, and the surface reserves no row of its own for a hover
+     * display.
      */
     title?: string,
     onContextMenu?: (event: MouseEvent) => void

@@ -29,7 +29,7 @@ const INTERPRETER_CLIENT = createInterpreterClient();
 
 /**
  * How the Reference's 「Playgroundで開く」 links hand a sample over:
- * `<playground-url>#code=<encodeURIComponent したソース>`.
+ * `<playground-url>#code=<encodeURIComponent-encoded source>`.
  *
  * Exported because the splash screen also keys off it — arriving this way says
  * the visitor already knows what they came to do (entry-common.ts
@@ -44,7 +44,7 @@ export interface GUI {
 
 // The full word list only changes when the vocabulary changes (after an
 // execution). Without this cache the whole set — including a WASM round-trip
-// per query — was rebuilt on every keystroke.
+// per query — would be rebuilt on every keystroke.
 let autocompleteWordsCache: string[] | null = null;
 
 const invalidateAutocompleteCache = (): void => {
@@ -65,8 +65,8 @@ const collectAutocompleteWords = (): string[] => {
         .filter((w): w is string => w !== undefined);
 
     const userWordsInfo = INTERPRETER_CLIENT.collectUserWordsInfo();
-    // Bare names only: a `DICT@NAME` completion no longer resolves to anything,
-    // so suggesting one only offered code that fails to run.
+    // Bare names only: a `DICT@NAME` completion does not resolve to anything,
+    // so suggesting one would only offer code that fails to run.
     const userWords: string[] = userWordsInfo.map(word => word[1]);
 
     const allWords: Set<string> = new Set([...coreWords, ...userWords]);
@@ -209,9 +209,9 @@ export const createGUI = (): GUI => {
             // Step mode (the sole consumer of this callback) splits the
             // extracted source on whitespace and feeds each piece to the
             // interpreter on its own — the same whitespace-only split the
-            // tokenizer itself now requires around `[` and `]` (SPEC
+            // tokenizer itself requires around `[` and `]` (SPEC
             // LANG.SOURCE.TEXT). Formatting first, exactly like `runEditorCode`
-            // already does for a normal run, guarantees every piece is one the
+            // does for a normal run, guarantees every piece is one the
             // tokenizer accepts even when the author wrote brackets glued to
             // other text.
             extractEditorValue: () => { editor.format(); return editor.extractValue(); },

@@ -32,25 +32,11 @@ export interface Display {
     readonly extractState: () => DisplayState;
 }
 
-const BRACKET_DEPTH_COLORS: readonly string[] = [
-    '#332288',
-    '#88CCEE',
-    '#44AA99',
-    '#117733',
-    '#999933',
-    '#DDCC77',
-    '#CC6677',
-    '#882255',
-    '#AA4499',
-] as const;
-
-const lookupBracketColor = (depth: number): string =>
-    BRACKET_DEPTH_COLORS[depth - 1] ?? '#332288';
-
+// Coloured by nesting depth in CSS (`--bracket-depth-N`).
 const createBracketSpan = (bracket: string, depth: number): HTMLSpanElement => {
     const span = document.createElement('span');
     span.className = 'stack-bracket';
-    span.style.color = lookupBracketColor(depth);
+    span.dataset.depth = String(depth);
     span.textContent = bracket;
     return span;
 };
@@ -264,9 +250,11 @@ const formatErrorMessage = (error: Error | { message?: string } | string): strin
         ? `Error: ${error}`
         : `Error: ${(error as Error).message || error}`;
 
-const createSpanElement = (text: string, color: string): HTMLSpanElement => {
+type OutputKind = 'debug' | 'program' | 'error' | 'info';
+
+const createSpanElement = (text: string, kind: OutputKind): HTMLSpanElement => {
     const span = document.createElement('span');
-    span.style.color = color;
+    span.className = `output-${kind}`;
     span.textContent = text;
     return span;
 };
@@ -304,12 +292,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const init = (): void => {
-        elements.outputDisplay.style.whiteSpace = 'pre-wrap';
         createLatexToggle();
     };
 
-    const appendSpan = (text: string, color: string): HTMLSpanElement => {
-        const span = createSpanElement(text.replace(/\\n/g, '\n'), color);
+    const appendSpan = (text: string, kind: OutputKind): HTMLSpanElement => {
+        const span = createSpanElement(text.replace(/\\n/g, '\n'), kind);
         elements.outputDisplay.appendChild(span);
         return span;
     };
@@ -322,7 +309,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         elements.outputDisplay.replaceChildren();
 
         if (debug) {
-            appendSpan(debug, '#333');
+            appendSpan(debug, 'debug');
         }
 
         if (debug && program) {
@@ -330,20 +317,20 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
 
         if (program) {
-            appendSpan(program, '#4DC4FF');
+            appendSpan(program, 'program');
         }
 
         if (!debug && !program && result.status === 'OK') {
-            appendSpan('OK', '#333');
+            appendSpan('OK', 'debug');
         }
     };
 
     /// An error is written *below* whatever the run already printed, never in
     /// place of it. `PRINT` is the language's trace tool, and the run that ends
-    /// in an error is the run whose trace is wanted; clearing the area first
-    /// meant the one moment `PRINT` mattered most was the one moment it showed
-    /// nothing. `precedingOutput` is what the failing run printed before it
-    /// stopped (the host now reports it on the error path too).
+    /// in an error is the run whose trace is wanted, so clearing the area first
+    /// would blank `PRINT` at the one moment it matters most. `precedingOutput`
+    /// is what the failing run printed before it stopped, which the host
+    /// reports on the error path too.
     const renderError = (
         error: Error | { message?: string } | string,
         precedingOutput = ''
@@ -353,23 +340,22 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         elements.outputDisplay.replaceChildren();
         if (printed) {
-            appendSpan(printed, '#4DC4FF');
+            appendSpan(printed, 'program');
             elements.outputDisplay.appendChild(document.createElement('br'));
         }
         mainOutput = printed ? `${printed}\n${errorMessage}` : errorMessage;
 
-        const span = appendSpan(errorMessage, '#dc3545');
-        span.style.fontWeight = 'bold';
+        appendSpan(errorMessage, 'error');
     };
 
     const renderInfo = (text: string, append = false): void => {
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
             mainOutput = `${mainOutput}\n${text}`;
-            appendSpan('\n' + text, '#666');
+            appendSpan('\n' + text, 'info');
         } else {
             mainOutput = text;
             elements.outputDisplay.replaceChildren();
-            appendSpan(text, '#666');
+            appendSpan(text, 'info');
         }
     };
 
@@ -377,11 +363,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
     // the way the cost summary is.
     //
     // A reasoned NIL is a value, not a failure: `1 0 DIV` answered what the
-    // language says it answers. Its diagnosis was printed in full anyway, so
-    // a correct ten-line answer arrived under a heading that reads like an
-    // error report. Folding it puts the reason one click away and leaves the
-    // stance of the language visible in the output. `mainOutput` still gets
-    // the text, so Copy copies what was said whether or not it was opened.
+    // language says it answers. Printed in full, its diagnosis would put a
+    // correct ten-line answer under a heading that reads like an error report.
+    // Folding it puts the reason one click away and leaves the stance of the
+    // language visible in the output. `mainOutput` still gets the text, so
+    // Copy copies what was said whether or not it was opened.
     const renderFoldedInfo = (label: string, text: string): void => {
         mainOutput = mainOutput ? `${mainOutput}\n${text}` : text;
 
@@ -408,7 +394,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
     const renderDocumentation = (text: string): void => {
         mainOutput = text;
         elements.outputDisplay.replaceChildren();
-        appendSpan(text, '#333');
+        appendSpan(text, 'debug');
     };
 
     const renderStack = (stack: Value[]): void => {
