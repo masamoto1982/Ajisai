@@ -27,6 +27,8 @@ export const createEmptyWordsElement = (text: string): HTMLElement => {
     return message;
 };
 
+const BACKGROUND_CLICK_HINT = 'Click the blank area to insert a space';
+
 export const registerBackgroundClickListeners = (
     container: HTMLElement,
     onBackgroundClick?: () => void,
@@ -44,6 +46,16 @@ export const registerBackgroundClickListeners = (
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
     if (onBackgroundClick) {
+        // The background is a control too, and nothing on screen said so. The
+        // browser's own tooltip carries the hint, the way a word's description
+        // rides on its button. It is set as the pointer arrives rather than
+        // once: an empty list ignores background clicks, so it must not
+        // advertise one.
+        container.addEventListener('mouseover', () => {
+            container.title = shouldIgnoreBackgroundInteraction()
+                ? ''
+                : BACKGROUND_CLICK_HINT;
+        });
         container.addEventListener('click', (e) => {
             if (!isBackgroundClick(e as MouseEvent)) return;
             if (clickTimer) clearTimeout(clickTimer);
@@ -87,7 +99,9 @@ export const createWordButtonElement = (
     button.type = 'button';
     button.textContent = text;
     button.className = className;
-    if (title) button.title = title;
+    // Always set, even when empty: an absent `title` would inherit the list
+    // background's hint, which describes the gap between buttons, not a word.
+    button.title = title ?? '';
 
     button.addEventListener('click', onClick);
 
