@@ -3,6 +3,7 @@ import 'katex/dist/katex.min.css';
 import type { Value, ExecuteResult, ExactTerm } from '../wasm-interpreter-types';
 import { valueToLatex } from './value-latex';
 import { isFailure } from './interpreter-execution-utils';
+import { toError } from './to-error';
 import {
     createRenderBudget,
     formatElision,
@@ -57,14 +58,14 @@ const formatNumber = (value: unknown): string => {
     return `${fraction.numerator}/${fraction.denominator}`;
 };
 
-/// A Vector renders as source that rebuilds it — a bracket literal, whatever
-/// it holds — matching the engine's own renderer
-/// (`rust/src/types/display_source.rs`). A nested Record is one element,
-/// because it has a literal of its own (`formatRecord`).
-///
-/// The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
-/// (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
-/// rather than an empty Vector.
+// A Vector renders as source that rebuilds it — a bracket literal, whatever
+// it holds — matching the engine's own renderer
+// (`rust/src/types/display_source.rs`). A nested Record is one element,
+// because it has a literal of its own (`formatRecord`).
+//
+// The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
+// (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
+// rather than an empty Vector.
 const formatVector = (value: unknown, depth: number): string => {
     if (!Array.isArray(value) || value.length === 0) return '[ ]';
     const formatSingleElement = (v: Value): string => {
@@ -125,11 +126,11 @@ const createElisionSpan = (elided: number): HTMLSpanElement => {
     return span;
 };
 
-/// An irrational's normal form Σ c·√r written exactly as the engine writes it
-/// (`rust/src/types/display.rs::render_algebraic_terms`): one spaceless token,
-/// terms in the normal form's order, `sqrt(r)` for a unit coefficient,
-/// `n/d*sqrt(r)` otherwise, and the rational term as `n/d` — the canonical
-/// display the Stack surface is required to show (spec/gui-semantics.md).
+// An irrational's normal form Σ c·√r written exactly as the engine writes it
+// (`rust/src/types/display.rs::render_algebraic_terms`): one spaceless token,
+// terms in the normal form's order, `sqrt(r)` for a unit coefficient,
+// `n/d*sqrt(r)` otherwise, and the rational term as `n/d` — the canonical
+// display the Stack surface is required to show (spec/gui-semantics.md).
 const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string | null => {
     if (!terms || terms.length === 0) return null;
     let out = '';
@@ -152,26 +153,55 @@ const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string |
     return out;
 };
 
+const NIL: Value = { type: 'nil' } as Value;
+
+// A collection's literal as DOM: `open`, the drawn children each preceded by
+// a space, the elision marker for the rest, a space, `close` — the same
+// spacing as the canonical text (`[ 1 2 ]`, `{ k v }`), which is source that
+// rebuilds the value. Every child is drawn under the one render budget.
+const renderCollectionNode = (
+    node: HTMLElement,
+    open: string,
+    close: string,
+    children: readonly Value[],
+    depth: number,
+    budget: RenderBudget
+): HTMLElement => {
+    const { shown, elided } = planCollectionRender(children.length, budget);
+    node.dataset.depth = String(depth);
+    node.appendChild(createBracketSpan(open, depth));
+    for (let index = 0; index < shown; index++) {
+        node.append(' ');
+        node.appendChild(renderStackValueNode(children[index]!, depth + 1, budget));
+    }
+    if (elided > 0) {
+        node.append(' ');
+        node.appendChild(createElisionSpan(elided));
+    }
+    node.append(' ');
+    node.appendChild(createBracketSpan(close, depth));
+    return node;
+};
+
 const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
-        const children = item.value as Value[];
-        const { shown, elided } = planCollectionRender(children.length, budget);
         node.classList.add('stack-node-vector');
-        node.dataset.depth = String(depth);
-        node.appendChild(createBracketSpan('[', depth));
-        for (let index = 0; index < shown; index++) {
-            if (index > 0) node.append(' ');
-            node.appendChild(renderStackValueNode(children[index]!, depth + 1, budget));
-        }
-        if (elided > 0) {
-            if (shown > 0) node.append(' ');
-            node.appendChild(createElisionSpan(elided));
-        }
-        node.appendChild(createBracketSpan(']', depth));
-        return node;
+        return renderCollectionNode(node, '[', ']', item.value as Value[], depth, budget);
+    }
+
+    // A Record's keys and values are two aligned arrays; they are drawn
+    // interleaved, a missing value padded with NIL (see `formatRecord`). Each
+    // pair counts as two children of the budget.
+    if (item.type === 'record') {
+        const record = item.value as { keys?: Value[]; values?: Value[] } | null;
+        const keys = Array.isArray(record?.keys) ? record.keys : [];
+        const values = Array.isArray(record?.values) ? record.values : [];
+        const pairs = keys.flatMap((key, index) => [key, values[index] ?? NIL]);
+        node.classList.add('stack-node-record');
+        return renderCollectionNode(node, '{', '}', pairs, depth, budget);
     }
 
     if (depth === 1) {
@@ -181,10 +211,10 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     return node;
 };
 
-/// A number as the engine displays it. An irrational's `n/d` is only an
-/// approximation, so its normal form (`semantics.exactTerms`) is written
-/// instead; a host that sends none gets the approximation marked `≈`, never a
-/// bare `n/d` that would read as exact.
+// A number as the engine displays it. An irrational's `n/d` is only an
+// approximation, so its normal form (`semantics.exactTerms`) is written
+// instead; a host that sends none gets the approximation marked `≈`, never a
+// bare `n/d` that would read as exact.
 const formatNumberNode = (item: Value): string => {
     const semantics = item?.semantics;
     const exact = formatNormalForm(semantics?.exactTerms);
@@ -193,12 +223,12 @@ const formatNumberNode = (item: Value): string => {
     return semantics?.approximate === true ? `≈ ${text}` : text;
 };
 
-/// Exported for `output-display-renderer.test.ts`, which pins these strings
-/// against the ones `rust/src/types/display.rs` produces. The two renderers
-/// are separate implementations of one display, and nothing but that test
-/// stops them drifting.
+// Exported for `output-display-renderer.test.ts`, which pins these strings
+// against the ones `rust/src/types/display.rs` produces. The two renderers
+// are separate implementations of one display, and nothing but that test
+// stops them drifting.
 export const formatValue = (item: Value, depth: number): string => {
-    if (!item || !item.type) return 'unknown';
+    if (!item || !item.type) return '?';
 
     switch (item.type) {
         case 'number':
@@ -220,17 +250,17 @@ export const formatValue = (item: Value, depth: number): string => {
     }
 };
 
-/// A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
-/// arrays of nodes, and renders as its own literal — `{ key value … }`, each
-/// key beside the value under it — which is the same display the engine's own
-/// stack rendering produces (`rust/src/types/display_source.rs`).
-///
-/// The empty Record is `{ }`, which needs no case of its own.
-///
-/// A short value array is padded with NIL rather than dropped, because the
-/// two arrays are aligned by position and a missing slot is the protocol
-/// having been malformed, not a Record with fewer values than keys — and
-/// neither `RECORD` nor the literal admits a length mismatch.
+// A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
+// arrays of nodes, and renders as its own literal — `{ key value … }`, each
+// key beside the value under it — which is the same display the engine's own
+// stack rendering produces (`rust/src/types/display_source.rs`).
+//
+// The empty Record is `{ }`, which needs no case of its own.
+//
+// A short value array is padded with NIL rather than dropped, because the
+// two arrays are aligned by position and a missing slot is the protocol
+// having been malformed, not a Record with fewer values than keys — and
+// neither `RECORD` nor the literal admits a length mismatch.
 const formatRecord = (value: unknown, depth: number): string => {
     const record = value as { keys?: Value[]; values?: Value[] } | null;
     const keys = Array.isArray(record?.keys) ? record!.keys : [];
@@ -240,16 +270,14 @@ const formatRecord = (value: unknown, depth: number): string => {
         try { return formatValue(v, depth + 1); } catch { return '?'; }
     };
     const pairs: string[] = keys.map((key, index) => {
-        const paired = values[index] ?? ({ type: 'nil' } as Value);
+        const paired = values[index] ?? NIL;
         return `${formatSingleElement(key)} ${formatSingleElement(paired)}`;
     });
     return `{ ${pairs.join(' ')} }`;
 };
 
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
-    typeof error === 'string'
-        ? `Error: ${error}`
-        : `Error: ${(error as Error).message || error}`;
+    `Error: ${typeof error === 'string' ? error : error.message || toError(error).message}`;
 
 type OutputKind = 'debug' | 'program' | 'error' | 'info';
 
@@ -297,7 +325,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const appendSpan = (text: string, kind: OutputKind): HTMLSpanElement => {
-        const span = createSpanElement(text.replace(/\\n/g, '\n'), kind);
+        const span = createSpanElement(text, kind);
         elements.outputDisplay.appendChild(span);
         return span;
     };
@@ -326,12 +354,12 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    /// An error is written *below* whatever the run already printed, never in
-    /// place of it. `PRINT` is the language's trace tool, and the run that ends
-    /// in an error is the run whose trace is wanted, so clearing the area first
-    /// would blank `PRINT` at the one moment it matters most. `precedingOutput`
-    /// is what the failing run printed before it stopped, which the host
-    /// reports on the error path too.
+    // An error is written *below* whatever the run already printed, never in
+    // place of it. `PRINT` is the language's trace tool, and the run that ends
+    // in an error is the run whose trace is wanted, so clearing the area first
+    // would blank `PRINT` at the one moment it matters most. `precedingOutput`
+    // is what the failing run printed before it stopped, which the host
+    // reports on the error path too.
     const renderError = (
         error: Error | { message?: string } | string,
         precedingOutput = ''
@@ -387,11 +415,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
         elements.outputDisplay.appendChild(details);
     };
 
-    /// A Core Word's reference entry, as the host's lookup answered it.
-    /// Reference text is read rather than run, so
-    /// it is shown here instead of being written into the editor over whatever
-    /// the user was writing. `pre-wrap` is already set on the area, so the
-    /// entry's own line structure survives verbatim.
+    // A Core Word's reference entry, as the host's lookup answered it.
+    // Reference text is read rather than run, so
+    // it is shown here instead of being written into the editor over whatever
+    // the user was writing. `pre-wrap` is already set on the area, so the
+    // entry's own line structure survives verbatim.
     const renderDocumentation = (text: string): void => {
         mainOutput = text;
         elements.outputDisplay.replaceChildren();

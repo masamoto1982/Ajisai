@@ -14,6 +14,7 @@ import type {
     UserWord
 } from '../wasm-interpreter-types';
 import { renderDiagnosisReport } from './diagnosis-report';
+import { toError } from './to-error';
 
 // Every User word with its definition and description, each looked up by bare
 // name. The dictionary has two tiers and User is one of them
@@ -27,8 +28,8 @@ export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] =>
         description: interpreter.lookup_word_description(name)
     }));
 
-/// The one reading of a result's success. The host sets `status` and `error`
-/// together; either says the run did not complete.
+// The one reading of a result's success. The host sets `status` and `error`
+// together; either says the run did not complete.
 export const isFailure = (result: ExecuteResult): boolean =>
     result.status !== 'OK' || Boolean(result.error);
 
@@ -166,7 +167,7 @@ export const resolveExecutionException = (
         showInfo('Execution aborted', true);
         return;
     }
-    showError(error as Error);
+    showError(toError(error));
     // The one refusal the interpreter never gets to explain: it is stopped from
     // outside, so the diagnosis is written here instead of arriving with the
     // result.

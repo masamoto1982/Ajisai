@@ -21,6 +21,24 @@ import {
 // taps in a row.
 const MULTI_TAP_INTERVAL_MS = 500;
 const TAP_MOVEMENT_TOLERANCE_PX = 24;
+const TAP_OPTIONS = { intervalMs: MULTI_TAP_INTERVAL_MS, movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX };
+
+// `action` runs on the `count`th click of a run, while `enabled` holds.
+const bindClickCount = (
+    target: HTMLElement,
+    count: number,
+    enabled: (e: MouseEvent) => boolean,
+    action: () => void
+): void => {
+    const recognizer = createMultiTapRecognizer(TAP_OPTIONS);
+    target.addEventListener('click', (e: MouseEvent) => {
+        if (!enabled(e)) return;
+        if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= count) {
+            recognizer.reset();
+            action();
+        }
+    });
+};
 
 // Reset is the one operation that throws away the stack *and* the dictionary,
 // so it asks first.
@@ -36,7 +54,7 @@ export type GuiEventBindingContext = {
     readonly editor: Editor;
     readonly executionController: ExecutionController;
     readonly persistence: Persistence;
-    /// Discard every value on the stack, leaving the dictionary alone.
+    // Discard every value on the stack, leaving the dictionary alone.
     readonly clearStack: () => void;
 };
 
@@ -59,30 +77,18 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
         select.addEventListener('change', () => switchArea(select.value as ViewMode));
     }
 
-    const setupDoubleTapToTransition = (
-        target: HTMLElement,
-        activeMode: ViewMode,
-        nextMode: ViewMode
-    ): void => {
-        const recognizer = createMultiTapRecognizer({
-            intervalMs: MULTI_TAP_INTERVAL_MS,
-            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
-        });
-
-        target.addEventListener('click', (e: MouseEvent) => {
-            if (!mobile.isMobile()) return;
-            if (layoutState.currentMode !== activeMode) return;
-            if ((e.target as HTMLElement).closest('button, a')) return;
-
-            if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= 2) {
-                recognizer.reset();
-                switchArea(nextMode);
-            }
-        });
-    };
-
-    setupDoubleTapToTransition(elements.stackDisplay, 'stack', 'output');
-    setupDoubleTapToTransition(elements.outputDisplay, 'output', 'input');
+    // On mobile a double-tap on Stack shows Output, and on Output shows Input.
+    const bindDoubleTapTransition = (target: HTMLElement, activeMode: ViewMode, nextMode: ViewMode): void =>
+        bindClickCount(
+            target,
+            2,
+            (e) => mobile.isMobile()
+                && layoutState.currentMode === activeMode
+                && !(e.target as HTMLElement).closest('button, a'),
+            () => switchArea(nextMode)
+        );
+    bindDoubleTapTransition(elements.stackDisplay, 'stack', 'output');
+    bindDoubleTapTransition(elements.outputDisplay, 'output', 'input');
 
     window.addEventListener('resize', () => {
         layoutController.handleResize();
@@ -195,10 +201,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     // same place, on its own: the end of a drag-to-select and one release out
     // of a pinch are not taps.
     {
-        const recognizer = createMultiTapRecognizer({
-            intervalMs: MULTI_TAP_INTERVAL_MS,
-            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
-        });
+        const recognizer = createMultiTapRecognizer(TAP_OPTIONS);
         let touchOrigin: GesturePoint | null = null;
 
         elements.codeInput.addEventListener('touchstart', (e: TouchEvent) => {
@@ -238,21 +241,8 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         }, { passive: true });
     }
 
-    {
-        const recognizer = createMultiTapRecognizer({
-            intervalMs: MULTI_TAP_INTERVAL_MS,
-            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
-        });
-
-        elements.codeInput.addEventListener('click', (e: MouseEvent) => {
-            if (mobile.isMobile()) return;
-
-            if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= 3) {
-                recognizer.reset();
-                runEditorCode();
-            }
-        });
-    }
+    // On desktop a triple-click on the editor runs the program, as Shift+Enter does.
+    bindClickCount(elements.codeInput, 3, () => !mobile.isMobile(), runEditorCode);
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {

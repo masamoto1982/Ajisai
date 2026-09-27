@@ -13,30 +13,30 @@
 
 import { scanAtoms } from './source-atoms';
 
-/// One piece of source that step mode can execute on its own, with where it
-/// sits in the source. The offsets travel with the text rather than being
-/// recomputed later: a piece's text can repeat, so searching the source for it
-/// would land on the wrong occurrence.
+// One piece of source that step mode can execute on its own, with where it
+// sits in the source. The offsets travel with the text rather than being
+// recomputed later: a piece's text can repeat, so searching the source for it
+// would land on the wrong occurrence.
 export interface StepToken {
     readonly text: string;
     readonly start: number;
     readonly end: number;
 }
 
-/// Split `code` into the balanced pieces step mode executes, in order.
-///
-/// A piece is one atom at bracket depth zero, or a whole `[ ... ]` group with
-/// everything nested inside it. Interior whitespace and line breaks are
-/// preserved, because the piece is executed as the source text it is: a
-/// multi-line vector is one value and stepping through it half-built would
-/// execute something the program never contains. Comments are dropped: a
-/// comment is not a step.
-///
-/// Malformed source is deliberately *not* repaired here. An unclosed `[` yields
-/// one final piece running to the end of the source, a stray `]` yields a
-/// piece of its own, and an unclosed string runs to the end; either way the
-/// interpreter reports the real source error against the real text, which is
-/// the same error a plain run would give.
+// Split `code` into the balanced pieces step mode executes, in order.
+//
+// A piece is one atom at bracket depth zero, or a whole `[ ... ]` group with
+// everything nested inside it. Interior whitespace and line breaks are
+// preserved, because the piece is executed as the source text it is: a
+// multi-line vector is one value and stepping through it half-built would
+// execute something the program never contains. Comments are dropped: a
+// comment is not a step.
+//
+// Malformed source is deliberately *not* repaired here. An unclosed `[` yields
+// one final piece running to the end of the source, a stray `]` yields a
+// piece of its own, and an unclosed string runs to the end; either way the
+// interpreter reports the real source error against the real text, which is
+// the same error a plain run would give.
 export const tokenizeWithOffsets = (code: string): StepToken[] => {
     const pieces: StepToken[] = [];
     const all = scanAtoms(code).filter((atom) => atom.kind !== 'comment');

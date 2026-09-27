@@ -8,6 +8,7 @@ import {
     registerBackgroundClickListeners,
 } from './dictionary-element-builders';
 import { isFailure } from './interpreter-execution-utils';
+import { toError } from './to-error';
 
 export interface WordInfo {
     readonly name: string;
@@ -26,6 +27,7 @@ export interface VocabularyCallbacks {
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (text: string, append: boolean) => void;
+    readonly showError?: (error: Error) => void;
 }
 
 export interface VocabularyManager {
@@ -49,20 +51,20 @@ const createWordInfoFromTuple = ([, name, isProtected]: UserWordInfo): WordInfo 
     protected: isProtected
 });
 
-/// The tooltip text for a User Word: what its author wrote for a reader
-/// (`#:contract`), or its source when nothing was written. Empty when the
-/// interpreter has neither.
+// The tooltip text for a User Word: what its author wrote for a reader
+// (`#:contract`), or its source when nothing was written. Empty when the
+// interpreter has neither.
 const lookupUserWordTooltip = (interpreter: AjisaiInterpreter, name: string): string =>
     interpreter.lookup_word_description(name)
     ?? interpreter.lookup_word_definition(name)
     ?? '';
 
-/// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
-/// Matched by category, never by the message, which is display text.
+// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
+// Matched by category, never by the message, which is display text.
 const DEPENDENCY_DELETE_CATEGORY = 'definitionConflict';
 
-/// A native popover (top-layer placement, light-dismiss on outside click or
-/// Escape), positioned at the cursor by `renderDeleteContextMenu`.
+// A native popover (top-layer placement, light-dismiss on outside click or
+// Escape), positioned at the cursor by `renderDeleteContextMenu`.
 const createDeleteContextMenuElement = (onDelete: () => void): HTMLDivElement => {
     const menu = document.createElement('div');
     menu.className = 'context-menu';
@@ -86,7 +88,7 @@ export const createVocabularyManager = (
     elements: VocabularyElements,
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
-    const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
+    const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo, showError } = callbacks;
     let activeContextWordName: string | null = null;
 
     const deleteContextMenu = createDeleteContextMenuElement(() => {
@@ -143,7 +145,7 @@ export const createVocabularyManager = (
                 if (result.aiDiagnostic?.kind === DEPENDENCY_DELETE_CATEGORY) {
                     showInfo?.(message, true);
                 } else {
-                    alert(`Failed to delete word: ${message}`);
+                    showError?.(new Error(`Failed to delete word: ${message}`));
                 }
                 return false;
             }
@@ -153,7 +155,7 @@ export const createVocabularyManager = (
             showInfo?.(`Word '${wordName}' deleted`, true);
             return true;
         } catch (error) {
-            alert(`Error deleting word: ${error}`);
+            showError?.(toError(error));
             return false;
         }
     };

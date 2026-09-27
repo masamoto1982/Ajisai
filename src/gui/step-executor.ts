@@ -1,4 +1,3 @@
-
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
@@ -9,6 +8,7 @@ import {
     resolveExecutionException
 } from './interpreter-execution-utils';
 import { tokenizeWithOffsets, type StepToken } from './step-tokens';
+import { toError } from './to-error';
 
 interface StepState {
     readonly active: boolean;
@@ -19,9 +19,9 @@ interface StepState {
 export interface StepExecutorCallbacks {
     readonly extractEditorValue: () => string;
     readonly showInfo: (text: string, append: boolean) => void;
-    /// Show the reader where execution has got to, by selecting the token that
-    /// is about to run, so following a run never means counting tokens by eye
-    /// against the source. Called with an empty range when step mode ends.
+    // Show the reader where execution has got to, by selecting the token that
+    // is about to run, so following a run never means counting tokens by eye
+    // against the source. Called with an empty range when step mode ends.
     readonly highlightSourceRange: (start: number, end: number) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
@@ -53,10 +53,10 @@ const advanceState = (state: StepState): StepState => ({
     currentIndex: state.currentIndex + 1
 });
 
-/// A step's text can span lines — a multi-line vector is one step — and a
-/// status line that wrapped mid-vector would undo the point of showing it. The
-/// editor highlight carries the exact range, so the message only needs enough
-/// of the text to recognise which step it is.
+// A step's text can span lines — a multi-line vector is one step — and a
+// status line that wrapped mid-vector would undo the point of showing it. The
+// editor highlight carries the exact range, so the message only needs enough
+// of the text to recognise which step it is.
 const STEP_LABEL_LIMIT = 40;
 
 const formatStepMessage = (
@@ -103,7 +103,6 @@ export const createStepExecutor = (
         }
     };
 
-
     const startStepMode = async (): Promise<void> => {
         const code = extractEditorValue();
         if (!code) return;
@@ -122,13 +121,12 @@ export const createStepExecutor = (
         await executeNextToken();
     };
 
-    const executeNextToken = async (): Promise<void> => {
-        if (state.currentIndex >= state.tokens.length) {
-            showInfo('[DONE] Step mode completed', true);
-            reset();
-            return;
-        }
+    const finish = (): void => {
+        showInfo('[DONE] Step mode completed', true);
+        reset();
+    };
 
+    const executeNextToken = async (): Promise<void> => {
         const token = state.tokens[state.currentIndex]!;
 
         try {
@@ -147,7 +145,7 @@ export const createStepExecutor = (
                 syncInterpreterState(interpreter, result);
             } catch (error) {
                 console.error('[StepExecutor] Failed to sync state:', error);
-                showError(error as Error);
+                showError(toError(error));
             }
 
             if (!isFailure(result)) {
@@ -163,12 +161,7 @@ export const createStepExecutor = (
             }
 
             state = advanceState(state);
-
-            if (state.currentIndex >= state.tokens.length) {
-                showInfo('[DONE] Step mode completed', true);
-                reset();
-            }
-
+            if (state.currentIndex >= state.tokens.length) finish();
         } catch (error) {
             resolveExecutionException('StepExecutor', error, showInfo, showError);
             reset();
