@@ -40,7 +40,46 @@ const quickstart = Buffer.concat([
   readFileSync(join(repoRoot, "SKILL.md")),
 ]);
 
+/**
+ * The MCP result schema's value node is spec/host-protocol.schema.json's, not
+ * a second description of it.
+ *
+ * `result.schema.json` used to describe the stack node by hand, loosely
+ * (`additionalProperties: true`, an untyped `value`), beside a canonical
+ * schema that nothing validated. The two drifted — the canonical one never
+ * declared `elided` or `absence.detail`, both of which the server emitted —
+ * and neither caught it. The canonical definitions are copied in here under
+ * the names the result schema uses, so the self-test's validation of every
+ * live result is also a validation of the protocol, and `--check` fails the
+ * moment the two differ.
+ */
+const protocolDefNames = {
+  observedValue: "protocolNode",
+  semantics: "protocolSemantics",
+  absence: "protocolAbsence",
+  exactTerm: "exactTerm",
+  elided: "protocolElided",
+  integerString: "integerString",
+  positiveIntegerString: "positiveIntegerString",
+};
+const resultSchemaPath = join(here, "result.schema.json");
+function resultSchemaWithProtocol() {
+  const protocol = JSON.parse(readFileSync(join(repoRoot, "spec", "host-protocol.schema.json"), "utf8"));
+  const result = JSON.parse(readFileSync(resultSchemaPath, "utf8"));
+  const renamed = JSON.parse(
+    JSON.stringify(protocol.$defs).replace(/"#\/\$defs\/([A-Za-z]+)"/g, (whole, name) => {
+      if (!(name in protocolDefNames)) throw new Error(`host protocol defines no ${name}`);
+      return `"#/$defs/${protocolDefNames[name]}"`;
+    }),
+  );
+  for (const [name, target] of Object.entries(protocolDefNames)) {
+    result.$defs[target] = renamed[name];
+  }
+  return Buffer.from(`${JSON.stringify(result, null, 1)}\n`);
+}
+
 const outputs = [...sources.map(([source, target]) => [readFileSync(source), target]),
+  [resultSchemaWithProtocol(), resultSchemaPath],
   [quickstart, join(assetsDir, "quickstart.md")],
   [Buffer.from(metadata), join(assetsDir, "metadata.json")]];
 // Generating or checking is the entry-point behaviour; importing this module

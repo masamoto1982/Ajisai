@@ -4,8 +4,8 @@
 // それでも万一 set が失敗した場合は console_error_panic_hook 経由で
 // ブラウザコンソールにスタックトレースが出るので、原因解析は可能。
 
-use crate::types::value_protocol::{exact_terms, value_to_protocol, ProtocolNode, ProtocolValue};
-use crate::types::{Value, ValueData};
+use crate::types::value_protocol::{value_to_protocol, ProtocolNode, ProtocolValue};
+use crate::types::Value;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -25,128 +25,20 @@ fn set_prop(obj: &js_sys::Object, key: &str, value: &JsValue) {
     js_sys::Reflect::set(obj, &key.into(), value).unwrap();
 }
 
-fn diagnosis_to_protocol_js(
-    diagnosis: &crate::interpreter::debug_diagnosis::DebugDiagnosis,
-) -> JsValue {
-    let obj = js_sys::Object::new();
-    set_prop(&obj, "when", &diagnosis.when.as_protocol_str().into());
-    set_prop(&obj, "why", &diagnosis.why.as_protocol_str().into());
-    set_prop(&obj, "summary", &diagnosis.summary.clone().into());
-
-    let where_obj = js_sys::Object::new();
-    set_prop(
-        &where_obj,
-        "kind",
-        &diagnosis.where_.kind.as_protocol_str().into(),
-    );
-    if let Some(word) = &diagnosis.where_.word {
-        set_prop(&where_obj, "word", &word.clone().into());
-    }
-    if let Some(dictionary) = &diagnosis.where_.dictionary {
-        set_prop(&where_obj, "dictionary", &dictionary.clone().into());
-    }
-    set_prop(&obj, "where", &where_obj.into());
-
-    let evidence_arr = js_sys::Array::new();
-    for item in &diagnosis.evidence {
-        evidence_arr.push(&JsValue::from_str(item));
-    }
-    set_prop(&obj, "evidence", &evidence_arr.into());
-
-    let checks_arr = js_sys::Array::new();
-    for c in &diagnosis.next_checks {
-        let check_obj = js_sys::Object::new();
-        set_prop(&check_obj, "code", &JsValue::from_str(c.code));
-        set_prop(&check_obj, "title", &localized_to_protocol_js(&c.title));
-        set_prop(&check_obj, "detail", &localized_to_protocol_js(&c.detail));
-        checks_arr.push(&check_obj);
-    }
-    set_prop(&obj, "nextChecks", &checks_arr.into());
-
-    let candidates_arr = js_sys::Array::new();
-    for candidate in &diagnosis.candidates {
-        candidates_arr.push(&JsValue::from_str(candidate));
-    }
-    set_prop(&obj, "candidates", &candidates_arr.into());
-
-    if let Some(facts) = &diagnosis.resource_limit {
-        let limit_obj = js_sys::Object::new();
-        set_prop(&limit_obj, "resource", &facts.resource.clone().into());
-        set_prop(&limit_obj, "limit", &(facts.limit as f64).into());
-        if let Some(observed) = facts.observed {
-            set_prop(&limit_obj, "observed", &(observed as f64).into());
-        }
-        set_prop(&obj, "resourceLimit", &limit_obj.into());
-    }
-    obj.into()
-}
-
-/// One locale-keyed display string. The stable identity of a next-check is its
-/// `code`; this carries only what a host displays.
-fn localized_to_protocol_js(text: &crate::interpreter::debug_diagnosis::LocalizedText) -> JsValue {
-    let obj = js_sys::Object::new();
-    set_prop(&obj, "en", &text.en.clone().into());
-    set_prop(&obj, "ja", &text.ja.clone().into());
-    obj.into()
-}
-
-/// The absence envelope the current protocol observes: the reason, plus the
-/// diagnosis when the runtime produced one. An absence's `origin` and
-/// `recoverability` are diagnostic state rather than wire fields, so they are
-/// not reconstructed here.
-fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue {
-    let obj = js_sys::Object::new();
-    if let Some(reason) = &absence.reason {
-        set_prop(&obj, "reason", &reason.as_protocol_str().into());
-    }
-    if let Some(detail) = &absence.detail {
-        set_prop(&obj, "detail", &detail.as_str().into());
-    }
-    if let Some(diagnosis) = &absence.diagnosis {
-        set_prop(&obj, "diagnosis", &diagnosis_to_protocol_js(diagnosis));
-    }
-    obj.into()
-}
-
-/// The `semantics` metadata bag the current protocol carries. The retired
-/// HostProtocolV1 also spelled `semanticKind`, `shape`, `capabilities`, and
-/// `origin` here; the value domains discriminate themselves through `type`, so
-/// those axes described the same six domains a second time and no reader ever
-/// consulted them.
+/// The `semantics` bag, rendered by the one serializer both hosts share
+/// (`agent::report::semantics_json`) and converted to a plain JS object.
+///
+/// This boundary used to build the same bag by hand, field by field, and the
+/// two copies had drifted: the WASM absence dropped `origin` and
+/// `recoverability`, and its diagnosis omitted `progress` from a resource
+/// limit — two spellings of one protocol, where LANG.OBSERVATION.PROTOCOL
+/// promises one. Converting the shared rendering makes a third copy
+/// impossible to write by accident.
 fn value_semantics_to_js(value: &Value) -> JsValue {
-    let obj = js_sys::Object::new();
-    // The `truthValue` axis (LANG.VALUES.TRUTH): present on a Boolean only.
-    // UNKNOWN is a NIL and is observed through `absence` below.
-    if let Some(truth) = value.truth_value() {
-        set_prop(&obj, "truthValue", &truth.into());
-    }
-    if let Some(absence) = value.normalized_absence_metadata() {
-        set_prop(&obj, "absence", &absence_to_protocol_js(&absence));
-    }
-    // Exact-irrational firewall marker (LANG.OBSERVATION.FIREWALL): an
-    // `ExactScalar`'s `number` value is a *best rational approximation* (see
-    // `value_to_protocol`). Without a marker it is indistinguishable from an
-    // exact rational, which contradicts Ajisai's "no hidden truncation"
-    // guarantee. The GUI can use it to prefix an `≈`.
-    if matches!(value.data, ValueData::ExactScalar(_)) {
-        set_prop(&obj, "approximate", &JsValue::TRUE);
-    }
-    // The exact value itself. An algebraic irrational is *stored* as the
-    // multiquadratic normal form Σ c_m √m (LANG.VALUES.EXACT), so these terms
-    // are the number rather than a view of it, and a host given them can draw
-    // `√3` or `1/2 + 1/3√5` instead of settling for an approximation.
-    if let Some(exact_terms) = exact_terms(value) {
-        let terms = js_sys::Array::new();
-        for exact_term in exact_terms {
-            let term = js_sys::Object::new();
-            set_prop(&term, "numerator", &exact_term.numerator.into());
-            set_prop(&term, "denominator", &exact_term.denominator.into());
-            set_prop(&term, "radicand", &exact_term.radicand.into());
-            terms.push(&term.into());
-        }
-        set_prop(&obj, "exactTerms", &terms.into());
-    }
-    obj.into()
+    use serde::Serialize as _;
+    crate::agent::report::semantics_json(value)
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .expect("a serde_json value always converts to a JS value")
 }
 
 // The pure Value -> protocol mapping (`ProtocolNode`,

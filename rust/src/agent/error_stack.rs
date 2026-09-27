@@ -28,7 +28,7 @@
 //! 2. **Values are dropped, never reasons.** `diagnosis`, `aiDiagnostic`,
 //!    `errorFlowTrace`, `message` and `runtimeMetrics` are never touched.
 //! 3. **Every slot stays in place.** An elided slot keeps its index, `type`,
-//!    `displayHint` and `semantics`, and gains an `elided` record naming what
+//!    `semantics` (less an algebraic value's `exactTerms`), and gains an `elided` record naming what
 //!    was dropped. Positions stay meaningful, so a diagnosis that points at
 //!    stack depth still points at the same thing.
 //!

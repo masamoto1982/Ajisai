@@ -157,9 +157,6 @@ pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
         "recoverability": payload.recoverability,
         "word": payload.word,
         "family": payload.family,
-        "absenceReason": payload.nil_reason,
-        "truthValue": payload.truth_value,
-        "effect": payload.effect,
         "nextChecks": payload.next_checks.iter().map(check_json).collect::<Vec<_>>(),
         "candidates": payload.candidates,
         "resourceLimit": payload.resource_limit.as_ref().map(resource_limit_json),
@@ -266,10 +263,10 @@ pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
     Json::Object(obj)
 }
 
-/// JSON rendering of the per-value `semantics` block — the native mirror of
-/// `value_semantics_to_js` at the WASM boundary; the two now emit the exact
-/// same field set.
-pub(super) fn semantics_json(value: &Value) -> Json {
+/// JSON rendering of the per-value `semantics` block — the one rendering:
+/// the WASM boundary converts this same value (`value_semantics_to_js`)
+/// rather than building its own.
+pub(crate) fn semantics_json(value: &Value) -> Json {
     let mut obj = Map::new();
     if let Some(truth) = value.truth_value() {
         obj.insert("truthValue".into(), json!(truth));

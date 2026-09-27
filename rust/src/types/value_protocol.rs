@@ -83,6 +83,32 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
     Some(algebraic.normal_form_terms())
 }
 
+/// A rational near an irrational value that costs one integer square root per
+/// term, for when the continued-fraction budget affords not even a first
+/// convergent. That budget is sized for the common case; a value of hundreds
+/// of terms can exhaust it on the first step, and the fallback used to be
+/// `Fraction::nil()` — `0/0`, the internal absence sentinel, shipped as if it
+/// were a number. Each term `c·√m` contributes `c·⌊√m·10⁹⌋/10⁹`, so the sum
+/// is within `terms·|c|·10⁻⁹` of the value: coarse, marked `approximate` like
+/// every approximation here, and never a denominator of zero.
+fn termwise_approximation(er: &crate::types::exact::ExactReal) -> Fraction {
+    let crate::types::exact::ExactReal::Algebraic(algebraic) = er else {
+        return er
+            .as_rational()
+            .cloned()
+            .unwrap_or_else(|| Fraction::from(0));
+    };
+    let scale = BigInt::from(1_000_000_000u64);
+    let scale_squared = &scale * &scale;
+    algebraic.normal_form_terms().into_iter().fold(
+        Fraction::from(0),
+        |sum, (coefficient, radicand)| {
+            let root = (radicand * &scale_squared).sqrt();
+            sum.add(&coefficient.mul(&Fraction::new(root, scale.clone())))
+        },
+    )
+}
+
 fn number_protocol_value(f: &Fraction) -> ProtocolValue {
     ProtocolValue::Number {
         numerator: f.numerator().to_string(),
@@ -147,7 +173,7 @@ pub(crate) fn value_to_protocol(value: &Value) -> ProtocolNode {
             // consumer can reference the exact source (LANG.OBSERVATION.FIREWALL).
             let approx = er
                 .best_rational_approximation(&BigInt::from(1_000_000_000u64))
-                .unwrap_or_else(Fraction::nil);
+                .unwrap_or_else(|| termwise_approximation(er));
             ("number", number_protocol_value(&approx))
         }
         ValueData::Scalar(f) => ("number", number_protocol_value(f)),
@@ -179,5 +205,26 @@ pub(crate) fn value_to_protocol(value: &Value) -> ProtocolNode {
         type_str,
         value: protocol_value,
         semantics: Some(value.clone()),
+    }
+}
+
+#[cfg(test)]
+mod termwise_approximation_tests {
+    use super::*;
+    use crate::types::exact::ExactReal;
+
+    /// The fallback never answers `0/0`, and lands within its stated bound.
+    #[test]
+    fn the_fallback_approximation_is_a_number_near_the_value() {
+        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::from(2)).expect("√2");
+        let approx = termwise_approximation(&sqrt2);
+        assert_eq!(
+            approx,
+            Fraction::new(
+                BigInt::from(1_414_213_562u64),
+                BigInt::from(1_000_000_000u64)
+            )
+        );
+        assert!(!approx.is_nil());
     }
 }
