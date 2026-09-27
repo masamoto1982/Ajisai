@@ -3,6 +3,7 @@ import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
     createExecutionSnapshot,
+    describeFailedRunOutput,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
@@ -155,7 +156,9 @@ export const createStepExecutor = (
             if (result.status === 'OK' && !result.error) {
                 showExecutionResult(result);
             } else {
-                showError(result.message || 'Unknown error', result.output || '');
+                // Same correction Run's error path gets: the `Defined word`
+                // lines a failed step printed do not hold.
+                showError(result.message || 'Unknown error', describeFailedRunOutput(result));
                 reset();
                 updateDisplays();
                 await saveState();
