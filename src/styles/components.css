@@ -289,6 +289,22 @@
     }
 }
 
+/* A run in progress, stated over the editor's lower-left corner — the one
+   corner no control holds — so it is on screen wherever the run was started. */
+.run-status {
+    position: absolute;
+    inset: auto auto var(--space-xs) var(--space-xs);
+    z-index: 2;
+    max-width: calc(100% - 4rem);
+    padding: var(--space-3xs) var(--space-xs);
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    background: var(--color-white);
+    color: var(--color-text-light);
+    font-size: var(--text-xs);
+    pointer-events: none;
+}
+
 /* Same gesture as clearing the editor, so the same control in the same corner. */
 #stack-clear-btn {
     color: var(--color-text-light);
@@ -538,6 +554,18 @@
     &[data-depth="7"] { color: var(--bracket-depth-7); }
     &[data-depth="8"] { color: var(--bracket-depth-8); }
     &[data-depth="9"] { color: var(--bracket-depth-9); }
+}
+
+/* A NIL with its reason beside it (`NIL · divisionByZero`). The reason is
+   the NIL's content rather than commentary, so it stays in the value's line,
+   set in the secondary ink so `NIL` itself still reads as the value. */
+.stack-node-nil {
+    white-space: nowrap;
+}
+
+.stack-nil-reason {
+    color: var(--color-text-light);
+    font-weight: var(--weight-regular);
 }
 
 /* The undrawn tail of a large collection (src/gui/stack-render-budget.ts),

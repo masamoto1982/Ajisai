@@ -7,8 +7,6 @@ import type {
 import { applyInterpreterSnapshot } from './interpreter-snapshot';
 
 let interpreter: AjisaiInterpreter | null = null;
-let isAborted = false;
-let currentTaskId: string | null = null;
 
 
 const bindingsPromise = import('../wasm/generated/ajisai_core.js');
@@ -53,13 +51,9 @@ self.onmessage = async (event: MessageEvent) => {
         return;
     }
 
-    if (type === 'abort') {
-        if (id === currentTaskId || id === '*') {
-            isAborted = true;
-        }
-        return;
-    }
-
+    // There is no `abort` message: the interpreter runs synchronously, so one
+    // would not be read until the run was over. The pool stops a run by
+    // terminating this worker (execution-worker-manager.ts, `stopActiveTask`).
     if (type !== 'execute') return;
 
 
@@ -71,14 +65,9 @@ self.onmessage = async (event: MessageEvent) => {
         }
     }
 
-    isAborted = false;
-    currentTaskId = id;
-
     try {
 
         applyInterpreterSnapshot(interpreter!, event.data.state);
-
-        if (isAborted) throw new Error('aborted');
 
         const result: ExecuteResult = await interpreter!.execute(event.data.code);
 
@@ -89,17 +78,9 @@ self.onmessage = async (event: MessageEvent) => {
         // the result stack exactly.
         result.stackSnapshot = interpreter!.snapshot_stack();
 
-        if (isAborted) throw new Error('aborted');
-
         self.postMessage({ type: 'result', id, data: result });
 
     } catch (error: any) {
-        if (isAborted || error.message === 'aborted') {
-            self.postMessage({ type: 'aborted', id });
-        } else {
-            self.postMessage({ type: 'error', id, data: error.toString() });
-        }
-    } finally {
-        currentTaskId = null;
+        self.postMessage({ type: 'error', id, data: error.toString() });
     }
 };

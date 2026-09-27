@@ -55,8 +55,9 @@ Ajisai is built from ten concepts and nothing else.
 |---|---|---|
 | Specification | Builders and porters | [SPECIFICATION.html](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html) |
 | Reference (Japanese) | Ajisai users | [docs/ja/index.html](https://masamoto1982.github.io/Ajisai/docs/ja/index.html) |
+| Word Reference (English) | Ajisai users | [docs/en/words.html](https://masamoto1982.github.io/Ajisai/docs/en/words.html) — every Word, generated from `spec/words.json` |
 | Reference (English) | Ajisai users | Not yet published — regenerating from the Japanese edition, see [`docs/dev/reference-ja-restructure-handoff.md`](docs/dev/reference-ja-restructure-handoff.md) §3.4/§6.3 |
-| Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Reference button links to the Japanese edition in the meantime |
+| Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Word Reference button links to the English Word Reference |
 
 ## Build and run
 

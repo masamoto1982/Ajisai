@@ -33,6 +33,8 @@ import { bindGuiEvents } from './gui-event-bindings';
  */
 export const PLAYGROUND_CODE_HASH_MARKER = '#code=';
 
+const RUN_STATUS_DELAY_MS = 300;
+
 export interface GUI {
     readonly init: () => Promise<void>;
 }
@@ -135,6 +137,23 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             void persistence.saveCurrentState();
         };
 
+        // Shown only once a run has taken long enough to be noticed, so the
+        // everyday run that answers at once does not flash a line over the
+        // editor.
+        let runStatusTimer: ReturnType<typeof setTimeout> | null = null;
+        const showRunStatus = (text: string | null): void => {
+            if (runStatusTimer !== null) clearTimeout(runStatusTimer);
+            runStatusTimer = null;
+            if (text === null) {
+                elements.runStatus.hidden = true;
+                return;
+            }
+            runStatusTimer = setTimeout(() => {
+                elements.runStatus.textContent = text;
+                elements.runStatus.hidden = false;
+            }, RUN_STATUS_DELAY_MS);
+        };
+
         const executionController = createExecutionController(interpreter, {
             // Step mode (the sole consumer of this callback) splits the
             // extracted source on whitespace and feeds each piece to the
@@ -156,7 +175,8 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
             updateView: (mode) => layoutController.setArea(mode),
-            updateAfterExecution: (changes) => applyExecutionAreaState(layoutDeps, changes)
+            updateAfterExecution: (changes) => applyExecutionAreaState(layoutDeps, changes),
+            showRunStatus
         });
 
         bindGuiEvents({

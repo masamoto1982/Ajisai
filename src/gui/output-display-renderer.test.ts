@@ -12,7 +12,7 @@
 // panel.
 
 import { describe, expect, test } from 'vitest';
-import { formatValue } from './output-display-renderer';
+import { describeNilNode, formatValue } from './output-display-renderer';
 
 type Node = Parameters<typeof formatValue>[0];
 
@@ -106,5 +106,26 @@ describe('an irrational renders as the engine writes it', () => {
 
     test('inside a Vector it is still one element', () => {
         expect(render(vec(irrational(['1', '1', '2']), num(1)))).toBe('[ sqrt(2) 1/1 ]');
+    });
+});
+
+// A NIL's reason is its observable content (LANG.VALUES.NIL). The canonical
+// text stays the engine's `NIL`; the Stack draws the reason beside it, and the
+// label it draws is this one.
+describe('a NIL in the Stack carries its reason', () => {
+    const nil = (reason?: string): Node =>
+        ({ type: 'nil', value: null, semantics: reason ? { absence: { reason } } : {} }) as Node;
+
+    test('1 0 DIV', () => {
+        expect(render(nil('divisionByZero'))).toBe('NIL');
+        expect(describeNilNode(nil('divisionByZero'))).toBe('NIL · divisionByZero');
+    });
+
+    test('a NIL the program wrote names that reason too', () => {
+        expect(describeNilNode(nil('literal'))).toBe('NIL · literal');
+    });
+
+    test('a NIL the host sent no reason for is a bare NIL', () => {
+        expect(describeNilNode(nil())).toBe('NIL');
     });
 });
