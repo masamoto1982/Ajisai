@@ -1,4 +1,4 @@
-import type { CoreWordInfo, UserWordInfo } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, CoreWordInfo, UserWordInfo } from '../wasm-interpreter-types';
 import {
     checkWordMatchesFilter,
     compareWordName,
@@ -7,6 +7,7 @@ import {
     createWordButtonElement,
     registerBackgroundClickListeners,
 } from './dictionary-element-builders';
+import { isFailure } from './interpreter-execution-utils';
 
 export interface WordInfo {
     readonly name: string;
@@ -51,9 +52,9 @@ const createWordInfoFromTuple = ([, name, isProtected]: UserWordInfo): WordInfo 
 /// The tooltip text for a User Word: what its author wrote for a reader
 /// (`#:contract`), or its source when nothing was written. Empty when the
 /// interpreter has neither.
-const lookupUserWordTooltip = (name: string): string =>
-    window.ajisaiInterpreter.lookup_word_description(name)
-    ?? window.ajisaiInterpreter.lookup_word_definition(name)
+const lookupUserWordTooltip = (interpreter: AjisaiInterpreter, name: string): string =>
+    interpreter.lookup_word_description(name)
+    ?? interpreter.lookup_word_definition(name)
     ?? '';
 
 /// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
@@ -81,6 +82,7 @@ const createDeleteContextMenuElement = (onDelete: () => void): HTMLDivElement =>
 };
 
 export const createVocabularyManager = (
+    interpreter: AjisaiInterpreter,
     elements: VocabularyElements,
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
@@ -125,7 +127,7 @@ export const createVocabularyManager = (
     let sortedCoreWordsCache: CoreWordInfo[] | null = null;
 
     const getSortedCoreWords = (): CoreWordInfo[] => {
-        sortedCoreWordsCache ??= [...window.ajisaiInterpreter.collect_core_words_info()]
+        sortedCoreWordsCache ??= [...interpreter.collect_core_words_info()]
             .sort((a, b) => compareWordName(a[0], b[0]));
         return sortedCoreWordsCache;
     };
@@ -135,8 +137,8 @@ export const createVocabularyManager = (
     // the referencing words in its message, so it is surfaced as-is.
     const deleteWord = async (wordName: string): Promise<boolean> => {
         try {
-            const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
-            if (result.status === 'ERROR') {
+            const result = await interpreter.execute(`'${wordName}' DEL`);
+            if (isFailure(result)) {
                 const message = result.message || 'Unknown error';
                 if (result.aiDiagnostic?.kind === DEPENDENCY_DELETE_CATEGORY) {
                     showInfo?.(message, true);
@@ -204,7 +206,7 @@ export const createVocabularyManager = (
                 () => onWordClick(wordInfo.name),
                 // Read at render rather than on hover: a tooltip has to carry
                 // its text before the pointer arrives.
-                lookupUserWordTooltip(wordInfo.name),
+                lookupUserWordTooltip(interpreter, wordInfo.name),
                 (event) => renderDeleteContextMenu(event, wordInfo.name)
             ));
         }
@@ -226,7 +228,6 @@ export const createVocabularyManager = (
     };
 
     const renderBuiltInWords = (): void => {
-        if (!window.ajisaiInterpreter) return;
         try {
             renderBuiltInWordsSorted(elements.builtInWordsDisplay);
         } catch (error) {

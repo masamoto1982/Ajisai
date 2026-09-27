@@ -1,5 +1,3 @@
-
-
 import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
 import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
@@ -36,6 +34,8 @@ export interface PersistenceCallbacks {
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
     readonly showInfo?: (text: string, append: boolean) => void;
+    /** The dictionary sheet currently selected, saved with the session. */
+    readonly readActiveDictionarySheet?: () => string;
 }
 
 export interface Persistence {
@@ -47,21 +47,17 @@ export interface Persistence {
     readonly importUserWords: () => void;
 }
 
-const readActiveDictionarySheet = (): string | undefined => {
-    const sheetSelect = document.getElementById('dictionary-sheet-select') as HTMLSelectElement | null;
-    return sheetSelect?.value || undefined;
-};
-
-const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
-    return {
-        stateVersion: STATE_FORMAT_VERSION,
-        // The lossless snapshot is what restore reads; `stack` is display data.
-        stack: interpreter.collect_stack(),
-        stackSnapshot: interpreter.snapshot_stack(),
-        userWords: collectUserWords(interpreter),
-        activeDictionarySheet: readActiveDictionarySheet()
-    };
-};
+const collectCurrentState = (
+    interpreter: AjisaiInterpreter,
+    activeDictionarySheet: string | undefined
+): InterpreterState => ({
+    stateVersion: STATE_FORMAT_VERSION,
+    // The lossless snapshot is what restore reads; `stack` is display data.
+    stack: interpreter.collect_stack(),
+    stackSnapshot: interpreter.snapshot_stack(),
+    userWords: collectUserWords(interpreter),
+    activeDictionarySheet
+});
 
 // Identity-keyed export/import (LANG.AUTHORITY.FREEDOM). The export document
 // carries each word's content identity so a shared group is content-addressed:
@@ -78,7 +74,6 @@ interface ExportWord {
 
 interface ExportDocument {
     readonly formatVersion: number;
-    readonly dictionary: string;
     readonly words: ExportWord[];
 }
 
@@ -92,10 +87,8 @@ const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, str
     return map;
 };
 
-// Every User Word, unconditionally. The dictionary has two tiers and User is
-// the only exportable one (`collect_user_words_info` reports a constant "USER"
-// label for all of them), so there is nothing to filter by. `dictionary` stays
-// in the document for format continuity, not as a selection.
+// Every User Word, unconditionally: the dictionary has two tiers and User is
+// the only exportable one, so there is nothing to filter by.
 export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument => {
     const identities = collectWordIdentityMap(interpreter);
     const words: ExportWord[] = interpreter.collect_user_words_info()
@@ -108,7 +101,7 @@ export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument
                 ...(id ? { id } : {})
             };
         });
-    return { formatVersion: EXPORT_FORMAT_VERSION, dictionary: 'USER', words };
+    return { formatVersion: EXPORT_FORMAT_VERSION, words };
 };
 
 export interface ParsedImport {
@@ -149,7 +142,6 @@ export const namesThatDidNotRestore = (
         .filter(word => word.definition && !present.has(buildWordKey(word.name)))
         .map(word => word.name);
 };
-const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
 
 // Validate a single raw word entry from an (untrusted) import file. Returns a
 // normalized word, or null when the entry is malformed. A word is only usable
@@ -202,8 +194,11 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
     return err(new Error('Invalid file format. Expected a versioned export document with a `words` array.'));
 };
 
-export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
-    const { showError, updateDisplays, showInfo } = callbacks;
+export const createPersistence = (
+    interpreter: AjisaiInterpreter,
+    callbacks: PersistenceCallbacks = {}
+): Persistence => {
+    const { showError, updateDisplays, showInfo, readActiveDictionarySheet } = callbacks;
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
     const RETRY_DELAY_MS = 1000;
@@ -236,14 +231,13 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     let resolvePendingSave: (() => void) | null = null;
 
     const performSave = async (): Promise<void> => {
-        if (!window.ajisaiInterpreter) return;
         if (!dbInitialized) {
             console.warn('Database not initialized, skipping state save.');
             return;
         }
 
         try {
-            const state = collectCurrentState(window.ajisaiInterpreter);
+            const state = collectCurrentState(interpreter, readActiveDictionarySheet?.());
             await getPlatform().persistence.saveInterpreterState(state);
             console.log('State saved automatically.');
         } catch (error) {
@@ -285,7 +279,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const loadExampleWords = async (): Promise<void> => {
         try {
-            window.ajisaiInterpreter.restore_user_words(EXAMPLE_USER_WORDS);
+            interpreter.restore_user_words(EXAMPLE_USER_WORDS);
             await saveCurrentState();
             console.log('Example Words loaded.');
 
@@ -297,7 +291,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     };
 
     const loadDatabaseData = async (): Promise<RestoredSelection> => {
-        if (!window.ajisaiInterpreter) return {};
         if (!dbInitialized) {
             console.warn('Database not initialized, loading Example Words instead.');
             await loadExampleWords();
@@ -320,16 +313,16 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return {};
                 }
                 if (typeof state.stackSnapshot === 'string') {
-                    window.ajisaiInterpreter.restore_stack_snapshot(state.stackSnapshot);
+                    interpreter.restore_stack_snapshot(state.stackSnapshot);
                 }
 
                 if (state.userWords && state.userWords.length > 0) {
                     const wordsToRestore = state.userWords;
 
-                    window.ajisaiInterpreter.restore_user_words(wordsToRestore);
+                    interpreter.restore_user_words(wordsToRestore);
 
                     const notRestored = namesThatDidNotRestore(
-                        window.ajisaiInterpreter,
+                        interpreter,
                         wordsToRestore
                     );
                     if (notRestored.length > 0) {
@@ -347,10 +340,10 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     const savedWordKeys = new Set(
                         wordsToRestore.map((w: UserWord) => buildWordKey(w.name))
                     );
-                    const currentWords = window.ajisaiInterpreter.collect_user_words_info();
+                    const currentWords = interpreter.collect_user_words_info();
                     for (const [, name] of currentWords) {
                         if (!savedWordKeys.has(buildWordKey(name))) {
-                            window.ajisaiInterpreter.remove_word(name);
+                            interpreter.remove_word(name);
                         }
                     }
 
@@ -374,16 +367,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     };
 
     const exportUserWords = (): void => {
-        if (!window.ajisaiInterpreter) {
-            showError?.(new Error('Interpreter not available'));
-            return;
-        }
-
         const requestedName = window.prompt('Export file name', DEFAULT_EXPORT_NAME)?.trim();
         if (!requestedName) {
             return;
         }
-        const exportData = createExportData(window.ajisaiInterpreter);
+        const exportData = createExportData(interpreter);
         const filename = buildExportFilename(requestedName);
 
         getPlatform().fileIO.saveJson(filename, exportData)
@@ -405,23 +393,17 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
-                const dictionary = filenameToDictionaryName(openedFile.filename);
-
-                const { words, embeddedIds } = parseResult.value;
-                const importedWords = words.map(word => ({
-                    ...word,
-                    dictionary
-                }));
+                const { words: importedWords, embeddedIds } = parseResult.value;
 
                 // Content-addressed dedup (LANG.AUTHORITY.FREEDOM): compare identities before and
                 // after the merge. Words whose identity is unchanged were already
                 // present with identical content and count as deduplicated.
-                const before = collectWordIdentityMap(window.ajisaiInterpreter);
-                window.ajisaiInterpreter.restore_user_words(importedWords);
-                const after = collectWordIdentityMap(window.ajisaiInterpreter);
+                const before = collectWordIdentityMap(interpreter);
+                interpreter.restore_user_words(importedWords);
+                const after = collectWordIdentityMap(interpreter);
 
                 const notImported = namesThatDidNotRestore(
-                    window.ajisaiInterpreter,
+                    interpreter,
                     importedWords
                 );
                 const notImportedKeys = new Set(notImported.map(buildWordKey));

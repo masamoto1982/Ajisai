@@ -2,6 +2,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import type { Value, ExecuteResult, ExactTerm } from '../wasm-interpreter-types';
 import { valueToLatex } from './value-latex';
+import { isFailure } from './interpreter-execution-utils';
 import {
     createRenderBudget,
     formatElision,
@@ -320,7 +321,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan(program, 'program');
         }
 
-        if (!debug && !program && result.status === 'OK') {
+        if (!debug && !program && !isFailure(result)) {
             appendSpan('OK', 'debug');
         }
     };

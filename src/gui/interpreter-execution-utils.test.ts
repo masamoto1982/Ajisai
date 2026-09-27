@@ -99,7 +99,7 @@ describe('collectUserWords', () => {
         interpreter.words.set('ADD10', '10 ADD');
 
         expect(collectUserWords(interpreter)).toEqual([
-            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD', description: null }
+            { name: 'ADD10', definition: '10 ADD', description: null }
         ]);
     });
 });
@@ -120,7 +120,7 @@ describe('execution round trip with user words present', () => {
         expect(changes.dictionarySheetId).toBeUndefined();
         // The words survived the worker round trip rather than being wiped.
         expect(collectUserWords(main)).toEqual([
-            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD', description: null }
+            { name: 'ADD10', definition: '10 ADD', description: null }
         ]);
     });
 

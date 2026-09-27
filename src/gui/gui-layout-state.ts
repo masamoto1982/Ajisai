@@ -1,5 +1,14 @@
-import type { ViewMode } from './mobile-view-switcher';
-import type { MobileHandler } from './mobile-view-switcher';
+// Presentation layer for Ajisai's four observation surfaces (LANG.OBSERVATION.PROJECTIONS:
+// Input/π_Input, Output/π_Output, Stack/π_Stack, Dictionary/π_Dict). The
+// concrete way those surfaces are made visible on a device is a "Presentation
+// Profile" (SPEC Portability Profiles): a labeled transition system over
+// visibility configurations. This module holds the initial configuration c0
+// (`createLayoutState`), the desktop transition core (`updateDesktopModes`)
+// and the execution-driven transition (`applyExecutionAreaState`); the
+// single-surface core lives in `mobile-view-switcher`, and the spec invariants
+// are checked in `presentation-profile.test.ts`.
+
+import type { ViewMode, MobileHandler } from './mobile-view-switcher';
 import type { GUIElements } from './gui-dom-cache';
 
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
@@ -83,14 +92,22 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'reset   Ctrl+Alt+Enter'
 ].join('\n');
 
+/** The one record of which surface is showing; every other view of it is derived. */
 export interface LayoutState {
-    /** Last mode passed to `setArea`. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
+    /** Last mode selected. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
     currentMode: ViewMode;
     /** Desktop left column state. Always 'input' or 'output'. Mobile does not read this. */
     currentLeftMode: ViewMode;
     /** Desktop right column state. Always 'stack' or 'dictionary'. Mobile does not read this. */
     currentRightMode: ViewMode;
 }
+
+/** The initial configuration c0. */
+export const createLayoutState = (): LayoutState => ({
+    currentMode: 'input',
+    currentLeftMode: 'input',
+    currentRightMode: 'stack'
+});
 
 const syncSelectorState = (elements: GUIElements, leftMode: ViewMode, rightMode: ViewMode): void => {
     elements.leftPanelSelect.value = leftMode;
@@ -115,8 +132,8 @@ const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
 // not layout cosmetics — they keep the surfaces that conflict in intent (Output
 // vs. Dictionary) out of the reachable configuration space, which is exactly what
 // makes the reachable subspace closed under idempotent selection (Invariant 5).
-// Exported so the conformance suite (layout/presentation-profile.test.ts) can
-// verify the shipped logic is a model of the Presentation Profile LTS.
+// Exported so the conformance suite (presentation-profile.test.ts) can verify
+// the shipped logic is a model of the Presentation Profile LTS.
 export const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     if (LEFT_TAB_MODES.includes(mode)) {
         state.currentLeftMode = mode;
@@ -145,7 +162,8 @@ export interface ApplyAreaStateDeps {
     readonly elements: GUIElements;
     readonly state: LayoutState;
     readonly mobile: MobileHandler;
-    readonly switchDictionarySheet: (sheetId: string) => void;
+    /** Select a dictionary sheet in the selector and show it. */
+    readonly showDictionarySheet: (sheetId: string) => void;
 }
 
 const applyMobileAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
@@ -168,12 +186,6 @@ export const applyAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void =
     } else {
         applyDesktopAreaState(deps, mode);
     }
-};
-
-const revealChangedDictionarySheet = (deps: ApplyAreaStateDeps, sheetId?: string): void => {
-    if (!sheetId) return;
-    deps.elements.dictionarySheetSelect.value = sheetId;
-    deps.switchDictionarySheet(sheetId);
 };
 
 // Execution-driven transition (distinct from the manual-selection core in
@@ -205,8 +217,8 @@ export const applyExecutionAreaState = (
             nextMode = 'stack';
         }
         if (nextMode) {
-            if (nextMode === 'dictionary') {
-                revealChangedDictionarySheet(deps, changes.dictionarySheetId);
+            if (nextMode === 'dictionary' && changes.dictionarySheetId) {
+                deps.showDictionarySheet(changes.dictionarySheetId);
             }
             deps.state.currentMode = nextMode;
             applyMobileAreaState(deps, nextMode);
@@ -222,7 +234,7 @@ export const applyExecutionAreaState = (
     }
     if (changes.dictionaryChanged) {
         deps.state.currentRightMode = 'dictionary';
-        revealChangedDictionarySheet(deps, changes.dictionarySheetId);
+        if (changes.dictionarySheetId) deps.showDictionarySheet(changes.dictionarySheetId);
     }
 
     deps.state.currentMode = deps.state.currentRightMode;
@@ -236,3 +248,22 @@ export const updateEditorPlaceholder = (elements: GUIElements, mobile: MobileHan
         ? MOBILE_EDITOR_PLACEHOLDER
         : DESKTOP_EDITOR_PLACEHOLDER;
 };
+
+export type LayoutController = {
+    readonly setArea: (mode: ViewMode) => void;
+    readonly handleResize: () => void;
+};
+
+// `setArea` realizes a Presentation Profile transition (SPEC Portability
+// Profiles): selecting one observation surface (LANG.OBSERVATION.PROJECTIONS)
+// drives the device-appropriate transition core via `applyAreaState`.
+export const createLayoutController = (deps: ApplyAreaStateDeps): LayoutController => ({
+    setArea: (mode) => {
+        deps.state.currentMode = mode;
+        applyAreaState(deps, mode);
+    },
+    handleResize: () => {
+        applyAreaState(deps, deps.state.currentMode);
+        updateEditorPlaceholder(deps.elements, deps.mobile);
+    }
+});

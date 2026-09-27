@@ -15,9 +15,8 @@
 // geometry) is implementation freedom (LANG.AUTHORITY.FREEDOM standing) and is not asserted.
 
 import { describe, it, expect } from 'vitest';
-import { updateDesktopModes, type LayoutState } from '../gui-layout-state';
-import { createGuiLayoutState } from './layout-model';
-import { resolveNextViewMode, VIEW_ORDER, type ViewMode } from '../mobile-view-switcher';
+import { createLayoutState, updateDesktopModes, type LayoutState } from './gui-layout-state';
+import { resolveNextViewMode, VIEW_ORDER, type ViewMode } from './mobile-view-switcher';
 
 // Surface set A (LANG.OBSERVATION.PROJECTIONS). Order is irrelevant here; configurations are sets.
 const SURFACES: readonly ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
@@ -85,7 +84,7 @@ const sortedConfig = <S>(lts: PresentationLTS<S>, state: S): string =>
 // surface runs the shipped `updateDesktopModes` coupling core.
 const desktopProfile: PresentationLTS<LayoutState> = {
     name: 'desktop',
-    initial: createGuiLayoutState(),
+    initial: createLayoutState(),
     key: (s) => `${s.currentLeftMode}|${s.currentRightMode}`,
     visible: (s) => new Set<ViewMode>([s.currentLeftMode, s.currentRightMode]),
     operations: ['show:input', 'show:output', 'show:stack', 'show:dictionary', 'run'],

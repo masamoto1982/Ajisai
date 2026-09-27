@@ -4,7 +4,7 @@ import type { ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
 
 const num = (n: number): Value => ({ type: 'number', value: { numerator: String(n), denominator: '1' } } as unknown as Value);
 
-const word = (name: string, definition: string): UserWord => ({ dictionary: 'USER', name, definition });
+const word = (name: string, definition: string): UserWord => ({ name, definition });
 
 const okResult = (overrides: Partial<ExecuteResult> = {}): ExecuteResult => ({
     status: 'OK',

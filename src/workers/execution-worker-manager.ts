@@ -1,6 +1,7 @@
 
 
 import { isMobileViewport } from '../platform/viewport';
+import { ExecutionAbortedError } from './execution-aborted';
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
@@ -96,7 +97,7 @@ export class WorkerManager {
                 task.reject(new Error(message.data));
                 break;
             case 'aborted':
-                task.reject(new Error('Execution aborted'));
+                task.reject(new ExecutionAbortedError());
                 break;
         }
         this.completeTask(instance);
@@ -221,13 +222,11 @@ export class WorkerManager {
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
 
-
-        const abortError = new Error('Execution aborted');
+        const abortError = new ExecutionAbortedError();
         for (const task of this.taskQueue) {
             task.reject(abortError);
         }
         this.taskQueue = [];
-
 
         for (const id of this.activeTasks.keys()) {
             const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
