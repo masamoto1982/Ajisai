@@ -24,7 +24,7 @@
 
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { cpus, tmpdir } from 'node:os';
+import { cpus, tmpdir, totalmem } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -232,7 +232,7 @@ function runCellAsync(ajisaiBin, scratchDir, counter, program) {
       if (signal !== null) {
         fail(
           `CLI for ${JSON.stringify(program)} was killed by ${signal}`
-            + (signal === 'SIGKILL' ? ' (likely out of memory: the pool runs one CLI per CPU)' : '')
+            + (signal === 'SIGKILL' ? ' (likely out of memory; see WORKER_MEMORY_BYTES)' : '')
             + ` after ${stdout.length} bytes of stdout`
         );
       }
@@ -253,6 +253,17 @@ function runCellAsync(ajisaiBin, scratchDir, counter, program) {
       resolveCell(classifyOutcome(json));
     });
   });
+}
+
+// One CLI per CPU, but never more than memory holds. A single cell can be
+// large: `[ 0 1000001 ] 999 RANGE` answers a million-element stack, and the CLI
+// peaks near 3.2 GB rendering it while this process holds its ~200 MB report.
+// Four of those at once exceed a 16 GB machine, and the kernel's OOM killer
+// then takes one child mid-write — the check's intermittent failure. Budgeting
+// 4 GiB per worker keeps the worst case inside memory on any machine.
+const WORKER_MEMORY_BYTES = 4 * 1024 ** 3;
+function poolSize() {
+  return Math.max(1, Math.min(cpus().length, Math.floor(totalmem() / WORKER_MEMORY_BYTES)));
 }
 
 // A fixed-size pool of workers pulling from a shared index, each awaiting its
@@ -299,7 +310,7 @@ async function buildTable(ajisaiBin) {
     const jobs = specs.map(
       (spec, i) => () => runCellAsync(ajisaiBin, scratchDir, i, spec.program),
     );
-    const outcomes = await runPool(jobs, cpus().length);
+    const outcomes = await runPool(jobs, poolSize());
     cells = specs.map((spec, i) => ({ word: spec.word, inputs: spec.inputs, outcome: outcomes[i] }));
   } finally {
     rmSync(scratchDir, { recursive: true, force: true });
