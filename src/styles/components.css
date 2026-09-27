@@ -566,6 +566,28 @@
     min-height: 7rem;
 }
 
+/* The background of the word list is itself a control — a click inserts a
+   space into the editor — and nothing on screen said so. The hint is a
+   pseudo-element rather than a node because the list is cleared and rebuilt
+   on every render, and because a click on it is then a click on the list
+   background, which is exactly what it describes. It is the last line of the
+   list, right-aligned, and sticks to the bottom edge while the list scrolls.
+   An empty list ignores background clicks, so it carries no hint. */
+.words-display:not(.is-empty)::after {
+    content: "Click the blank area to insert a space";
+    position: sticky;
+    bottom: -0.75rem;
+    flex: 0 0 100%;
+    margin: 0.25rem -0.75rem -0.75rem;
+    padding: 0.125rem 0.75rem;
+    text-align: right;
+    font-family: var(--font-stack-primary);
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--color-text-light);
+    background: #fff;
+}
+
 .empty-words-message {
     width: 100%;
     padding: 0.75rem;
