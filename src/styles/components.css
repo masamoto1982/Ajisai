@@ -58,16 +58,6 @@
     @media (769px <= width <= 1024px) {
         padding-inline: calc(var(--space-sm) / 2) var(--space-sm);
     }
-
-    /* The Dictionary stacks three rows (surface selector, sheet selector,
-       word list) where the Stack has two, so its seams are tighter. */
-    &:has(.dictionary-area:not([hidden])) {
-        gap: var(--space-2xs);
-
-        @media (width <= 768px) {
-            padding-top: var(--space-2xs);
-        }
-    }
 }
 
 /* Mobile shows one surface: the column that does not hold it is gone. */
@@ -620,12 +610,8 @@
     }
 }
 
-.dictionary-area {
-    gap: var(--space-2xs);
-
-    & > .dictionary-sheet-select {
-        flex: 0 0 auto;
-    }
+.dictionary-area > .dictionary-sheet-select {
+    flex: 0 0 auto;
 }
 
 .words-display {
