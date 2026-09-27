@@ -26,36 +26,10 @@ class AjisaiInterpreter {
         wasm.ajisaiinterpreter_clear_stack(this.__wbg_ptr);
     }
     /**
-     * Returns the canonical Core-listed words.
-     *
-     * Tuple shape: `(name, description, syntax)` — same as
-     * `collect_core_words_info` so the GUI can render either list with the
-     * same code path.
-     * @returns {any}
-     */
-    collect_core_listed_words_info() {
-        const ret = wasm.ajisaiinterpreter_collect_core_listed_words_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {any}
-     */
-    collect_core_word_aliases_info() {
-        const ret = wasm.ajisaiinterpreter_collect_core_word_aliases_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
      * @returns {any}
      */
     collect_core_words_info() {
         const ret = wasm.ajisaiinterpreter_collect_core_words_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {any}
-     */
-    collect_input_helper_words_info() {
-        const ret = wasm.ajisaiinterpreter_collect_input_helper_words_info(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -99,16 +73,6 @@ class AjisaiInterpreter {
         const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ajisaiinterpreter_execute(this.__wbg_ptr, ptr0, len0);
-        return ret;
-    }
-    /**
-     * @param {string} code
-     * @returns {any}
-     */
-    execute_step(code) {
-        const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.ajisaiinterpreter_execute_step(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
     /**
@@ -181,14 +145,6 @@ class AjisaiInterpreter {
      */
     reset() {
         const ret = wasm.ajisaiinterpreter_reset(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * Compatibility alias for [`Self::reset`].
-     * @returns {any}
-     */
-    reset_session() {
-        const ret = wasm.ajisaiinterpreter_reset_session(this.__wbg_ptr);
         return ret;
     }
     /**

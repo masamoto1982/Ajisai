@@ -5,7 +5,6 @@
 #![allow(unsafe_code)]
 
 use crate::interpreter::Interpreter;
-use crate::types::Token;
 use wasm_bindgen::prelude::*;
 
 mod wasm_agent;
@@ -28,10 +27,6 @@ pub fn init_panic_hook() {
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
     interpreter: Interpreter,
-    step_tokens: Vec<Token>,
-    step_position: usize,
-    step_mode: bool,
-    current_step_code: String,
 }
 
 pub(crate) fn set_js_prop(obj: &js_sys::Object, key: &str, value: &JsValue) {
@@ -51,10 +46,6 @@ impl AjisaiInterpreter {
         let interp = Interpreter::new();
         AjisaiInterpreter {
             interpreter: interp,
-            step_tokens: Vec::new(),
-            step_position: 0,
-            step_mode: false,
-            current_step_code: String::new(),
         }
     }
 

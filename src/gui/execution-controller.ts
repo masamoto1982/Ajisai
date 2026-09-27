@@ -20,7 +20,6 @@ import type { ExecutionSurfaceChanges } from './gui-layout-state';
 export interface ExecutionCallbacks {
     readonly extractEditorValue: () => string;
     readonly clearEditor: (switchView?: boolean) => void;
-    readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showFoldedInfo: (label: string, text: string) => void;
     readonly highlightSourceRange: (start: number, end: number) => void;
@@ -53,7 +52,6 @@ export const createExecutionController = (
     const {
         extractEditorValue,
         clearEditor,
-        insertEditorText,
         showInfo,
         showFoldedInfo,
         highlightSourceRange,
@@ -129,12 +127,7 @@ export const createExecutionController = (
 
     const applyExecutionResult = (result: ExecuteResult): void => {
         const diagnosis = describeDiagnosis(result);
-        if (result.inputHelper) {
-            clearEditor(false);
-            insertEditorText(result.inputHelper);
-            showInfo('Input helper inserted', false);
-            updateView('input');
-        } else if (result.status === 'OK' && !result.error) {
+        if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
             clearEditor(false);
         } else {

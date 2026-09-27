@@ -22,12 +22,7 @@ export interface AjisaiInterpreter {
      * is what it enforces.
      */
     host_profile(): string;
-    execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
-    // Session reset: reinitializes session state but keeps the cross-reset
-    // compiled-artifact cache alive so an unchanged user word's compiled plan
-    // is reused instead of recompiled.
-    reset_session(): ExecuteResult;
     collect_stack(): Value[];
     // Tuple shape: [dictionary, name, isProtected].
     collect_user_words_info(): Array<[string, string, boolean]>;
@@ -39,9 +34,6 @@ export interface AjisaiInterpreter {
     // hover_syntax is the inline word-info preview (shortest useful invocation,
     // operands included). See docs/dev/three-layer-documentation-model.md §4.
     collect_core_words_info(): Array<[string, string, string]>;
-    collect_core_listed_words_info(): Array<[string, string, string]>;
-    collect_core_word_aliases_info(): Array<[string, string, string, string]>;
-    collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;
     // See `UserWord.description`.
     lookup_word_description(name: string): string | null;
@@ -239,8 +231,12 @@ export interface ExecuteResult {
     debugOutput?: string;
     message?: string;
     error?: boolean;
-    hasMore?: boolean;
-    inputHelper?: string;
+    /**
+     * On an ERROR result, the same `aiDiagnostic` the CLI reports: `kind` is
+     * the failure's category (spec/outcomes.json), the machine-readable name
+     * a host branches on instead of the display text in `message`.
+     */
+    aiDiagnostic?: { kind: string } | null;
 
     // The observation-format stack, for display only.
     stack?: Value[];

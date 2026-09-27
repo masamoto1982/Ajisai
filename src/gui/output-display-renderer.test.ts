@@ -78,3 +78,35 @@ describe('a Vector of ordinary values is a literal', () => {
         expect(render(vec())).toBe('[ ]');
     });
 });
+
+describe('an irrational renders as the engine writes it', () => {
+    // Captured from `ajisai agent compute` (`stackDisplay`), with the node's
+    // `semantics.exactTerms` as the input. The panel used to write `√2`.
+    const irrational = (...terms: [string, string, string][]): Node =>
+        ({
+            type: 'number',
+            value: { numerator: '0', denominator: '1' },
+            semantics: {
+                approximate: true,
+                exactTerms: terms.map(([numerator, denominator, radicand]) => ({
+                    numerator,
+                    denominator,
+                    radicand
+                }))
+            }
+        }) as Node;
+
+    test.each([
+        ['2 SQRT', irrational(['1', '1', '2']), 'sqrt(2)'],
+        ['1 2 SQRT ADD', irrational(['1', '1', '1'], ['1', '1', '2']), '1/1+sqrt(2)'],
+        ['2 SQRT 3 SQRT SUB', irrational(['1', '1', '2'], ['-1', '1', '3']), 'sqrt(2)-sqrt(3)'],
+        ['2 SQRT 2 DIV', irrational(['1', '2', '2']), '1/2*sqrt(2)'],
+        ['0 2 SQRT SUB', irrational(['-1', '1', '2']), '-sqrt(2)']
+    ])('%s', (_source, node, expected) => {
+        expect(render(node)).toBe(expected);
+    });
+
+    test('inside a Vector it is still one element', () => {
+        expect(render(vec(irrational(['1', '1', '2']), num(1)))).toBe('[ sqrt(2) 1/1 ]');
+    });
+});

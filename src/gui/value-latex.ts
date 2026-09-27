@@ -131,41 +131,9 @@ export const fractionToLatex = (frac: Fraction): string => {
     return negative ? `-${body}` : body;
 };
 
-const laneToLatex = (lane: unknown): string => {
-    const frac = checkFractionShape(lane);
-    // An invalid dense lane is NIL occupancy (LANG.VALUES.VECTOR).
-    return frac === null ? '\\mathrm{NIL}' : fractionToLatex(frac);
-};
-
 const rowsToMatrixLatex = (rows: string[][]): string => {
     const body = rows.map(row => row.join(' & ')).join(' \\\\ ');
     return `\\begin{bmatrix} ${body} \\end{bmatrix}`;
-};
-
-const tensorToLatex = (value: unknown): string | null => {
-    if (!value || typeof value !== 'object') return null;
-    const tensor = value as { shape?: unknown; data?: unknown };
-    if (!Array.isArray(tensor.shape) || !Array.isArray(tensor.data)) return null;
-
-    const shape = tensor.shape as number[];
-    const data = tensor.data as unknown[];
-    if (data.length === 0 || data.length > MAX_MATH_LANES) return null;
-
-    if (shape.length === 0) return laneToLatex(data[0]);
-    if (shape.length === 1) {
-        return rowsToMatrixLatex([data.map(laneToLatex)]);
-    }
-    if (shape.length === 2) {
-        const [rowCount, colCount] = [shape[0] ?? 0, shape[1] ?? 0];
-        if (rowCount * colCount !== data.length || colCount === 0) return null;
-        const rows: string[][] = [];
-        for (let r = 0; r < rowCount; r++) {
-            rows.push(data.slice(r * colCount, (r + 1) * colCount).map(laneToLatex));
-        }
-        return rowsToMatrixLatex(rows);
-    }
-    // Rank >= 3 has no flat matrix reading.
-    return null;
 };
 
 const numberElementToLatex = (item: Value): string | null => {
@@ -253,8 +221,6 @@ export const valueToLatex = (item: Value): string | null => {
             const approximate = semantics?.approximate === true;
             return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;
         }
-        case 'tensor':
-            return tensorToLatex(item.value);
         case 'vector':
             return Array.isArray(item.value) ? vectorToLatex(item.value as Value[]) : null;
         default:

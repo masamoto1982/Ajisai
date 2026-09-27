@@ -213,10 +213,10 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         }
     });
 
-    // Triple-tap the editor to Run. This is the shortcut, not the only way in:
-    // the Run button below the editor is, and a gesture that shares its shape
-    // with the OS's own paragraph-select must never be the sole route to
-    // running a program. What it must be is deliberate, so a tap here is a
+    // Triple-tap the editor to Run — on mobile the one route, which the Input
+    // surface's own text names (spec/gui-semantics.md, rule 4). A gesture that
+    // shares its shape with the OS's own paragraph-select must therefore be
+    // deliberate, so a tap here is a
     // touch that went down and came up in the same place, on its own: the end
     // of a drag-to-select and one release out of a pinch are not taps, and
     // before this guard three of either ran the program.

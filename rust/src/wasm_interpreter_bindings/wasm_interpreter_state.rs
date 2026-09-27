@@ -1,63 +1,8 @@
 use super::wasm_value_conversion::{value_to_js, UserWordData};
-use super::{set_js_prop, AjisaiInterpreter};
+use super::AjisaiInterpreter;
 use crate::builtins;
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
-
-fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
-    let obj = js_sys::Object::new();
-
-    set_js_prop(&obj, "when", &(diagnosis.when.as_protocol_str().into()));
-    set_js_prop(&obj, "why", &(diagnosis.why.as_protocol_str().into()));
-    set_js_prop(&obj, "summary", &(diagnosis.summary.clone().into()));
-
-    let where_obj = js_sys::Object::new();
-    set_js_prop(
-        &where_obj,
-        "kind",
-        &(diagnosis.where_.kind.as_protocol_str().into()),
-    );
-    if let Some(word) = &diagnosis.where_.word {
-        set_js_prop(&where_obj, "word", &(word.clone().into()));
-    }
-    if let Some(dictionary) = &diagnosis.where_.dictionary {
-        set_js_prop(&where_obj, "dictionary", &(dictionary.clone().into()));
-    }
-    set_js_prop(&obj, "where", &where_obj.into());
-
-    let evidence_arr = js_sys::Array::new();
-    for item in &diagnosis.evidence {
-        evidence_arr.push(&JsValue::from_str(item));
-    }
-    set_js_prop(&obj, "evidence", &evidence_arr.into());
-
-    let checks_arr = js_sys::Array::new();
-    for c in &diagnosis.next_checks {
-        let check_obj = js_sys::Object::new();
-        set_js_prop(&check_obj, "code", &JsValue::from_str(c.code));
-        set_js_prop(&check_obj, "title", &localized_to_js(&c.title));
-        set_js_prop(&check_obj, "detail", &localized_to_js(&c.detail));
-        checks_arr.push(&check_obj);
-    }
-    set_js_prop(&obj, "nextChecks", &checks_arr.into());
-
-    let candidates_arr = js_sys::Array::new();
-    for candidate in &diagnosis.candidates {
-        candidates_arr.push(&JsValue::from_str(candidate));
-    }
-    set_js_prop(&obj, "candidates", &candidates_arr.into());
-
-    obj.into()
-}
-
-/// One locale-keyed display string, shared by every diagnosis surface.
-fn localized_to_js(text: &crate::interpreter::debug_diagnosis::LocalizedText) -> JsValue {
-    let obj = js_sys::Object::new();
-    set_js_prop(&obj, "en", &JsValue::from_str(&text.en));
-    set_js_prop(&obj, "ja", &JsValue::from_str(&text.ja));
-    obj.into()
-}
 
 #[wasm_bindgen]
 impl AjisaiInterpreter {
@@ -135,31 +80,6 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_core_words_info(&self) -> JsValue {
         to_value(&builtins::collect_core_builtin_definitions()).unwrap_or(JsValue::NULL)
-    }
-
-    /// Returns the canonical Core-listed words.
-    ///
-    /// Tuple shape: `(name, description, syntax)` — same as
-    /// `collect_core_words_info` so the GUI can render either list with the
-    /// same code path.
-    #[wasm_bindgen]
-    pub fn collect_core_listed_words_info(&self) -> JsValue {
-        let entries: Vec<(String, String, String)> = builtins::collect_core_builtin_definitions()
-            .into_iter()
-            .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
-            .collect();
-
-        to_value(&entries).unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen]
-    pub fn collect_core_word_aliases_info(&self) -> JsValue {
-        to_value(&crate::core_word_aliases::collect_core_word_aliases()).unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen]
-    pub fn collect_input_helper_words_info(&self) -> JsValue {
-        to_value(&crate::core_word_aliases::collect_input_helper_words()).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
@@ -312,52 +232,29 @@ impl AjisaiInterpreter {
 /// result envelope (`errorFlowTrace`), so no host calls this directly.
 impl AjisaiInterpreter {
     pub(crate) fn collect_error_flow_trace(&mut self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for event in self.interpreter.drain_error_flow_trace() {
-            let obj = js_sys::Object::new();
-            set_js_prop(&obj, "kind", &(event.kind.as_protocol_str().into()));
-            if let Some(word) = event.word {
-                set_js_prop(&obj, "word", &(word.into()));
-            }
-            if let Some(absence) = event.absence {
-                let absence_obj = js_sys::Object::new();
-                if let Some(reason) = &absence.reason {
-                    set_js_prop(&absence_obj, "reason", &(reason.as_protocol_str().into()));
-                }
-                if let Some(detail) = &absence.detail {
-                    set_js_prop(&absence_obj, "detail", &(detail.as_str().into()));
-                }
-                set_js_prop(
-                    &absence_obj,
-                    "origin",
-                    &(absence.origin.as_protocol_str().into()),
-                );
-                set_js_prop(
-                    &absence_obj,
-                    "recoverability",
-                    &(absence.recoverability.as_protocol_str().into()),
-                );
-                if let Some(diagnosis) = &absence.diagnosis {
-                    set_js_prop(&absence_obj, "diagnosis", &diagnosis_to_js(diagnosis));
-                }
-                set_js_prop(&obj, "absence", &absence_obj.into());
-            }
-            set_js_prop(
-                &obj,
-                "stackLenBefore",
-                &((event.stack_len_before as u32).into()),
-            );
-            set_js_prop(
-                &obj,
-                "stackLenAfter",
-                &((event.stack_len_after as u32).into()),
-            );
-            set_js_prop(&obj, "message", &(event.message.into()));
-            if let Some(diagnosis) = event.diagnosis {
-                set_js_prop(&obj, "diagnosis", &diagnosis_to_js(&diagnosis));
-            }
-            arr.push(&obj);
-        }
-        arr.into()
+        let events = self.interpreter.drain_error_flow_trace();
+        error_flow_trace_to_js(&events)
     }
+}
+
+// Rendered by the CLI's own serializer and converted, so the trace a GUI
+// reads is the one an agent reads. A hand-built copy here was the third
+// spelling of a diagnosis (beside the CLI's and the value node's), and it had
+// already dropped a resource limit's `progress`.
+pub(crate) fn error_flow_trace_to_js(
+    events: &[crate::interpreter::error_flow_trace::ErrorFlowEvent],
+) -> JsValue {
+    json_to_js(serde_json::Value::Array(
+        events
+            .iter()
+            .map(crate::agent::report::error_flow_event_json)
+            .collect(),
+    ))
+}
+
+pub(crate) fn json_to_js(value: serde_json::Value) -> JsValue {
+    use serde::Serialize as _;
+    value
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .expect("a serde_json value always converts to a JS value")
 }

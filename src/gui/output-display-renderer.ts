@@ -76,46 +76,6 @@ const formatNumber = (value: unknown): string => {
     return `${fraction.numerator}/${fraction.denominator}`;
 };
 
-const formatFraction = (frac: unknown): string => {
-    const fraction = checkFractionObject(frac);
-    if (!fraction) return '?';
-    return `${fraction.numerator}/${fraction.denominator}`;
-};
-
-const formatTensorRecursive = (shape: number[], data: unknown[], depth: number): string => {
-    const [open, close] = lookupBracketsAtDepth(depth);
-
-    if (shape.length === 0) {
-        if (data.length === 0) return `${open}${close}`;
-        return `${open} ${formatFraction(data[0])} ${close}`;
-    }
-
-    if (shape.length === 1) {
-        if (data.length === 0) return `${open}${close}`;
-        const elements: string = data.map(frac => formatFraction(frac)).join(' ');
-        return `${open} ${elements} ${close}`;
-    }
-
-    const outerSize: number = shape[0] ?? 0;
-    const innerShape: number[] = shape.slice(1);
-    const innerSize: number = innerShape.reduce((a: number, b: number) => a * b, 1);
-
-    const parts: string[] = [];
-    for (let i = 0; i < outerSize; i++) {
-        const innerData = data.slice(i * innerSize, (i + 1) * innerSize);
-        parts.push(formatTensorRecursive(innerShape, innerData, depth + 1));
-    }
-
-    return `${open} ${parts.join(' ')} ${close}`;
-};
-
-const formatTensor = (value: unknown, depth: number): string => {
-    if (!value || typeof value !== 'object') return '?';
-    const v = value as Record<string, unknown>;
-    if (!('shape' in v) || !('data' in v)) return '?';
-    return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth);
-};
-
 /// A Vector renders as source that rebuilds it — a bracket literal, whatever
 /// it holds — matching the engine's own renderer
 /// (`rust/src/types/display_source.rs`). A nested Record is one element,
@@ -200,25 +160,32 @@ interface ExactTerm {
     readonly radicand: string;
 }
 
-/// Σ c·√r as one line. A coefficient of exactly one is left off (`√3`, not
-/// `1/1√3`); every other coefficient keeps the canonical `n/d` shape the rest
-/// of the panel uses, so a number does not change spelling depending on which
-/// term it sits in. A negative term joins with `-` rather than `+ -`.
+/// An irrational's normal form Σ c·√r written exactly as the engine writes it
+/// (`rust/src/types/display.rs::render_algebraic_terms`): one spaceless token,
+/// terms in the normal form's order, `sqrt(r)` for a unit coefficient,
+/// `n/d*sqrt(r)` otherwise, and the rational term as `n/d`. The panel used to
+/// write `√3` and `1/2√2` with spaced signs — a second spelling of a value
+/// whose canonical display the Stack surface is required to show
+/// (spec/gui-semantics.md), and one no program could have written back.
 const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string | null => {
     if (!terms || terms.length === 0) return null;
     let out = '';
-    for (const term of terms) {
+    terms.forEach((term, index) => {
         const negative = term.numerator.startsWith('-');
         const magnitude = negative ? term.numerator.slice(1) : term.numerator;
-        const root = term.radicand === '1' ? '' : `√${term.radicand}`;
-        const unit = magnitude === '1' && term.denominator === '1' && root !== '';
-        const coefficient = unit ? '' : `${magnitude}/${term.denominator}`;
-        if (out === '') {
-            out = `${negative ? '-' : ''}${coefficient}${root}`;
+        if (index === 0) {
+            if (negative) out += '-';
         } else {
-            out += ` ${negative ? '-' : '+'} ${coefficient}${root}`;
+            out += negative ? '-' : '+';
         }
-    }
+        if (term.radicand === '1') {
+            out += `${magnitude}/${term.denominator}`;
+        } else if (magnitude === '1' && term.denominator === '1') {
+            out += `sqrt(${term.radicand})`;
+        } else {
+            out += `${magnitude}/${term.denominator}*sqrt(${term.radicand})`;
+        }
+    });
     return out;
 };
 
@@ -244,81 +211,25 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
         return node;
     }
 
-    if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
-        const tensor = item.value as { shape?: number[]; data?: unknown[] };
-        const shape = Array.isArray(tensor.shape) ? tensor.shape : [];
-        const data = Array.isArray(tensor.data) ? tensor.data : [];
-
-        const renderTensorNode = (tensorShape: number[], tensorData: unknown[], tensorDepth: number): HTMLElement => {
-            const tensorNode = document.createElement('span');
-            tensorNode.className = 'stack-node stack-node-vector';
-            tensorNode.dataset.depth = String(tensorDepth);
-
-            if (tensorShape.length === 0) {
-                tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-                tensorNode.appendChild(createBracketSpan(']', tensorDepth));
-                return tensorNode;
-            }
-
-            if (tensorShape.length === 1) {
-                const { shown, elided } = planCollectionRender(tensorData.length, budget);
-                tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-                for (let index = 0; index < shown; index++) {
-                    if (index > 0) tensorNode.append(' ');
-                    tensorNode.append(formatFraction(tensorData[index]));
-                }
-                if (elided > 0) {
-                    if (shown > 0) tensorNode.append(' ');
-                    tensorNode.appendChild(createElisionSpan(elided));
-                }
-                tensorNode.appendChild(createBracketSpan(']', tensorDepth));
-                return tensorNode;
-            }
-
-            tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-            const outerSize = tensorShape[0] ?? 0;
-            const innerShape = tensorShape.slice(1);
-            const innerSize = innerShape.reduce((a, b) => a * b, 1);
-            const { shown, elided } = planCollectionRender(outerSize, budget);
-            for (let i = 0; i < shown; i++) {
-                if (i > 0) tensorNode.append(' ');
-                const innerData = tensorData.slice(i * innerSize, (i + 1) * innerSize);
-                tensorNode.appendChild(renderTensorNode(innerShape, innerData, tensorDepth + 1));
-            }
-            if (elided > 0) {
-                if (shown > 0) tensorNode.append(' ');
-                tensorNode.appendChild(createElisionSpan(elided));
-            }
-            tensorNode.appendChild(createBracketSpan(']', tensorDepth));
-            return tensorNode;
-        };
-
-        return renderTensorNode(shape, data, depth);
-    }
-
     if (depth === 1) {
         node.dataset.depth = String(depth);
     }
-    node.textContent = renderExactScalar(item, formatValue(item, depth));
+    node.textContent = formatValue(item, depth);
     return node;
 };
 
-/// An exact irrational cannot be written as `n/d`, so any `n/d` the host sends
-/// for one is a best rational approximation. Drawn plainly, `3 SQRT` read as
-/// `708158977/408855776` — the same shape a genuinely exact rational has, in a
-/// language whose claim is that nothing is silently rounded.
-///
-/// There are two honest answers, and the host supplies both. When it sends the
-/// value's normal form (`semantics.exactTerms`) the panel draws that: `√3` is
-/// the number, exactly, in one line. Only when it does not does the panel fall
-/// back to the approximation, and then it marks it `≈`.
-const renderExactScalar = (item: Value, text: string): string => {
+/// A number as the engine displays it. An irrational's `n/d` is only an
+/// approximation, so its normal form (`semantics.exactTerms`) is written
+/// instead; a host that sends none gets the approximation marked `≈`, never a
+/// bare `n/d` that would read as exact.
+const formatNumberNode = (item: Value): string => {
     const semantics = item?.semantics as
         | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
         | undefined;
     const exact = formatNormalForm(semantics?.exactTerms);
     if (exact) return exact;
-    return semantics?.approximate === true && !text.startsWith('≈') ? `≈ ${text}` : text;
+    const text = formatNumber(item.value);
+    return semantics?.approximate === true ? `≈ ${text}` : text;
 };
 
 /// Exported for `output-display-renderer.test.ts`, which pins these strings
@@ -330,9 +241,7 @@ export const formatValue = (item: Value, depth: number): string => {
 
     switch (item.type) {
         case 'number':
-            return formatNumber(item.value);
-        case 'tensor':
-            return formatTensor(item.value, depth);
+            return formatNumberNode(item);
         case 'string':
             return `'${item.value}'`;
         case 'symbol':

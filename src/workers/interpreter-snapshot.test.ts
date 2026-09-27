@@ -8,7 +8,7 @@ import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 
 const makeMock = () => {
     const fns = {
-        reset_session: vi.fn(() => ({})),
+        reset: vi.fn(() => ({})),
         restore_stack_snapshot: vi.fn(),
         restore_user_words: vi.fn(),
         set_max_execution_steps: vi.fn(),
@@ -52,7 +52,7 @@ describe('applyInterpreterSnapshot robustness', () => {
     test('resets the session before restoring', () => {
         const { fns, interpreter } = makeMock();
         applyInterpreterSnapshot(interpreter, null);
-        expect(fns.reset_session).toHaveBeenCalledTimes(1);
+        expect(fns.reset).toHaveBeenCalledTimes(1);
     });
 });
 
