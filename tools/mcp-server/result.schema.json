@@ -245,7 +245,7 @@
   },
   "matches": {
    "type": "array",
-   "description": "Canonical registry entries matching the requested Word or alias (`word_contract` only).",
+   "description": "Canonical registry entries matching the requested Word (`word_contract` only).",
    "items": {
     "$ref": "#/$defs/wordContract"
    }

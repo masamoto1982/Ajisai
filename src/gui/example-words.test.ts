@@ -14,16 +14,18 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLE_USER_WORDS } from './example-words';
 
-// Symbols the lexer still accepts: one character each, plus the structural
-// delimiters. Kept as data so a token that is no longer one of these is a
-// visible diff rather than a silent runtime failure.
-const SYMBOL_ALIASES = ['+', '-', '*', '/', '%', '=', '<', '>', '?', '^'];
-const STRUCTURAL_TOKENS = ['[', ']', '{', '}', '|'];
+// The one delimiter pair the grammar allocates. Every other symbol is an
+// ordinary name the dictionary does not hold — `+` and `<` included, since a
+// Word has exactly one name — so any of them in a seeded definition is an
+// unknown word on the first run, and this check refuses it here instead.
+const STRUCTURAL_TOKENS = ['[', ']'];
 
-// Two-character symbols and the force/negation marks, all retired.
-const RETIRED_SYMBOLS = [',,', '<=', '>=', '<>', '&', '!', '..', '~'];
+// Two-character symbols, the force/negation marks and the former symbol
+// spellings of the arithmetic and comparison Words, all retired.
+const RETIRED_SYMBOLS = [',,', '<=', '>=', '<>', '&', '!', '..', '~', '+', '-', '*', '/', '%', '=', '<', '>', '?', '^'];
 
-const WORD_NAME = /^[A-Z][A-Z0-9-]*$/;
+// The canonical Word-name grammar (spec/words.schema.json `name`).
+const WORD_NAME = /^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$/;
 // Integers, fractions and decimals; digits are required on both sides of a point.
 const NUMBER_LITERAL = /^-?\d+(?:\/\d+|\.\d+)?$/;
 
@@ -56,8 +58,7 @@ describe('EXAMPLE_USER_WORDS', () => {
         '%s is built only from tokens the lexer still accepts',
         (name, definition) => {
             const unrecognized = tokenize(definition ?? '').filter(token =>
-                !SYMBOL_ALIASES.includes(token)
-                && !STRUCTURAL_TOKENS.includes(token)
+                !STRUCTURAL_TOKENS.includes(token)
                 && !NUMBER_LITERAL.test(token)
                 && !WORD_NAME.test(token)
             );

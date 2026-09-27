@@ -429,10 +429,10 @@ the ceiling compared against, so an agent can subtract:
 appear — `bigintBits` and `algebraicTerms` are checked per result and never
 accumulated, so there is no peak to report, and none is invented, which is the
 same discipline that made the phantom field a defect rather than a feature.
-`runtimeMetrics.executionSteps` stays as a compatibility alias carrying the
-same reading, because removing a field is what a schema version is for; that it
-lived in the optimizer object beside cache-hit counters is how nobody noticed
-it was constant.
+`runtimeMetrics.executionSteps` was kept for a while as a compatibility alias
+carrying the same reading; envelope schema version 2 removed it, so the budget
+is reported once. That it lived in the optimizer object beside cache-hit
+counters is how nobody noticed it was constant.
 
 **What replaced the `wallTimeMs` over-case was itself a finding, and it has now
 been acted on.** That case was the four-factor product, and it stopped timing

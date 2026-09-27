@@ -171,7 +171,7 @@ mod runtime_limits_tests {
         assert_eq!(
             interp.get_stack().last().and_then(|v| v.as_i64()),
             Some(5),
-            "2 3 + must evaluate to 5 after a materialization space projection"
+            "2 3 ADD must evaluate to 5 after a materialization space projection"
         );
     }
 

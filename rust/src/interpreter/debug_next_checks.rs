@@ -301,14 +301,6 @@ pub(crate) fn build_next_checks(
                     "[ ] の対応と、閉じ忘れた vector がないか確認する",
                 ),
             ));
-            out.push(check(
-                "checkClauseForm",
-                ("Check clause form", "節の形を確認する"),
-                (
-                    "'|' is only legal directly inside a vector, and needs both a guard and a body.",
-                    "'|' は vector の直下にのみ書ける。guard と body の両方が必要",
-                ),
-            ));
         }
         CauseClass::ResourceLimit => out.extend(resource_limit_checks(category)),
         CauseClass::UserLogic => {

@@ -31,6 +31,40 @@ mod malformed_numeric_literal_tests {
         }
     }
 
+    /// One numeric grammar, one answer at every entry point: a zero mantissa
+    /// is zero at any scale, so `0e2147483648` — an exponent past `i32` —
+    /// denotes 0 in source, through `NUM` and through `JSON-DECODE` alike. It
+    /// used to be three things (a mid-run `malformedSource`, a NIL and 0),
+    /// because the exponent's range was checked before the mantissa's zero.
+    #[tokio::test]
+    async fn a_zero_mantissa_is_zero_past_the_exponent_range_everywhere() {
+        for source in [
+            "1 PRINT 0e2147483648",
+            "1 PRINT '0e2147483648' NUM",
+            "1 PRINT '[0e2147483648]' JSON-DECODE 0 GET",
+            "1 PRINT 0e-2147483649",
+        ] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(source)
+                .await
+                .unwrap_or_else(|e| panic!("`{source}` must run: {e}"));
+            assert_eq!(interp.collect_output(), "1/1\n", "`{source}`");
+            assert_eq!(
+                interp.get_stack().last().and_then(|v| v.as_i64()),
+                Some(0),
+                "`{source}` must leave 0"
+            );
+        }
+        // The exponent's form is still checked: a malformed one is not a number.
+        let mut interp = Interpreter::new();
+        interp.execute("'0eX' NUM NIL?").await.unwrap();
+        assert_eq!(
+            interp.get_stack().last().map(|v| v.as_truth()),
+            Some(Some(true))
+        );
+    }
+
     /// And the refusal is the same wherever the literal is written — bare,
     /// inside a vector literal, and in a `DEF` body.
     #[tokio::test]

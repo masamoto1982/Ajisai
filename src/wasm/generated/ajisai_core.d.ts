@@ -123,9 +123,11 @@ export function agent_infer_contracts(source: string): string;
 
 /**
  * Predict the finite set of outcome ids `source` could produce without
- * executing it, matching `ajisai agent outcomes`.
+ * executing it, under the same agent-profile ceilings `agent_compute`
+ * applies, matching `ajisai agent outcomes`. `step_limit` as for
+ * `agent_compute`.
  */
-export function agent_predict_outcomes(source: string): string;
+export function agent_predict_outcomes(source: string, step_limit?: number | null): string;
 
 /**
  * Install console_error_panic_hook so any panic on the WASM side
@@ -144,7 +146,7 @@ export interface InitOutput {
     readonly agent_check: (a: number, b: number) => [number, number];
     readonly agent_compute: (a: number, b: number, c: number) => any;
     readonly agent_infer_contracts: (a: number, b: number) => [number, number];
-    readonly agent_predict_outcomes: (a: number, b: number) => [number, number];
+    readonly agent_predict_outcomes: (a: number, b: number, c: number) => [number, number];
     readonly ajisaiinterpreter_clear_stack: (a: number) => void;
     readonly ajisaiinterpreter_collect_core_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;

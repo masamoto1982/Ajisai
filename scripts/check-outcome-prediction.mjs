@@ -78,7 +78,8 @@ function predict(ajisaiBin, scratchDir, counter, source) {
   // `agent outcomes` always exits 0 (predicting always succeeds, even for a
   // program that cannot itself run) — execFileSync is safe here, unlike the
   // bijection gate's `agent compute`.
-  const stdout = execFileSync(ajisaiBin, ['agent', 'outcomes', file, '--json'], { encoding: 'utf8' });
+  // The trusted profile, the one the bijection gate runs the program under.
+  const stdout = execFileSync(ajisaiBin, ['agent', 'outcomes', file, '--limits', 'trusted'], { encoding: 'utf8' });
   return JSON.parse(stdout);
 }
 

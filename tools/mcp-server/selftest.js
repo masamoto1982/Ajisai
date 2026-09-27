@@ -586,6 +586,13 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     spent.structuredContent?.runtimeMetrics !== undefined &&
       !("executionSteps" in spent.structuredContent.runtimeMetrics),
   );
+  // One envelope, one version: the adapter's own answers (`word_contract`)
+  // carry the backend report's schema version, not a number of their own.
+  check(
+    "every envelope carries the one schema version",
+    Number.isInteger(spent.structuredContent?.schemaVersion) &&
+      addContract.structuredContent?.schemaVersion === spent.structuredContent.schemaVersion,
+  );
 
   // An error report's answer is its diagnosis; the stack is residual state.
   // `0 99999 RANGE LENGHT` is a one-character typo holding a

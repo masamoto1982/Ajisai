@@ -74,7 +74,7 @@ function resolveAjisaiBin() {
 // Domains considered and rejected, with the reason (kept here so the
 // rejection is not silently rediscovered):
 //
-//   - `scalarFraction` ('1 2 /'), meant to reach `invalidInteger`: the table
+//   - `scalarFraction` ('1 2 DIV'), meant to reach `invalidInteger`: the table
 //     already observes it through the integer-taking Words' existing domains,
 //     so the whole table need not carry another.
 //   - `vectorRagged` ('[ [ 1 ] [ 2 3 ] ]'), meant to reach `shapeMismatch`:
@@ -83,10 +83,10 @@ function resolveAjisaiBin() {
 //     answers a value). `shapeMismatch` is reached far more directly by two
 //     *flat* vectors of different lengths, which is what `vectorTriple`
 //     below is for.
-//   - `codeBlockFails` ('{ 1 0 / }'), meant to reach the retired
+//   - `codeBlockFails` ('{ 1 0 DIV }'), meant to reach the retired
 //     `NilReason::ExecutionFailure`: that reason no longer exists (Phase 1
 //     deleted it as unreachable), and separately `{ }` is no longer valid
-//     source syntax at all (confirmed: `{ 1 0 / }` is a MalformedSource
+//     source syntax at all (confirmed: `{ 1 0 DIV }` is a MalformedSource
 //     parse error, not a CodeBlock value) — code and data share `[ ]` since
 //     the CodeBlock/Vector unification. Both premises this domain was
 //     designed around are gone.

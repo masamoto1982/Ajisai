@@ -174,8 +174,8 @@ export interface ProtocolValueSemantics {
      * The exact value of an algebraic irrational, as the multiquadratic normal
      * form Σ c·√r it is stored in (LANG.VALUES.EXACT): one entry per term, ascending by
      * radicand, with radicand `'1'` keying the rational part. These pairs *are*
-     * the number, so a host that draws them shows the exact value in a line —
-     * `√3`, `1/2 + 1/3√5` — instead of choosing between a thirty-line continued
+     * the number, so a host that writes them shows the exact value in a line —
+     * `sqrt(3)`, `1/2+1/3*sqrt(5)` — instead of choosing between a thirty-line continued
      * fraction and the approximation `approximate` marks. Absent on rationals
      * and on every non-scalar node. Additive and optional.
      */

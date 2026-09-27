@@ -285,9 +285,12 @@ impl OutcomesResponse {
 /// executing it (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 5).
 /// Always succeeds — an unresolvable program still has an exact, single
 /// predicted outcome (`error:malformedSource` or `error:unknownWord`); see `outcome_report::predict_outcomes`.
-pub fn predict_outcomes(source: &str) -> OutcomesResponse {
+/// Predict `source`'s outcome set under `options`' ceilings, without
+/// executing it. The reported `limitProfile` is the profile the prediction
+/// assumed, so it must be the one the caller would compute under.
+pub fn predict_outcomes(source: &str, options: ComputeOptions) -> OutcomesResponse {
     OutcomesResponse {
-        report: outcome_report::predict_outcomes(source),
+        report: outcome_report::predict_outcomes(source, &options),
     }
 }
 

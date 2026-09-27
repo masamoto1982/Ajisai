@@ -165,12 +165,10 @@ the display is meant to be read rather than parsed.
 The one that misleads is the node's own `value`: a rational approximation
 flagged `semantics.approximate`, so it looks exact and is not.
 
-The display renders the stored normal form faithfully, which means equal
-values can be written differently: `8 SQRT` gives `sqrt(8)` and
-`2 SQRT 2 SQRT ADD` gives `2/1*sqrt(2)`, and `EQ` decides they are the same
-number. Reducing the display would only move the discrepancy, by making the
-string disagree with the `exactTerms` beside it. Comparison decides equality
-here; string comparison does not. `exactTerms` does not appear on a rational
+The display writes the canonical normal form, so equal values are written
+the same way: `8 SQRT` and `2 SQRT 2 SQRT ADD` both give `2/1*sqrt(2)`, and
+`EQ` decides they are the same number. Comparison decides equality here;
+string comparison does not — the string is display text, not a value. `exactTerms` does not appear on a rational
 or a vector of rationals, whose `stackDisplay` is already the whole value.
 
 ### Diagnostics
@@ -246,7 +244,7 @@ what they apply, and the divergence is recorded as an explicit
 `ajisai://guide/quickstart`, `ajisai://vocabulary`, `ajisai://schema/result`
 and `ajisai://limits`. The `ajisai://words/{name}` template exposes the same
 complete Word contract as `word_contract` without a tool call. Contract lookups
-accept canonical names and aliases; their registry digest is calculated from
+accept canonical names; their registry digest is calculated from
 the canonical specification, not from a reduced documentation manifest.
 
 `ajisai://guide/quickstart` is an MCP preface (`mcp-quickstart.md`) followed by

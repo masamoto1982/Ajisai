@@ -146,15 +146,15 @@ const COLLECTION = [
 ];
 
 const STEPS = [
-    // 15,000 reps, not 200,000: each `" 7 +"` is 4 source bytes, and this
+    // 10,000 reps, not 200,000: each `" 7 ADD"` is 6 source bytes, and this
     // case's source is written out flat (unlike the trampoline below, which
     // stays short at any rep count because the loop body lives once in a
-    // `DEF`) — 200,000 reps is 800,001 bytes, over the MCP profile's
-    // 65,536-byte `sourceBytes`. 15,000 reps is 60,001 bytes, comfortably
+    // `DEF`) — 200,000 reps is 1,200,001 bytes, over the MCP profile's
+    // 65,536-byte `sourceBytes`. 10,000 reps is 60,001 bytes, comfortably
     // under, and still gives `rate()` a wall-clock interval well clear of
     // jitter (rates are ms-normalized, so step *count* only needs to be
     // enough to time cleanly, not any particular round number).
-    ['add loop x15k', '', `1${' 7 +'.repeat(15_000)}`],
+    ['add loop x10k', '', `1${' 7 ADD'.repeat(10_000)}`],
     // Every iteration pays a dictionary lookup and a frame push, not just an
     // arithmetic op, which is what makes it the dearer of the two shapes. It
     // used to be written as a self-calling trampoline; LANG.DICTIONARY.ACYCLIC
