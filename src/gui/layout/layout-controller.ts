@@ -4,7 +4,6 @@ import type { GUIElements } from '../gui-dom-cache';
 import type { MobileHandler } from '../mobile-view-switcher';
 
 export type LayoutController = {
-    readonly getState: () => LayoutState;
     readonly setArea: (mode: ViewMode) => void;
     readonly handleResize: () => void;
 };
@@ -31,9 +30,5 @@ export const createLayoutController = (deps: LayoutControllerDeps): LayoutContro
         updateEditorPlaceholder(deps.elements, deps.mobile);
     };
 
-    return {
-        getState: () => deps.state,
-        setArea,
-        handleResize
-    };
+    return { setArea, handleResize };
 };

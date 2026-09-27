@@ -1,5 +1,6 @@
 
 
+import { isMobileViewport } from '../platform/viewport';
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
@@ -25,7 +26,6 @@ interface WorkerInstance {
     currentTaskId: string | null;
 }
 
-const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
 
 export class WorkerManager {
@@ -33,7 +33,7 @@ export class WorkerManager {
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
     private compiledModule: WebAssembly.Module | null = null;
-    private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
+    private maxWorkers = isMobileViewport()
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
         : navigator.hardwareConcurrency || 4;
     // Whether SharedArrayBuffer-backed wasm threading can run in this page

@@ -1,7 +1,7 @@
+import { isMobileViewport } from '../platform/viewport';
 import { formatAjisaiSource } from './code-formatter';
 
 export interface EditorCallbacks {
-    readonly onContentChange?: (content: string) => void;
     readonly onSwitchToInputMode?: () => void;
     readonly onRequestSuggestions?: (prefix: string) => string[];
 }
@@ -11,7 +11,6 @@ export interface Editor {
     readonly updateValue: (value: string) => void;
     readonly clear: (switchView?: boolean) => void;
     readonly insertWord: (word: string) => void;
-    readonly insertText: (text: string) => void;
     readonly removeLastWord: () => void;
     readonly format: () => void;
     readonly focus: () => void;
@@ -28,7 +27,6 @@ export interface Editor {
      * the selection, which is how step mode says it has finished.
      */
     readonly revealRange: (start: number, end: number) => void;
-    readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
     /**
      * The word-shaped token touching the cursor (or the current selection's
      * start), the same extraction autocomplete uses. Empty when the cursor
@@ -43,33 +41,6 @@ const insertAt = (
     end: number,
     insertion: string
 ): string => text.substring(0, start) + insertion + text.substring(end);
-
-const locateInnerBracketPosition = (text: string): number | null => {
-    const pos = text.lastIndexOf('[ ]');
-    return pos !== -1 ? pos + 2 : null;
-};
-
-const computeCursorPosition = (
-    basePosition: number,
-    insertedText: string,
-    preferInnerBracket: boolean
-): number => {
-    if (preferInnerBracket) {
-        const innerPos = locateInnerBracketPosition(insertedText);
-        if (innerPos !== null) {
-            return basePosition + innerPos;
-        }
-    }
-    return basePosition + insertedText.length;
-};
-
-const updateElementValue = (element: HTMLTextAreaElement, value: string): void => {
-    element.value = value;
-};
-
-const focusElement = (element: HTMLTextAreaElement): void => {
-    element.focus();
-};
 
 const updateSelectionRange = (
     element: HTMLTextAreaElement,
@@ -92,8 +63,6 @@ const MAX_SUGGESTIONS = 10;
 // `SQRT`. Ten results are the ceiling either way (`MAX_SUGGESTIONS`), so a
 // shorter prefix costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
-const MOBILE_BREAKPOINT = 768;
-const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
     '(', ')', '[', ']', '{', '}',
     '<', '>', '+', '-', '*', '/',
@@ -158,7 +127,6 @@ export const createEditor = (
     element: HTMLTextAreaElement,
     callbacks: EditorCallbacks = {}
 ): Editor => {
-    let onContentChangeCallback = callbacks.onContentChange;
     const switchToInputMode = callbacks.onSwitchToInputMode ?? (() => {});
     const requestSuggestions = callbacks.onRequestSuggestions ?? (() => []);
 
@@ -173,12 +141,6 @@ export const createEditor = (
     suggestionPanel.setAttribute('role', 'listbox');
     suggestionPanel.style.display = 'none';
     textareaContainer?.appendChild(suggestionPanel);
-
-    const emitContentChange = (): void => {
-        if (onContentChangeCallback) {
-            onContentChangeCallback(element.value);
-        }
-    };
 
     const syncLastKnownSelection = (): void => {
         lastKnownSelection = lookupSelectionRange(element);
@@ -298,7 +260,7 @@ export const createEditor = (
         const isTokenStart = cursorPos === 0 || /\s/.test(prevChar);
         const { token } = extractToken(element.value, element.selectionStart);
         if (isTokenStart && token.length === 0) {
-            if (!checkIsMobile()) {
+            if (!isMobileViewport()) {
                 hideSuggestions();
                 return;
             }
@@ -326,13 +288,11 @@ export const createEditor = (
 
     const applySuggestion = (suggestion: string): void => {
         const { start, end } = extractToken(element.value, element.selectionStart);
-        const newText = insertAt(element.value, start, end, suggestion);
-        updateElementValue(element, newText);
+        element.value = insertAt(element.value, start, end, suggestion);
         const newPos = start + suggestion.length;
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
         hideSuggestions();
-        emitContentChange();
     };
 
     const registerEventListeners = (): void => {
@@ -349,7 +309,6 @@ export const createEditor = (
 
         element.addEventListener('input', () => {
             syncLastKnownSelection();
-            emitContentChange();
             refreshSuggestions();
         });
 
@@ -389,32 +348,34 @@ export const createEditor = (
     };
 
     if (element.value.trim() === '') {
-        updateElementValue(element, '');
+        element.value = '';
     }
     registerEventListeners();
 
     const extractValue = (): string => element.value.trim();
 
     const updateValue = (value: string): void => {
-        updateElementValue(element, value);
+        element.value = value;
         const cursor = value.length;
         updateSelectionRange(element, cursor, cursor);
         syncLastKnownSelection();
         hideSuggestions();
-        emitContentChange();
         switchToInputMode();
+    };
+
+    // On a phone, taking focus raises the keyboard over the surface the user
+    // is looking at, so focus is only kept where it already was.
+    const refocus = (wasFocused: boolean): void => {
+        if (wasFocused || !isMobileViewport()) element.focus();
     };
 
     const clear = (switchView = true): void => {
         const wasFocused = document.activeElement === element;
-        updateElementValue(element, '');
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
+        element.value = '';
+        refocus(wasFocused);
         updateSelectionRange(element, 0, 0);
         syncLastKnownSelection();
         hideSuggestions();
-        emitContentChange();
         if (switchView) {
             switchToInputMode();
         }
@@ -423,37 +384,12 @@ export const createEditor = (
     const insertWord = (word: string): void => {
         const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
-        const newText = insertAt(element.value, start, end, word);
-
-        updateElementValue(element, newText);
-
+        element.value = insertAt(element.value, start, end, word);
         const newPos = start + word.length;
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
-
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
+        refocus(wasFocused);
         hideSuggestions();
-        emitContentChange();
-    };
-
-    const insertText = (text: string): void => {
-        const wasFocused = document.activeElement === element;
-        const { start, end } = lookupEditableSelectionRange();
-        const newText = insertAt(element.value, start, end, text);
-
-        updateElementValue(element, newText);
-
-        const cursorPos = computeCursorPosition(start, text, true);
-        updateSelectionRange(element, cursorPos, cursorPos);
-        syncLastKnownSelection();
-
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
-        hideSuggestions();
-        emitContentChange();
     };
 
     const removeLastWord = (): void => {
@@ -463,17 +399,11 @@ export const createEditor = (
         const after = element.value.substring(start);
 
         const trimmed = before.replace(/\S+\s*$/, '');
-        const newText = trimmed + after;
-
-        updateElementValue(element, newText);
+        element.value = trimmed + after;
         updateSelectionRange(element, trimmed.length, trimmed.length);
         syncLastKnownSelection();
-
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
+        refocus(wasFocused);
         hideSuggestions();
-        emitContentChange();
     };
 
     const format = (): void => {
@@ -481,16 +411,13 @@ export const createEditor = (
         const formatted = formatAjisaiSource(element.value);
 
         if (formatted !== element.value) {
-            updateElementValue(element, formatted);
+            element.value = formatted;
             const cursor = formatted.length;
             updateSelectionRange(element, cursor, cursor);
             syncLastKnownSelection();
-            emitContentChange();
         }
 
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
+        refocus(wasFocused);
 
         // Focusing the textarea re-runs the focus handler, which would reopen the
         // suggestion panel. Formatting is an explicit, whole-buffer action, so
@@ -499,20 +426,14 @@ export const createEditor = (
     };
 
     const focus = (): void => {
-        focusElement(element);
+        element.focus();
         switchToInputMode();
         refreshSuggestions();
     };
 
-    const registerContentChangeCallback = (callback: (content: string) => void): void => {
-        onContentChangeCallback = callback;
-    };
-
-    // Escape is bound window-wide to Abort, on a capturing listener that stops
-    // propagation, so the panel's own Escape branch never ran and the panel
-    // could not be dismissed with the key every other editor dismisses it with.
-    // The window handler now asks here first and only aborts when there was no
-    // panel to close.
+    // Escape is bound window-wide to Abort on a capturing listener, so the
+    // window handler asks here first and only aborts when there was no panel
+    // to close.
     const dismissSuggestions = (): boolean => {
         if (suggestionPanel.style.display === 'none') return false;
         hideSuggestions();
@@ -530,7 +451,7 @@ export const createEditor = (
         const offset = raw.length - raw.trimStart().length;
         const from = Math.min(offset + start, raw.length);
         const to = Math.min(offset + end, raw.length);
-        focusElement(element);
+        element.focus();
         updateSelectionRange(element, from, to);
         syncLastKnownSelection();
     };
@@ -548,13 +469,11 @@ export const createEditor = (
         updateValue,
         clear,
         insertWord,
-        insertText,
         removeLastWord,
         format,
         focus,
         dismissSuggestions,
         revealRange,
-        registerContentChangeCallback,
         getWordAtCursor
     };
 };

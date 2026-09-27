@@ -24,7 +24,6 @@ const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps =
         state,
         mobile: {
             isMobile: () => mobileMode,
-            extractCurrentMode: () => state.currentMode,
             updateView: vi.fn((mode: ViewMode) => { state.currentMode = mode; }),
         },
         switchDictionarySheet: vi.fn(),

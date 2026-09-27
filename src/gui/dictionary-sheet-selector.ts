@@ -36,7 +36,6 @@ export const createDictionarySheetSelector = (
     // the first setEntries() populates the real list.
     let currentValue = 'core';
 
-    rootEl.dataset.value = currentValue;
     rootEl.classList.add('sheet-selector');
     rootEl.innerHTML = '';
 
@@ -115,7 +114,6 @@ export const createDictionarySheetSelector = (
 
     const selectSheet = (sheetId: string): void => {
         currentValue = sheetId;
-        rootEl.dataset.value = sheetId;
         syncNativeTriggerOptions();
         syncTrigger();
         renderPanel();
@@ -158,7 +156,6 @@ export const createDictionarySheetSelector = (
         entries = next;
         if (currentValue && !entries.some(e => e.sheetId === currentValue)) {
             currentValue = entries[0]?.sheetId ?? '';
-            rootEl.dataset.value = currentValue;
         }
         syncNativeTriggerOptions();
         syncTrigger();

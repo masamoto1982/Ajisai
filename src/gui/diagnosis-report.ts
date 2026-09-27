@@ -55,8 +55,9 @@ export const renderDiagnosisReport = (
     // as evidence — the same `key=value` channel `stackLenBefore` uses —
     // so nothing about the protocol had to change to carry it.
     const sourceLine = evidenceValue(diagnosis.evidence, 'sourceLine');
+    const sourceColumn = evidenceValue(diagnosis.evidence, 'sourceColumn');
     const at = sourceLine
-        ? ` at line ${sourceLine}, column ${evidenceValue(diagnosis.evidence, 'sourceColumn')}`
+        ? ` at line ${sourceLine}${sourceColumn ? `, column ${sourceColumn}` : ''}`
         : '';
     // The Words the failure happened *inside*, innermost first. A block and
     // a Word body are each their own token stream with no source of their

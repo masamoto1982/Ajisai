@@ -21,8 +21,6 @@ export interface GUIElements {
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
-    readonly editorPanel: HTMLElement;
-    readonly statePanel: HTMLElement;
     readonly leftPanelSelect: HTMLSelectElement;
     readonly rightPanelSelect: HTMLSelectElement;
     readonly mobilePanelSelect: HTMLSelectElement;
@@ -36,64 +34,45 @@ type ElementConstructor<T extends HTMLElement> = {
     readonly name: string;
 };
 
-function requireElementById<T extends HTMLElement>(id: string, expectedConstructor: ElementConstructor<T>): T {
-    const element = document.getElementById(id);
-
-    if (!element) {
-        throw new Error(`Required GUI element #${id} was not found.`);
-    }
-
-    if (!(element instanceof expectedConstructor)) {
-        throw new Error(`Required GUI element #${id} has unexpected type: ${element.constructor.name}.`);
-    }
-
-    return element as T;
-}
-
-
-
-function requireElementBySelector<T extends HTMLElement>(selector: string, expectedConstructor: ElementConstructor<T>): T {
+// Every element the GUI binds to is required at startup: a missing one is a
+// broken page, reported once here rather than as a null somewhere later.
+function requireElement<T extends HTMLElement>(selector: string, expectedConstructor: ElementConstructor<T>): T {
     const element = document.querySelector(selector);
-
     if (!element) {
-        throw new Error(`Required GUI element selector '${selector}' was not found.`);
+        throw new Error(`Required GUI element ${selector} was not found.`);
     }
-
     if (!(element instanceof expectedConstructor)) {
-        throw new Error(`Required GUI element selector '${selector}' has unexpected type: ${element.constructor.name}.`);
+        throw new Error(`Required GUI element ${selector} has unexpected type: ${element.constructor.name}.`);
     }
-
-    return element as T;
+    return element;
 }
 
 export const cacheElements = (): GUIElements => ({
-    codeInput: requireElementById('code-input', HTMLTextAreaElement),
-    editorClearBtn: requireElementById('editor-clear-btn', HTMLButtonElement),
-    stackClearBtn: requireElementById('stack-clear-btn', HTMLButtonElement),
-    editorFormatBtn: requireElementById('editor-format-btn', HTMLButtonElement),
-    exportBtn: requireElementById('export-btn', HTMLButtonElement),
-    importBtn: requireElementById('import-btn', HTMLButtonElement),
-    outputDisplay: requireElementById('output-display', HTMLElement),
-    stackDisplay: requireElementById('stack-display', HTMLElement),
-    builtInWordsDisplay: requireElementById('core-words-display', HTMLElement),
-    userWordsDisplay: requireElementById('user-words-display', HTMLElement),
-    dictionarySearch: requireElementById('dictionary-search', HTMLInputElement),
-    dictionarySearchClearBtn: requireElementById('dictionary-search-clear-btn', HTMLButtonElement),
+    codeInput: requireElement('#code-input', HTMLTextAreaElement),
+    editorClearBtn: requireElement('#editor-clear-btn', HTMLButtonElement),
+    stackClearBtn: requireElement('#stack-clear-btn', HTMLButtonElement),
+    editorFormatBtn: requireElement('#editor-format-btn', HTMLButtonElement),
+    exportBtn: requireElement('#export-btn', HTMLButtonElement),
+    importBtn: requireElement('#import-btn', HTMLButtonElement),
+    outputDisplay: requireElement('#output-display', HTMLElement),
+    stackDisplay: requireElement('#stack-display', HTMLElement),
+    builtInWordsDisplay: requireElement('#core-words-display', HTMLElement),
+    userWordsDisplay: requireElement('#user-words-display', HTMLElement),
+    dictionarySearch: requireElement('#dictionary-search', HTMLInputElement),
+    dictionarySearchClearBtn: requireElement('#dictionary-search-clear-btn', HTMLButtonElement),
     // A custom selector component installs a `value` accessor on this element
     // at init time, so it satisfies DictionarySheetSelectElement at runtime.
-    dictionarySheetSelect: requireElementById('dictionary-sheet-select', HTMLElement) as DictionarySheetSelectElement,
-    inputArea: requireElementBySelector('.input-area', HTMLElement),
-    outputArea: requireElementBySelector('.output-area', HTMLElement),
-    stackArea: requireElementBySelector('.stack-area', HTMLElement),
-    dictionaryArea: requireElementById('dictionary-panel', HTMLElement),
-    editorPanel: requireElementById('editor-panel', HTMLElement),
-    statePanel: requireElementById('state-panel', HTMLElement),
-    leftPanelSelect: requireElementById('left-panel-select', HTMLSelectElement),
-    rightPanelSelect: requireElementById('right-panel-select', HTMLSelectElement),
-    mobilePanelSelect: requireElementById('mobile-panel-select', HTMLSelectElement),
-    mobileDictionarySearch: requireElementById('mobile-dictionary-search', HTMLInputElement),
-    mobileDictionarySearchClearBtn: requireElementById('mobile-dictionary-search-clear-btn', HTMLButtonElement),
-    copyOutputBtn: requireElementById('copy-output-btn', HTMLButtonElement)
+    dictionarySheetSelect: requireElement('#dictionary-sheet-select', HTMLElement) as DictionarySheetSelectElement,
+    inputArea: requireElement('.input-area', HTMLElement),
+    outputArea: requireElement('.output-area', HTMLElement),
+    stackArea: requireElement('.stack-area', HTMLElement),
+    dictionaryArea: requireElement('#dictionary-panel', HTMLElement),
+    leftPanelSelect: requireElement('#left-panel-select', HTMLSelectElement),
+    rightPanelSelect: requireElement('#right-panel-select', HTMLSelectElement),
+    mobilePanelSelect: requireElement('#mobile-panel-select', HTMLSelectElement),
+    mobileDictionarySearch: requireElement('#mobile-dictionary-search', HTMLInputElement),
+    mobileDictionarySearchClearBtn: requireElement('#mobile-dictionary-search-clear-btn', HTMLButtonElement),
+    copyOutputBtn: requireElement('#copy-output-btn', HTMLButtonElement)
 });
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({

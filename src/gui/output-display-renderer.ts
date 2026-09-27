@@ -1,6 +1,6 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import type { Value, ExecuteResult } from '../wasm-interpreter-types';
+import type { Value, ExecuteResult, ExactTerm } from '../wasm-interpreter-types';
 import { valueToLatex } from './value-latex';
 import {
     createRenderBudget,
@@ -21,8 +21,6 @@ export interface DisplayState {
 export interface Display {
     readonly init: () => void;
     readonly renderExecutionResult: (result: ExecuteResult) => void;
-    readonly appendExecutionResult: (result: ExecuteResult) => void;
-    readonly renderOutput: (text: string) => void;
     readonly renderError: (
         error: Error | { message?: string } | string,
         precedingOutput?: string
@@ -33,9 +31,6 @@ export interface Display {
     readonly renderStack: (stack: Value[]) => void;
     readonly extractState: () => DisplayState;
 }
-
-const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
-
 
 const BRACKET_DEPTH_COLORS: readonly string[] = [
     '#332288',
@@ -60,7 +55,6 @@ const createBracketSpan = (bracket: string, depth: number): HTMLSpanElement => {
     return span;
 };
 
-
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== 'object') return null;
     const candidate = value as Record<string, unknown>;
@@ -83,24 +77,14 @@ const formatNumber = (value: unknown): string => {
 ///
 /// The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
 /// (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
-/// rather than an empty Vector. This panel used to print the glued form,
-/// which no one noticed while a display was not expected to be source.
+/// rather than an empty Vector.
 const formatVector = (value: unknown, depth: number): string => {
-    const [open, close] = lookupBracketsAtDepth(depth);
-
-    if (Array.isArray(value)) {
-        if (value.length === 0) {
-            return `${open} ${close}`;
-        }
-        const formatSingleElement = (v: Value): string => {
-            try { return formatValue(v, depth + 1); } catch { return '?'; }
-        };
-        const elements: string = value.map(formatSingleElement).join(' ');
-        return `${open} ${elements} ${close}`;
-    }
-    return `${open} ${close}`;
+    if (!Array.isArray(value) || value.length === 0) return '[ ]';
+    const formatSingleElement = (v: Value): string => {
+        try { return formatValue(v, depth + 1); } catch { return '?'; }
+    };
+    return `[ ${value.map(formatSingleElement).join(' ')} ]`;
 };
-
 
 // Math view (docs/dev/gui-current-design-memory.md): an alternate KaTeX
 // rendering of stack values, derived from the structured protocol form.
@@ -154,19 +138,11 @@ const createElisionSpan = (elided: number): HTMLSpanElement => {
     return span;
 };
 
-interface ExactTerm {
-    readonly numerator: string;
-    readonly denominator: string;
-    readonly radicand: string;
-}
-
 /// An irrational's normal form Σ c·√r written exactly as the engine writes it
 /// (`rust/src/types/display.rs::render_algebraic_terms`): one spaceless token,
 /// terms in the normal form's order, `sqrt(r)` for a unit coefficient,
-/// `n/d*sqrt(r)` otherwise, and the rational term as `n/d`. The panel used to
-/// write `√3` and `1/2√2` with spaced signs — a second spelling of a value
-/// whose canonical display the Stack surface is required to show
-/// (spec/gui-semantics.md), and one no program could have written back.
+/// `n/d*sqrt(r)` otherwise, and the rational term as `n/d` — the canonical
+/// display the Stack surface is required to show (spec/gui-semantics.md).
 const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string | null => {
     if (!terms || terms.length === 0) return null;
     let out = '';
@@ -223,9 +199,7 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
 /// instead; a host that sends none gets the approximation marked `≈`, never a
 /// bare `n/d` that would read as exact.
 const formatNumberNode = (item: Value): string => {
-    const semantics = item?.semantics as
-        | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
-        | undefined;
+    const semantics = item?.semantics;
     const exact = formatNormalForm(semantics?.exactTerms);
     if (exact) return exact;
     const text = formatNumber(item.value);
@@ -285,7 +259,6 @@ const formatRecord = (value: unknown, depth: number): string => {
     return `{ ${pairs.join(' ')} }`;
 };
 
-
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
     typeof error === 'string'
         ? `Error: ${error}`
@@ -296,14 +269,6 @@ const createSpanElement = (text: string, color: string): HTMLSpanElement => {
     span.style.color = color;
     span.textContent = text;
     return span;
-};
-
-const clearElement = (element: HTMLElement): void => {
-    element.innerHTML = '';
-};
-
-const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
-    parent.appendChild(child);
 };
 
 export const createDisplay = (elements: DisplayElements): Display => {
@@ -345,7 +310,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const appendSpan = (text: string, color: string): HTMLSpanElement => {
         const span = createSpanElement(text.replace(/\\n/g, '\n'), color);
-        appendToElement(elements.outputDisplay, span);
+        elements.outputDisplay.appendChild(span);
         return span;
     };
 
@@ -353,15 +318,15 @@ export const createDisplay = (elements: DisplayElements): Display => {
         const debug = (result.debugOutput || '').trim();
         const program = (result.output || '').trim();
 
-        mainOutput = `${debug}\n${program}`;
-        clearElement(elements.outputDisplay);
+        mainOutput = [debug, program].filter(Boolean).join('\n');
+        elements.outputDisplay.replaceChildren();
 
         if (debug) {
             appendSpan(debug, '#333');
         }
 
         if (debug && program) {
-            appendToElement(elements.outputDisplay, document.createElement('br'));
+            elements.outputDisplay.appendChild(document.createElement('br'));
         }
 
         if (program) {
@@ -371,21 +336,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         if (!debug && !program && result.status === 'OK') {
             appendSpan('OK', '#333');
         }
-
-    };
-
-    const appendExecutionResult = (result: ExecuteResult): void => {
-        const filteredOutput = (result.output || '').trim();
-
-        if (filteredOutput) {
-            appendSpan(filteredOutput, '#4DC4FF');
-        }
-    };
-
-    const renderOutput = (text: string): void => {
-        mainOutput = text;
-        clearElement(elements.outputDisplay);
-        appendSpan(text, '#4DC4FF');
     };
 
     /// An error is written *below* whatever the run already printed, never in
@@ -401,10 +351,10 @@ export const createDisplay = (elements: DisplayElements): Display => {
         const errorMessage = formatErrorMessage(error);
         const printed = precedingOutput.trim();
 
-        clearElement(elements.outputDisplay);
+        elements.outputDisplay.replaceChildren();
         if (printed) {
             appendSpan(printed, '#4DC4FF');
-            appendToElement(elements.outputDisplay, document.createElement('br'));
+            elements.outputDisplay.appendChild(document.createElement('br'));
         }
         mainOutput = printed ? `${printed}\n${errorMessage}` : errorMessage;
 
@@ -418,7 +368,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan('\n' + text, '#666');
         } else {
             mainOutput = text;
-            clearElement(elements.outputDisplay);
+            elements.outputDisplay.replaceChildren();
             appendSpan(text, '#666');
         }
     };
@@ -447,7 +397,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         body.textContent = text;
         details.appendChild(body);
 
-        appendToElement(elements.outputDisplay, details);
+        elements.outputDisplay.appendChild(details);
     };
 
     /// A Core Word's reference entry, as the host's lookup answered it.
@@ -457,14 +407,14 @@ export const createDisplay = (elements: DisplayElements): Display => {
     /// entry's own line structure survives verbatim.
     const renderDocumentation = (text: string): void => {
         mainOutput = text;
-        clearElement(elements.outputDisplay);
+        elements.outputDisplay.replaceChildren();
         appendSpan(text, '#333');
     };
 
     const renderStack = (stack: Value[]): void => {
         lastStack = Array.isArray(stack) ? stack : [];
         const display = elements.stackDisplay;
-        clearElement(display);
+        display.replaceChildren();
 
         // The clear control follows the same rule the editor's does: it is not
         // drawn when there is nothing to clear. The flag goes on the panel
@@ -499,10 +449,10 @@ export const createDisplay = (elements: DisplayElements): Display => {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';
             }
-            appendToElement(container, elem);
+            container.appendChild(elem);
         });
 
-        appendToElement(display, container);
+        display.appendChild(container);
     };
 
     const extractState = (): DisplayState => ({ mainOutput });
@@ -510,8 +460,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
     return {
         init,
         renderExecutionResult,
-        appendExecutionResult,
-        renderOutput,
         renderError,
         renderInfo,
         renderFoldedInfo,

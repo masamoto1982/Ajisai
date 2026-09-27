@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/src/styles/tokens.css">
     <link rel="stylesheet" href="/src/styles/base.css">
-    <link rel="stylesheet" href="/src/styles/layout.css">
     <link rel="stylesheet" href="/src/styles/components.css">
-    <link rel="stylesheet" href="/src/styles/responsive.css">
     <meta name="description" content="Ajisai - AI-first, vector-oriented, fractional-dataflow language">
-    <meta name="theme-color" content="#007bff">
+    <meta name="theme-color" content="#6b5b95">
 
     <title>Ajisai</title>
-
-    <!-- DEBUG: div階層を色枠で可視化。確認時は下行のコメントを外す。
-         本番ビルドではコメントアウトのままにすること。 -->
-    <!-- <link rel="stylesheet" href="/src/styles/debug.css"> -->
 </head>
 <body data-active-area="input">
     <!-- First-visit walkthrough (both desktop and mobile). Shows the logo, then
@@ -148,7 +142,7 @@
                 </div>
                 <section id="stack-panel" class="stack-area" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
-                    <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                    <div id="stack-display" class="state-display highlight-top" aria-live="polite" aria-atomic="false"></div>
                     <!--
                       Discarding the stack is the same gesture as clearing the
                       editor, so it is the same control in the same place: an

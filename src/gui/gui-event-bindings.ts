@@ -188,10 +188,8 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         });
     });
 
-    elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
-    elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
-
-
+    elements.exportBtn.addEventListener('click', () => persistence.exportUserWords());
+    elements.importBtn.addEventListener('click', () => persistence.importUserWords());
 
     elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && e.shiftKey) {

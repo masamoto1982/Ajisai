@@ -244,10 +244,6 @@ header h1 {
     margin: 0;
 }
 
-header h1 a {
-    color: var(--color-text);
-}
-
 .version {
     display: inline-block;
     font-size: 0.75rem;
@@ -531,28 +527,4 @@ footer a {
 .state-display::-webkit-scrollbar-thumb:hover,
 .words-display::-webkit-scrollbar-thumb:hover {
     background: var(--color-secondary);
-}
-
-
-
-@media (max-width: 768px) {
-    html,
-    body {
-        height: auto;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .container {
-        min-height: 100vh;
-        height: auto;
-        width: 100%;
-    }
-
-
-    header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
 }

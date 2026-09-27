@@ -3,6 +3,23 @@ export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
+/** One entry of `collect_user_words_info`. The dictionary slot is constant (`USER`). */
+export type UserWordInfo = [dictionary: string, name: string, isProtected: boolean];
+
+/**
+ * One entry of `collect_core_words_info`. `hoverSummary` is the button title
+ * ("WORD — short verb phrase"); `hoverSyntax` is the shortest useful
+ * invocation, operands included. See docs/dev/three-layer-documentation-model.md §4.
+ */
+export type CoreWordInfo = [name: string, hoverSummary: string, hoverSyntax: string];
+
+/** One term c·√r of an irrational's exact normal form (LANG.VALUES.EXACT). */
+export interface ExactTerm {
+    readonly numerator: string;
+    readonly denominator: string;
+    readonly radicand: string;
+}
+
 export interface UserWord {
     dictionary?: string | null;
     name: string;
@@ -24,16 +41,11 @@ export interface AjisaiInterpreter {
     host_profile(): string;
     reset(): ExecuteResult;
     collect_stack(): Value[];
-    // Tuple shape: [dictionary, name, isProtected].
-    collect_user_words_info(): Array<[string, string, boolean]>;
+    collect_user_words_info(): UserWordInfo[];
     // Content identity per user word (LANG.AUTHORITY.FREEDOM).
     // Tuple shape: [fullyQualifiedName, contentId].
     collect_word_identities(): Array<[string, string]>;
-    // Tuple shape: [name, hover_summary, hover_syntax].
-    // hover_summary is the native button title ("WORD — short verb phrase");
-    // hover_syntax is the inline word-info preview (shortest useful invocation,
-    // operands included). See docs/dev/three-layer-documentation-model.md §4.
-    collect_core_words_info(): Array<[string, string, string]>;
+    collect_core_words_info(): CoreWordInfo[];
     lookup_word_definition(name: string): string | null;
     // See `UserWord.description`.
     lookup_word_description(name: string): string | null;
@@ -179,11 +191,7 @@ export interface ProtocolValueSemantics {
      * fraction and the approximation `approximate` marks. Absent on rationals
      * and on every non-scalar node. Additive and optional.
      */
-    exactTerms?: ReadonlyArray<{
-        readonly numerator: string;
-        readonly denominator: string;
-        readonly radicand: string;
-    }>;
+    exactTerms?: ReadonlyArray<ExactTerm>;
 }
 
 export interface ErrorFlowTraceEvent {
@@ -252,4 +260,11 @@ export interface WasmModule {
     default?: () => Promise<any>;
     init?: () => Promise<any>;
     init_panic_hook?: () => void;
+}
+
+declare global {
+    interface Window {
+        AjisaiWasm: WasmModule;
+        ajisaiInterpreter: AjisaiInterpreter;
+    }
 }
