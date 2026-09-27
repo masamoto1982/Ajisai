@@ -40,7 +40,7 @@ export const applyInterpreterSnapshot = (
     // compiled-artifact cache, so an unchanged user word's compiled plan is
     // reused across runs instead of recompiled. Reuse is content-identity keyed
     // and observationally transparent.
-    interpreter.reset_session();
+    interpreter.reset();
     if (!snapshot) return;
 
     // The lossless snapshot is the only accepted stack format, so exact values

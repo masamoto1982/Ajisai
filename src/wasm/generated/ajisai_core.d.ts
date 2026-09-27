@@ -16,17 +16,7 @@ export class AjisaiInterpreter {
      * person at the keyboard is the one asking.
      */
     clear_stack(): void;
-    /**
-     * Returns the canonical Core-listed words.
-     *
-     * Tuple shape: `(name, description, syntax)` — same as
-     * `collect_core_words_info` so the GUI can render either list with the
-     * same code path.
-     */
-    collect_core_listed_words_info(): any;
-    collect_core_word_aliases_info(): any;
     collect_core_words_info(): any;
-    collect_input_helper_words_info(): any;
     /**
      * Runtime counters for the Playground. Counts are session-cumulative and
      * reset with the interpreter. Observational only.
@@ -41,7 +31,6 @@ export class AjisaiInterpreter {
      */
     collect_word_identities(): any;
     execute(code: string): Promise<any>;
-    execute_step(code: string): any;
     /**
      * The resource ceilings this interpreter is actually running under, as
      * JSON, under the same names every other Ajisai host publishes them by —
@@ -68,10 +57,6 @@ export class AjisaiInterpreter {
     constructor();
     remove_word(name: string): void;
     reset(): any;
-    /**
-     * Compatibility alias for [`Self::reset`].
-     */
-    reset_session(): any;
     /**
      * Answer the host's lookup of `name` against the current dictionary.
      *
@@ -166,16 +151,12 @@ export interface InitOutput {
     readonly agent_infer_contracts: (a: number, b: number) => [number, number];
     readonly agent_predict_outcomes: (a: number, b: number) => [number, number];
     readonly ajisaiinterpreter_clear_stack: (a: number) => void;
-    readonly ajisaiinterpreter_collect_core_listed_words_info: (a: number) => any;
-    readonly ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_words_info: (a: number) => any;
-    readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_runtime_metrics: (a: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_word_identities: (a: number) => any;
     readonly ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
-    readonly ajisaiinterpreter_execute_step: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_host_profile: (a: number) => [number, number];
     readonly ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_lookup_word_description: (a: number, b: number, c: number) => any;
@@ -188,7 +169,6 @@ export interface InitOutput {
     readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
     readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number];
     readonly init_panic_hook: () => void;
-    readonly ajisaiinterpreter_reset_session: (a: number) => any;
     readonly wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h0896cde0637cafae: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

@@ -60,7 +60,7 @@ const createFakeInterpreter = (): FakeInterpreter => {
                 words.set(word.name.toUpperCase(), word.definition);
             }
         },
-        reset_session: () => {
+        reset: () => {
             words.clear();
             stack = [];
             return { status: 'OK' } as ExecuteResult;
@@ -81,7 +81,7 @@ const runOneExecution = (
     const before = { stack: main.collect_stack(), userWords: collectUserWords(main) };
     const snapshot = createExecutionSnapshot(main);
 
-    worker.reset_session();
+    worker.reset();
     worker.restore_stack_snapshot(snapshot.stackSnapshot!);
     worker.restore_user_words(snapshot.userWords);
 

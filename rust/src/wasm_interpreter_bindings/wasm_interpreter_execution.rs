@@ -1,5 +1,4 @@
 use super::{set_js_prop, AjisaiInterpreter};
-use crate::tokenizer;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -54,98 +53,12 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn execute_step(&mut self, code: &str) -> JsValue {
-        let obj = js_sys::Object::new();
-
-        if !self.step_mode || code != self.current_step_code {
-            self.step_mode = true;
-            self.step_position = 0;
-            self.current_step_code = code.to_string();
-
-            match tokenizer::tokenize(code) {
-                Ok(tokens) => {
-                    self.step_tokens = tokens;
-                }
-                Err(e) => {
-                    self.step_mode = false;
-                    set_js_prop(&obj, "status", &("ERROR".into()));
-                    set_js_prop(
-                        &obj,
-                        "message",
-                        &(format!("Tokenization error: {}", e).into()),
-                    );
-                    set_js_prop(&obj, "error", &(true.into()));
-                    return obj.into();
-                }
-            }
-        }
-
-        if self.step_position >= self.step_tokens.len() {
-            self.step_mode = false;
-            set_js_prop(&obj, "status", &("OK".into()));
-            set_js_prop(&obj, "output", &("Step execution completed".into()));
-            set_js_prop(&obj, "hasMore", &(false.into()));
-            return obj.into();
-        }
-
-        let token = self.step_tokens[self.step_position].clone();
-
-        let result = self
-            .interpreter
-            .execute_section_core(std::slice::from_ref(&token), 0)
-            .map(|_| ());
-
-        match result {
-            Ok(()) => {
-                let output = self.interpreter.collect_output();
-                self.step_position += 1;
-                set_js_prop(&obj, "status", &("OK".into()));
-                set_js_prop(&obj, "output", &(output.into()));
-                set_js_prop(
-                    &obj,
-                    "hasMore",
-                    &((self.step_position < self.step_tokens.len()).into()),
-                );
-                set_js_prop(&obj, "position", &((self.step_position as u32).into()));
-                set_js_prop(&obj, "total", &((self.step_tokens.len() as u32).into()));
-                set_js_prop(&obj, "stack", &(self.collect_stack()));
-                set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
-                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
-            }
-            Err(e) => {
-                self.step_mode = false;
-                set_js_prop(&obj, "status", &("ERROR".into()));
-                set_js_prop(&obj, "message", &(e.to_string().into()));
-                set_js_prop(&obj, "error", &(true.into()));
-                set_js_prop(&obj, "hasMore", &(false.into()));
-                // Same as the whole-program path: a failing step keeps what it
-                // printed, and draining the buffer keeps it out of the next run.
-                set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
-                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
-            }
-        }
-
-        obj.into()
-    }
-
-    #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
-        self.reset_runtime()
-    }
-
-    /// Compatibility alias for [`Self::reset`].
-    #[wasm_bindgen]
-    pub fn reset_session(&mut self) -> JsValue {
         self.reset_runtime()
     }
 
     fn reset_runtime(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
-
-        self.step_mode = false;
-        self.step_tokens.clear();
-        self.step_position = 0;
-        self.current_step_code.clear();
 
         let outcome = self.interpreter.execute_reset();
 

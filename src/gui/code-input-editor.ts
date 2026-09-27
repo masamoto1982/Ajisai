@@ -528,9 +528,9 @@ export const createEditor = (
         syncLastKnownSelection();
     };
 
-    // Reads the last known caret position rather than the live one: the mobile
-    // Lookup button takes focus off the textarea when it is tapped, and a
-    // blurred textarea's own `selectionStart` is not something to rely on.
+    // Reads the last known caret position rather than the live one: anything
+    // that takes focus off the textarea before Lookup runs leaves a blurred
+    // textarea, and its own `selectionStart` is not something to rely on.
     // `lookupEditableSelectionRange` is the same caret every other
     // cursor-addressed operation here uses.
     const getWordAtCursor = (): string =>

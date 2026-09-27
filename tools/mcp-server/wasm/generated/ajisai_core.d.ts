@@ -16,17 +16,7 @@ export class AjisaiInterpreter {
      * person at the keyboard is the one asking.
      */
     clear_stack(): void;
-    /**
-     * Returns the canonical Core-listed words.
-     *
-     * Tuple shape: `(name, description, syntax)` — same as
-     * `collect_core_words_info` so the GUI can render either list with the
-     * same code path.
-     */
-    collect_core_listed_words_info(): any;
-    collect_core_word_aliases_info(): any;
     collect_core_words_info(): any;
-    collect_input_helper_words_info(): any;
     /**
      * Runtime counters for the Playground. Counts are session-cumulative and
      * reset with the interpreter. Observational only.
@@ -41,7 +31,6 @@ export class AjisaiInterpreter {
      */
     collect_word_identities(): any;
     execute(code: string): Promise<any>;
-    execute_step(code: string): any;
     /**
      * The resource ceilings this interpreter is actually running under, as
      * JSON, under the same names every other Ajisai host publishes them by —
@@ -68,10 +57,6 @@ export class AjisaiInterpreter {
     constructor();
     remove_word(name: string): void;
     reset(): any;
-    /**
-     * Compatibility alias for [`Self::reset`].
-     */
-    reset_session(): any;
     /**
      * Answer the host's lookup of `name` against the current dictionary.
      *

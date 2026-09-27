@@ -67,7 +67,9 @@ const lookupUserWordTooltip = (name: string): string => {
 // See core-word-name.ts: the predicate lives beside its spec-driven test so a
 // canonical Word can never be filtered out of the Core sheet again.
 
-const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
+/// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
+/// Matched by category, never by the message, which is display text.
+const DEPENDENCY_DELETE_CATEGORY = 'definitionConflict';
 
 const createDeleteContextMenuElement = (
     onDelete: () => void
@@ -172,7 +174,7 @@ export const createVocabularyManager = (
     const getSortedCoreWords = (): unknown[][] => {
         if (sortedCoreWordsCache) return sortedCoreWordsCache;
 
-        const coreWords = window.ajisaiInterpreter.collect_core_listed_words_info();
+        const coreWords = window.ajisaiInterpreter.collect_core_words_info();
         const filtered = coreWords.filter(
             wd =>
                 Array.isArray(wd)
@@ -208,7 +210,10 @@ export const createVocabularyManager = (
             const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
             if (result.status === 'ERROR') {
                 const message = result.message || 'Unknown error';
-                if (message.includes(DEPENDENCY_DELETE_ERROR)) {
+                const refusedAsReferenced = (result.errorFlowTrace ?? []).some(
+                    (event) => event.errorCategory === DEPENDENCY_DELETE_CATEGORY
+                );
+                if (refusedAsReferenced) {
                     showInfo?.(message, true);
                 } else {
                     alert(`Failed to delete word: ${message}`);

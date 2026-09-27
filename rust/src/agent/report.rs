@@ -188,6 +188,13 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
     if let Some(word) = &event.word {
         obj.insert("word".into(), json!(word));
     }
+    // An ERROR's category, so a host can tell one refusal from another
+    // without reading the message — which is display text, free to change
+    // (LANG.OBSERVATION.FIREWALL). A NIL's event carries its reason in
+    // `absence` instead, and gets no second name for it here.
+    if let (Some(category), None) = (&event.error_category, &event.absence) {
+        obj.insert("errorCategory".into(), json!(category.as_protocol_str()));
+    }
     if let Some(absence) = &event.absence {
         obj.insert("absence".into(), absence_json(absence));
     }

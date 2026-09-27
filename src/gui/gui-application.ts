@@ -45,12 +45,6 @@ const INTERPRETER_CLIENT = createInterpreterClient();
  */
 export const PLAYGROUND_CODE_HASH_MARKER = '#code=';
 
-const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
-    '+', '-', '*', '/', '=', '<', '>',
-    '[', ']', '{', '}', '(', ')',
-    '.', ',', "'", '"',
-]);
-
 export interface GUI {
     readonly init: () => Promise<void>;
     readonly updateAllDisplays: () => void;
@@ -81,7 +75,9 @@ const collectAutocompleteWords = (): string[] => {
     const coreWordsInfo = INTERPRETER_CLIENT.collectCoreWordsInfo();
     const coreWords: string[] = coreWordsInfo
         .map(word => word[0])
-        .filter((w): w is string => w !== undefined && !HIDDEN_AUTOCOMPLETE_ALIASES.has(w));
+        // Canonical names only: the Core list carries no alias
+        // (`builtin_specs_do_not_contain_symbol_aliases_or_input_helpers`).
+        .filter((w): w is string => w !== undefined);
 
     const userWordsInfo = INTERPRETER_CLIENT.collectUserWordsInfo();
     // Bare names only: a `DICT@NAME` completion no longer resolves to anything,
@@ -134,9 +130,9 @@ export const createGUI = (): GUI => {
 
     // Clearing the stack keeps the dictionary — that is the whole point of
     // having it apart from Reset — so it is the interpreter's `clear_stack` and
-    // nothing else, followed by a redraw and a save. One definition for all
-    // three routes to it: the Stack area's `×`, `Ctrl+Alt+S`, and the
-    // `STACK-CLEAR` host command typed in the editor.
+    // nothing else, followed by a redraw and a save. One definition for both
+    // routes to it: the Stack area's `×` and `Ctrl+Alt+S`. It has no typed
+    // spelling (spec/gui-semantics.md, "Operations without a typed spelling").
     const clearStack = (): void => {
         const interpreter = INTERPRETER_CLIENT.getOptional();
         if (!interpreter) return;
@@ -246,7 +242,6 @@ export const createGUI = (): GUI => {
             // other text.
             extractEditorValue: () => { editor.format(); return editor.extractValue(); },
             clearEditor: (switchView) => { editor.clear(switchView); },
-            insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
             showFoldedInfo: (label, text) => display.renderFoldedInfo(label, text),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
