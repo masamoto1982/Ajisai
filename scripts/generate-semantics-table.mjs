@@ -214,7 +214,7 @@ function runCellAsync(ajisaiBin, scratchDir, counter, program) {
   return new Promise((resolveCell) => {
     const file = join(scratchDir, `cell-${counter}.ajisai`);
     writeFileSync(file, `${program}\n`);
-    const proc = spawn(ajisaiBin, ['run', file, '--json']);
+    const proc = spawn(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted']);
     let stdout = '';
     let stderr = '';
     proc.stdout.on('data', (chunk) => {

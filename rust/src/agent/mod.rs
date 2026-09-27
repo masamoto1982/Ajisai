@@ -55,6 +55,17 @@ pub(crate) struct Opts {
     /// `compute`: execution step budget override. `None` keeps the
     /// interpreter default.
     pub step_limit: Option<usize>,
+    /// `agent compute`: which resource ceilings apply.
+    pub limits: LimitProfile,
+}
+
+/// The resource ceilings an `agent compute` runs under: the tighter profile
+/// for untrusted, generated programs (the default), or the interpreter's own
+/// defaults, which `run` uses for a program its author trusts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum LimitProfile {
+    Agent,
+    Trusted,
 }
 
 pub(crate) fn error_report(

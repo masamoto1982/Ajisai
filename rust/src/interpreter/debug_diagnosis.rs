@@ -248,7 +248,7 @@ pub(super) fn classify_locus(word: Option<&str>) -> ErrorLocus {
             if let Some(idx) = name.find('@') {
                 let (dictionary, _) = name.split_at(idx);
                 (ErrorLocusKind::UserWord, Some(dictionary.to_string()))
-            } else if crate::coreword_registry::get_builtin_word_metadata(name).is_some() {
+            } else if crate::coreword_registry::get_coreword_metadata(name).is_some() {
                 (ErrorLocusKind::CoreWord, None)
             } else {
                 (ErrorLocusKind::Unknown, None)

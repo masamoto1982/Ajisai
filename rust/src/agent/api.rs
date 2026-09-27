@@ -54,18 +54,13 @@ pub struct ContractResponse {
 }
 
 impl ContractResponse {
-    /// Common agent envelope. The native schema-1 CLI keeps emitting the bare
-    /// `contracts` array for compatibility; new hosts should use this shape.
+    /// The agent envelope around the inferred contracts.
     pub fn to_json(&self) -> serde_json::Value {
         serde_json::json!({
             "schemaVersion": super::report::SCHEMA_VERSION,
             "status": "ok",
             "contracts": self.contracts,
         })
-    }
-
-    pub(crate) fn contracts(&self) -> &serde_json::Value {
-        &self.contracts
     }
 }
 

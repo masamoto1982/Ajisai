@@ -206,7 +206,7 @@
   },
   "runtimeMetrics": {
    "type": "object",
-   "description": "How the runtime went about its work: which cache answered, which fast path fired, how often a plan was rebuilt. Optimizer observations, not budgets — read `resourceUsage` for what a ceiling would judge. `executionSteps` appears in both and carries the same reading; it is kept here for compatibility and belongs in `resourceUsage`."
+   "description": "How the runtime went about its work: which cache answered, which fast path fired, how often a plan was rebuilt. Optimizer observations, not budgets — read `resourceUsage` for what a ceiling would judge."
   },
   "resourceUsage": {
    "type": "object",

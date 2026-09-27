@@ -39,7 +39,7 @@
  "source": {
  "type": "string",
  "minLength": 1,
- "description": "Ajisai source text, run verbatim through `ajisai run <file> --json` (with --step-limit appended when profile.stepLimit is set). Must be the actual program that reaches the outcome — the gate re-runs it every time, it does not trust this field's history."
+ "description": "Ajisai source text, run verbatim through `ajisai agent compute <file> --limits trusted` (with --step-limit appended when profile.stepLimit is set). Must be the actual program that reaches the outcome — the gate re-runs it every time, it does not trust this field's history."
  },
  "profile": {
  "type": "object",
@@ -56,7 +56,7 @@
  "expect": {
  "type": "string",
  "pattern": "^(value|nil:[a-z][a-zA-Z0-9]*|error:[a-z][a-zA-Z0-9]*)$",
- "description": "The classification scripts/generate-semantics-table.mjs's classifyOutcome would assign this program's `ajisai run --json` output: `value`, `nil:<reason>`, or `error:<category>`, in the exact same spelling docs/semantics-table.json's own `outcome` field uses. The gate re-derives this from the live CLI run and compares it verbatim — never from message text (LANG-stable identifiers only, per this work order's §0.3)."
+ "description": "The classification scripts/generate-semantics-table.mjs's classifyOutcome would assign this program's `ajisai agent compute --limits trusted` output: `value`, `nil:<reason>`, or `error:<category>`, in the exact same spelling docs/semantics-table.json's own `outcome` field uses. The gate re-derives this from the live CLI run and compares it verbatim — never from message text (LANG-stable identifiers only, per this work order's §0.3)."
  },
  "rationale": {
  "type": "string",

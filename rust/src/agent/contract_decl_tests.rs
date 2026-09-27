@@ -328,7 +328,7 @@ mod contract_decl_tests {
     fn unknown_cost_class_is_a_parse_error() {
         let source = "[ 1 2 ADD ] 'S' DEF\n#:contract S cost numeric=quadratic";
         let decls = contract_decls(source);
-        assert_eq!(decls["violated"], true);
+        assert_eq!(decls["outcome"], "error");
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(findings.iter().any(|f| f["message"]
             .as_str()
@@ -340,7 +340,7 @@ mod contract_decl_tests {
     fn unknown_cost_axis_is_a_parse_error() {
         let source = "[ 1 2 ADD ] 'S' DEF\n#:contract S cost bogus=const";
         let decls = contract_decls(source);
-        assert_eq!(decls["violated"], true);
+        assert_eq!(decls["outcome"], "error");
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(findings
             .iter()
@@ -351,7 +351,7 @@ mod contract_decl_tests {
     fn legacy_fields_still_present() {
         let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
-        assert_eq!(decls["violated"], true);
+        assert_eq!(decls["outcome"], "error");
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty());
         for finding in findings {

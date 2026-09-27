@@ -77,36 +77,7 @@ export interface AjisaiInterpreter {
     // side ignores non-positive values and falls back to its own
     // `DEFAULT_MAX_EXECUTION_STEPS`.
     set_max_execution_steps(steps: number): void;
-    // Cost-model counters (LANG.AUTHORITY.FREEDOM): observational only,
-    // session-cumulative, reset with the interpreter.
-    collect_runtime_metrics(): RuntimeMetricsSnapshot;
 
-}
-
-/**
- * Cost-model counters as exposed by `collect_runtime_metrics()`
- * (LANG.AUTHORITY.FREEDOM). These are the machine-channel names; the GUI
- * renders them in the Reference cost-model vocabulary (fast lane, dense
- * vectors, comparison depth) and never shows these identifiers to users.
- * Counters are diagnostics: reading them changes no result.
- */
-export interface RuntimeMetricsSnapshot {
-    scalarFastpathCount: number;
-    bulkKernelUseCount: number;
-    simdKernelUseCount: number;
-    tensorFlattenCount: number;
-    tensorRebuildCount: number;
-    sparseCandidateCount: number;
-    compareWithinCount: number;
-    compareWithinLazyCount: number;
-    compareWithinUnknownCount: number;
-    compareWithinBudgetTermsConsumed: number;
-    // Cross-reset artifact cache: compiled plans reused across a GUI session
-    // reset instead of being rebuilt.
-    artifactCacheBuildCount: number;
-    artifactCacheHitCount: number;
-    artifactCacheMissCount: number;
-    artifactCacheEvictionCount: number;
 }
 
 /**
@@ -259,10 +230,6 @@ export interface ExecuteResult {
     discardedDictionaryChanges?: string[];
     errorFlowTrace?: ErrorFlowTraceEvent[];
 
-    // Per-run cost-model activity: the counter delta across this execution,
-    // attached by the execution worker. Diagnostics only (LANG.AUTHORITY.FREEDOM); the
-    // GUI renders it in cost-model vocabulary, collapsed by default.
-    runtimeMetricsDelta?: RuntimeMetricsSnapshot;
 }
 
 export interface Fraction {

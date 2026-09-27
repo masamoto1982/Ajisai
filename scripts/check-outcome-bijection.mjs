@@ -107,7 +107,7 @@ function classifyOutcome(json) {
 function runProgram(ajisaiBin, scratchDir, counter, source, profile) {
   const file = join(scratchDir, `witness-${counter}.ajisai`);
   writeFileSync(file, `${source}\n`);
-  const args = ['run', file, '--json'];
+  const args = ['agent', 'compute', file, '--limits', 'trusted'];
   if (profile?.stepLimit !== undefined) {
     args.push('--step-limit', String(profile.stepLimit));
   }

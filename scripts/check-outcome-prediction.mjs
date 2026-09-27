@@ -77,7 +77,7 @@ function predict(ajisaiBin, scratchDir, counter, source) {
   writeFileSync(file, `${source}\n`);
   // `agent outcomes` always exits 0 (predicting always succeeds, even for a
   // program that cannot itself run) — execFileSync is safe here, unlike the
-  // bijection gate's `run`.
+  // bijection gate's `agent compute`.
   const stdout = execFileSync(ajisaiBin, ['agent', 'outcomes', file, '--json'], { encoding: 'utf8' });
   return JSON.parse(stdout);
 }
@@ -106,7 +106,7 @@ function run(ajisaiBin, scratchDir, counter, source) {
   writeFileSync(file, `${source}\n`);
   // A language ERROR exits 1 with the JSON diagnosis on stdout, so this
   // cannot use execFileSync (which would throw on it).
-  const result = spawnSync(ajisaiBin, ['run', file, '--json'], { encoding: 'utf8' });
+  const result = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
   if (result.error) throw result.error;
   if (result.status !== 0 && result.status !== 1) {
     throw new Error(`exit ${result.status}: ${result.stderr}`);
