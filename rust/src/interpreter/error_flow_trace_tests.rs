@@ -105,22 +105,20 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
         .diagnosis
         .as_ref()
         .expect("NilProduced event should carry a diagnosis");
-    let payload = diagnosis.ai_payload(
-        event.error_category.as_ref(),
-        event
-            .absence
-            .as_ref()
-            .and_then(|absence| absence.reason.as_ref()),
-        None,
-        None,
-    );
+    let payload = diagnosis.ai_payload(event.error_category.as_ref());
     assert_eq!(payload.kind.as_deref(), Some("divisionByZero"));
     assert_eq!(payload.recoverability, "fixInput");
     assert_eq!(payload.word.as_deref(), Some("DIV"));
     assert_eq!(payload.family.as_deref(), Some("exactArithmetic"));
-    assert_eq!(payload.nil_reason.as_deref(), Some("divisionByZero"));
-    assert!(payload.truth_value.is_none());
-    assert!(payload.effect.is_none());
+    // The NIL's reason is the event's absence, where every host reads it.
+    assert_eq!(
+        event
+            .absence
+            .as_ref()
+            .and_then(|absence| absence.reason.as_ref())
+            .map(|reason| reason.as_protocol_str()),
+        Some("divisionByZero")
+    );
     assert!(payload
         .next_checks
         .iter()

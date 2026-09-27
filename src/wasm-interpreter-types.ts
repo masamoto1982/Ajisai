@@ -166,22 +166,29 @@ export interface ProtocolDiagnosis {
      * Which declared ceiling a resource-limit failure crossed. `resource`
      * names an entry of the host's limit profile, so a reader can tell an
      * exhausted step budget from an oversized value without parsing a
-     * message. Absent for every other cause class.
+     * message. `null` for every other cause class.
      */
     resourceLimit?: {
         resource: string;
         limit: number;
-        observed?: number;
-    };
+        observed: number | null;
+        /** How far a cumulative meter had got; present only for one. */
+        progress?: { completed: number; total: number; unit: string };
+    } | null;
 }
 
 /**
- * The absence envelope the current protocol carries: the reason, plus the
- * diagnosis when the runtime produced one. An absence's origin and
- * recoverability are diagnostic state, not wire fields.
+ * The absence envelope: the same one the CLI emits, since both hosts render
+ * it with one serializer (spec/host-protocol.schema.json). `reason` is the
+ * NIL's observable content (LANG.VALUES.NIL); `detail` is the text a
+ * `userDeclared` reason carries; `origin` and `recoverability` are diagnostic
+ * state beyond the reason.
  */
 export interface ProtocolAbsence {
     reason?: string;
+    detail?: string;
+    origin?: string;
+    recoverability?: string;
     diagnosis?: ProtocolDiagnosis;
 }
 

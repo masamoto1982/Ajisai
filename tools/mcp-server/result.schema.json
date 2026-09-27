@@ -467,7 +467,7 @@
     "resource",
     "limit"
    ],
-   "description": "Which declared ceiling a resource-limit failure crossed. `resource` names an entry of `mcp.limits`. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
+   "description": "Which declared ceiling a resource-limit failure crossed, or a generative Word declined a result under (the diagnosis of a NIL(spaceExhausted), which can name `materializedElements`). `resource` names an entry of `mcp.limits`. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
    "properties": {
     "resource": {
      "type": "string",
@@ -479,6 +479,7 @@
       "bigintBits",
       "algebraicTerms",
       "nestingDepth",
+      "materializedElements",
       "executionSteps"
      ]
     },
@@ -737,69 +738,103 @@
     "denominator",
     "radicand"
    ],
+   "description": "One term c·√m of the normal form: the rational coefficient numerator/denominator and the square-free radicand m (1 for the rational term).",
    "properties": {
     "numerator": {
      "$ref": "#/$defs/integerString"
     },
     "denominator": {
-     "type": "string",
-     "pattern": "^[1-9][0-9]*$"
+     "$ref": "#/$defs/positiveIntegerString"
     },
     "radicand": {
-     "type": "string",
-     "pattern": "^[1-9][0-9]*$"
-    }
-   }
-  },
-  "semantics": {
-   "type": "object",
-   "additionalProperties": true,
-   "description": "Value metadata. For an algebraic irrational, `exactTerms` is the value; `stackDisplay` writes those same terms as one token (`sqrt(2)`, `1/1+sqrt(2)`), and the node's own `value` is a rational approximation (`approximate: true`).",
-   "properties": {
-    "approximate": {
-     "const": true
-    },
-    "exactTerms": {
-     "type": "array",
-     "minItems": 1,
-     "items": {
-      "$ref": "#/$defs/exactTerm"
-     }
+     "$ref": "#/$defs/positiveIntegerString"
     }
    }
   },
   "protocolNode": {
    "type": "object",
-   "additionalProperties": true,
    "required": [
     "type",
     "value"
    ],
+   "additionalProperties": false,
+   "description": "One stack value as observed at the host boundary. Every field is derived from the value itself, never from the Word that produced it (LANG.VALUES.DENOTATION). A vector's own elements are observedValue nodes in turn (see `value` below), so this definition is recursive.",
    "properties": {
     "type": {
-     "type": "string"
+     "description": "The value's domain (LANG.VALUES.DISJOINT), discriminating `value`'s shape. A NIL is `nil` wherever it stands, including in truth position, where it reads as UNKNOWN (LANG.VALUES.TRUTH).",
+     "enum": [
+      "nil",
+      "boolean",
+      "number",
+      "string",
+      "vector",
+      "symbol",
+      "record"
+     ]
     },
-    "value": {},
+    "value": {
+     "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number -> {numerator, denominator} (arbitrary-precision decimal strings, the denominator positive); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue; record -> {keys, values}, two arrays of observedValue of equal length, aligned position by position (LANG.RECORDS.STRUCTURE). null for any type when `elided` is present.",
+     "oneOf": [
+      {
+       "type": "null"
+      },
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "string"
+      },
+      {
+       "type": "object",
+       "required": [
+        "numerator",
+        "denominator"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "numerator": {
+         "$ref": "#/$defs/integerString"
+        },
+        "denominator": {
+         "$ref": "#/$defs/positiveIntegerString"
+        }
+       }
+      },
+      {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/protocolNode"
+       }
+      },
+      {
+       "type": "object",
+       "required": [
+        "keys",
+        "values"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "keys": {
+         "type": "array",
+         "items": {
+          "$ref": "#/$defs/protocolNode"
+         }
+        },
+        "values": {
+         "type": "array",
+         "items": {
+          "$ref": "#/$defs/protocolNode"
+         }
+        }
+       }
+      }
+     ]
+    },
     "semantics": {
-     "$ref": "#/$defs/semantics"
+     "$ref": "#/$defs/protocolSemantics"
     },
     "elided": {
-     "type": "object",
-     "description": "Present when this slot's value was dropped to keep an error report deliverable. `type` and `semantics` still describe what the value was; `value` is `null`. Tell this apart from a genuine `NIL` by `type`, which names the real domain, and by this field's presence.",
-     "properties": {
-      "reason": {
-       "type": "string",
-       "const": "errorStackBudget"
-      },
-      "approxBytes": {
-       "type": "integer",
-       "minimum": 0
-      },
-      "elements": {
-       "type": "integer",
-       "minimum": 0
-      }
-     }
+     "$ref": "#/$defs/protocolElided"
     }
    }
   },
@@ -824,6 +859,87 @@
     }
    },
    "additionalProperties": false
+  },
+  "protocolSemantics": {
+   "description": "Present on every node except an interior (rank >= 2) tensor node. Every field is optional. Both host surfaces emit the same set, because both render it with one function (rust/src/agent/report.rs::semantics_json).",
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "truthValue": {
+     "description": "Present on a Boolean node, and only there (rust/src/types/value_absence.rs::truth_value). UNKNOWN is a NIL (LANG.VALUES.TRUTH) and is observed through `absence`, not here.",
+     "enum": [
+      "true",
+      "false"
+     ]
+    },
+    "absence": {
+     "$ref": "#/$defs/protocolAbsence"
+    },
+    "approximate": {
+     "description": "true when the node is an irrational scalar (LANG.VALUES.EXACT), whose `value` is therefore a rational approximation: the best convergent the observation budget affords, or, for a value too large to afford even one, a term-by-term one. `exactTerms` is the value. Never present otherwise.",
+     "const": true
+    },
+    "exactTerms": {
+     "description": "An irrational scalar's exact multiquadratic normal form, structured for computation: one term per {numerator, denominator, radicand}. The stack display writes the same terms as one token (`sqrt(2)`, `1/1+sqrt(2)`).",
+     "type": "array",
+     "minItems": 1,
+     "items": {
+      "$ref": "#/$defs/exactTerm"
+     }
+    }
+   }
+  },
+  "protocolAbsence": {
+   "description": "Present only on a nil-type node. `reason` is the stable, machine-readable identifier LANG.VALUES.NIL calls the entire observable content of a NIL (one of spec/outcomes.json's NIL reasons); it is absent only for a NIL an implementation could not yet label. `detail` is the text a `userDeclared` reason carries, which is part of that reason. `origin` and `recoverability` are diagnostic state beyond the reason, informational only: a program cannot observe them, and two NILs with one reason are one value whatever their origin. `diagnosis` nests the structured diagnosis object docs/dev/agent-cli-output-contract.md describes, when the runtime produced one.",
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "reason": {
+     "type": "string"
+    },
+    "detail": {
+     "type": "string"
+    },
+    "origin": {
+     "type": "string"
+    },
+    "recoverability": {
+     "type": "string"
+    },
+    "diagnosis": {
+     "type": "object"
+    }
+   }
+  },
+  "protocolElided": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "reason",
+    "approxBytes"
+   ],
+   "description": "Present only in the stack of a CLI/MCP error report, on a slot whose value was dropped to keep the report deliverable (rust/src/agent/error_stack.rs). `type` and `semantics` still describe what the value was (less an algebraic value's `exactTerms`, whose count moves here); `value` is null. Tell it apart from a genuine NIL by `type`, which names the real domain, and by this field's presence.",
+   "properties": {
+    "reason": {
+     "const": "errorStackBudget"
+    },
+    "approxBytes": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "elements": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "algebraicTerms": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  },
+  "positiveIntegerString": {
+   "type": "string",
+   "pattern": "^[1-9][0-9]*$"
   }
  }
 }

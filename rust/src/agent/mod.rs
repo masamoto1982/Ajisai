@@ -76,7 +76,7 @@ pub(crate) fn error_report(
     let diagnosis = diagnosis
         .clone()
         .with_source_position(interp.current_source_position());
-    let ai = diagnosis.ai_payload(category, None, None, None);
+    let ai = diagnosis.ai_payload(category);
     // The residue a failed run was holding is not worth the diagnosis that
     // explains it — see `agent::error_stack`.
     let residue = error_stack::elided_error_stack(interp);

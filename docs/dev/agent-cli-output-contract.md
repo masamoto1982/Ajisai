@@ -263,8 +263,8 @@ themselves.
 It does **not** include `stackDisplay`, `message`, `diagnosis`,
 `aiDiagnostic`, `errorFlowTrace`, `runtimeMetrics`, `resourceUsage`, or
 `contractDecls` — none of those are the observation; several of them
-(`stackDisplay` in particular, LANG.VALUES.EXACT's continued fraction truncated at a
-display budget) are not even faithful to the value they render. A value's
+(`stackDisplay` in particular) are renderings of a value rather than the value
+itself. A value's
 `hint` (display role) is excluded the same way `PartialEq for Value` excludes
 it; a NIL's reason is included the same way `PartialEq for Value` includes it.
 
@@ -420,10 +420,10 @@ canonical value.
 
 `stackDisplay` writes the same normal form as one token — `sqrt(2)`,
 `2/1*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` — exact and never truncated. It
-is a display: read it, compute with `exactTerms`. Because it renders the
-stored normal form faithfully, two values `=` decides are equal can still be
-written differently (`sqrt(8)` and `2/1*sqrt(2)`); comparison decides
-equality, string comparison does not. There is no separate short-rendering
+is a display: read it, compute with `exactTerms`. It renders the stored normal
+form, and a number has one normal form (radicands are square-free), so two
+values `EQ` calls equal are written alike: `8 SQRT` and `2 SQRT 2 SQRT ADD` both
+display `2/1*sqrt(2)`. There is no separate short-rendering
 field: an `exactDisplay` once carried this string when `stackDisplay` was a
 truncated continued fraction, and was removed once the two became the same.
 
@@ -431,8 +431,10 @@ truncated continued fraction, and was removed once the two became the same.
 
 `diagnosis` is a structured failure explanation with `when`, `why`, `summary`,
 `where`, `evidence`, `nextChecks`, `candidates`, and
-`resourceLimit`. `aiDiagnostic` is its machine-oriented classification and
-carries `candidates` and `resourceLimit` too. Consumers must treat new
+`resourceLimit`. `aiDiagnostic` is its machine-oriented classification of an
+ERROR: `kind`, `recoverability`, `word`, `family`, `nextChecks`, `candidates`
+and `resourceLimit`. A NIL's reason is read from the value's
+`semantics.absence`, not from here. Consumers must treat new
 protocol-string variants as opaque values rather than rejecting the report.
 
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
@@ -446,10 +448,14 @@ match first, and is empty for every other cause class. It considers the
 compiled-in vocabulary, the failing interpreter's own dictionary, and — for
 `check` — the Words the same source defines.
 
-`resourceLimit` is `{ resource, limit, observed }` and is present when a
-declared ceiling fired. `resource` is the ceiling's own name
-(`sourceBytes`, `numericLiteralDigits`, `numericWork`, `bigintBits`,
-`algebraicTerms`, `nestingDepth`, `executionSteps`) — the same identifier a host publishes in
+`resourceLimit` is `{ resource, limit, observed }` (plus `progress` for a
+cumulative meter) when a declared ceiling fired, and `null` otherwise. The same
+record sits in the diagnosis of a NIL a generative Word declined with
+`spaceExhausted`, which names `materializedElements`, `nestingDepth` or
+`numericLiteralDigits`. `resource` is the ceiling's own name
+(`sourceBytes`, `numericLiteralDigits`, `numericWork`, `collectionWork`,
+`bigintBits`, `algebraicTerms`, `nestingDepth`, `materializedElements`,
+`executionSteps`) — the same identifier a host publishes in
 its limit profile, so "too big" says what was too big and against what. A size
 ceiling reports `aiDiagnostic.kind: "resourceLimitExceeded"` and
 `recoverability: "reduceWorkOrRaiseLimit"`; the step budget keeps
@@ -463,10 +469,12 @@ language `status: error` is a host transport failure.
 ## `contract`
 
 `contract --json` emits a JSON array, not the `run` envelope. Each entry reports
-a user Word's inferred `name`, `arity`, `purity`, `determinism`, NIL behavior,
-order sensitivity, space class, a `cost` object keyed by its three axes
+a user Word's inferred `name`, `inputs`, `outputs`, `partiality`, `purity`,
+`determinism`, a `cost` object keyed by its three axes
 (`steps`/`numeric`/`collection`, each `"const"`/`"linear"`/`"superlinear"`/
-`"unbounded"`), effects, confidence, and a paste-ready `suggested` declaration.
+`"unbounded"`), `effects`, `confidence`, `gaps`, and a paste-ready `suggested`
+declaration — the same keys, in the same vocabulary, as a registered Word's
+contract.
 Inference registers definitions without executing their bodies.
 
 `suggested` carries only terms the declaration checker can parse — arity,

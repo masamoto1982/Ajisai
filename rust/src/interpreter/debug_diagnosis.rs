@@ -111,9 +111,6 @@ pub struct AiDiagnosticPayload {
     /// `None` when no Core Word is at fault. The one classification of a
     /// Word the diagnosis reports is the registry's own.
     pub family: Option<String>,
-    pub nil_reason: Option<String>,
-    pub truth_value: Option<String>,
-    pub effect: Option<String>,
     pub next_checks: Vec<DebugCheck>,
     /// Known Words within a small edit distance of an unrecognized name,
     /// best match first. Empty for every other cause class.
@@ -354,18 +351,13 @@ impl DebugDiagnosis {
         }
     }
 
-    /// Build the AI-facing structured diagnostic payload used by tests, WASM
-    /// adapters, and review tooling. Human-readable `summary` stays separate;
-    /// this payload exposes stable protocol fields so agents can distinguish
-    /// NIL, UNKNOWN, host-effect violations, portability issues, and input
-    /// domain errors without matching display strings.
-    pub fn ai_payload(
-        &self,
-        category: Option<&ErrorCategory>,
-        nil_reason: Option<&NilReason>,
-        truth_value: Option<&str>,
-        effect: Option<&str>,
-    ) -> AiDiagnosticPayload {
+    /// Build the AI-facing structured diagnostic payload. Human-readable
+    /// `summary` stays separate; this payload exposes stable protocol fields
+    /// so an agent can branch on the failure without matching display
+    /// strings. It describes an ERROR: a NIL's reason, a truth value and an
+    /// effect are observed on the stack and in the output, not here — the
+    /// three fields that once carried them here were always null.
+    pub fn ai_payload(&self, category: Option<&ErrorCategory>) -> AiDiagnosticPayload {
         let word = self.where_.word.as_deref();
         AiDiagnosticPayload {
             kind: category.map(|c| c.as_protocol_str().to_string()),
@@ -374,9 +366,6 @@ impl DebugDiagnosis {
             family: word
                 .and_then(crate::kernel::generated::generated_word)
                 .map(|w| w.family.as_spec_str().to_string()),
-            nil_reason: nil_reason.map(|r| r.as_protocol_str().to_string()),
-            truth_value: truth_value.map(str::to_string),
-            effect: effect.map(str::to_string),
             next_checks: self.next_checks.clone(),
             candidates: self.candidates.clone(),
             resource_limit: self.resource_limit.clone(),
