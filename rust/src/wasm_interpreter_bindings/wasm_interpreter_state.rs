@@ -232,19 +232,29 @@ impl AjisaiInterpreter {
 /// result envelope (`errorFlowTrace`), so no host calls this directly.
 impl AjisaiInterpreter {
     pub(crate) fn collect_error_flow_trace(&mut self) -> JsValue {
-        // Rendered by the CLI's own serializer and converted, so the trace a
-        // GUI reads is the one an agent reads. A hand-built copy here was the
-        // third spelling of a diagnosis (beside the CLI's and the value
-        // node's), and it had already dropped a resource limit's `progress`.
-        use serde::Serialize as _;
-        let events: Vec<serde_json::Value> = self
-            .interpreter
-            .drain_error_flow_trace()
+        let events = self.interpreter.drain_error_flow_trace();
+        error_flow_trace_to_js(&events)
+    }
+}
+
+// Rendered by the CLI's own serializer and converted, so the trace a GUI
+// reads is the one an agent reads. A hand-built copy here was the third
+// spelling of a diagnosis (beside the CLI's and the value node's), and it had
+// already dropped a resource limit's `progress`.
+pub(crate) fn error_flow_trace_to_js(
+    events: &[crate::interpreter::error_flow_trace::ErrorFlowEvent],
+) -> JsValue {
+    json_to_js(serde_json::Value::Array(
+        events
             .iter()
             .map(crate::agent::report::error_flow_event_json)
-            .collect();
-        serde_json::Value::Array(events)
-            .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
-            .expect("a serde_json value always converts to a JS value")
-    }
+            .collect(),
+    ))
+}
+
+pub(crate) fn json_to_js(value: serde_json::Value) -> JsValue {
+    use serde::Serialize as _;
+    value
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .expect("a serde_json value always converts to a JS value")
 }

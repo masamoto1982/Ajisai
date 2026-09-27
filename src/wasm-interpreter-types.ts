@@ -218,8 +218,6 @@ export interface ProtocolValueSemantics {
 export interface ErrorFlowTraceEvent {
     kind: string;
     word?: string;
-    /** An ERROR event's category (spec/outcomes.json); a NIL's is its `absence.reason`. */
-    errorCategory?: string;
     absence?: ProtocolAbsence;
     stackLenBefore: number;
     stackLenAfter: number;
@@ -233,6 +231,12 @@ export interface ExecuteResult {
     debugOutput?: string;
     message?: string;
     error?: boolean;
+    /**
+     * On an ERROR result, the same `aiDiagnostic` the CLI reports: `kind` is
+     * the failure's category (spec/outcomes.json), the machine-readable name
+     * a host branches on instead of the display text in `message`.
+     */
+    aiDiagnostic?: { kind: string } | null;
 
     // The observation-format stack, for display only.
     stack?: Value[];

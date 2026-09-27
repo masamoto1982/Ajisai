@@ -210,9 +210,8 @@ export const createVocabularyManager = (
             const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
             if (result.status === 'ERROR') {
                 const message = result.message || 'Unknown error';
-                const refusedAsReferenced = (result.errorFlowTrace ?? []).some(
-                    (event) => event.errorCategory === DEPENDENCY_DELETE_CATEGORY
-                );
+                const refusedAsReferenced =
+                    result.aiDiagnostic?.kind === DEPENDENCY_DELETE_CATEGORY;
                 if (refusedAsReferenced) {
                     showInfo?.(message, true);
                 } else {

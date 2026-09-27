@@ -1,4 +1,8 @@
+use super::wasm_interpreter_state::{error_flow_trace_to_js, json_to_js};
 use super::{set_js_prop, AjisaiInterpreter};
+use crate::agent::report::ai_payload_json;
+use crate::agent::run_render::failed_run_diagnosis;
+use crate::error::ErrorCategory;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -31,7 +35,15 @@ impl AjisaiInterpreter {
                 // nothing else. Draining the buffer here also stops the
                 // orphaned output from surfacing at the head of the next run.
                 set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
-                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
+                // The failure's category travels where the CLI puts it,
+                // `aiDiagnostic.kind`, built by the same functions — never
+                // parsed back out of `message`, which is display text.
+                let trace = self.interpreter.drain_error_flow_trace();
+                let diagnosis = failed_run_diagnosis(&self.interpreter, &e, &trace);
+                let category = ErrorCategory::from_error(&e);
+                let ai = ai_payload_json(&diagnosis.ai_payload(Some(&category)));
+                set_js_prop(&obj, "aiDiagnostic", &json_to_js(ai));
+                set_js_prop(&obj, "errorFlowTrace", &error_flow_trace_to_js(&trace));
                 // An ERROR result carries no `userWords`, which is the
                 // protocol's way of saying the run committed nothing to the
                 // dictionary. The run said otherwise while it was going: every
