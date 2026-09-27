@@ -42,7 +42,7 @@ proptest! {
     }
 
     /// **`CHARS` then `JOIN` is the identity on text** (the codepoint sequence
-    /// is split into single-char strings and re-concatenated): `w CHARS JOIN = w`.
+    /// is split into single-char strings and re-concatenated): `w CHARS JOIN EQ w`.
     #[test]
     fn chars_join_round_trip(w in ascii_word()) {
         prop_assert_eq!(obs1(&format!("'{w}' CHARS JOIN")), format!("'{w}'"));
@@ -58,14 +58,14 @@ proptest! {
         prop_assert_eq!(once, format!("'{w}'"));
     }
     /// **`STR`∘`NUM` round-trips an integer through text** (value-preserving):
-    /// `n STR NUM = n`. (`STR` renders the canonical integer form `'n'`; `NUM`
+    /// `n STR NUM EQ n`. (`STR` renders the canonical integer form `'n'`; `NUM`
     /// parses it back to the rational `n/1`.)
     #[test]
     fn str_num_round_trip(n in -1000i64..=1000) {
         prop_assert_eq!(obs1(&format!("{n} STR NUM")), format!("{n}/1"));
     }
 
-    /// **`STR` of an integer is its canonical decimal text**: `n STR = 'n'`.
+    /// **`STR` of an integer is its canonical decimal text**: `n STR EQ 'n'`.
     #[test]
     fn str_of_integer_is_decimal(n in -1000i64..=1000) {
         prop_assert_eq!(obs1(&format!("{n} STR")), format!("'{n}'"));
@@ -73,7 +73,7 @@ proptest! {
 
     /// **`CHARS` of a word has one element per codepoint, and `JOIN` of two
     /// char-vectors concatenates** (free monoid on codepoints):
-    /// `(u CHARS) (v CHARS) CONCAT JOIN = uv`. The word lengths start at 1: a
+    /// `(u CHARS) (v CHARS) CONCAT JOIN EQ uv`. The word lengths start at 1: a
     /// one-character word makes `CHARS` yield a one-element vector, which
     /// `CONCAT` used to mistake for an operand count (finding I2, resolved —
     /// see `finding_i2_concat_joins_a_singleton_top_operand`).

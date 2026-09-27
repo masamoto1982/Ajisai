@@ -30,7 +30,7 @@ fn fraction_floor(f: &Fraction) -> BigInt {
 /// took 5 ms / 57 ms / 951 ms / 9.1 s / **147 s** — about 12x per doubling.
 ///
 /// Budgeting the work costs the common case nothing: a one- or two-term value
-/// (`2 SQRT`, `2 SQRT 3 SQRT +`) spends well under this and still reaches any
+/// (`2 SQRT`, `2 SQRT 3 SQRT ADD`) spends well under this and still reaches any
 /// practical denominator bound. An expansion that would cost seconds stops
 /// early and yields a coarser convergent, never a wrong one; the value itself
 /// is `exactTerms` (and the stack display, which is the value's own source).
@@ -105,7 +105,7 @@ impl Algebraic {
     /// deepest principal convergent whose denominator does not exceed
     /// `max_denominator`. Same contract as the historical
     /// `ExactReal::best_rational_approximation`; `None` when
-    /// `max_denominator < 1`.
+    /// `max_denominator LT 1`.
     pub fn best_rational_approximation(&self, max_denominator: &BigInt) -> Option<Fraction> {
         if max_denominator < &BigInt::one() {
             return None;

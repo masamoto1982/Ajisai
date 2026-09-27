@@ -571,7 +571,6 @@
    "additionalProperties": true,
    "required": [
     "name",
-    "aliases",
     "family",
     "stack",
     "nilPolicy",
@@ -586,12 +585,6 @@
     "name": {
      "type": "string",
      "minLength": 1
-    },
-    "aliases": {
-     "type": "array",
-     "items": {
-      "type": "string"
-     }
     },
     "family": {
      "type": "string"

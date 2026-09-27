@@ -274,7 +274,7 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
         };
         let k = j + 1;
         let is_def = matches!(tokens.get(k), Some(Token::Symbol(s))
-            if crate::core_word_aliases::canonicalize_core_word_name(s).eq_ignore_ascii_case("DEF"));
+            if crate::word_name::canonical_word_name(s).eq_ignore_ascii_case("DEF"));
         if !is_def {
             continue;
         }

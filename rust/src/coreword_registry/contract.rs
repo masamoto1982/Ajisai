@@ -50,7 +50,7 @@ pub(super) fn mass_from_arity(word: &GeneratedWord) -> MassContract {
 /// The canonical mass contract for a Coreword, keyed by its canonical name.
 /// Unknown or non-core names conservatively return `Dynamic`.
 pub fn mass_contract(name: &str) -> MassContract {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    let canonical = crate::word_name::canonical_word_name(name);
     crate::kernel::generated::generated_word(&canonical)
         .map(mass_from_arity)
         .unwrap_or(MassContract::Dynamic)

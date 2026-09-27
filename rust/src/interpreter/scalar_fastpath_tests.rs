@@ -95,14 +95,14 @@ fn assert_direct_on_equals_off(
 #[test]
 fn arithmetic_fast_path_matches_baseline_for_bare_scalars_and_singleton_tensors() {
     for src in [
-        "2 3 +",
-        "7 4 -",
-        "6 5 *",
-        "6 4 /",
-        "[ 1 ] [ 2 ] +",
-        "[ 7 ] [ 4 ] -",
-        "[ 6 ] [ 5 ] *",
-        "[ 6 ] [ 4 ] /",
+        "2 3 ADD",
+        "7 4 SUB",
+        "6 5 MUL",
+        "6 4 DIV",
+        "[ 1 ] [ 2 ] ADD",
+        "[ 7 ] [ 4 ] SUB",
+        "[ 6 ] [ 5 ] MUL",
+        "[ 6 ] [ 4 ] DIV",
     ] {
         let (on, off) = assert_on_equals_off(src);
         assert!(
@@ -119,14 +119,14 @@ fn arithmetic_fast_path_matches_baseline_for_bare_scalars_and_singleton_tensors(
 
 #[test]
 fn fast_path_preserves_tensor_wrapping() {
-    let (on, _) = assert_on_equals_off("[ 1 ] [ 2 ] +");
+    let (on, _) = assert_on_equals_off("[ 1 ] [ 2 ] ADD");
     let rendered = rendered_stack(&on);
     assert_eq!(rendered, vec!["[ 3/1 ]"]);
 }
 
 #[test]
 fn unsupported_or_semantically_sensitive_shapes_fall_back() {
-    for src in ["2 [ 3 ] +", "[ 2 ] 3 +", "NIL 3 +", "3 NIL >"] {
+    for src in ["2 [ 3 ] ADD", "[ 2 ] 3 ADD", "NIL 3 ADD", "3 NIL GT"] {
         let (on, off) = assert_on_equals_off(src);
         assert_eq!(
             on.runtime_metrics().scalar_fastpath_count,
@@ -183,7 +183,7 @@ fn string_operand_stays_on_baseline_path() {
 
 #[test]
 fn division_by_zero_matches_baseline() {
-    let (on, _) = assert_on_equals_off("6 0 /");
+    let (on, _) = assert_on_equals_off("6 0 DIV");
     assert!(
         on.runtime_metrics().scalar_fastpath_count >= 1,
         "division by zero still uses the scalar fast path to produce the same projected NIL"

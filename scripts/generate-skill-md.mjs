@@ -121,26 +121,6 @@ function buildWordTable() {
       if (!contract) fail(`no contract found for coreword ${entry.surface}`);
       const syntax = contract.documentation.syntax ? ` — e.g. \`${contract.documentation.syntax}\`` : '';
       rows.push(`| \`${entry.surface}\` | ${entry.family} | ${contract.documentation.summary}${syntax} |`);
-    } else if (entry.canonical) {
-      const escaped = entry.surface.replace(/\|/g, '\\|');
-      const concept = entry.canonical.replace(/\|/g, '\\|');
-      // Only an alias is a shorthand *for* a Word you could have written out. A
-      // delimiter, a directive, or a reserved marker is not: calling a reserved
-      // marker "shorthand" would read as an invitation to use one.
-      const note = {
-        reserved_marker: `${concept} — reserved, never valid in source`,
-        // A retired form is not a reserved one: it *was* valid, so the note
-        // says what replaced it rather than only that it is refused. Listing
-        // these as `delimiter_sugar` is what let §9 advertise `{` and `}` as
-        // structural delimiters while §2 called them invalid characters.
-        retired_form: `${concept} — retired, no longer valid in source`,
-        source_directive: `${concept} — consumed by the lexer, not a Word`,
-        control_directive: `${concept} — only inside the construct that defines it`,
-        delimiter_sugar: `${concept} — structural delimiter, not a Word`,
-        literal_sugar: `${concept} — literal delimiter, not a Word`,
-        input_helper: `${concept} — editor affordance, not a Word`,
-      }[entry.kind] ?? `shorthand for \`${concept}\``;
-      rows.push(`| \`${escaped}\` | ${entry.kind.replace(/_/g, ' ')} | ${note} |`);
     }
   }
   return rows;
@@ -152,18 +132,18 @@ function buildWordTable() {
 
 const canonicalExamples = [
   { title: 'Push a number (always inside a vector)', code: '[ 42 ]' },
-  { title: 'Exact rational division — no floats, ever', code: '[ 1 ] [ 3 ] /' },
-  { title: 'Elementwise vector arithmetic', code: '[ 1 2 3 ] [ 4 5 6 ] +' },
-  { title: 'Scalar broadcast over a vector', code: '[ 5 ] [ 1 2 3 ] *' },
-  { title: 'Remainder: name the operands, then a - b * floor(a/b)', code: "10 'A' BIND 3 'B' BIND A A B / FLOOR B * -" },
-  { title: 'Comparison pushes a boolean', code: '1 2 <' },
-  { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] <' },
+  { title: 'Exact rational division — no floats, ever', code: '[ 1 ] [ 3 ] DIV' },
+  { title: 'Elementwise vector arithmetic', code: '[ 1 2 3 ] [ 4 5 6 ] ADD' },
+  { title: 'Scalar broadcast over a vector', code: '[ 5 ] [ 1 2 3 ] MUL' },
+  { title: 'Remainder: name the operands, then a - b * floor(a/b)', code: "10 'A' BIND 3 'B' BIND A A B DIV FLOOR B MUL SUB" },
+  { title: 'Comparison pushes a boolean', code: '1 2 LT' },
+  { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] LT' },
   { title: 'Range: start end, both included', code: '0 5 RANGE' },
   { title: 'A stride is a multiplication of a range', code: '0 5 RANGE 2 MUL' },
   { title: 'Fill a shape with one number: [ shape ] value', code: '[ 2 2 ] 7 FILL' },
-  { title: 'MAP with a [ ] code block', code: '0 4 RANGE [ [ 2 ] * ] MAP' },
-  { title: 'FILTER keeps matching elements', code: '0 10 RANGE [ 5 > ] FILTER' },
-  { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
+  { title: 'MAP with a [ ] code block', code: '0 4 RANGE [ [ 2 ] MUL ] MAP' },
+  { title: 'FILTER keeps matching elements', code: '0 10 RANGE [ 5 GT ] FILTER' },
+  { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ ADD ] FOLD' },
   {
     id: 'record-basic',
     title: 'A Record from a Vector of keys and a Vector of values',
@@ -172,7 +152,7 @@ const canonicalExamples = [
   {
     id: 'def-basic',
     title: 'Define a user word: [ body ] then name, then DEF',
-    code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
+    code: "[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM",
   },
   {
     id: 'select-basic',
@@ -189,24 +169,24 @@ const canonicalExamples = [
   { title: 'PRINT pops and emits to output (not the stack)', code: '[ 1 2 3 ] PRINT' },
   { title: 'Sorting is a plain Core word', code: '[ 3 1 2 ] SORT' },
   { title: 'Exact square root takes a bare scalar', code: '2 SQRT' },
-  { title: 'A value used twice is named with BIND', code: "5 'N' BIND N N 1 +" },
+  { title: 'A value used twice is named with BIND', code: "5 'N' BIND N N 1 ADD" },
 ];
 
 const commonErrors = [
   {
     title: 'Typo / unknown word',
     code: '[ 1 ] ADDD',
-    fix: 'Grep §9 for the word you meant (here: `+` / `ADD`). Word names are upper-cased automatically.',
+    fix: 'Grep §9 for the word you meant (here: `ADD`). Word names are upper-cased automatically.',
   },
   {
     title: 'Stack underflow: operands must be pushed first',
-    code: '+',
-    fix: 'Push both operands before the operator: `[ 1 ] [ 2 ] +`. Ajisai is postfix; there is no infix form.',
+    code: 'ADD',
+    fix: 'Push both operands before the operator: `[ 1 ] [ 2 ] ADD`. Ajisai is postfix; there is no infix form.',
   },
   {
     title: 'FOLD without an initial value',
-    code: '[ 1 2 3 ] [ + ] FOLD',
-    fix: 'FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.',
+    code: '[ 1 2 3 ] [ ADD ] FOLD',
+    fix: 'FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD`.',
   },
   {
     title: 'SELECT takes three operands: both candidates, then the truth',
@@ -220,7 +200,7 @@ const commonErrors = [
   },
   {
     title: 'Broadcast shape mismatch',
-    code: '[ 1 2 ] [ 1 2 3 ] +',
+    code: '[ 1 2 ] [ 1 2 3 ] ADD',
     fix: 'Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).',
   },
   {
@@ -391,7 +371,7 @@ function verifiedNilSection() {
 function verifiedExactnessSection() {
   // Comparison over the algebraic field is total: values built through
   // different histories compare equal when they denote the same real.
-  const json = expectOk('8 SQRT 2 SQRT 2 SQRT + =');
+  const json = expectOk('8 SQRT 2 SQRT 2 SQRT ADD EQ');
   if (json.stackDisplay.join(' ') !== 'TRUE') fail('sqrt(8) must equal sqrt(2)+sqrt(2)');
   // POW answers inside the field and nowhere else: a cube root leaves it.
   const outside = expectOk('8 1/3 POW NIL-REASON');
@@ -472,7 +452,7 @@ built from rationals and \`SQRT\` decides**: there is no budget, no refinement
 limit, and no undecided outcome.
 
 \`\`\`ajisai
-8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
+8 SQRT 2 SQRT 2 SQRT ADD EQ   # √8 vs √2+√2
 \`\`\`
 
 → stack \`${exactness.decided}\` (exit 0). Values built through different

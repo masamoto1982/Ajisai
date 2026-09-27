@@ -316,7 +316,7 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
 
     if chars[i] == '-' || chars[i] == '+' {
         // The sign must be followed by a digit; otherwise the token is a name,
-        // not a number. This is what leaves `-` free to be the SUB spelling.
+        // not a number. This is what leaves a bare `-` an ordinary name.
         if chars.len() == 1 || !chars[i + 1].is_ascii_digit() {
             return None;
         }

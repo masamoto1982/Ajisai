@@ -3,7 +3,6 @@
   "entries": [
     {
       "name": "TRUE",
-      "aliases": [],
       "family": "booleanLogic",
       "stack": {
         "inputs": 0,
@@ -48,7 +47,6 @@
     },
     {
       "name": "FALSE",
-      "aliases": [],
       "family": "booleanLogic",
       "stack": {
         "inputs": 0,
@@ -93,7 +91,6 @@
     },
     {
       "name": "AND",
-      "aliases": [],
       "family": "booleanLogic",
       "stack": {
         "inputs": 2,
@@ -145,7 +142,6 @@
     },
     {
       "name": "NOT",
-      "aliases": [],
       "family": "booleanLogic",
       "stack": {
         "inputs": 1,
@@ -195,7 +191,6 @@
     },
     {
       "name": "SELECT",
-      "aliases": [],
       "family": "booleanLogic",
       "stack": {
         "inputs": 3,
@@ -248,9 +243,6 @@
     },
     {
       "name": "EQ",
-      "aliases": [
-        "="
-      ],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -300,9 +292,6 @@
     },
     {
       "name": "LT",
-      "aliases": [
-        "<"
-      ],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -355,9 +344,6 @@
     },
     {
       "name": "GT",
-      "aliases": [
-        ">"
-      ],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -410,9 +396,6 @@
     },
     {
       "name": "ADD",
-      "aliases": [
-        "+"
-      ],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -465,9 +448,6 @@
     },
     {
       "name": "SUB",
-      "aliases": [
-        "-"
-      ],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -521,9 +501,6 @@
     },
     {
       "name": "MUL",
-      "aliases": [
-        "*"
-      ],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -576,9 +553,6 @@
     },
     {
       "name": "DIV",
-      "aliases": [
-        "/"
-      ],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -632,7 +606,6 @@
     },
     {
       "name": "FLOOR",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
@@ -683,7 +656,6 @@
     },
     {
       "name": "ROUND",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
@@ -735,7 +707,6 @@
     },
     {
       "name": "MIN",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -789,7 +760,6 @@
     },
     {
       "name": "MAX",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -843,7 +813,6 @@
     },
     {
       "name": "SQRT",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
@@ -895,7 +864,6 @@
     },
     {
       "name": "POW",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -958,7 +926,6 @@
     },
     {
       "name": "GCD",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
@@ -1013,7 +980,6 @@
     },
     {
       "name": "RATIO",
-      "aliases": [],
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
@@ -1066,7 +1032,6 @@
     },
     {
       "name": "GET",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1127,7 +1092,6 @@
     },
     {
       "name": "LENGTH",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1177,7 +1141,6 @@
     },
     {
       "name": "TAKE",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1232,7 +1195,6 @@
     },
     {
       "name": "DROP",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1287,7 +1249,6 @@
     },
     {
       "name": "CONCAT",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1338,7 +1299,6 @@
     },
     {
       "name": "REVERSE",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1389,7 +1349,6 @@
     },
     {
       "name": "COLLECT",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": "variable",
@@ -1437,7 +1396,6 @@
     },
     {
       "name": "RANGE",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1491,7 +1449,6 @@
     },
     {
       "name": "FILL",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1545,7 +1502,6 @@
     },
     {
       "name": "SHAPE",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1593,7 +1549,6 @@
     },
     {
       "name": "RESHAPE",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -1647,7 +1602,6 @@
     },
     {
       "name": "FLATTEN",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1697,7 +1651,6 @@
     },
     {
       "name": "DEPTH",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1745,7 +1698,6 @@
     },
     {
       "name": "SORT",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1797,7 +1749,6 @@
     },
     {
       "name": "ORDER",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1849,7 +1800,6 @@
     },
     {
       "name": "UNIQUE",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -1900,7 +1850,6 @@
     },
     {
       "name": "TALLY",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 1,
@@ -1952,7 +1901,6 @@
     },
     {
       "name": "ZIP",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 1,
@@ -2004,7 +1952,6 @@
     },
     {
       "name": "PUT",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 3,
@@ -2060,7 +2007,6 @@
     },
     {
       "name": "GROUP",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 2,
@@ -2114,7 +2060,6 @@
     },
     {
       "name": "INDEX-OF",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -2167,7 +2112,6 @@
     },
     {
       "name": "MEMBER?",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -2219,7 +2163,6 @@
     },
     {
       "name": "BSEARCH",
-      "aliases": [],
       "family": "collection",
       "stack": {
         "inputs": 2,
@@ -2275,7 +2218,6 @@
     },
     {
       "name": "RECORD",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 2,
@@ -2329,7 +2271,6 @@
     },
     {
       "name": "KEYS",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 1,
@@ -2379,7 +2320,6 @@
     },
     {
       "name": "VALUES",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 1,
@@ -2429,7 +2369,6 @@
     },
     {
       "name": "WITHOUT",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 2,
@@ -2482,7 +2421,6 @@
     },
     {
       "name": "HAS?",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 2,
@@ -2534,7 +2472,6 @@
     },
     {
       "name": "MERGE",
-      "aliases": [],
       "family": "record",
       "stack": {
         "inputs": 2,
@@ -2585,7 +2522,6 @@
     },
     {
       "name": "MAP",
-      "aliases": [],
       "family": "higherOrder",
       "stack": {
         "inputs": 2,
@@ -2637,7 +2573,6 @@
     },
     {
       "name": "FILTER",
-      "aliases": [],
       "family": "higherOrder",
       "stack": {
         "inputs": 2,
@@ -2691,7 +2626,6 @@
     },
     {
       "name": "FOLD",
-      "aliases": [],
       "family": "higherOrder",
       "stack": {
         "inputs": 3,
@@ -2744,7 +2678,6 @@
     },
     {
       "name": "SCAN",
-      "aliases": [],
       "family": "higherOrder",
       "stack": {
         "inputs": 3,
@@ -2798,7 +2731,6 @@
     },
     {
       "name": "CHARS",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -2849,7 +2781,6 @@
     },
     {
       "name": "JOIN",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -2900,7 +2831,6 @@
     },
     {
       "name": "TRIM",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -2952,7 +2882,6 @@
     },
     {
       "name": "UPPER",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -3004,7 +2933,6 @@
     },
     {
       "name": "LOWER",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -3056,7 +2984,6 @@
     },
     {
       "name": "TOKENIZE",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 2,
@@ -3110,7 +3037,6 @@
     },
     {
       "name": "SEARCH",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 2,
@@ -3165,7 +3091,6 @@
     },
     {
       "name": "REPLACE",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 3,
@@ -3220,7 +3145,6 @@
     },
     {
       "name": "NUM",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -3278,7 +3202,6 @@
     },
     {
       "name": "STR",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -3328,7 +3251,6 @@
     },
     {
       "name": "FORMAT",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 2,
@@ -3384,7 +3306,6 @@
     },
     {
       "name": "JSON-DECODE",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -3444,7 +3365,6 @@
     },
     {
       "name": "JSON-ENCODE",
-      "aliases": [],
       "family": "text",
       "stack": {
         "inputs": 1,
@@ -3495,7 +3415,6 @@
     },
     {
       "name": "EXEC",
-      "aliases": [],
       "family": "control",
       "stack": {
         "inputs": 1,
@@ -3545,7 +3464,6 @@
     },
     {
       "name": "CONTRACT",
-      "aliases": [],
       "family": "dictionary",
       "stack": {
         "inputs": 1,
@@ -3598,7 +3516,6 @@
     },
     {
       "name": "FAIL",
-      "aliases": [],
       "family": "control",
       "stack": {
         "inputs": 1,
@@ -3649,7 +3566,6 @@
     },
     {
       "name": "NIL",
-      "aliases": [],
       "family": "absence",
       "stack": {
         "inputs": 0,
@@ -3695,7 +3611,6 @@
     },
     {
       "name": "NIL?",
-      "aliases": [],
       "family": "absence",
       "stack": {
         "inputs": 1,
@@ -3743,7 +3658,6 @@
     },
     {
       "name": "NIL-REASON",
-      "aliases": [],
       "family": "absence",
       "stack": {
         "inputs": 1,
@@ -3792,7 +3706,6 @@
     },
     {
       "name": "ABSENT",
-      "aliases": [],
       "family": "absence",
       "stack": {
         "inputs": 1,
@@ -3844,7 +3757,6 @@
     },
     {
       "name": "BIND",
-      "aliases": [],
       "family": "dictionary",
       "stack": {
         "inputs": 2,
@@ -3864,7 +3776,6 @@
         "nameConflict",
         "shapeMismatch",
         "invalidName",
-        "protectedWord",
         "selfReferentialDefinition"
       ],
       "purity": "pure",
@@ -3900,7 +3811,6 @@
     },
     {
       "name": "DEF",
-      "aliases": [],
       "family": "dictionary",
       "stack": {
         "inputs": 2,
@@ -3960,7 +3870,6 @@
     },
     {
       "name": "DEL",
-      "aliases": [],
       "family": "dictionary",
       "stack": {
         "inputs": 1,
@@ -4002,7 +3911,7 @@
         "LANG.DICTIONARY.MUTATION"
       ],
       "documentation": {
-        "summary": "Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
+        "summary": "Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
         "hover": "DEL — delete user word",
         "syntax": "[ 1 ] 'W' DEF 'W' DEL",
         "stackEffect": "[ name ] -> [ ]"
@@ -4016,7 +3925,6 @@
     },
     {
       "name": "DIGEST",
-      "aliases": [],
       "family": "dictionary",
       "stack": {
         "inputs": 1,
@@ -4066,7 +3974,6 @@
     },
     {
       "name": "PRINT",
-      "aliases": [],
       "family": "output",
       "stack": {
         "inputs": 1,

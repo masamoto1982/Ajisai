@@ -43,7 +43,7 @@ fn every_hover_syntax_is_a_well_formed_snippet() {
     // Ledger item 9. A `hover_syntax` is a runnable example, so requiring it to
     // tokenize makes well-formedness a build-time guarantee. Only tokenization
     // is sound to require of all of them — some are deliberate modifier fragments
-    // (`. +`); symbol resolution is the sibling check below (item 10).
+    // (`. ADD`); symbol resolution is the sibling check below (item 10).
     for spec in builtin_specs() {
         if spec.hover_syntax.is_empty() {
             continue;
@@ -59,28 +59,14 @@ fn every_hover_syntax_is_a_well_formed_snippet() {
 #[tokio::test]
 async fn every_hover_syntax_calls_its_word_and_runs() {
     // Ledger items 10 and 10b. A `hover_syntax` is also the "one correct call"
-    // a diagnosis quotes, so it must be one: it ends in the Word's own
-    // canonical name — never an alias, which is a second spelling of the same
-    // Word — and it runs on a fresh interpreter. FAIL's one correct call is the
+    // a diagnosis quotes, so it must be one: it ends in the Word's own name
+    // and it runs on a fresh interpreter. FAIL's one correct call is the
     // ERROR it exists to raise.
-    let aliases: Vec<&str> = GENERATED_WORDS
-        .iter()
-        .flat_map(|word| word.aliases.iter().copied())
-        .collect();
     let mut ran = 0u32;
     for spec in builtin_specs() {
         if spec.hover_syntax.is_empty() {
             continue;
         }
-        assert!(
-            !spec
-                .hover_syntax
-                .split_whitespace()
-                .any(|token| aliases.contains(&token)),
-            "{}: hover_syntax `{}` spells a Word by an alias",
-            spec.name,
-            spec.hover_syntax
-        );
         assert_eq!(
             spec.hover_syntax.split_whitespace().last(),
             Some(spec.name),

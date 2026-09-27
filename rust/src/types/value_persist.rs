@@ -190,7 +190,7 @@ fn encode_data(data: &ValueData) -> PersistData {
             // The denominators already say *which* lanes are absent. This says
             // why, one entry per absent lane that knows — the same `r` field a
             // scalar NIL carries, addressed by lane. Without it a saved
-            // session reloaded `[ 1 2 ] [ 1 0 ] /` as a vector whose second
+            // session reloaded `[ 1 2 ] [ 1 0 ] DIV` as a vector whose second
             // lane had stopped being a division by zero.
             absent: data
                 .absences()

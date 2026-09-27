@@ -131,7 +131,7 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
 /// The codec carried a whole-value NIL's reason in its `r` field from the
 /// start, and carried a tensor's lanes as bare numerator/denominator columns
 /// — which record that a lane is absent and nothing about why. So a saved
-/// session reloaded `[ 1 2 ] [ 1 0 ] /` as a vector whose second lane had
+/// session reloaded `[ 1 2 ] [ 1 0 ] DIV` as a vector whose second lane had
 /// stopped being a division by zero. Under LANG.VALUES.NIL the reason is the
 /// whole observable content of an absence, so that reload returned a
 /// different value, which is the one thing this codec promises not to do.

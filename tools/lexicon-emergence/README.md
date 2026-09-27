@@ -50,13 +50,13 @@ which is the variable §5.3 controls. A refusal is recorded as the run's end.
 ## What the instrument can and cannot say
 
 - **D0** equal means the same Word. It ignores Word names, even through
-  dependencies, and normalizes aliases (`*` = `MUL`). But it tells apart
-  bodies that differ only in their `BIND` names.
+  dependencies. But it tells apart bodies that differ only in their `BIND`
+  names.
 - **D0α** renames bound variables to `_B0`, `_B1`, … before hashing, and
   merges those bodies.
 - **D1** only means the engine gave the same answers on the probe battery in
   `lib/identity.mjs`. The battery includes scalars and one-element Vectors,
-  because `[ 2 ] *` and `2 *` differ only on a scalar input, and irregular
+  because `[ 2 ] MUL` and `2 MUL` differ only on a scalar input, and irregular
   text (`''`, `'x  y'`, `' lead'`), because without it a word-splitting and
   a character-scanning title-caser answered alike (pilot, 2026-09-23). A Word that
   errors on every probe gets no D1.

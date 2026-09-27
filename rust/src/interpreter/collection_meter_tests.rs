@@ -111,7 +111,7 @@ mod collection_meter_tests {
         // Equality on a nested element is a loop over that element, so "one
         // element" is only a unit of work when the elements are scalars.
         let flat = charged_by("0 199 RANGE UNIQUE").await;
-        let nested = charged_by("0 199 RANGE [ 1 16 RANGE + ] MAP UNIQUE").await;
+        let nested = charged_by("0 199 RANGE [ 1 16 RANGE ADD ] MAP UNIQUE").await;
         assert!(
             nested > flat * 8,
             "sixteen leaves per element must cost more than one: {nested} \
@@ -146,10 +146,10 @@ mod collection_meter_tests {
         // width of an element moves. Multiplying by the wide literal is what
         // makes the elements genuine BigInts rather than machine words — the
         // step where the measured cost jumps twelvefold.
-        let narrow = charged_by_word("1 200 RANGE [ 1/101 MUL FLOOR 1 + ] MAP", "UNIQUE").await;
+        let narrow = charged_by_word("1 200 RANGE [ 1/101 MUL FLOOR 1 ADD ] MAP", "UNIQUE").await;
         let wide = charged_by_word(
             &format!(
-                "1 200 RANGE [ 1/101 MUL FLOOR 1 + {} * ] MAP",
+                "1 200 RANGE [ 1/101 MUL FLOOR 1 ADD {} MUL ] MAP",
                 "9".repeat(512)
             ),
             "UNIQUE",

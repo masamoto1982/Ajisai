@@ -150,7 +150,7 @@
       "id": "protectedWord",
       "kind": "declared",
       "repair": "program",
-      "documentation": "DEF or DEL targeted a Core Word or a reserved alias, which the dictionary protects; BIND likewise refuses a reserved name."
+      "documentation": "DEF or DEL targeted a Core Word, which the dictionary protects."
     },
     {
       "id": "recursionLimitExceeded",

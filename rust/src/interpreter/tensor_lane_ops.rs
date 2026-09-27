@@ -129,9 +129,9 @@ where
 ///
 /// Shape handling is the flat path's, lane for lane — the same
 /// [`broadcast_shape`] and the same index projection — so a Word cannot mean
-/// one thing when it projects and another when it does not: `[ 6 ] [ 1 2 0 ] /`
+/// one thing when it projects and another when it does not: `[ 6 ] [ 1 2 0 ] DIV`
 /// broadcasts its single dividend across three divisors here exactly as
-/// `[ 6 ] [ 1 2 3 ] /` does there.
+/// `[ 6 ] [ 1 2 3 ] DIV` does there.
 ///
 /// The leaf law never sees an absent operand: [`apply_lane_law`] settles those
 /// first, from the `Value`, so each lane's reason survives the lift. It is not

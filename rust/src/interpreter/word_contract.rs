@@ -304,8 +304,7 @@ impl Interpreter {
                     sim.feed_literal();
                     cost_sim.feed_literal();
                     if contexts[idx] == LiteralContext::Code {
-                        let canonical =
-                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                        let canonical = crate::word_name::canonical_word_name(symbol);
                         if runs_unread_code(&def.body, &contexts, idx, &canonical) {
                             self.widen_with_unread_code_operand(&mut acc, &mut complete);
                         }
@@ -324,7 +323,7 @@ impl Interpreter {
                     cost_sim.feed_literal();
                 }
                 Token::Symbol(symbol) => {
-                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                    let canonical = crate::word_name::canonical_word_name(symbol);
                     note_bound_names(&mut bound, &canonical, &def.body, idx);
                     if runs_unread_code(&def.body, &contexts, idx, &canonical) {
                         self.widen_with_unread_code_operand(&mut acc, &mut complete);

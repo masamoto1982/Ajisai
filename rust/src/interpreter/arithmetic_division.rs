@@ -28,7 +28,7 @@ pub(crate) fn division_by_zero_projection() -> Value {
 /// The scalar law of `DIV` as a whole `Value`, for the lane-wise lift.
 ///
 /// A zero divisor is a projection, not a failure (`LANG.FAILURE.TRICHOTOMY`),
-/// so it answers with the reasoned NIL the scalar `6 0 /` answers with.
+/// so it answers with the reasoned NIL the scalar `6 0 DIV` answers with.
 ///
 /// An absent operand never reaches here: `apply_lane_wise_broadcast` lifts the
 /// scalar passthrough law over each lane *before* consulting this one, while
@@ -49,9 +49,9 @@ fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
 
 /// A zero divisor on the one-lane fast path projects *inside* the operand's
 /// wrap, for the same reason it projects per lane in the broadcast: the shape
-/// of `[ 6 ] [ 0 ] /` is the shape of `[ 6 ] [ 2 ] /`. Answering with a bare
+/// of `[ 6 ] [ 0 ] DIV` is the shape of `[ 6 ] [ 2 ] DIV`. Answering with a bare
 /// NIL here made `DIV` the one Word whose result shape depended on whether it
-/// projected — `[ 6 ] [ 2 ] /` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] /` gave a
+/// projected — `[ 6 ] [ 2 ] DIV` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] DIV` gave a
 /// scalar `NIL`.
 ///
 /// The projection is a reasoned NIL, so the wrap is rebuilt as a nested
@@ -113,7 +113,7 @@ pub(crate) fn apply_division_schema(
     // The flat rational broadcast above cannot say that. Its leaf law answers
     // with a `Fraction`, so a projection can only surface as one error for the
     // whole operation, and the lanes that had already divided were discarded
-    // with it: `[ 6 6 6 ] [ 1 2 0 ] /` answered `NIL` where the same division
+    // with it: `[ 6 6 6 ] [ 1 2 0 ] DIV` answered `NIL` where the same division
     // through `MAP` answered `[ 6/1 3/1 NIL ]`, so one `DIV` meant two
     // different things depending on the route it took.
     //

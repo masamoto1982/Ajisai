@@ -1,7 +1,7 @@
 //! Pre-resolved builtin call sites for compiled plans.
 //!
 //! A builtin call site, specialized once at compile time so the per-call
-//! dispatch work (alias canonicalization, linear registry scan,
+//! dispatch work (name canonicalization, linear registry scan,
 //! mode-preservation lookup) is never repeated at runtime.
 //! This is the call-site analogue of the resolve cache's epoch discipline:
 //! everything precomputed here depends only on static tables, never on
@@ -16,10 +16,10 @@ use super::Interpreter;
 
 #[derive(Debug)]
 pub struct CompiledCall {
-    /// Canonical builtin name (post-alias). Kept for the unresolved fallback
+    /// Canonical builtin name. Kept for the unresolved fallback
     /// path, diagnostics, and plan introspection.
     pub name: String,
-    /// Pre-resolved contract, replacing the runtime alias scan + registry scan.
+    /// Pre-resolved contract, replacing the runtime registry scan.
     /// `None` for a name the registry does not know — the fallback path reports
     /// it as an unknown word.
     pub word: Option<&'static GeneratedWord>,
@@ -27,7 +27,7 @@ pub struct CompiledCall {
 
 impl CompiledCall {
     pub fn resolve(name: &str) -> Self {
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(name).into_owned();
+        let canonical = crate::word_name::canonical_word_name(name).into_owned();
         let word = generated_word(&canonical);
         Self {
             word,
@@ -39,7 +39,7 @@ impl CompiledCall {
 /// Run a pre-resolved builtin call site. Mirrors `execute_builtin` exactly —
 /// declared NIL contract, then executor dispatch — but
 /// consumes the decisions `CompiledCall::resolve` already made instead of
-/// re-scanning the alias and registry tables.
+/// re-scanning the registry table.
 ///
 /// "Mirrors `execute_builtin` exactly" is the whole contract of this function,
 /// and the NIL guard is part of what it has to mirror: a compiled body that

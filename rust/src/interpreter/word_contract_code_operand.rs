@@ -31,7 +31,7 @@ impl Interpreter {
         acc: &mut AccumulatedContract,
         complete: &mut bool,
     ) {
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
+        let canonical = crate::word_name::canonical_word_name(symbol);
         let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
             *complete = false;
             acc.gaps.push(GapCode::UnresolvedWord);

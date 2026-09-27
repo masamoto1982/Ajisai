@@ -8,11 +8,11 @@
 // The unit is a *balanced* piece of source, not a whitespace-separated token.
 // That distinction is the whole of this module. Step mode runs each piece on
 // its own against the persisted interpreter state, so a piece that cannot
-// stand alone cannot be stepped: splitting `[ 1 ] [ 2 ] +` on whitespace hands
+// stand alone cannot be stepped: splitting `[ 1 ] [ 2 ] ADD` on whitespace hands
 // the interpreter a bare `[`, which is the source error `Unclosed '[':
 // expected ']'`, and step mode reset on it. Since `[ 42 ]` is the idiomatic
 // scalar and Vectors are the language's central data structure, that made the
-// feature unusable for very nearly every real program while `1 2 +` — the one
+// feature unusable for very nearly every real program while `1 2 ADD` — the one
 // shape without brackets — kept working, which is why it read as fine.
 
 /// One piece of source that step mode can execute on its own, with where it

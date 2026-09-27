@@ -161,7 +161,7 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
                     match close_of[i].and_then(|close| next_symbol_from(tokens, close + 1)) {
                         Some(name)
                             if consumes_preceding_as_code(
-                                &crate::core_word_aliases::canonicalize_core_word_name(name),
+                                &crate::word_name::canonical_word_name(name),
                             ) =>
                         {
                             LiteralContext::Code

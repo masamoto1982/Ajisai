@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **78 Words**, of which **48** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **78 Words**, of which **48** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -89,7 +89,6 @@ Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: 
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
 - **Syntax:** `1 1 EQ`
-- **Aliases:** `=`
 
 ## `LT`
 
@@ -104,7 +103,6 @@ Whether the left number is less than the right: `1 2 LT` is `TRUE`, element-wise
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 2 LT`
-- **Aliases:** `<`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `GT`
@@ -120,7 +118,6 @@ Whether the left number is greater than the right: `2 1 GT` is `TRUE`, element-w
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `2 1 GT`
-- **Aliases:** `>`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `ADD`
@@ -136,7 +133,6 @@ The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadc
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1 2 ADD`
-- **Aliases:** `+`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `SUB`
@@ -152,7 +148,6 @@ The exact difference, left minus right: `5 3 SUB` is `2`, and element-wise over 
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `5 3 SUB`
-- **Aliases:** `-`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `MUL`
@@ -168,7 +163,6 @@ The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with br
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `2 4 MUL`
-- **Aliases:** `*`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `DIV`
@@ -184,7 +178,6 @@ The exact quotient, left over right: `1 3 DIV` is `1/3` — never a decimal appr
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `10 2 DIV`
-- **Aliases:** `/`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `FLOOR`
@@ -1106,7 +1099,7 @@ Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10
 - **Effects:** none
 - **Clauses:** `LANG.SOURCE.FRAME`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ 1 2 3 ] 'XS' BIND`
-- **ERROR conditions:** `nonText`, `nameConflict`, `shapeMismatch`, `invalidName`, `protectedWord`, `selfReferentialDefinition`
+- **ERROR conditions:** `nonText`, `nameConflict`, `shapeMismatch`, `invalidName`, `selfReferentialDefinition`
 
 ## `DEF`
 
@@ -1125,7 +1118,7 @@ A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is
 
 ## `DEL`
 
-Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.
+Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

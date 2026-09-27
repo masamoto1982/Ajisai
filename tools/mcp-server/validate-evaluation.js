@@ -13,8 +13,8 @@ const repairCorpus = read("./eval/repair-cases.json");
  * No prompt may show the retired block syntax.
  *
  * The `static-check` and `contract-inference` prompts asked, in both locales,
- * about `{ [ 1 ] + } 'INC' DEF` — the retired block form — while their own
- * `arguments.source` carried the correct `[ [ 1 ] + ] 'INC' DEF`. The fixtures
+ * about `{ [ 1 ] ADD } 'INC' DEF` — the retired block form — while their own
+ * `arguments.source` carried the correct `[ [ 1 ] ADD ] 'INC' DEF`. The fixtures
  * therefore passed: the corpus scores the tool call, and nothing read the
  * prompt. But this corpus is the text a model is shown, and what a model is
  * shown is what it imitates. A corpus for an AI-first language is the last
@@ -25,7 +25,7 @@ const repairCorpus = read("./eval/repair-cases.json");
  * no such entries any more: `{`, `}` and a bare `|` were freed into ordinary
  * name characters along with `(` and `)`, and the manifest carries only live
  * forms (`docs/dev/source-character-liberation-2026-09.md`). The gate's reason
- * is untouched by that — `{ [ 1 ] + } 'INC' DEF` still does not define
+ * is untouched by that — `{ [ 1 ] ADD } 'INC' DEF` still does not define
  * anything, because `{` resolves to no Word — so what changed is only which
  * layer refuses it, the dictionary rather than the lexer. The pair is named
  * here because it is now a closed historical fact rather than a registry that

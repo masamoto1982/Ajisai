@@ -108,8 +108,8 @@ fn down_probe_exceeds_the_real_default_budget_without_step_limit() {
 
 /// Twelve word executions (a step counts a *word* execution, not a literal),
 /// so this trips a 10-step budget but is far below the default either way.
-const SIMPLE_PROGRAM: &str = "[ 1 ] [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + \
-     [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] +";
+const SIMPLE_PROGRAM: &str = "[ 1 ] [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD \
+     [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD [ 1 ] ADD";
 
 #[test]
 fn lowered_step_limit_sandboxes_a_simple_program() {

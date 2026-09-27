@@ -5,7 +5,7 @@
 //! It used to be neither: two of the six routes out of
 //! `arithmetic::apply_exact_arithmetic_schema` charged, both reachable only
 //! when both operands were scalar-shaped, and the other four were free. So
-//! `2 3 *` was priced and `[ 2 ] 3 *` was not, and `algebraicTerms` was a
+//! `2 3 MUL` was priced and `[ 2 ] 3 MUL` was not, and `algebraicTerms` was a
 //! ceiling a vector literal turned off. Which route runs is an optimization
 //! decision, unobservable by LANG.AUTHORITY.FREEDOM; a safety control priced
 //! per route made it observable, which is the one thing a limit must never do.

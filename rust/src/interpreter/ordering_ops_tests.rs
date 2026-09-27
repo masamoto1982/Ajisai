@@ -133,7 +133,7 @@ mod ordering_ops_tests {
     /// than a canonical one.
     #[tokio::test]
     async fn a_dense_scan_follows_the_inputs_order_not_a_canonical_one() {
-        // `(x - 5)^2` over 0..9 is 25 16 9 4 1 0 1 4 9 16: not monotone, so
+        // `(x SUB 5)^2` over 0..9 is 25 16 9 4 1 0 1 4 9 16: not monotone, so
         // neither direction of the input is a sorted order.
         assert!(
             top_is_dense("0 9 RANGE [ 5 SUB 2 POW ] MAP").await,

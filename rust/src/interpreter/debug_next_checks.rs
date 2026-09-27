@@ -187,14 +187,6 @@ pub(crate) fn build_next_checks(
             }
             out.push(spelling_check(candidates));
             out.push(check(
-                "checkAliasCanonicalization",
-                ("Check alias canonicalization", "別名の正規化を確認する"),
-                (
-                    "Check the canonical Word name the alias expands to.",
-                    "alias 展開後の canonical word 名を確認する",
-                ),
-            ));
-            out.push(check(
                 "checkUserDefinitions",
                 ("Check user definitions", "ユーザー定義を確認する"),
                 (

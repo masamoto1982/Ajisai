@@ -247,8 +247,8 @@ fn a_word_with_no_registry_entry_still_gets_its_class_level_checks() {
 /// This gate exists because of a defect it would have caught on the day it
 /// landed: the zero-division check told both locales to "handle it with SAFE",
 /// and `SAFE` is not an Ajisai word — it is the pre-rename spelling of
-/// `OR-NIL`. `1 0 /` therefore answered a correct NIL whose diagnosis sent the
-/// reader to `1 0 / SAFE`, which fails with `Unknown word: SAFE`, and no check
+/// `OR-NIL`. `1 0 DIV` therefore answered a correct NIL whose diagnosis sent the
+/// reader to `1 0 DIV SAFE`, which fails with `Unknown word: SAFE`, and no check
 /// ever named `OR-NIL`. For a language whose stated claim is that a machine can
 /// follow a structured diagnosis to a first-attempt repair, a check that names
 /// a word the dictionary rejects is worse than a check that names none.
@@ -304,7 +304,7 @@ mod diagnosis_vocabulary_is_real {
         if crate::surface_forms::lookup_surface_form(token).is_some() {
             return true;
         }
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(token);
+        let canonical = crate::word_name::canonical_word_name(token);
         crate::kernel::generated::generated_word(canonical.as_ref()).is_some()
     }
 
@@ -373,7 +373,7 @@ mod diagnosis_vocabulary_is_real {
                                 }
                                 assert!(
                                     resolves(&token),
-                                    "check `{}` names `{token}`, which no Ajisai Word, alias or \
+                                    "check `{}` names `{token}`, which no Ajisai Word or \
                                      surface form resolves. A diagnosis may not send a reader to \
                                      a name the dictionary rejects. Text: {text}",
                                     check.code

@@ -68,7 +68,6 @@ serialize_as_spec_str!(
 mod tests {
     use super::{generated_word, GENERATED_WORDS};
     use crate::builtins::builtin_specs;
-    use crate::core_word_aliases::canonicalize_core_word_name;
     use std::collections::BTreeSet;
 
     #[test]
@@ -76,23 +75,6 @@ mod tests {
         let generated: BTreeSet<&str> = GENERATED_WORDS.iter().map(|word| word.name).collect();
         let runtime: BTreeSet<&str> = builtin_specs().iter().map(|spec| spec.name).collect();
         assert_eq!(generated, runtime);
-    }
-
-    #[test]
-    fn generated_aliases_resolve_to_their_canonical_word() {
-        let mut alias_count = 0;
-        for word in GENERATED_WORDS {
-            for &alias in word.aliases {
-                alias_count += 1;
-                assert_eq!(
-                    canonicalize_core_word_name(alias).as_ref(),
-                    word.name,
-                    "alias {alias} should canonicalize to {}",
-                    word.name
-                );
-            }
-        }
-        assert_eq!(alias_count, 7, "spec/words.json declares 7 aliases");
     }
 
     /// The executor-key equivalence test this module used to carry is gone: it

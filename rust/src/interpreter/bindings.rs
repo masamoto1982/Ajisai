@@ -11,8 +11,8 @@
 //! copy — the second use is now buried under the first result and cannot be
 //! reached. Three copies do not help: consuming the first buries the second.
 //! The workaround is to pack the values into a matrix and recover them with a
-//! weighted fold, so `a - b` is written as
-//! `CP DLS * 2 * 2 COLLECT [ [ -1 ] [ 1 ] ] * 0 { + } FOLD`. That is not a
+//! weighted fold, so `a SUB b` is written as
+//! `CP DLS MUL 2 MUL 2 COLLECT [ [ -1 ] [ 1 ] ] MUL 0 { ADD } FOLD`. That is not a
 //! program anyone can read, and it is what the third test report was reduced to.
 //!
 //! So a value gets a name. What makes this a dictionary operation rather than a
@@ -125,9 +125,8 @@ impl Interpreter {
     /// the question of which one they got: within a program, a name is a Word
     /// or a binding and never both.
     pub(crate) fn check_bindable_name(&self, name: &str) -> Result<()> {
-        // Both checks mirror `op_def_inner`'s identical two, which declares
-        // them `invalidName` / `protectedWord` — BIND's contract now
-        // declares the same pair, closing the gap the two used to sit in.
+        // The name check mirrors `op_def_inner`'s, which declares it
+        // `invalidName`; a Core or User Word's name is `nameConflict` below.
         if !crate::tokenizer::is_symbol_token_lexeme(name) {
             return Err(AjisaiError::declared(
                 "invalidName",
@@ -136,11 +135,6 @@ impl Interpreter {
                     name
                 ),
             ));
-        }
-        if let Some(message) =
-            crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "bind")
-        {
-            return Err(AjisaiError::declared("protectedWord", message));
         }
         let upper = name.to_uppercase();
         if self.core_vocabulary.contains_key(&upper) {

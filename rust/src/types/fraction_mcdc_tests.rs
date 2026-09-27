@@ -367,7 +367,7 @@ mod floor_negative_remainder {
 //
 //   C is structurally always T at this site: the immediately preceding block
 //   at fraction.rs:261-264 normalizes d to be non-negative
-//   (`if d < 0 { n = -n; d = -d; }`), so by the time line 267 evaluates
+//   (`if d LT 0 { n EQ -n; d EQ -d; }`), so by the time line 267 evaluates
 //   `d >= 0`, this condition is invariant. Treated as defensive code; the
 //   row C=F is unreachable without bypassing the normalizer.
 //
@@ -578,7 +578,7 @@ mod add_checked_chain_defensive {
         assert_eq!(
             result,
             small(2, 1),
-            "i64::MAX/i64::MAX + i64::MAX/i64::MAX = 2"
+            "i64::MAX/i64::MAX ADD i64::MAX/i64::MAX EQ 2"
         );
     }
 

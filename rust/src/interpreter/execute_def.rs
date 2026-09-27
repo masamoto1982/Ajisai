@@ -119,12 +119,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
     crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
-    if let Some(message) =
-        crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "define")
-    {
-        return Err(AjisaiError::declared("protectedWord", message));
-    }
-
     // A Word is reached by writing its name as one token, so a name that
     // cannot be written is not a name: `DEF` took one anyway, and the entry it
     // made could be listed, hovered and exported but never called. That splits
@@ -229,7 +223,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // included (`body_symbols`): one it could reach at run time is one this
     // check has to see.
     for s in crate::interpreter::body_symbols::body_symbol_names(&body) {
-        let upper_s = crate::core_word_aliases::canonicalize_core_word_name(&s);
+        let upper_s = crate::word_name::canonical_word_name(&s);
         new_text_references.insert(upper_s.to_string());
         if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
             if !resolved_def.is_builtin || resolved_name.contains('@') {

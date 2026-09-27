@@ -28,7 +28,6 @@ const registry = JSON.parse(
 const known = new Set();
 for (const entry of registry.entries) {
   known.add(entry.name);
-  for (const alias of entry.aliases ?? []) known.add(alias);
 }
 // Input-schema property descriptions count too: `source` carries the syntax
 // rules, and a rule that names a Word which does not exist misleads exactly as

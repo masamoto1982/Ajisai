@@ -68,7 +68,7 @@ mod tests {
     async fn a_brace_block_does_not_define_a_word() {
         let mut interp = Interpreter::new();
         let err = interp
-            .execute("{ [ 2 ] * } 'DOUBLE' DEF")
+            .execute("{ [ 2 ] MUL } 'DOUBLE' DEF")
             .await
             .expect_err("a brace block must not define a Word")
             .to_string();
@@ -132,18 +132,18 @@ mod tests {
         }
     }
 
-    /// A name reserved as an alias keeps its own diagnosis: `+` and `<` both
-    /// lex as perfectly ordinary Symbols, so the unwritable-name rule must not
-    /// shadow the more specific message. This is why that rule is checked after
-    /// the reserved-name one rather than before it.
+    /// A symbol that was once a second spelling of a Core Word is an ordinary
+    /// name now: `+` and `<` lex as Symbols, so they are definable like any
+    /// other, and the Word defined under one is reached by writing it.
     #[tokio::test]
-    async fn a_reserved_alias_keeps_its_own_message() {
+    async fn a_freed_symbol_is_an_ordinary_definable_name() {
         for name in ["+", "<"] {
-            let err = def(name).await.expect_err(&format!("`{name}` is reserved"));
-            assert!(
-                err.contains("reserved"),
-                "`{name}` should say it is reserved rather than unwritable, got: {err}"
-            );
+            let mut interp = Interpreter::new();
+            interp
+                .execute(&format!("[ 1 ] '{name}' DEF {name}"))
+                .await
+                .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));
+            assert_eq!(interp.stack.len(), 1);
         }
     }
 }

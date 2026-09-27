@@ -112,18 +112,18 @@ async function rate(meter, setup, ops) {
 
 const wide = '9'.repeat(4096);
 const PAIRS = [[2, 3], [5, 7], [11, 13], [17, 19], [23, 29], [31, 37], [41, 43], [47, 53]];
-const cascade = (f) => PAIRS.slice(0, f).map(([l, r], i) => `${l} SQRT ${r} SQRT +${i > 0 ? ' *' : ''}`).join(' ');
+const cascade = (f) => PAIRS.slice(0, f).map(([l, r], i) => `${l} SQRT ${r} SQRT ADD${i > 0 ? ' MUL' : ''}`).join(' ');
 
 const NUMERIC = [
     // The floor candidate: one charged unit per lane, a machine-word add
     // inside a tensor kernel, with nothing else to amortize it.
-    ['dense tensor lanes (100k) x80', '0 99999 RANGE', ' 1 +'.repeat(80)],
+    ['dense tensor lanes (100k) x80', '0 99999 RANGE', ' 1 ADD'.repeat(80)],
     // 19, not 20: the twentieth multiplication crosses the MCP profile's
     // `bigintBits` (272,133 against 262,144), which is the very boundary
     // `profile_liveness_tests` pins. Measuring under a real profile means
     // living inside every one of its ceilings, not just the one being timed.
-    ['scalar wide MUL x19 (4096-digit)', `{ ${wide} * } 'M' DEF 1`, ' M'.repeat(19)],
-    ['scalar wide ADD x200 (4096-digit)', `{ ${wide} + } 'W' DEF 1`, ' W'.repeat(200)],
+    ['scalar wide MUL x19 (4096-digit)', `{ ${wide} MUL } 'M' DEF 1`, ' M'.repeat(19)],
+    ['scalar wide ADD x200 (4096-digit)', `{ ${wide} ADD } 'W' DEF 1`, ' W'.repeat(200)],
     ['algebraic cascade(8) x18', `{ ${cascade(8)} } 'C' DEF`, ' C'.repeat(18)],
 ];
 
@@ -142,7 +142,7 @@ const COLLECTION = [
     // Wide elements: an equality probe walks limbs, and this was by far the
     // dearest per-element shape on native. If any collection path is the WASM
     // floor, it is a candidate.
-    ['UNIQUE 4k x 4096-digit x2', `1 4000 RANGE { ${wide} * } MAP`, ' UNIQUE'.repeat(2)],
+    ['UNIQUE 4k x 4096-digit x2', `1 4000 RANGE { ${wide} MUL } MAP`, ' UNIQUE'.repeat(2)],
 ];
 
 const STEPS = [
@@ -160,7 +160,7 @@ const STEPS = [
     // used to be written as a self-calling trampoline; LANG.DICTIONARY.ACYCLIC
     // refuses a self-call, so the same per-iteration cost is paid by a MAP over
     // a materialized Vector instead.
-    ['user-word call x200k', "[ [ 7 ] + ] 'STEP' DEF", `1 200000 RANGE [ STEP ] MAP`],
+    ['user-word call x200k', "[ [ 7 ] ADD ] 'STEP' DEF", `1 200000 RANGE [ STEP ] MAP`],
 ];
 
 async function section(title, meter, cases) {

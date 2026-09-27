@@ -37,7 +37,7 @@ pub enum HostLookup {
 /// that the same way it reports any other unknown name, so a typo at the
 /// lookup prompt reads like a typo in a program.
 pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLookup> {
-    let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+    let canonical_name = crate::word_name::canonical_word_name(name);
 
     let Some(def) = interp.resolve_word(&canonical_name) else {
         return Err(AjisaiError::UnknownWord(name.to_string()));

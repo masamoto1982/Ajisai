@@ -187,7 +187,6 @@ const LEXICAL_KINDS = new Set([
   'literal_sugar',
   'reserved_marker',
   'retired_form',
-  'input_helper',
 ]);
 
 const producedSurfaces = new Set();

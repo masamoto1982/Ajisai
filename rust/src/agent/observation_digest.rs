@@ -11,7 +11,7 @@
 //! easy to get wrong without a test noticing:
 //!
 //!  * **Algebraic normal forms are not canonical.** `8 SQRT` keeps the basis
-//!    `{8}`; `2 SQRT 2 SQRT +` keeps `{2}` — equal values, disagreeing
+//!    `{8}`; `2 SQRT 2 SQRT ADD` keeps `{2}` — equal values, disagreeing
 //!    `normal_form_terms()`. Hashing the normal form would make this Phase's
 //!    own founding example fail. `impl Hash for Algebraic`
 //!    (`types/exact/algebraic.rs`) already solves this by hashing

@@ -23,7 +23,7 @@ use crate::types::fraction::Fraction;
 #[derive(Debug, Clone)]
 pub enum PowOutcome {
     Value(ExactReal),
-    /// `0ʸ` with `y < 0`.
+    /// `0ʸ` with `y LT 0`.
     DivisionByZero,
     /// A negative base under `p/2`, or an answer outside the field.
     DomainMiss,

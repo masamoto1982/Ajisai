@@ -22,7 +22,7 @@ pub fn small() -> impl Strategy<Value = i64> {
     -20i64..=20
 }
 
-/// A nonzero divisor (keeps `_ _ /` away from the NIL-projection path when a
+/// A nonzero divisor (keeps `_ _ DIV` away from the NIL-projection path when a
 /// value is wanted; a separate [`nil_src`] exercises the division-by-zero NIL).
 pub fn nonzero() -> impl Strategy<Value = i64> {
     (1i64..=20).prop_flat_map(|n| prop_oneof![Just(n), Just(-n)])
@@ -32,7 +32,7 @@ pub fn nonzero() -> impl Strategy<Value = i64> {
 pub fn scalar_src() -> impl Strategy<Value = String> {
     prop_oneof![
         small().prop_map(|n| n.to_string()),
-        (small(), nonzero()).prop_map(|(a, b)| format!("{a} {b} /")),
+        (small(), nonzero()).prop_map(|(a, b)| format!("{a} {b} DIV")),
         (small(), small()).prop_map(|(a, b)| format!("{a} {b} ADD")),
         (small(), small()).prop_map(|(a, b)| format!("{a} {b} MUL")),
     ]
@@ -51,7 +51,7 @@ pub fn boolean_src() -> impl Strategy<Value = String> {
 
 /// Pushes a reasoned NIL via the NIL Projection Rule (division by zero, LANG.FAILURE.PROJECT).
 pub fn nil_src() -> impl Strategy<Value = String> {
-    small().prop_map(|n| format!("{n} 0 /"))
+    small().prop_map(|n| format!("{n} 0 DIV"))
 }
 
 /// Radicands that are **not** perfect squares, so `√n` stays a genuine
@@ -173,7 +173,7 @@ pub fn completing_block_body() -> impl Strategy<Value = String> {
         (small(), small()).prop_map(|(a, b)| format!("{a} {b} MUL")),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
         small().prop_map(|a| format!("{a} [ 1 ADD ] EXEC")),
-        small().prop_map(|a| format!("{a} 0 /")), // div-by-zero → NIL, still completes
+        small().prop_map(|a| format!("{a} 0 DIV")), // div-by-zero → NIL, still completes
         Just("TRUE FALSE AND".to_string()),
         Just("[ 3 1 2 ] 0 GET".to_string()),
     ]

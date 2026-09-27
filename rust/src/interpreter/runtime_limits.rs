@@ -68,9 +68,9 @@ pub const ALGEBRAIC_PAIR_UNITS: u64 = 1_024;
 /// costs, in limb-multiply units.
 ///
 /// Every schema is priced limb×limb, including addition and subtraction. That
-/// looks wrong for a moment and is the whole point: Ajisai's `+` is *rational*
-/// addition, not integer addition. `a/b + c/d` cross-multiplies into
-/// `(ad + cb)/(bd)` and then normalizes by a gcd — three multiplications and a
+/// looks wrong for a moment and is the whole point: Ajisai's `ADD` is *rational*
+/// addition, not integer addition. `a/b ADD c/d` cross-multiplies into
+/// `(ad ADD cb)/(bd)` and then normalizes by a gcd — three multiplications and a
 /// Euclid, none of them linear in the wider operand.
 ///
 /// Pricing it as linear was not a rounding error. Measured on the reference
@@ -96,8 +96,8 @@ pub fn binary_numeric_work(left_bits: u64, right_bits: u64) -> u64 {
 /// shape it arrived in.
 ///
 /// The meter used to read a `Fraction` and stop there, which made it a meter on
-/// the *representation* rather than on the arithmetic: `2 3 *` was charged and
-/// `[ 2 ] 3 *` was free, because the second one leaves the scalar path and
+/// the *representation* rather than on the arithmetic: `2 3 MUL` was charged and
+/// `[ 2 ] 3 MUL` was free, because the second one leaves the scalar path and
 /// every other path charged nothing. Whether an operand is stored as a scalar,
 /// a one-element vector or an N-lane tensor is an internal decision
 /// (LANG.AUTHORITY.FREEDOM says it is unobservable), and a safety control whose

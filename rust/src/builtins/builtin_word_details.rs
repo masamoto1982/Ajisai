@@ -1,5 +1,4 @@
 use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
-use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
 use crate::coreword_registry::Partiality;
 use crate::kernel::generated::{generated_word, OperandRole, VocabularyTier};
 
@@ -9,23 +8,13 @@ use crate::kernel::generated::{generated_word, OperandRole, VocabularyTier};
 /// Effects, Vocabulary) — derived so they can never drift from the
 /// registry. See docs/dev/three-layer-documentation-model.md §3.
 pub fn lookup_builtin_detail(name: &str) -> String {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
-    let alias_lead = build_alias_lead(name);
+    let canonical = crate::word_name::canonical_word_name(name);
 
     let Some(spec) = lookup_builtin_spec(&canonical) else {
-        return format!(
-            "{}# {}\n\nNo documentation found for this word.\n",
-            alias_lead, canonical
-        );
+        return format!("# {}\n\nNo documentation found for this word.\n", canonical);
     };
 
-    let mut out = render_sections(
-        &alias_lead,
-        spec.name,
-        spec.family,
-        spec.summary,
-        spec.stack_effect,
-    );
+    let mut out = render_sections(spec.name, spec.family, spec.summary, spec.stack_effect);
 
     // One source for what a Word does: the summary above, from
     // `spec/words.json`, carries the prose and the tested examples. The
@@ -151,17 +140,8 @@ pub(super) fn effect_sentence(effect: &str) -> Option<&'static str> {
     }
 }
 
-pub fn render_sections(
-    alias_lead: &str,
-    name: &str,
-    family: &str,
-    summary: &str,
-    stack_effect: &str,
-) -> String {
-    let mut out = String::new();
-    out.push_str(alias_lead);
-
-    out.push_str(&format!("# {}\n\n", name));
+pub fn render_sections(name: &str, family: &str, summary: &str, stack_effect: &str) -> String {
+    let mut out = format!("# {}\n\n", name);
 
     out.push_str("Family:\n");
     push_indented(&mut out, family, "  ");
@@ -175,27 +155,6 @@ pub fn render_sections(
     push_indented(&mut out, stack_effect, "  ");
 
     out
-}
-
-fn build_alias_lead(name: &str) -> String {
-    lookup_core_word_alias(name)
-        .and_then(|alias| {
-            alias.canonical.map(|canonical_name| match alias.kind {
-                CoreWordAliasKind::SymbolAlias => {
-                    format!("{} is an alias of {}.\n\n", alias.alias, canonical_name)
-                }
-                CoreWordAliasKind::SyntaxSugar => {
-                    format!(
-                        "{} is syntax sugar for {}.\n\n",
-                        alias.alias, canonical_name
-                    )
-                }
-                CoreWordAliasKind::InputHelper => {
-                    format!("{} is an input helper.\n\n", alias.alias)
-                }
-            })
-        })
-        .unwrap_or_default()
 }
 
 fn push_indented(out: &mut String, body: &str, indent: &str) {

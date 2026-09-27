@@ -200,7 +200,7 @@ pub(crate) struct ResolvedWords {
 }
 
 /// Best-effort static resolution: a word resolves when it is a builtin, a
-/// canonical alias, a word the file itself defines via DEF, or a name a
+/// word the file itself defines via DEF, or a name a
 /// `BIND` in the same frame region binds.
 ///
 /// Frame regions follow `bindings.rs`'s rule: a binding is reachable in the
@@ -283,7 +283,7 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
             continue;
         };
         let normalized = normalize_word(symbol);
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
+        let canonical = crate::word_name::canonical_word_name(&normalized);
         let bound_here = bound
             .get(&regions[i])
             .is_some_and(|names| names.contains(canonical.as_ref()));

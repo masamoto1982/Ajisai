@@ -3,7 +3,7 @@
 // "each lane preserves the exactness, truth, NIL, and ERROR distinctions of
 // the scalar law").
 //
-// The scalar law is passthrough with the reason intact — `1 0 / 1 +` is still
+// The scalar law is passthrough with the reason intact — `1 0 DIV 1 ADD` is still
 // `NIL(divisionByZero)`. This checks the lifted law says the same thing, lane
 // for lane: a program that puts a reasoned NIL into a collection and then runs
 // element-wise Words over it must still report that reason, and must still
@@ -77,17 +77,17 @@ function resolveAjisaiBin() {
 // only *that* a lane was absent; now that it records why, that vector is
 // stored densely like any other and takes the same path as a computed one.
 const PRODUCERS = [
-  ['[ 1 2 ] [ 1 0 ] /', 'divisionByZero'],
-  ['[ 6 6 6 ] [ 1 2 0 ] /', 'divisionByZero'],
-  ['[ 6 ] [ 1 2 0 ] /', 'divisionByZero'],
+  ['[ 1 2 ] [ 1 0 ] DIV', 'divisionByZero'],
+  ['[ 6 6 6 ] [ 1 2 0 ] DIV', 'divisionByZero'],
+  ['[ 6 ] [ 1 2 0 ] DIV', 'divisionByZero'],
   ['[ 4 -1 ] SQRT', 'domainMiss'],
   ['[ -1 -4 ] SQRT', 'domainMiss'],
   ["[ '1' 'a' ] [ NUM ] MAP", 'invalidEncoding'],
-  ['[ 1 2 3 ] [ 0 / ] MAP', 'divisionByZero'],
-  ['[ 2 3 ] [ SQRT ] MAP [ 1 0 ] /', 'divisionByZero'],
-  ['[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 1 1 ] ] /', 'divisionByZero'],
-  ['[ 1 [ 2 3 ] ] 0 /', 'divisionByZero'],
-  ['[ 1 NIL 3 ] [ 2 ] *', 'literal'],
+  ['[ 1 2 3 ] [ 0 DIV ] MAP', 'divisionByZero'],
+  ['[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV', 'divisionByZero'],
+  ['[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 1 1 ] ] DIV', 'divisionByZero'],
+  ['[ 1 [ 2 3 ] ] 0 DIV', 'divisionByZero'],
+  ['[ 1 NIL 3 ] [ 2 ] MUL', 'literal'],
 ];
 
 // Applied after a producer. Each is lane-preserving: it maps over the lanes
@@ -95,19 +95,19 @@ const PRODUCERS = [
 // producer's absences, with exactly the producer's reasons.
 const CHAINS = [
   '',
-  '[ 1 1 ] +',
-  '[ 1 1 ] -',
-  '[ 1 1 ] *',
-  '[ 1 1 ] /',
+  '[ 1 1 ] ADD',
+  '[ 1 1 ] SUB',
+  '[ 1 1 ] MUL',
+  '[ 1 1 ] DIV',
   'FLOOR',
   'ROUND',
-  '[ 2 ] *',
-  '[ 2 ] +',
-  '2 *',
-  '2 +',
+  '[ 2 ] MUL',
+  '[ 2 ] ADD',
+  '2 MUL',
+  '2 ADD',
   'REVERSE',
-  '[ 1 1 ] + [ 1 1 ] *',
-  '[ 1 + ] MAP',
+  '[ 1 1 ] ADD [ 1 1 ] MUL',
+  '[ 1 ADD ] MAP',
   // Structural rebuilds. These add no absence and remove none, but they
   // reassemble the collection from its children — which is where dense
   // storage is chosen. A lane whose reason lives only outside the dense
@@ -115,7 +115,7 @@ const CHAINS = [
   // would show it.
   '[ 3 4 ] CONCAT',
   '[ 3 4 ] CONCAT REVERSE',
-  '[ 1 1 ] + [ 3 4 ] CONCAT',
+  '[ 1 1 ] ADD [ 3 4 ] CONCAT',
 ];
 
 function collectAbsenceReasons(node, out) {

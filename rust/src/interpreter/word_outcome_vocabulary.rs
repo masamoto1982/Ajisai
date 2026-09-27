@@ -330,9 +330,7 @@ pub(crate) fn outcome_vocabulary_for_word(
             // somewhere, so the arm above carries the whole call graph.
             Token::String(text)
                 if interp
-                    .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
-                        text,
-                    ))
+                    .resolve_word_entry(&crate::word_name::canonical_word_name(text))
                     .is_some() =>
             {
                 outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
@@ -356,7 +354,7 @@ pub(crate) fn resolve_and_collect(
     visiting: &mut HashSet<String>,
     reach: &mut Reachability,
 ) -> BTreeSet<String> {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
+    let canonical = crate::word_name::canonical_word_name(symbol);
     match interp.resolve_word_entry(&canonical) {
         Some((dep_name, dep_def)) => {
             outcome_vocabulary_for_word(interp, &dep_name, &dep_def, visiting, reach)

@@ -284,8 +284,8 @@ async fn a_map_over_a_literal_block_still_widens_regardless_of_purity() {
 #[tokio::test]
 async fn a_bound_name_reads_as_one_value_not_an_unresolved_word() {
     for (src, name) in [
-        ("[ 'V' BIND V V LENGTH / ] 'M' DEF", "M"),
-        ("[ [ 'A' 'B' ] BIND A B + ] 'S' DEF", "S"),
+        ("[ 'V' BIND V V LENGTH DIV ] 'M' DEF", "M"),
+        ("[ [ 'A' 'B' ] BIND A B ADD ] 'S' DEF", "S"),
     ] {
         let contract = contract_for(src, name).await;
         assert_eq!(contract.flow, fixed(1, 1), "`{src}`");

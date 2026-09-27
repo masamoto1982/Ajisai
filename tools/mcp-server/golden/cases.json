@@ -3,7 +3,7 @@
   "cases": [
     {
       "name": "successful exact rational",
-      "source": "[ 1 ] [ 2 ] +",
+      "source": "[ 1 ] [ 2 ] ADD",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 3/1 ]",
@@ -12,7 +12,7 @@
     },
     {
       "name": "reason-carrying NIL is a successful value",
-      "source": "1 0 /",
+      "source": "1 0 DIV",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "NIL",
@@ -44,7 +44,7 @@
     },
     {
       "name": "a misspelled user Word is matched against the live dictionary",
-      "source": "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBEL",
+      "source": "[ [ 2 ] MUL ] 'DOUBLE' DEF [ 3 ] DOUBEL",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
@@ -65,7 +65,7 @@
     },
     {
       "name": "a scaled algebraic value writes its coefficient",
-      "source": "1 2 / SQRT",
+      "source": "1 2 DIV SQRT",
       "expect": {
         "/status": "ok",
         "/stack/0/semantics/exactTerms/0/numerator": "1",
@@ -76,7 +76,7 @@
     },
     {
       "name": "a multi-term algebraic value writes every term",
-      "source": "2 SQRT 3 SQRT +",
+      "source": "2 SQRT 3 SQRT ADD",
       "expect": {
         "/status": "ok",
         "/stack/0/semantics/exactTerms/0/radicand": "2",
@@ -86,7 +86,7 @@
     },
     {
       "name": "a rational carries no algebraic rendering",
-      "source": "2 3 / 1 3 / +",
+      "source": "2 3 DIV 1 3 DIV ADD",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "1/1"
@@ -98,7 +98,7 @@
     },
     {
       "name": "a vector of rationals carries no algebraic rendering",
-      "source": "[ 1 2 3 ] [ 4 5 6 ] +",
+      "source": "[ 1 2 3 ] [ 4 5 6 ] ADD",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 5/1 7/1 9/1 ]"
@@ -109,7 +109,7 @@
     },
     {
       "name": "a NIL lane survives arithmetic applied to the whole vector",
-      "source": "[ 1 NIL 3 ] [ 2 ] *",
+      "source": "[ 1 NIL 3 ] [ 2 ] MUL",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 2/1 NIL 6/1 ]",
@@ -119,7 +119,7 @@
     },
     {
       "name": "a zero divisor projects its own lane and says why",
-      "source": "[ 6 6 6 ] [ 1 2 0 ] /",
+      "source": "[ 6 6 6 ] [ 1 2 0 ] DIV",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 6/1 3/1 NIL ]",
@@ -207,7 +207,7 @@
     },
     {
       "name": "a run reports the resources it actually spent",
-      "source": "1 20 RANGE 1 [ * ] FOLD",
+      "source": "1 20 RANGE 1 [ MUL ] FOLD",
       "expect": {
         "/status": "ok",
         "/resourceUsage/executionSteps": 22,

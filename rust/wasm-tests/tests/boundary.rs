@@ -79,7 +79,7 @@ async fn number_vector_serializes_as_numbers() {
 /// (TruthValue role on a bare scalar), distinct from the vector case above.
 #[wasm_bindgen_test]
 async fn scalar_comparison_serializes_as_boolean() {
-    let stack = stack_of("3 5 <").await;
+    let stack = stack_of("3 5 LT").await;
     assert_eq!(stack.length(), 1);
     let node = stack.get(0);
     assert_eq!(type_of(&node), "boolean");
@@ -125,7 +125,7 @@ async fn exact_scalar_rawnumber_marks_approximate_at_boundary() {
 /// the marker is specific to exact irrationals collapsed to an approximation.
 #[wasm_bindgen_test]
 async fn exact_rational_is_not_marked_approximate() {
-    let stack = stack_of("3 4 /").await;
+    let stack = stack_of("3 4 DIV").await;
     assert_eq!(stack.length(), 1);
     let node = stack.get(0);
     assert_eq!(type_of(&node), "number");

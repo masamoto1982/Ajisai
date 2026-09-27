@@ -46,7 +46,7 @@ test('a subject that computes and submits is graded like a pilot submission', as
     [{ type: 'text', text: 'Trying the sum.' }, toolUse('t1', 'compute', { source: '[ 3 1 4 1 5 ] G0A.SUM' })],
     [
       toolUse('t2', 'submit', {
-        definitions: [{ name: 'G0A.SUM', body: '0 [ + ] FOLD', note: 'sum of a numeric Vector' }],
+        definitions: [{ name: 'G0A.SUM', body: '0 [ ADD ] FOLD', note: 'sum of a numeric Vector' }],
         solutions: tasks.map((t) => ({ task: t.id, code: t.reference })),
       }),
     ],
@@ -73,7 +73,7 @@ test('a subject that computes and submits is graded like a pilot submission', as
   assert.deepEqual(client.requests[0].output_config, { effort: 'high' });
 
   assert.equal(submission.agent, 'G0A');
-  assert.equal(submission.definitions[0].body, '0 [ + ] FOLD');
+  assert.equal(submission.definitions[0].body, '0 [ ADD ] FOLD');
   const graded = await grade(ajisai, submission, { entries: [] }, families);
   assert.equal(graded.results.filter((r) => r.correct).length, tasks.length);
 });

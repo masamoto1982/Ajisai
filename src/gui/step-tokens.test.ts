@@ -43,15 +43,15 @@ describe('tokenizeWithOffsets', () => {
         expect(tokenizeWithOffsets('  \n ')).toEqual([]);
     });
 
-    // The reported defect. `[ 1 ] [ 2 ] +` split to `[`, `1`, `]`, … and the
+    // The reported defect. `[ 1 ] [ 2 ] ADD` split to `[`, `1`, `]`, … and the
     // first step alone was `Unclosed '[': expected ']'`, which reset step mode
     // before anything ran. `[ 42 ]` is the idiomatic scalar, so this was very
     // nearly every real program.
     test('a vector is one step, not a bracket and its contents', () => {
-        expect(tokenizeWithOffsets('[ 1 ] [ 2 ] +').map((t) => t.text)).toEqual([
+        expect(tokenizeWithOffsets('[ 1 ] [ 2 ] ADD').map((t) => t.text)).toEqual([
             '[ 1 ]',
             '[ 2 ]',
-            '+'
+            'ADD'
         ]);
     });
 
@@ -63,8 +63,8 @@ describe('tokenizeWithOffsets', () => {
     });
 
     test('a code block is a vector, so a definition steps in three', () => {
-        expect(tokenizeWithOffsets("[ [ 1 ] + ] 'INC' DEF").map((t) => t.text)).toEqual([
-            '[ [ 1 ] + ]',
+        expect(tokenizeWithOffsets("[ [ 1 ] ADD ] 'INC' DEF").map((t) => t.text)).toEqual([
+            '[ [ 1 ] ADD ]',
             "'INC'",
             'DEF'
         ]);
@@ -87,7 +87,7 @@ describe('tokenizeWithOffsets', () => {
     });
 
     test('a comment is not a step', () => {
-        expect(tokenizeWithOffsets('# note\n1 2 +').map((t) => t.text)).toEqual(['1', '2', '+']);
+        expect(tokenizeWithOffsets('# note\n1 2 ADD').map((t) => t.text)).toEqual(['1', '2', 'ADD']);
     });
 
     test('a hash glued to a name is part of that name, not a comment', () => {
@@ -110,7 +110,7 @@ describe('tokenizeWithOffsets', () => {
     });
 
     test('every piece is exactly the source it points at', () => {
-        const code = "[ 1 ] [ [ 2 ] 'x' ] +";
+        const code = "[ 1 ] [ [ 2 ] 'x' ] ADD";
         for (const token of tokenizeWithOffsets(code)) {
             expect(code.slice(token.start, token.end)).toBe(token.text);
         }

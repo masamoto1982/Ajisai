@@ -85,7 +85,7 @@ async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
 /// the NIL-flow rule and not a special case for the resource ceiling.
 #[tokio::test]
 async fn a_division_by_zero_reaches_the_top_level_diagnosis_too() {
-    let report = report("1 0 / EXEC").await;
+    let report = report("1 0 DIV EXEC").await;
     let detail = report["diagnosis"]["nextChecks"][0]["detail"]["en"]
         .as_str()
         .expect("english detail");
@@ -133,7 +133,7 @@ async fn a_written_nil_is_not_reported_as_an_upstream_cause() {
 /// reads from.
 #[tokio::test]
 async fn a_recovered_absence_leaves_no_trace_of_the_link() {
-    let report = report("1 0 / 'S' BIND 42 S S NIL? SELECT").await;
+    let report = report("1 0 DIV 'S' BIND 42 S S NIL? SELECT").await;
     assert_eq!(report["status"], "ok");
     assert!(report["diagnosis"].is_null());
 }

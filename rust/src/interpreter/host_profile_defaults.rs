@@ -197,7 +197,7 @@ const EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS: u64 = 406;
 /// playground-specific value through
 /// (`docs/dev/host-profile-derivation-handoff.md` §4 item 3: "a long loop of
 /// cheap Words hits the same wall on its own tab as it does through MCP").
-/// The MCP profile still passes its own `executionSteps = 100_000` explicitly
+/// The MCP profile still passes its own `executionSteps EQ 100_000` explicitly
 /// at every call site (`tools/mcp-server/index.js` `LIMITS.executionSteps`,
 /// threaded through `--step-limit` / `stepLimit`), so raising this default
 /// only widens the playground and native-CLI budget; MCP's is untouched.
@@ -224,7 +224,7 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize =
 /// [`DEFAULT_HOST_TIME_BUDGET_MS`] ×
 /// [`COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS`]. **No longer twice the numeric
 /// budget**, and not a fixed ratio to it at all. It used to be defined as
-/// `2 * DEFAULT_MAX_NUMERIC_WORK`, a relationship that was itself derived
+/// `2 MUL DEFAULT_MAX_NUMERIC_WORK`, a relationship that was itself derived
 /// once — the two floor rates measured 14,465 and 30,800 units/ms on the
 /// reference container in `docs/dev/collection-word-billing-2026-08-13.md`
 /// §6, a ratio of ~2.1 that the `2×` constant captured — but a ratio between

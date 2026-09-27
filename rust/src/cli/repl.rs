@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn stack_persists_across_lines() {
-        let r = eval_all(&["[ 2 ] [ 3 ] +", "[ 10 ] *"]);
+        let r = eval_all(&["[ 2 ] [ 3 ] ADD", "[ 10 ] MUL"]);
         assert_eq!(r[0].status, ReplStatus::Ok);
         assert_eq!(r[0].stack_display, vec!["[ 5/1 ]".to_string()]);
         // The second line multiplies the persisted [ 5 ] by [ 10 ].
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn definitions_persist_across_lines() {
-        let r = eval_all(&["[ [ 2 ] * ] 'DBL' DEF", "[ 21 ] DBL"]);
+        let r = eval_all(&["[ [ 2 ] MUL ] 'DBL' DEF", "[ 21 ] DBL"]);
         assert_eq!(r[1].status, ReplStatus::Ok);
         assert_eq!(r[1].stack_display, vec!["[ 42/1 ]".to_string()]);
     }
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn driver_is_pipe_safe_and_json_per_line() {
-        let input = b"[ 2 ] [ 3 ] +\n:quit\n" as &[u8];
+        let input = b"[ 2 ] [ 3 ] ADD\n:quit\n" as &[u8];
         let mut out = Vec::new();
         let mut err = Vec::new();
         let opts = Opts {

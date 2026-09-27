@@ -60,7 +60,7 @@ number to pin — the Status block names the release stage instead
 independently of the implementation's, once beta is declared.
 
 `npm run semantic-kernel:check` enforces the budgets that keep the language
-small: at most 400 lines of kernel, 12 semantic families, 70 canonical Words,
-and 16 aliases, with every family and clause reference resolving. The budgets
-are ceilings — shrinking is always allowed, growing is a deliberate
-specification change.
+small — ceilings on the kernel's lines, on semantic families and on canonical
+Words, whose numbers live in `scripts/check-semantic-kernel.mjs` alone — with
+every family and clause reference resolving. The budgets are ceilings —
+shrinking is always allowed, growing is a deliberate specification change.

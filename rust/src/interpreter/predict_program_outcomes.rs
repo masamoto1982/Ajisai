@@ -89,7 +89,7 @@ impl Interpreter {
                 // `Token::String` arm for why that is not hypothetical.
                 Token::String(text) => {
                     flow.feed_literal();
-                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(text);
+                    let canonical = crate::word_name::canonical_word_name(text);
                     if self.resolve_word_entry(&canonical).is_some() {
                         outcomes.extend(resolve_and_collect(self, text, &mut visiting, &mut reach));
                     }
@@ -102,8 +102,7 @@ impl Interpreter {
                     if contexts[idx].in_vector_literal() {
                         flow.feed_literal();
                     } else {
-                        let canonical =
-                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                        let canonical = crate::word_name::canonical_word_name(symbol);
                         match self.infer_word_contract(&canonical) {
                             Some(contract) => flow.feed_word(&contract.flow),
                             None => flow.go_dynamic(),

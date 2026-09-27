@@ -14,8 +14,8 @@ import { createHash } from 'node:crypto';
 import { alphaNormalize, closure, norm, prelude } from './source.mjs';
 
 // Scalars, one- and many-element Vectors, nesting, NIL, text and a Record:
-// §2.2 requires scalars and one-element Vectors both, since `[ 2 ] *` and
-// `2 *` agree on everything else.
+// §2.2 requires scalars and one-element Vectors both, since `[ 2 ] MUL` and
+// `2 MUL` agree on everything else.
 const PROBES = [
   '0', '1', '-2', '7/3',
   '[ 2 ]', '[ 3 1 4 1 5 ]', '[ 10 -2 7/2 ]', '[ [ 1 2 ] [ 3 4 ] ]',

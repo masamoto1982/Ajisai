@@ -141,7 +141,7 @@ const sourceSchema = {
         `Ajisai source text (file paths are not accepted). The effective limit is ${LIMITS.sourceBytes} UTF-8 bytes, so non-ASCII text reaches it at fewer characters than maxLength suggests. ` +
         "Syntax is postfix: operands first, then the Word — `1 2 ADD`, `[ 1 2 3 ] LENGTH`. " +
         "A string is single-quoted (`'hi'`, never \"hi\"). " +
-        "A block passed to MAP/FILTER/FOLD/SCAN is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 > ] FILTER`). " +
+        "A block passed to MAP/FILTER/FOLD/SCAN is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 GT ] FILTER`). " +
         "A Word's operand shape is part of its contract and is worth checking with word_contract when unsure — several take a vector where one number looks natural, e.g. `0 4 RANGE` and `[ [ 1 2 ] [ 3 4 ] ] ZIP`.",
     },
   },
@@ -225,12 +225,12 @@ export const TOOLS = [
     // whole list is one resource read away, so a caller that does not know the
     // name has something better to do than guess again.
     description:
-      "Return the generated canonical registry entry for a Word or alias — its arity, purity, NIL policy, contract, " +
+      "Return the generated canonical registry entry for a Word — its arity, purity, NIL policy, contract, " +
       "and `cost`: what the Word charges on each metered resource (`steps`/`numeric`/`collection`), as a growth class " +
       "in its input. Cost classes join pointwise under concatenation, so a phrase's bound is the widest bound among " +
       "its Words — read them here to budget a program before running it rather than discovering the ceiling by hitting it. " +
       "A class is how the charge *grows*, never how large it is: two programs of the same class can differ by orders of " +
-      "magnitude. Measured, `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` spends 5 `numericWork` while `2 SQRT 3 SQRT +` — also `const` — " +
+      "magnitude. Measured, `[ 1 2 3 4 5 ] [ 0 ] [ ADD ] FOLD` spends 5 `numericWork` while `2 SQRT 3 SQRT ADD` — also `const` — " +
       "spends 2048, because an algebraic value carries a multiquadratic normal form and every operation on one rebuilds it. " +
       "Budget an algebraic chain at 10^2–10^3 times a rational one of the same class, and read `resourceUsage` from a small " +
       "run when the size matters rather than inferring it from the class. " +
@@ -499,10 +499,7 @@ function wordContract(word) {
     return fail(new HostError("invalidRequest", "Provide a `word`."), "word_contract");
   }
   const entries = contracts().entries ?? [];
-  const matches = entries.filter((entry) =>
-    entry.name.toUpperCase() === needle ||
-    entry.aliases.some((alias) => alias.toUpperCase() === needle)
-  );
+  const matches = entries.filter((entry) => entry.name.toUpperCase() === needle);
   let mcp;
   try {
     mcp = provenance();
@@ -538,7 +535,7 @@ const RESOURCE_TEMPLATES = [
   {
     uriTemplate: "ajisai://words/{name}",
     name: "Ajisai canonical Word contract",
-    description: "The complete spec/words.json contract for a Word or alias.",
+    description: "The complete spec/words.json contract for a Word.",
     mimeType: "application/json",
   },
 ];

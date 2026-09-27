@@ -7,7 +7,7 @@
 // spawning the native backend for every call. A hand-copy is exactly the kind
 // of thing that can drift silently — as the ranking rule changes on one side,
 // or the compiled-in vocabulary the two sides draw from stops matching (this
-// repo's Corewords + aliases, packaged separately as
+// repo's Corewords, packaged separately as
 // tools/mcp-server/assets/words.json vs. compiled into the `ajisai` binary).
 // This test closes that gap the same way backend/parity-test.js closes the
 // native/WASM one: run the same inputs through both implementations and

@@ -95,17 +95,6 @@ fn lookup_for_add_contains_four_required_sections() {
 }
 
 #[test]
-fn lookup_for_alias_includes_alias_lead() {
-    let body = lookup_builtin_detail("+");
-    assert!(
-        body.starts_with("+ is syntax sugar for ADD") || body.starts_with("+ is an alias of ADD"),
-        "alias lead missing for '+'; got:\n{}",
-        body
-    );
-    assert!(body.contains("# ADD"));
-}
-
-#[test]
 fn every_builtin_lookup_contains_all_four_sections() {
     for spec in crate::builtins::builtin_specs() {
         let body = lookup_builtin_detail(spec.name);

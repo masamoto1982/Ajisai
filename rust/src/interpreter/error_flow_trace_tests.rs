@@ -7,7 +7,7 @@ use crate::interpreter::Interpreter;
 #[tokio::test]
 async fn nil_produced_event_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -27,7 +27,7 @@ async fn nil_produced_event_has_execute_word_diagnosis() {
 #[tokio::test]
 async fn projection_produced_by_word_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -49,7 +49,7 @@ async fn projection_produced_by_word_has_execute_word_diagnosis() {
 #[tokio::test]
 async fn stack_underflow_has_stack_shape_diagnosis() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("+").await;
+    let result = interp.execute("ADD").await;
     assert!(result.is_err());
 
     let trace = interp.drain_error_flow_trace();
@@ -67,7 +67,7 @@ async fn stack_underflow_has_stack_shape_diagnosis() {
 #[tokio::test]
 async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -93,7 +93,7 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
 #[tokio::test]
 async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -128,7 +128,7 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
 #[tokio::test]
 async fn error_flow_trace_records_direct_projection_from_word() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
     let trace = interp.drain_error_flow_trace();
     assert!(
         trace
@@ -144,7 +144,7 @@ async fn error_flow_trace_records_direct_projection_from_word() {
 #[tokio::test]
 async fn error_flow_trace_drain_clears_log() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
     let first = interp.drain_error_flow_trace();
     assert!(!first.is_empty());
     let second = interp.drain_error_flow_trace();
@@ -154,7 +154,7 @@ async fn error_flow_trace_drain_clears_log() {
 #[tokio::test]
 async fn direct_projection_carries_division_by_zero_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
@@ -300,26 +300,5 @@ mod source_position_tests {
             evidence.contains(&"sourceColumn=5".to_string()),
             "{evidence:?}"
         );
-    }
-
-    /// The spelling the program was written with, from the one place it still
-    /// exists: the token. Dispatch canonicalizes an alias before anything
-    /// downstream sees it, so `1 + 2` reported a failure in `ADD` with
-    /// nothing tying it to the `+` that was typed. It is recorded beside the
-    /// position because it answers the same question: what the reader wrote.
-    #[tokio::test]
-    async fn a_failure_reached_through_an_alias_records_the_alias() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1 + 2").await.is_err());
-        assert_eq!(evidence_of(&mut interp, "sourceWord").as_deref(), Some("+"));
-    }
-
-    /// A program written under the Word's own name has no second spelling to
-    /// report, and the diagnosis says nothing rather than repeating itself.
-    #[tokio::test]
-    async fn a_failure_written_under_the_words_own_name_records_no_spelling() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1 ADD").await.is_err());
-        assert_eq!(evidence_of(&mut interp, "sourceWord"), None);
     }
 }

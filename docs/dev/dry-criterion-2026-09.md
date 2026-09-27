@@ -47,10 +47,11 @@ scaffolding」と書いていた。これは重複を**形**で測る書き方�
   源とし、`scripts/generate-*.mjs` が Rust レジストリ・`docs/word-reference.md`・
   `SKILL.md`・`SPECIFICATION.html` へ射影する。`--check` 付きの同一スクリプトが
   乖離を落とす。これは基準 3 の「射影」に当たり、重複ではない。
-- **やむを得ない二重表現に門を立てている例**。`src/gui/core-word-name.ts` は
-  GUI が実行時に spec を読めないため canonical 名の文法を
-  `spec/words.schema.json` から言い直しているが、`core-word-name.test.ts` が
-  `spec/words.json` 自体に対して述語を突き合わせる。理由もコメントに書かれている。
+- **やむを得ない二重表現に門を立てている例**。`scripts/lib/reference-lexer.mjs` は
+  `spec/grammar.json` を Rust トークナイザとは別の字句解析器として実行し、
+  `scripts/check-grammar.mjs` が両者の不一致を落とす。理由もコメントに書かれている。
+  （本報告時点の例は `src/gui/core-word-name.ts` だったが、記号別名の削除で
+  フィルタごと不要になり削除された。）
 - **あえて共通化しない判断を記録している例**。
   `rust/src/interpreter/word_outcome_vocabulary.rs` は冒頭で、`word_contract.rs`
   の契約推論と**意図的に独立**であること（状態を共有しない並行実装であること）を

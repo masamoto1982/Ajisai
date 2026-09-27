@@ -74,7 +74,7 @@ Superseded designs, migration history, and the reasoning behind a change are rec
 Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
 </p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>78</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>7</td><td>Alias spellings — the 7 symbolic surface forms of those Words, none counted as vocabulary</td></tr><tr><td>48</td><td>Semantic Kernel Words, within the 78 — carry the language's semantic identity</td></tr><tr><td>30</td><td>Standard Words, within the 78 — carry its practical surface</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>78</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>48</td><td>Semantic Kernel Words, within the 78 — carry the language's semantic identity</td></tr><tr><td>30</td><td>Standard Words, within the 78 — carry its practical surface</td></tr></tbody></table></div>
 
 <p>
 Kernel and Standard are both ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
@@ -113,7 +113,7 @@ An unclosed string, a delimiter glued to anything, a zero denominator and an unb
 <h3 id="lang-source-normalize">LANG.SOURCE.NORMALIZE — Name normalization</h3>
 
 <p>
-Word lookup is case-insensitive through the canonical normalization. A symbolic alias resolves to exactly the same canonical Word contract and executor as its English name.
+Word lookup is case-insensitive through the canonical normalization, and case is all it folds: a Word has exactly one name, and no second spelling resolves to it.
 </p>
 
 <p>
@@ -123,7 +123,7 @@ Normalization does not merge distinct value tags, invent dictionary entries, or 
 <h3 id="lang-source-desugar">LANG.SOURCE.DESUGAR — Surface forms</h3>
 
 <p>
-Desugaring is deterministic and semantics-preserving. Aliases and the registered delimiter forms lower to canonical concepts before evaluation.
+Desugaring is deterministic and semantics-preserving. The registered delimiter forms lower to canonical concepts before evaluation.
 </p>
 
 <p>
@@ -133,7 +133,7 @@ If \(D\) is desugaring and \(O\) observation, then \(O(p)=O(D(p))\) for every we
 <h3 id="lang-source-code">LANG.SOURCE.CODE — Code values</h3>
 
 <p>
-Code is a Vector holding source for later evaluation — not a distinct domain from data, but the same Vector domain (LANG.VALUES.DISJOINT) read as executable by a Word whose contract requests it. <code>[ ]</code> is the sole bracket, for both: <code>[ 1 2 + ]</code> is equally a data literal and, wherever a Word's contract requests it, executable code. A value's construction history is not part of it (LANG.VALUES.DENOTATION), so nothing about how a Vector came to exist marks it as "code" or "data" ahead of use. Evaluated as code, a Vector's elements run in order: a Symbol names a Word, and every other element pushes itself exactly as it is held — a NIL with its reason, a Record, an exact irrational — whether or not any source text denotes it.
+Code is a Vector holding source for later evaluation — not a distinct domain from data, but the same Vector domain (LANG.VALUES.DISJOINT) read as executable by a Word whose contract requests it. <code>[ ]</code> is the sole bracket, for both: <code>[ 1 2 ADD ]</code> is equally a data literal and, wherever a Word's contract requests it, executable code. A value's construction history is not part of it (LANG.VALUES.DENOTATION), so nothing about how a Vector came to exist marks it as "code" or "data" ahead of use. Evaluated as code, a Vector's elements run in order: a Symbol names a Word, and every other element pushes itself exactly as it is held — a NIL with its reason, a Record, an exact irrational — whether or not any source text denotes it.
 </p>
 
 <p>
@@ -141,7 +141,7 @@ Producing, storing, displaying, and evaluating a Vector as code are distinct ope
 </p>
 
 <h3 id="lang-source-frame">LANG.SOURCE.FRAME — What a block sees</h3>
-<p>A block has no stack discipline of its own: the Word that evaluates it decides what the block reaches and what it may leave, and the block's text does not say which rule applies. The difference is whether a <code>+</code> written inside it finds two operands or none. Two rules cover every case.</p>
+<p>A block has no stack discipline of its own: the Word that evaluates it decides what the block reaches and what it may leave, and the block's text does not say which rule applies. The difference is whether an <code>ADD</code> written inside it finds two operands or none. Two rules cover every case.</p>
 
 <div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Rule</th><th>Applies to</th><th>Frame holds</th><th>On leaving</th></tr></thead><tbody><tr><td>Whole-stack</td><td>A user Word's body (<code>DEF</code>) and <code>EXEC</code></td><td>The whole stack</td><td>Leaves whatever it pushes, however many values</td></tr><tr><td>Isolated frame</td><td><code>MAP</code> <code>FILTER</code> — the current element · <code>FOLD</code> <code>SCAN</code> — the accumulator and the current element</td><td>A fixed number of values (one, except <code>FOLD</code>'s two)</td><td>Must leave exactly one; leaving none is ERROR, and anything below the top goes with the frame</td></tr></tbody></table></div>
 <p>A block written inside another block is data where it is written, evaluated only when the Word receiving it runs it, under that Word's rule and not the enclosing block's. This holds regardless of what name the block writes: a name naming the word being defined, reached only through such a nested block, is still a reference to that word for LANG.DICTIONARY.ACYCLIC to see, even though nothing here evaluates it.</p>
@@ -232,7 +232,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A canonical Word contract selects a semantic family and supplies its differences: stack arity, NIL policy, projection condition and reason, error conditions, purity, determinism, effects, clause links, documentation, and executor key. Determinism classifies what the result is relative to: <em>deterministic</em> from operands alone, <em>state-relative</em> when the wider stack, frame bindings, or dictionary also decide it (LANG.MACHINE.STATE) — a pure Word can still be state-relative, since purity (LANG.EFFECTS.OUTPUT) asks only whether the same stack and dictionary always yield the same result — or <em>host-relative</em> when the host's own rendering, capture, or discard of the effect also decides it (LANG.EFFECTS.OUTPUT).</p>
 
-<p>The executor must refine its contract. Aliases and documentation are projections of the same canonical entry, not independent semantic authorities.</p>
+<p>The executor must refine its contract. Documentation is a projection of the same canonical entry, not an independent semantic authority.</p>
 
 <h3 id="lang-machine-order">LANG.MACHINE.ORDER — Evaluation order</h3>
 
@@ -256,7 +256,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-stack-consumption">LANG.STACK.CONSUMPTION — Consumption</h3>
 
-<p>A Word consumes the operands it reads: they leave the stack, and its results take their place. Nothing modifies this, and a Word whose result is empty is no exception — <code>BIND</code>, <code>DEF</code> and <code>DEL</code> consume their operands too. A value used more than once is named with <code>BIND</code> and read by that name as often as it is needed: <code>5 'N' BIND N N 1 +</code> leaves <code>5 6</code>. Because every call consumes exactly what it reads, writing a User Word's body in place of the Word never changes which operands are consumed, which is what lets a program be expanded into Core Words alone.</p>
+<p>A Word consumes the operands it reads: they leave the stack, and its results take their place. Nothing modifies this, and a Word whose result is empty is no exception — <code>BIND</code>, <code>DEF</code> and <code>DEL</code> consume their operands too. A value used more than once is named with <code>BIND</code> and read by that name as often as it is needed: <code>5 'N' BIND N N 1 ADD</code> leaves <code>5 6</code>. Because every call consumes exactly what it reads, writing a User Word's body in place of the Word never changes which operands are consumed, which is what lets a program be expanded into Core Words alone.</p>
 
 <p>A Word selects operands from the top of the stack, validates its registered contract, computes or projects the result, and then consumes its operands. ERROR does not masquerade as a successful NIL projection.</p>
 
@@ -300,7 +300,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A Word applies element-wise wherever it reads an operand as one value: a <code>leaf</code> operand, read as one Scalar, String or Boolean, and a <code>truth</code> operand (LANG.FAILURE.PASSTHROUGH). Given a Vector there, it answers a Vector of its answers for the elements; given a Record, a Record of its answers under the unchanged keys (LANG.RECORDS.STRUCTURE). Every Word lifts by this one rule, arithmetic, comparison, logic and text alike, and a one-element Vector is a Vector there, never its element. A scalar combines with every element of a vector, however that vector is nested, including a ragged one. A Record lifts first: any other operand combines with each of its values, two Records combine value by value when their key sequences are equal, and two whose key sequences differ are a <code>shapeMismatch</code> ERROR.</p>
 
-<p>Two vectors combine by pairing their axes. A vector whose nesting is rectangular has a shape: the lengths of its axes, outermost first. The two shapes are aligned at their innermost axis, and an axis the shorter shape does not reach counts as length 1. Paired axes combine when their lengths are equal, and when one of them is 1 that operand's single lane is reused across the other's length; the result carries the longer length on that axis. This makes a one-element vector combine with a vector of any length, and <code>[ 1 2 3 ] [ 10 ] *</code> is <code>[ 10/1 20/1 30/1 ]</code>. Any other pairing is ERROR, and so is any pairing of two vectors where either one is ragged. A program reads this shape with <code>SHAPE</code>, which answers a rectangular vector's axis lengths and, for a ragged one, the reasoned absence <code>domainMiss</code> — a ragged vector has no shape; <code>RESHAPE</code> regroups a vector's leaves, in order, under a shape whose product is their count; <code>FLATTEN</code> collapses every axis into one; <code>DEPTH</code> answers how deeply a value nests, a leaf being 0. The last two cannot be written as user definitions: nesting depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC).</p>
+<p>Two vectors combine by pairing their axes. A vector whose nesting is rectangular has a shape: the lengths of its axes, outermost first. The two shapes are aligned at their innermost axis, and an axis the shorter shape does not reach counts as length 1. Paired axes combine when their lengths are equal, and when one of them is 1 that operand's single lane is reused across the other's length; the result carries the longer length on that axis. This makes a one-element vector combine with a vector of any length, and <code>[ 1 2 3 ] [ 10 ] MUL</code> is <code>[ 10/1 20/1 30/1 ]</code>. Any other pairing is ERROR, and so is any pairing of two vectors where either one is ragged. A program reads this shape with <code>SHAPE</code>, which answers a rectangular vector's axis lengths and, for a ragged one, the reasoned absence <code>domainMiss</code> — a ragged vector has no shape; <code>RESHAPE</code> regroups a vector's leaves, in order, under a shape whose product is their count; <code>FLATTEN</code> collapses every axis into one; <code>DEPTH</code> answers how deeply a value nests, a leaf being 0. The last two cannot be written as user definitions: nesting depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC).</p>
 
 <p>Each lane preserves the exactness, truth, NIL, and ERROR distinctions of the scalar law. Vectorization cannot turn an ERROR lane into NIL.</p>
 

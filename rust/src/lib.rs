@@ -10,9 +10,9 @@
 #![deny(unsafe_code)]
 
 mod builtins;
-pub mod core_word_aliases;
 pub mod coreword_registry;
 mod error;
+pub mod word_name;
 pub use error::{AjisaiError, ErrorCategory, NilReason};
 pub mod interpreter;
 pub mod kernel;

@@ -1,10 +1,10 @@
 //! Surface-form metadata: the named, English-based concept behind every visible
 //! source form that is *not* a runtime word.
 //!
-//! Ajisai source is word-based. Visible symbols are **surface forms** — aliases
-//! or sugar for named, English-based canonical concepts. Crucially, not every
-//! surface form is a runtime word: some are purely lexical (resolved by the
-//! tokenizer) and some are parser-level structural delimiters.
+//! Ajisai source is word-based: every Word has exactly one name, its English
+//! one. The few visible symbols that are not names are **surface forms** —
+//! purely lexical (resolved by the tokenizer) or parser-level structural
+//! delimiters, never runtime words.
 //!
 //! Every form listed here is live. There is no entry for a character the
 //! tokenizer refuses, because it refuses none: `(`, `)` and a bare `|` were
@@ -15,15 +15,6 @@
 //! `{` and `}` came back for: they were freed with those three and then
 //! allocated as the Record literal's delimiters (LANG.RECORDS.STRUCTURE),
 //! the second of the grammar's two delimiter pairs.
-//!
-//! This module classifies the lexical / structural surface forms that
-//! are **not** runtime-canonicalizable words. The runtime *word* aliases
-//! (`+` -> `ADD`, `<` -> `LT`, ...) live in [`crate::core_word_aliases`], which
-//! remains the single source of truth for runtime name canonicalization. The two
-//! tables are deliberately kept separate:
-//! [`crate::core_word_aliases::canonicalize_core_word_name`] must never map `#`,
-//! `[`, `{`, `'`, ... onto the concept names defined here, because these
-//! concepts are not runtime words.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SurfaceFormKind {
@@ -48,9 +39,6 @@ pub struct SurfaceForm {
 }
 
 /// The lexical / structural surface forms.
-///
-/// Runtime word aliases are intentionally absent here; see
-/// [`crate::core_word_aliases::CORE_WORD_ALIASES`].
 pub const SURFACE_FORMS: &[SurfaceForm] = &[
     SurfaceForm {
         surface: "#",
@@ -90,7 +78,6 @@ pub fn lookup_surface_form(surface: &str) -> Option<&'static SurfaceForm> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core_word_aliases::canonicalize_core_word_name;
 
     /// Characters that are ordinary name characters, not surface forms.
     const FREED: [&str; 5] = ["(", ")", "|", "{", "}"];
@@ -196,15 +183,5 @@ mod tests {
     #[test]
     fn surface_forms_are_never_runtime_words() {
         assert!(SURFACE_FORMS.iter().all(|f| !f.runtime_word));
-    }
-
-    /// The two tables must stay disjoint: a lexical/structural surface form must
-    /// never be canonicalized onto its concept name as if it were a runtime word.
-    #[test]
-    fn canonicalize_does_not_leak_surface_concepts() {
-        assert_ne!(canonicalize_core_word_name("#"), "COMMENT-LINE");
-        assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
-        assert_ne!(canonicalize_core_word_name("]"), "END-VECTOR");
-        assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
     }
 }

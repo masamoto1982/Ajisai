@@ -138,7 +138,7 @@ check(
     contract.structuredContent?.matches?.[0]?.cost?.numeric?.class === "unbounded" &&
     contract.structuredContent?.matches?.[0]?.cost?.collection?.class === "unbounded",
 );
-const addContract = await client.callTool({ name: "word_contract", arguments: { word: "+" } });
+const addContract = await client.callTool({ name: "word_contract", arguments: { word: "ADD" } });
 // `MAP` is unbounded on every axis, so it cannot show that the axes are read
 // independently; `ADD` is the case where they differ, and its `numeric` bound
 // is the one `runtime_limits.rs` prices limb×limb and therefore attains.
@@ -190,11 +190,11 @@ check(
 );
 // The property that makes a published bound worth reading: a caller that joins
 // the atoms' classes gets the same answer the engine infers for the phrase.
-// `[ 1 ] +` is `ADD` against a literal, so `numeric` stays `linear` while every
+// `[ 1 ] ADD` is `ADD` against a literal, so `numeric` stays `linear` while every
 // other axis stays at the lattice bottom.
 const composed = await client.callTool({
   name: "infer_contracts",
-  arguments: { source: "[ [ 1 ] + ] 'BUDGETED' DEF" },
+  arguments: { source: "[ [ 1 ] ADD ] 'BUDGETED' DEF" },
 });
 check(
   "an inferred phrase bound agrees with the join of its Words' published bounds",
@@ -417,7 +417,7 @@ if (impatient) {
 // summary of it. That makes the text a *mirror*: if it ever stops being the
 // same object, the two kinds of client stop seeing the same answer. These pin
 // the mirror, and pin the padding that used to cost a third of it.
-const mirrored = await client.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+const mirrored = await client.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
 check(
   "the text block is the structured result, not a summary of it",
   JSON.stringify(JSON.parse(mirrored.content?.[0]?.text ?? "null")) ===
@@ -440,8 +440,8 @@ check(
 // Compaction must not cost a text-only client the outcome distinction, which
 // is the whole reason the text is the serialized result rather than prose.
 for (const [label, call] of [
-  ["a value", { name: "compute", arguments: { source: "1 3 /" } }],
-  ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 /" } }],
+  ["a value", { name: "compute", arguments: { source: "1 3 DIV" } }],
+  ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 DIV" } }],
   ["a language error", { name: "compute", arguments: { source: "FROBNICATE" } }],
   ["a host failure", { name: "compute", arguments: { source: "" } }],
 ]) {
@@ -565,7 +565,7 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   // every limit check increments.
   const spent = await client.callTool({
     name: "compute",
-    arguments: { source: "1 20 RANGE 1 [ * ] FOLD" },
+    arguments: { source: "1 20 RANGE 1 [ MUL ] FOLD" },
   });
   const usage = spent.structuredContent?.resourceUsage;
   check(
@@ -626,13 +626,13 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
 
   const checked = await client.callTool({
     name: "check",
-    arguments: { source: "[ [ 1 ] + ] 'INC' DEF" },
+    arguments: { source: "[ [ 1 ] ADD ] 'INC' DEF" },
   });
   check("check is execution-free and structured", checked.structuredContent?.status === "ok");
 
   const inferred = await client.callTool({
     name: "infer_contracts",
-    arguments: { source: "[ [ 1 ] + ] 'INC' DEF" },
+    arguments: { source: "[ [ 1 ] ADD ] 'INC' DEF" },
   });
   check(
     "infer_contracts returns the user Word contract",
@@ -674,7 +674,7 @@ check(
 );
 check(
   "--doctor proves exactness rather than only reporting that it started",
-  doctorRun.text.includes("2 3 / 1 3 / + = 1/1") && doctorRun.text.includes("exactTerms"),
+  doctorRun.text.includes("2 3 DIV 1 3 DIV ADD = 1/1") && doctorRun.text.includes("exactTerms"),
 );
 const unknownFlag = await cli("--frobnicate");
 check(

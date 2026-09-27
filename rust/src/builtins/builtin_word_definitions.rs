@@ -45,7 +45,7 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
 }
 
 pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    let canonical = crate::word_name::canonical_word_name(name);
     builtin_specs().iter().find(|spec| spec.name == canonical)
 }
 
@@ -66,7 +66,7 @@ pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'
 #[cfg(test)]
 mod tests {
     #[test]
-    fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
+    fn builtin_specs_are_not_named_by_symbols() {
         let forbidden = [
             "+", "-", "*", "/", "%", "=", "<", "<=", ">", ">=", "<>", ".", "..", ",", ",,", "~",
             "!", "'", "|", "?", "^",

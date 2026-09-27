@@ -72,9 +72,9 @@ mod whitespace_and_comments {
 // `OR-NIL` has no symbol sugar: it is a spelled-out control directive
 // recognized only by its bare word, case-folded (LANG.FAILURE.RECOVERY). `^` and `~`
 // carry no meaning of their own, so both are ordinary Symbols the dictionary
-// does not have. `=` is an unconditional single-char `EQ` Symbol with no
-// lookahead. We cover that boundary plus the bare `=` Symbol.
-mod single_char_aliases {
+// does not have, and so is `=`: a single-char Symbol with no lookahead. We
+// cover that boundary plus the bare `=` Symbol.
+mod single_char_symbols {
     use super::*;
 
     /// `^` used to be `OR-NIL`'s sugar; it now carries no meaning of its own,
@@ -110,13 +110,13 @@ mod single_char_aliases {
 
     #[test]
     fn aq_ver_002_d_equals_is_bare_symbol() {
-        // `=` has no lookahead: it is always the bare EQ Symbol.
+        // `=` has no lookahead: it is always the bare `=` Symbol.
         let tokens = tokenize("= a").unwrap();
         assert_eq!(tokens, vec![sym("="), sym("a")]);
     }
 
-    /// Every symbol is one character and nothing looks ahead, so `==` is a single
-    /// name token rather than two `EQ`s.
+    /// Nothing looks ahead, so `==` is a single name token rather than two
+    /// `=`s.
     #[test]
     fn aq_ver_002_d_double_equals_is_one_name() {
         let tokens = tokenize("a == b").unwrap();
