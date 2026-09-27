@@ -55,7 +55,7 @@ const wasm = new WasmWorkerBackend({
   responseBytes: LIMITS.responseBytes,
 });
 
-// Every field of the schema-1 envelope except the host-metrics/provenance
+// Every field of the result envelope except the host-metrics/provenance
 // fields a backend's own process/thread model incidentally affects.
 const STABLE_FIELDS = [
   "schemaVersion",

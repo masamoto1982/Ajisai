@@ -139,6 +139,42 @@ for (const span of codeSpans) {
   );
 }
 
+// ── and what they claim about the vocabulary is what the registry holds ────
+//
+// The compute description and the quickstart preface both count the Words and
+// both call their list the whole vocabulary. Each claim was once hand-typed:
+// "78 Words" beside a list of 72, and "case-sensitive" beside an engine that
+// canonicalizes every name to upper case. Both are claims a caller acts on, so
+// both are measured here instead of trusted.
+const computeDescription = TOOLS.find(({ name }) => name === "compute").description;
+const quickstartPreface = readFileSync(new URL("./mcp-quickstart.md", import.meta.url), "utf8");
+for (const [surface, text, countPattern] of [
+  ["the compute description", computeDescription, /Its (\d+) Words/],
+  ["the quickstart preface", quickstartPreface, /The (\d+) Words are/],
+]) {
+  const claimed = Number(text.match(countPattern)?.[1]);
+  assert.equal(
+    claimed,
+    known.size,
+    `${surface} counts ${claimed} Words; the registry holds ${known.size}`,
+  );
+  const unnamed = [...known].filter(
+    (name) => !new RegExp(`(^|[\\s(\`/])${escapeRegExp(name)}($|[\\s),\`/.;])`).test(text),
+  );
+  assert.deepEqual(unnamed, [], `${surface} calls its list the whole vocabulary but omits ${unnamed.join(", ")}`);
+  assert.ok(
+    !/case-sensitive/i.test(text),
+    `${surface} calls Word names case-sensitive; the engine canonicalizes every name to upper case`,
+  );
+}
+
+const liveCase = await liveBackend.compute("1 2 add");
+assert.equal(
+  liveCase.status,
+  "ok",
+  "the descriptions say Word names are case-insensitive, but `1 2 add` did not run",
+);
+
 console.log(
   `tool descriptions announce ${MUST_ANNOUNCE.length} Word families and name ` +
     `${new Set(mentioned).size} Words, all of which exist; ${codeSpans.length} source-shaped ` +
