@@ -58,6 +58,16 @@
     @media (769px <= width <= 1024px) {
         padding-inline: calc(var(--space-sm) / 2) var(--space-sm);
     }
+
+    /* The Dictionary stacks three rows (surface selector, sheet selector,
+       word list) where the Stack has two, so its seams are tighter. */
+    &:has(.dictionary-area:not([hidden])) {
+        gap: var(--space-2xs);
+
+        @media (width <= 768px) {
+            padding-top: var(--space-2xs);
+        }
+    }
 }
 
 /* Mobile shows one surface: the column that does not hold it is gone. */
@@ -160,8 +170,7 @@
     }
 }
 
-.area-selector-left,
-.area-selector-right {
+.area-selector-left {
     @media (width <= 768px) {
         display: none;
     }
@@ -169,6 +178,10 @@
 
 .area-selector-right {
     display: flex;
+
+    @media (width <= 768px) {
+        display: none;
+    }
 }
 
 .area-selector-mobile {
@@ -607,8 +620,12 @@
     }
 }
 
-.dictionary-area > .dictionary-sheet-select {
-    flex: 0 0 auto;
+.dictionary-area {
+    gap: var(--space-2xs);
+
+    & > .dictionary-sheet-select {
+        flex: 0 0 auto;
+    }
 }
 
 .words-display {
@@ -731,9 +748,12 @@
 }
 
 /* Custom dictionary sheet selector: the inert native select paints the closed
-   control (text, height, chevron) and the overlaid button owns the popup. */
+   control (text, height, chevron) and the overlaid button owns the popup. The
+   root is only their positioning box, so the control padding of the shared
+   selector rule is cleared here and carried by the two children. */
 .sheet-selector {
     position: relative;
+    padding: 0;
     border: 0;
     background: transparent;
     transition: none;
