@@ -286,17 +286,20 @@ export function agent_infer_contracts(source) {
 
 /**
  * Predict the finite set of outcome ids `source` could produce without
- * executing it, matching `ajisai agent outcomes`.
+ * executing it, under the same agent-profile ceilings `agent_compute`
+ * applies, matching `ajisai agent outcomes`. `step_limit` as for
+ * `agent_compute`.
  * @param {string} source
+ * @param {number | null} [step_limit]
  * @returns {string}
  */
-export function agent_predict_outcomes(source) {
+export function agent_predict_outcomes(source, step_limit) {
     let deferred2_0;
     let deferred2_1;
     try {
         const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.agent_predict_outcomes(ptr0, len0);
+        const ret = wasm.agent_predict_outcomes(ptr0, len0, isLikeNone(step_limit) ? Number.MAX_SAFE_INTEGER : (step_limit) >>> 0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);

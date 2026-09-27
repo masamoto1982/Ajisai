@@ -30,6 +30,13 @@ const skillPath = join(assetsPath, "quickstart.md");
 const metadataPath = join(assetsPath, "metadata.json");
 const serverPackagePath = join(here, "package.json");
 const resultSchemaPath = join(here, "result.schema.json");
+// The one envelope every Ajisai MCP tool result is wrapped in
+// (`result.schema.json`) carries one version: the backend's report
+// (`rust/src/agent/report.rs::SCHEMA_VERSION`), which the adapter's own
+// envelopes — a host error, a `word_contract` answer — repeat rather than
+// numbering separately. The selftest checks the two agree.
+export const ENVELOPE_SCHEMA_VERSION = 2;
+
 export const LIMITS = Object.freeze({
   sourceBytes: 64 * 1024,
   wallTimeMs: 5_000,
@@ -369,7 +376,7 @@ function provenance() {
 /**
  * Drop the envelope fields whose value is `null`.
  *
- * The backend fills every slot of the schema-1 envelope on every answer, so a
+ * The backend fills every slot of the envelope on every answer, so a
  * successful `compute` used to advertise `message: null`, `diagnosis: null`,
  * `aiDiagnostic: null` and `contractDecls: null` — four diagnostic-sounding
  * fields inviting a reader to look at nothing. Absence says the same thing in
@@ -417,7 +424,7 @@ function envelope(value) {
 function fail(error, context = "tool call") {
   logHostError(error, context);
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: ENVELOPE_SCHEMA_VERSION,
     status: "hostError",
     error: {
       code: error.code,
@@ -507,7 +514,7 @@ function wordContract(word) {
     return fail(HostError.from(error), "word_contract");
   }
   return envelope({
-    schemaVersion: 1,
+    schemaVersion: ENVELOPE_SCHEMA_VERSION,
     status: "ok",
     registrySchemaVersion: contracts().schemaVersion,
     matches,

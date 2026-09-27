@@ -149,10 +149,11 @@ is **not** the value, and reading it as if it were will mislead you:
 `exactTerms` does not appear on a plain rational or a vector of rationals —
 there is no radical to write, and `stackDisplay` is already the whole value.
 
-One caution about the display: it writes the stored form faithfully, so two
-values that *are* equal can be written differently — `8 SQRT` gives
-`sqrt(8)` and `2 SQRT 2 SQRT ADD` gives `2/1*sqrt(2)`. Never compare these
-strings to decide equality. Ask Ajisai, which decides on the exact value:
+The display writes the canonical normal form, so two values that *are* equal
+are written the same way — `8 SQRT` and `2 SQRT 2 SQRT ADD` both give
+`2/1*sqrt(2)`. Even so, never compare these strings to decide equality: the
+string is display text, not a value. Ask Ajisai, which decides on the exact
+value:
 
 ```ajisai tool=compute status=ok stack="TRUE"
 8 SQRT 2 SQRT 2 SQRT ADD EQ

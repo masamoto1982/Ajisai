@@ -52,7 +52,8 @@ Commands:
                                   The one source-to-JSON host boundary. Operations:
                                   compute, check, infer-contracts, outcomes. `-`
                                   reads the program from standard input, so an
-                                  embedding host needs no temporary file
+                                  embedding host needs no temporary file. `check`
+                                  always verifies `#:contract` declarations
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
@@ -68,11 +69,13 @@ Options:
                                   (exit 1 on a contradiction). The check is
                                   conservative: an unanalyzable body is
                                   reported as `cannot verify`, never as passed
-  --limits <agent|trusted>        With `agent compute`: the resource ceilings.
-                                  `agent` (default) is the tighter profile for
-                                  untrusted, generated programs; `trusted` is
-                                  the interpreter default `run` uses
-  --step-limit <N>                With `run`/`agent compute`: override the execution step
+  --limits <agent|trusted>        With `agent compute`/`agent outcomes`: the
+                                  resource ceilings. `agent` (default) is the
+                                  tighter profile for untrusted, generated
+                                  programs; `trusted` is the interpreter
+                                  default `run` uses
+  --step-limit <N>                With `run`/`agent compute`/`agent outcomes`:
+                                  override the execution step
                                   budget. N is a positive integer; default:
                                   the host's derived step budget
                                   (interpreter::DEFAULT_MAX_EXECUTION_STEPS,
@@ -93,6 +96,7 @@ pub fn run(args: &[String]) -> i32 {
     let mut json = false;
     let mut contract = false;
     let mut limits = LimitProfile::Agent;
+    let mut limits_given = false;
     let mut step_limit: Option<usize> = None;
     let mut positional: Vec<&str> = Vec::new();
     let mut iter = rest.iter();
@@ -101,8 +105,8 @@ pub fn run(args: &[String]) -> i32 {
             "--json" => json = true,
             "--contract" => contract = true,
             "--limits" => match iter.next().map(String::as_str) {
-                Some("agent") => limits = LimitProfile::Agent,
-                Some("trusted") => limits = LimitProfile::Trusted,
+                Some("agent") => (limits, limits_given) = (LimitProfile::Agent, true),
+                Some("trusted") => (limits, limits_given) = (LimitProfile::Trusted, true),
                 _ => {
                     eprintln!("--limits expects `agent` or `trusted`\n\n{}", USAGE);
                     return 2;
@@ -132,15 +136,45 @@ pub fn run(args: &[String]) -> i32 {
         limits,
     };
     if json && matches!(command.as_str(), "run" | "check" | "contract") {
-        let operation = match command.as_str() {
-            "run" => "compute",
-            "contract" => "infer-contracts",
-            other => other,
+        // Name the exact equivalent, profile included: `run` executes under
+        // the trusted ceilings, which `agent compute` applies only on request.
+        let equivalent = match command.as_str() {
+            "run" => "`ajisai agent compute --limits trusted`",
+            "check" => "`ajisai agent check` (it always verifies `#:contract` declarations)",
+            _ => "`ajisai agent infer-contracts`",
         };
         eprintln!(
-            "`{command}` is the human-readable form; its JSON form is `ajisai agent {operation}`\n\n{USAGE}"
+            "`{command}` is the human-readable form; its JSON form is {equivalent}\n\n{USAGE}"
         );
         return 2;
+    }
+    // A flag the command does not read would be accepted and silently
+    // ignored — `run file --limits agent` running under the trusted ceilings
+    // regardless — so it is refused instead.
+    let agent_op = |op: &str| command == "agent" && positional.first() == Some(&op);
+    let misplaced = [
+        (
+            "--limits",
+            limits_given,
+            agent_op("compute") || agent_op("outcomes"),
+        ),
+        (
+            "--step-limit",
+            step_limit.is_some(),
+            command == "run" || agent_op("compute") || agent_op("outcomes"),
+        ),
+        ("--contract", contract, command == "check"),
+    ];
+    for (flag, given, applies) in misplaced {
+        if given && !applies {
+            let where_ = if command == "agent" {
+                format!("agent {}", positional.first().copied().unwrap_or(""))
+            } else {
+                command.to_string()
+            };
+            eprintln!("`{flag}` does not apply to `{where_}`\n\n{USAGE}");
+            return 2;
+        }
     }
     match (command.as_str(), positional.as_slice()) {
         ("run", [path]) => cmd_run(path, &opts),
@@ -302,16 +336,7 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
     };
     let (document, exit_code) = match operation {
         "compute" => {
-            let response = block_on(agent_api::compute(
-                &source,
-                agent_api::ComputeOptions {
-                    step_limit: opts.step_limit,
-                    runtime_limits: match opts.limits {
-                        LimitProfile::Agent => Some(agent_api::LOCAL_AGENT_RUNTIME_LIMITS),
-                        LimitProfile::Trusted => None,
-                    },
-                },
-            ));
+            let response = block_on(agent_api::compute(&source, compute_options(opts)));
             (response.to_json(), response.exit_code())
         }
         "check" => {
@@ -319,7 +344,10 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
             (response.to_json(), response.exit_code())
         }
         "infer-contracts" => (agent_api::infer_contracts(&source).to_json(), 0),
-        "outcomes" => (agent_api::predict_outcomes(&source).to_json(), 0),
+        "outcomes" => (
+            agent_api::predict_outcomes(&source, compute_options(opts)).to_json(),
+            0,
+        ),
         _ => {
             eprintln!("unknown agent operation: {operation}");
             return 2;
@@ -327,6 +355,18 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
     };
     println!("{}", pretty(&document));
     exit_code
+}
+
+/// The ceilings an `agent compute`/`agent outcomes` runs under, from the
+/// command line: the step budget and the chosen limit profile.
+fn compute_options(opts: &Opts) -> agent_api::ComputeOptions {
+    agent_api::ComputeOptions {
+        step_limit: opts.step_limit,
+        runtime_limits: match opts.limits {
+            LimitProfile::Agent => Some(agent_api::LOCAL_AGENT_RUNTIME_LIMITS),
+            LimitProfile::Trusted => None,
+        },
+    }
 }
 
 fn emit(report: &Report) {

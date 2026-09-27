@@ -25,7 +25,7 @@ async function main() {
   } else if (op === "inferContracts") {
     json = wasm.agent_infer_contracts(source);
   } else if (op === "outcomes") {
-    json = wasm.agent_predict_outcomes(source);
+    json = wasm.agent_predict_outcomes(source, stepLimit ?? undefined);
   } else {
     parentPort.postMessage({
       error: {

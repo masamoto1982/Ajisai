@@ -123,9 +123,11 @@ export function agent_infer_contracts(source: string): string;
 
 /**
  * Predict the finite set of outcome ids `source` could produce without
- * executing it, matching `ajisai agent outcomes`.
+ * executing it, under the same agent-profile ceilings `agent_compute`
+ * applies, matching `ajisai agent outcomes`. `step_limit` as for
+ * `agent_compute`.
  */
-export function agent_predict_outcomes(source: string): string;
+export function agent_predict_outcomes(source: string, step_limit?: number | null): string;
 
 /**
  * Install console_error_panic_hook so any panic on the WASM side

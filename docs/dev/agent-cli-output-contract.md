@@ -30,19 +30,24 @@ leaves no program on disk for the duration of the call.
 | 1 | Ajisai language, check, contract, or test failure |
 | 2 | CLI usage or host file-reading failure; JSON is not guaranteed |
 
-`run`, `check` and `contract` are the human-readable forms of `agent compute`,
-`agent check` and `agent infer-contracts`, and take no `--json`: the machine
-form of an operation is its `agent` operation, and there is one. `agent` (and
+`run`, `check` and `contract` are the human-readable forms of
+`agent compute --limits trusted`, `agent check` and `agent infer-contracts`,
+and take no `--json`: the machine form of an operation is its `agent`
+operation, and there is one. (`run` executes under the trusted ceilings;
+`agent compute` applies them only when asked. `agent check` always verifies
+`#:contract` declarations, as `check --contract` does.) A flag a command does
+not read is a usage error (exit 2), never silently ignored. `agent` (and
 `test`/`repl`/`version` with `--json`) write one JSON document to stdout.
 Program `PRINT` effects are captured in the document rather than mixed into
 stdout.
 
-`--limits` chooses the resource ceilings `agent compute` runs under: `agent`
-(the default) is the tighter profile for untrusted, generated programs
-(`agent::api::LOCAL_AGENT_RUNTIME_LIMITS`); `trusted` is the interpreter
-default that `run` uses. `--step-limit` is a positive integer and applies to
-`run` and `agent compute`; the default is the host's derived step budget
-(`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 23,190,000 — see
+`--limits` chooses the resource ceilings `agent compute` runs under and
+`agent outcomes` predicts under: `agent` (the default) is the tighter profile
+for untrusted, generated programs (`agent::api::LOCAL_AGENT_RUNTIME_LIMITS`);
+`trusted` is the interpreter default that `run` uses. `--step-limit` is a
+positive integer and applies to `run`, `agent compute` and `agent outcomes`;
+the default is the host's derived step budget
+(`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 12,180,000 — see
 `docs/dev/mcp-host-profiles.md`, re-derived per-container and not a value to
 hard-code elsewhere). `--contract` applies only to `check`.
 
@@ -508,7 +513,8 @@ Ajisai program semantics.
 ## `repl`
 
 The REPL preserves stack and definitions across lines. In JSON mode, every
-submitted program line produces one `agent compute`-shaped JSON document. REPL
+submitted program line produces one small JSON document of its own —
+`{ "status", "stackDisplay", "output", "message" }`, not the `agent` envelope. REPL
 meta-commands (`:help`, `:stack`, `:reset`, and `:quit`) are host commands, not
 Ajisai Words.
 
@@ -517,7 +523,7 @@ Ajisai Words.
 `version --json` emits:
 
 ```json
-{ "schemaVersion": 2, "status": "ok", "version": "0.2.0-beta.1" }
+{ "schemaVersion": 2, "status": "ok", "version": "0.2.0-alpha.1" }
 ```
 
 ## `agent`
@@ -588,8 +594,8 @@ never reaches" nor "a block executed somewhere other than where it is
 written" was represented.
 
 `limitProfile` (the same shape `receipt.limitProfile` reports) names the
-resource ceilings this prediction assumed; `outcomes` does not currently
-accept a caller-supplied profile override.
+resource ceilings this prediction assumed: the profile `--limits` selects and
+the `--step-limit` budget, exactly as `agent compute` would run it.
 
 ## Compatibility
 

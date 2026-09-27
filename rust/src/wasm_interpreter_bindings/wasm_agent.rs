@@ -1,5 +1,5 @@
 //! One-shot WASM entry point for the host-neutral agent boundary
-//! (`crate::agent`). Returns the same schema-1 JSON envelope the native
+//! (`crate::agent`). Returns the same JSON envelope the native
 //! `ajisai agent <operation>` CLI emits
 //! (`docs/dev/agent-cli-output-contract.md`), serialized as a JSON string so
 //! a Node host parses it identically to the native CLI's stdout — no
@@ -41,8 +41,14 @@ pub fn agent_infer_contracts(source: &str) -> String {
 }
 
 /// Predict the finite set of outcome ids `source` could produce without
-/// executing it, matching `ajisai agent outcomes`.
+/// executing it, under the same agent-profile ceilings `agent_compute`
+/// applies, matching `ajisai agent outcomes`. `step_limit` as for
+/// `agent_compute`.
 #[wasm_bindgen]
-pub fn agent_predict_outcomes(source: &str) -> String {
-    api::predict_outcomes(source).to_json().to_string()
+pub fn agent_predict_outcomes(source: &str, step_limit: Option<u32>) -> String {
+    let options = api::ComputeOptions {
+        step_limit: step_limit.filter(|&n| n > 0).map(|n| n as usize),
+        runtime_limits: Some(api::LOCAL_AGENT_RUNTIME_LIMITS),
+    };
+    api::predict_outcomes(source, options).to_json().to_string()
 }
