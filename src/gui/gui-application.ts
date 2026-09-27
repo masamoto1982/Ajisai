@@ -119,7 +119,8 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             onBackgroundDoubleClick: () => editor.removeLastWord(),
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text, append) => display.renderInfo(text, append)
+            showInfo: (text, append) => display.renderInfo(text, append),
+            showError: (error) => display.renderError(error)
         });
 
         // Clearing the stack keeps the dictionary — that is what separates it

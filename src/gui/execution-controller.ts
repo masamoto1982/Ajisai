@@ -1,9 +1,5 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type {
-    AjisaiInterpreter,
-    ProtocolDiagnosis,
-    ExecuteResult
-} from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
     createExecutionSnapshot,
     collectUserWords,
@@ -13,6 +9,7 @@ import {
     resolveExecutionException
 } from './interpreter-execution-utils';
 import { renderDiagnosisReport } from './diagnosis-report';
+import { toError } from './to-error';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 import type { ViewMode } from './mobile-view-switcher';
@@ -40,9 +37,9 @@ export interface ExecutionController {
     readonly executeStep: () => Promise<void>;
     readonly checkIsStepModeActive: () => boolean;
     readonly abortExecution: () => void;
-    /// Look `name` up in the dictionary and show the answer. Bound to
-    /// `Ctrl+Alt+L`, which supplies the word under the cursor — see
-    /// `lookupWord` below for why the answer always goes to Output.
+    // Look `name` up in the dictionary and show the answer. Bound to
+    // `Ctrl+Alt+L`, which supplies the word under the cursor — see
+    // `lookupWord` below for why the answer always goes to Output.
     readonly lookupWord: (name: string) => void;
 }
 
@@ -66,14 +63,14 @@ export const createExecutionController = (
         updateAfterExecution
     } = callbacks;
 
-    /// Answer a lookup from the dictionary for `name`, without running
-    /// anything. Always answers to the Output area, whether `name` is a Core
-    /// word (its reference text) or a User word (its reconstructed `DEF`
-    /// source, shown as read-only reference rather than loaded for editing).
-    ///
-    /// The trigger is `Ctrl+Alt+L` at the cursor, which can be anywhere inside
-    /// a program still being written, so overwriting the Input area here would
-    /// risk unsaved work; Output is the only destination that is always safe.
+    // Answer a lookup from the dictionary for `name`, without running
+    // anything. Always answers to the Output area, whether `name` is a Core
+    // word (its reference text) or a User word (its reconstructed `DEF`
+    // source, shown as read-only reference rather than loaded for editing).
+    //
+    // The trigger is `Ctrl+Alt+L` at the cursor, which can be anywhere inside
+    // a program still being written, so overwriting the Input area here would
+    // risk unsaved work; Output is the only destination that is always safe.
     const lookupWord = (name: string): void => {
         if (!name) return;
         const found = interpreter.resolve_host_lookup(name);
@@ -109,15 +106,14 @@ export const createExecutionController = (
         const event = result.errorFlowTrace
             ?.filter((candidate) => Boolean(candidate.diagnosis))
             .at(-1);
-        const diagnosis: ProtocolDiagnosis | undefined = event?.diagnosis;
-        if (!diagnosis) return null;
+        if (!event?.diagnosis) return null;
         return {
-            text: renderDiagnosisReport(diagnosis, { stackLenBefore: event?.stackLenBefore }),
+            text: renderDiagnosisReport(event.diagnosis, { stackLenBefore: event.stackLenBefore }),
             // A reasoned NIL is one of the three outcomes, not a failure. The
             // trace says which this was, so the presentation can follow the
             // language instead of reporting every NIL as though something
             // went wrong.
-            aboutNil: event?.kind === 'nilProduced'
+            aboutNil: event.kind === 'nilProduced'
         };
     };
 
@@ -159,7 +155,7 @@ export const createExecutionController = (
                 syncInterpreterState(interpreter, result);
             } catch (error) {
                 console.error('[ExecController] Failed to sync state:', error);
-                showError(error as Error);
+                showError(toError(error));
             }
 
             applyExecutionResult(result);
@@ -204,7 +200,7 @@ export const createExecutionController = (
             }
         } catch (error) {
             console.error('[ExecController] Reset failed:', error);
-            showError(error as Error);
+            showError(toError(error));
         }
     };
 

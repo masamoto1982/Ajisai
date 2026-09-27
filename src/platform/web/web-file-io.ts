@@ -33,20 +33,20 @@ export class WebFileIO implements FileIO {
     }
 
     async openJsonFile(): Promise<OpenResult | null> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
 
-            input.onchange = async (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
+            input.onchange = () => {
+                const file = input.files?.[0];
                 if (!file) {
                     resolve(null);
                     return;
                 }
-
-                const text = await readFileAsText(file);
-                resolve({ filename: file.name, text });
+                readFileAsText(file)
+                    .then((text) => resolve({ filename: file.name, text }))
+                    .catch(reject);
             };
 
             input.click();

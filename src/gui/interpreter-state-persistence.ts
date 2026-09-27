@@ -3,6 +3,7 @@ import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
 import { collectUserWords } from './interpreter-execution-utils';
+import { toError } from './to-error';
 
 // The persisted session document. `stateVersion` identifies the format; a
 // document that does not carry the current version is not migrated — the beta
@@ -211,7 +212,6 @@ export const createPersistence = (
             try {
                 await getPlatform().persistence.open();
                 dbInitialized = true;
-                console.log('Database initialized successfully for Persistence.');
                 return;
             } catch (error) {
                 console.error(`Failed to initialize persistence database (attempt ${attempt}/${MAX_RETRY_COUNT}):`, error);
@@ -230,18 +230,22 @@ export const createPersistence = (
     let pendingSave: Promise<void> | null = null;
     let resolvePendingSave: (() => void) | null = null;
 
+    // A failing auto-save is reported once, not on every keystroke's worth of
+    // saves after it.
+    let saveFailureReported = false;
+
     const performSave = async (): Promise<void> => {
-        if (!dbInitialized) {
-            console.warn('Database not initialized, skipping state save.');
-            return;
-        }
+        if (!dbInitialized) return;
 
         try {
             const state = collectCurrentState(interpreter, readActiveDictionarySheet?.());
             await getPlatform().persistence.saveInterpreterState(state);
-            console.log('State saved automatically.');
         } catch (error) {
             console.error('Failed to auto-save state:', error);
+            if (!saveFailureReported) {
+                saveFailureReported = true;
+                showError?.(new Error('Failed to save the session; changes since the last save will not survive a reload.'));
+            }
         }
     };
 
@@ -281,12 +285,12 @@ export const createPersistence = (
         try {
             interpreter.restore_user_words(EXAMPLE_USER_WORDS);
             await saveCurrentState();
-            console.log('Example Words loaded.');
 
             const wordNames = EXAMPLE_USER_WORDS.map(w => w.name).join(', ');
             showInfo?.(`Example Words loaded: ${wordNames}`, false);
         } catch (error) {
             console.error('Failed to load Example Words:', error);
+            showError?.(toError(error));
         }
     };
 
@@ -331,23 +335,6 @@ export const createPersistence = (
                         ));
                     }
 
-                    // Defensive: on this path (restoring into a freshly created
-                    // interpreter) `currentWords` is always a subset of
-                    // `wordsToRestore`, so this loop is normally a no-op. It
-                    // guards against a future restore path that starts from an
-                    // interpreter that already holds words not present in the
-                    // saved set — those should not survive a load.
-                    const savedWordKeys = new Set(
-                        wordsToRestore.map((w: UserWord) => buildWordKey(w.name))
-                    );
-                    const currentWords = interpreter.collect_user_words_info();
-                    for (const [, name] of currentWords) {
-                        if (!savedWordKeys.has(buildWordKey(name))) {
-                            interpreter.remove_word(name);
-                        }
-                    }
-
-                    console.log('Interpreter state restored.');
                 } else {
                     await loadExampleWords();
                 }
@@ -361,7 +348,7 @@ export const createPersistence = (
             }
         } catch (error) {
             console.error('Failed to load database data:', error);
-            showError?.(error as Error);
+            showError?.(toError(error));
             return {};
         }
     };
@@ -376,7 +363,7 @@ export const createPersistence = (
 
         getPlatform().fileIO.saveJson(filename, exportData)
             .then(() => showInfo?.(`User words exported as ${filename}`, true))
-            .catch((error) => showError?.(error as Error));
+            .catch((error) => showError?.(toError(error)));
     };
 
     const importUserWords = (): void => {
@@ -455,16 +442,15 @@ export const createPersistence = (
                 }
 
             } catch (error) {
-                showError?.(error as Error);
+                showError?.(toError(error));
             }
-        });
+        }).catch((error) => showError?.(toError(error)));
     };
 
     const fullReset = async (): Promise<void> => {
         try {
             if (dbInitialized) {
                 await getPlatform().persistence.clearAll();
-                console.log('IndexedDB cleared.');
             } else {
                 console.warn('Database not initialized, skipping clear operation.');
             }
@@ -472,7 +458,7 @@ export const createPersistence = (
             updateDisplays?.();
         } catch (error) {
             console.error('Failed to perform full reset:', error);
-            showError?.(error as Error);
+            showError?.(toError(error));
         }
     };
 

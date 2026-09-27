@@ -1,5 +1,6 @@
 import { getPlatform } from '../platform';
 import { createGUI, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
+import { toError } from '../gui/to-error';
 import { initWasm } from '../wasm-module-loader';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
 import type { AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
@@ -237,7 +238,7 @@ export async function initializeApplication(): Promise<void> {
         if (outputDisplay) {
             const errorSpan = document.createElement('span');
             errorSpan.className = 'output-error';
-            errorSpan.textContent = `Application startup failed: ${(error as Error).message}`;
+            errorSpan.textContent = `Application startup failed: ${toError(error).message}`;
             outputDisplay.replaceChildren(errorSpan);
         }
     }
