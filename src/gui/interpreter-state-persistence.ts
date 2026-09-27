@@ -10,20 +10,11 @@ import { collectUserWords } from './interpreter-execution-utils';
 // document that does not carry the current version is not migrated — the beta
 // reads one format only (LANG.OBSERVATION.FIREWALL).
 //
-// 4: the dense-tensor node dropped its `mask` field. A tensor's absence is the
-// 0 denominator its `dens` array already carries, and the bitmap beside it was
-// a second record of that fact which nothing ever wrote to. A version-3
-// document therefore starts a fresh session rather than being migrated, as any
-// other format change does.
-//
 // A bump discards every existing session, so it gates readability, not
-// changes: bump it only when an older document can no longer be read — `mask`
-// above sat inside the stack snapshot, so a version-3 payload could not be
-// parsed — never to record that a field went away. Dropping
-// `activeUserDictionary` kept this at 4 for that reason: a version-4 document
-// still carries everything a reader looks at, and the abandoned key beside
-// them is simply never read. Version 5 dropped the per-value and per-slot role
-// tags from the stack snapshot, so a version-4 payload no longer parses.
+// changes: bump it only when an older document cannot be parsed (a field
+// inside the stack snapshot changed shape), never to record that a key went
+// away — an abandoned key beside the ones a reader looks at is simply never
+// read.
 export const STATE_FORMAT_VERSION = 5;
 
 export interface InterpreterState {
@@ -101,13 +92,10 @@ const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, str
     return map;
 };
 
-// Every User Word, unconditionally. There used to be a per-dictionary
-// filter here, from the module/multi-dictionary era; the dictionary has two
-// tiers and User is the only exportable one (`collect_user_words_info`
-// reports a constant "USER" label for all of them), so a filter could only
-// ever keep everything or — if the label it filtered against came from
-// somewhere that was not also "USER" — silently drop everything. `dictionary`
-// stays in the document for format continuity but is no longer a selection.
+// Every User Word, unconditionally. The dictionary has two tiers and User is
+// the only exportable one (`collect_user_words_info` reports a constant "USER"
+// label for all of them), so there is nothing to filter by. `dictionary` stays
+// in the document for format continuity, not as a selection.
 export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument => {
     const identities = collectWordIdentityMap(interpreter);
     const words: ExportWord[] = interpreter.collect_user_words_info()
@@ -140,7 +128,7 @@ const buildWordKey = (name: string): string => name.toUpperCase();
 //
 // A saved definition is source text, so a restore re-runs the lexer and `DEF`
 // against today's rules: a dictionary saved before a lexical or naming rule
-// changed can hold an entry this build no longer accepts. The interpreter skips
+// changed can hold an entry this build does not accept. The interpreter skips
 // such an entry rather than abandoning the rest of the dictionary with it —
 // which is what keeps `parseImportDocument`'s promise (valid words in a
 // partially corrupt file still import) true for corruption only the lexer can
@@ -167,10 +155,9 @@ const filenameToDictionaryName = (filename: string): string => filename.replace(
 // normalized word, or null when the entry is malformed. A word is only usable
 // downstream if it has a string `name`; `definition` and `id` are optional and
 // must be strings when present. This keeps `parseImportDocument` a total
-// function — a hostile or hand-corrupted file with `null`, numeric, or
-// name-less entries previously threw a TypeError out of the `.map` (and
-// would have thrown again at `word.name.toUpperCase()` in `importUserWords`)
-// instead of being parsed or cleanly rejected.
+// function: a hostile or hand-corrupted file with `null`, numeric, or
+// name-less entries is parsed or cleanly rejected, never thrown out of the
+// `.map` or out of `word.name.toUpperCase()` in `importUserWords`.
 const normalizeImportWord = (
     raw: unknown
 ): { name: string; definition: string | null; description?: string | null; id?: string } | null => {
@@ -191,9 +178,9 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
         return err(e instanceof Error ? e : new Error(String(e)));
     }
 
-    // Both branches drop malformed entries rather than throwing or forwarding
-    // them to `restore_user_words`; valid words in a partially-corrupt file
-    // still import.
+    // Malformed entries are dropped rather than thrown on or forwarded to
+    // `restore_user_words`; valid words in a partially-corrupt file still
+    // import.
     const collect = (rawWords: unknown[]): ParsedImport => {
         const embeddedIds = new Map<string, string>();
         const words: UserWord[] = [];

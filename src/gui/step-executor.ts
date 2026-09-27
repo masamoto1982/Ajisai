@@ -19,10 +19,8 @@ export interface StepExecutorCallbacks {
     readonly extractEditorValue: () => string;
     readonly showInfo: (text: string, append: boolean) => void;
     /// Show the reader where execution has got to, by selecting the token that
-    /// is about to run. Step mode used to report only "Step 4/9" and the
-    /// token's text, so following a run meant counting tokens by eye against
-    /// the source — exactly the accounting the step view exists to remove.
-    /// Called with an empty range when step mode ends.
+    /// is about to run, so following a run never means counting tokens by eye
+    /// against the source. Called with an empty range when step mode ends.
     readonly highlightSourceRange: (start: number, end: number) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
@@ -54,7 +52,7 @@ const advanceState = (state: StepState): StepState => ({
     currentIndex: state.currentIndex + 1
 });
 
-/// A step's text can now span lines — a multi-line vector is one step — and a
+/// A step's text can span lines — a multi-line vector is one step — and a
 /// status line that wrapped mid-vector would undo the point of showing it. The
 /// editor highlight carries the exact range, so the message only needs enough
 /// of the text to recognise which step it is.

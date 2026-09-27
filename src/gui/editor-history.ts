@@ -1,10 +1,10 @@
 // Recall of previously run source.
 //
 // A successful Run empties the editor, and Reset empties it too. The Stack, by
-// contrast, persists across runs. That combination is what makes the Playground
-// awkward to learn in: the natural loop — run something, change one token, run
-// it again — required retyping the whole program every time, and a Reset after
-// a run that did not happen took the text with it.
+// contrast, persists across runs. Without recall, the natural loop — run
+// something, change one token, run it again — means retyping the whole program
+// every time, and a Reset after a run that did not happen takes the text with
+// it.
 //
 // So every submitted program is remembered for the session and can be walked
 // back into the editor. This is editor convenience in the same class as the

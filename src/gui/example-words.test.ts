@@ -1,12 +1,8 @@
 // The seeded Example Words are the first thing a fresh session shows, and they
 // are the one place in the host that ships Ajisai source rather than reading it
 // from the interpreter. Nothing type-checks them: `restore_user_words` only
-// tokenizes a definition, so a body naming a word that no longer exists is
+// tokenizes a definition, so a body naming a word that does not exist is
 // defined without complaint and fails only when the user runs it.
-//
-// That is how every SAY word and GREET came to fail with "Unknown word: ,,"
-// on first launch: `,,` was the symbol of a modifier, and it was retired when every
-// symbol became one character.
 //
 // These tests check the shape of every token the seed data ships, so retired
 // residue is caught here instead of on someone's first run.

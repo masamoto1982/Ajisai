@@ -1,13 +1,5 @@
 export const switchDictionarySheet = (containerEl: HTMLElement, sheetId: string): void => {
-    const allSheets = containerEl.querySelectorAll('.dictionary-sheet');
-    allSheets.forEach(sheet => {
-        (sheet as HTMLElement).hidden = true;
-        sheet.classList.remove('active');
+    containerEl.querySelectorAll<HTMLElement>('.dictionary-sheet').forEach(sheet => {
+        sheet.hidden = sheet.id !== `dictionary-sheet-${sheetId}`;
     });
-
-    const target = document.getElementById(`dictionary-sheet-${sheetId}`);
-    if (target) {
-        target.hidden = false;
-        target.classList.add('active');
-    }
 };

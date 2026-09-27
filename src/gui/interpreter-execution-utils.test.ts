@@ -1,15 +1,13 @@
-// Regression for the auto-transition fault: running a pure stack program such
-// as the Reference's `3 4 ADD` pulled the right column to the Dictionary
-// instead of the Stack.
+// A pure stack program such as the Reference's `3 4 ADD` must not read as a
+// dictionary change and pull the right column to the Dictionary instead of
+// the Stack.
 //
-// The cause was name addressing, not the layout rule. The dictionary has two
-// tiers and User is one of them (LANG.DICTIONARY.RESOLUTION), so a word is
-// addressed by its bare name and the interpreter no longer resolves a
-// `DICT@NAME` composite. The host still composed one, so every definition read
-// back as null; `restore_user_words` skips a definition-less word, so the
-// worker ran without the user's words and reported none back, and the
-// post-execution sync wiped them from the main interpreter. Every run then
-// looked like a dictionary change.
+// Name addressing is what that rests on. The dictionary has two tiers and User
+// is one of them (LANG.DICTIONARY.RESOLUTION), so a word is addressed by its
+// bare name and a `DICT@NAME` composite resolves to null; `restore_user_words`
+// skips a definition-less word, so a host that composed one would run the
+// worker without the user's words and the post-execution sync would wipe them
+// from the main interpreter.
 //
 // The fake below reproduces exactly those three contracts of the wasm boundary
 // (bare-name lookup, definition-less words skipped on restore, session reset

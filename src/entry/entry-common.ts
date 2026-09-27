@@ -38,11 +38,10 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  * `リファレンス` badge, and state which build is deployed.
  *
  * Which build matters because the Playground is a separately deployed
- * artifact and a deploy can be stranded — see the `workflow_dispatch` note in
- * `.github/workflows/build.yml` for the incident that added it. When that
- * happens the symptom is a site whose behaviour disagrees with the
- * specification, and with no version anywhere there is nothing to compare
- * against.
+ * artifact and a deploy can be stranded (see the `workflow_dispatch` note in
+ * `.github/workflows/build.yml`). When that happens the symptom is a site
+ * whose behaviour disagrees with the specification, and with no version
+ * anywhere there is nothing to compare against.
  *
  * The header says it on hover and the splash says it in plain text, which is
  * what makes the pair work: a tooltip does not exist on a touch device, so
@@ -98,8 +97,8 @@ function setPlaygroundBadgeTooltip(lines: string[]): void {
  * LANG.MACHINE.LIMITS makes limits a host safety control rather than value semantics, so
  * two conforming hosts legitimately enforce different ceilings — and they do:
  * `0 100001 RANGE` materializes here and answers `NIL(spaceExhausted)`
- * under the MCP agent profile. That difference is only a trap when neither
- * host discloses what it applies, which is what this fixes on this side.
+ * under the MCP agent profile. That difference is only a trap when a host
+ * does not disclose what it applies, so this one does.
  * See docs/dev/mcp-host-profiles.md for the comparison.
  */
 export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
@@ -237,12 +236,10 @@ export async function initializeApplication(): Promise<void> {
         console.error('[Main] Application startup failed:', error);
         const outputDisplay = document.getElementById('output-display');
         if (outputDisplay) {
-            outputDisplay.innerHTML = '';
             const errorSpan = document.createElement('span');
-            errorSpan.style.color = '#dc3545';
-            errorSpan.style.fontWeight = 'bold';
+            errorSpan.className = 'output-error';
             errorSpan.textContent = `Application startup failed: ${(error as Error).message}`;
-            outputDisplay.appendChild(errorSpan);
+            outputDisplay.replaceChildren(errorSpan);
         }
     }
 }

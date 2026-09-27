@@ -57,11 +57,11 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 });
 
 const MAX_SUGGESTIONS = 10;
-// Two characters, not three. The mobile cheat sheet advertises autocomplete
-// while typing, and a three-character floor silently withholds it for exactly
-// the prefixes a phone typist most wants it for: `MA` for `MAP`, `SQ` for
-// `SQRT`. Ten results are the ceiling either way (`MAX_SUGGESTIONS`), so a
-// shorter prefix costs a longer list, not an unbounded one.
+// Two characters. The mobile cheat sheet advertises autocomplete while
+// typing, and a longer floor silently withholds it for exactly the prefixes a
+// phone typist most wants it for: `MA` for `MAP`, `SQ` for `SQRT`. Ten
+// results are the ceiling either way (`MAX_SUGGESTIONS`), so a shorter prefix
+// costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
 const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
     '(', ')', '[', ']', '{', '}',
@@ -207,7 +207,7 @@ export const createEditor = (
         // so a caret anchor puts the palette square over the first lines of
         // the placeholder cheat sheet. On a phone that sheet is the only place
         // the touch gestures are written down, so tapping in to read how to
-        // run something hid how to run something. Pinned to the bottom edge
+        // run something would hide how to run something. Pinned to the bottom edge
         // the sheet reads from the top down into the palette instead, and the
         // corner buttons it would otherwise cover are themselves hidden while
         // the placeholder shows (`:placeholder-shown` in components.css).
@@ -332,11 +332,10 @@ export const createEditor = (
                 // Tab accepts; Enter never does. A newline separates
                 // statements in a definition body, so it is load-bearing
                 // syntax in this language — an open suggestion panel must not
-                // be able to eat one. It used to: typing `PRINT` opened the panel, and the
-                // Enter meant to end the line accepted the completion instead,
-                // so the next line's first token was appended to it (`PRINT3`).
-                // Dismissing the panel instead keeps the following Enter,
-                // whether the panel was wanted or not, a newline.
+                // be able to eat one (an Enter that accepted the completion for
+                // `PRINT` would glue the next line's first token to it:
+                // `PRINT3`). Dismissing the panel instead keeps the following
+                // Enter, whether the panel was wanted or not, a newline.
                 e.preventDefault();
                 applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
             } else if (e.key === 'Enter') {

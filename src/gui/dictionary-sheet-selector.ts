@@ -4,7 +4,7 @@
 // and User. It replaces the native select because the app styles the closed
 // control and the open panel itself.
 //
-// To stay drop-in compatible with the call sites that used the native select,
+// To stay drop-in compatible with call sites written against a native select,
 // the component installs a `value` accessor on the root element and dispatches
 // a `change` event when the selection changes via user interaction (matching
 // native behavior: programmatic `value =` assignment does not fire `change`).
@@ -63,7 +63,7 @@ export const createDictionarySheetSelector = (
     panel.id = SHEET_SELECTOR_PANEL_ID;
     panel.setAttribute('role', 'listbox');
     // Native popover: top-layer placement plus light-dismiss on outside click /
-    // Escape, replacing the former document-click and window-blur listeners.
+    // Escape.
     panel.popover = 'auto';
 
     // The popover lives in the top layer, so anchor it to the closed control with
