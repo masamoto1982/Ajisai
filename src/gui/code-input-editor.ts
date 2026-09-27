@@ -170,6 +170,7 @@ export const createEditor = (
     const textareaContainer = element.closest('.input-area');
     const suggestionPanel = document.createElement('div');
     suggestionPanel.className = 'editor-suggestions';
+    suggestionPanel.setAttribute('role', 'listbox');
     suggestionPanel.style.display = 'none';
     textareaContainer?.appendChild(suggestionPanel);
 
@@ -270,10 +271,15 @@ export const createEditor = (
         suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
 
         suggestionPanel.innerHTML = '';
-        currentSuggestions.forEach((suggestion) => {
+        currentSuggestions.forEach((suggestion, index) => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'editor-suggestion-item';
+            button.setAttribute('role', 'option');
+            // The item Tab will accept, moved by ArrowUp/ArrowDown.
+            const selected = index === selectedSuggestionIndex;
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-selected', String(selected));
             button.textContent = suggestion;
             button.addEventListener('mousedown', (e) => {
                 e.preventDefault();
@@ -283,6 +289,7 @@ export const createEditor = (
         });
 
         suggestionPanel.style.display = isSymbolMode ? 'grid' : 'block';
+        suggestionPanel.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
     };
 
     const refreshSuggestions = (): void => {

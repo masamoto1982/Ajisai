@@ -1,169 +1,86 @@
 // Ajisai source formatter.
 //
-// Goal: tidy messy input into the canonical written form without ever changing
-// what the code means. A line break is whitespace like any other in Ajisai
-// (LANG.SOURCE.TEXT) except that it ends a `#` comment, and the layout is the
-// author's. The formatter therefore preserves the line structure exactly and
-// rewrites only the spacing between tokens and the indentation at the start of
-// each line.
+// Tidies input into the canonical written form without changing what the code
+// means. A line break is whitespace like any other in Ajisai (LANG.SOURCE.TEXT)
+// except that it ends a `#` comment, and the layout is the author's, so the
+// line structure is preserved exactly and only the spacing between tokens and
+// the indentation at the start of each line are rewritten.
 //
 // Per line it:
 //   - collapses runs of spaces/tabs to a single space;
 //   - surrounds the always-standalone delimiters [ ] with spaces, so
 //     `[1 2 3]` becomes `[ 1 2 3 ]` and `[[1]]` becomes `[ [ 1 ] ]`;
 //   - keeps string literals ('...') and comments (#...) verbatim;
-//   - re-indents the line by the bracket/block nesting depth open at its start.
+//   - re-indents the line by the bracket nesting depth open at its start.
 //
-// It never adds or removes a line break. It used to add one before each
-// clause of a branch after the first, which was the one place it made a layout
-// choice of its own; branching is now `SELECT` over two ordinary values, with
-// no clauses to lay out, so the formatter only rewrites whitespace within a
-// line. If the input
-// contains something it cannot rewrite safely (an unterminated string, or a
-// newline inside a string literal) it returns the input unchanged.
+// It never adds or removes a line break. Input it cannot rewrite safely (an
+// unterminated string, or a newline inside a string literal) is returned
+// unchanged.
+
+import { scanAtoms } from './source-atoms';
 
 const INDENT_UNIT = '  ';
 
-// Whitespace is the sole token delimiter in Ajisai source (SPECIFICATION.html
-// LANG.SOURCE.TEXT) — the same rule Forth applies to its own words, brackets
-// and comment word included. `[` and `]` must therefore stand alone, glued to
-// nothing, exactly like every other word; the tokenizer (rust/src/tokenizer.rs)
-// rejects a bracket that touches adjacent text rather than splitting it off.
-// This formatter's job is to supply that missing whitespace proactively, so
-// messy input like `[1 2 3]` becomes valid, canonical source (`[ 1 2 3 ]`)
-// instead of a tokenizer error. Every other punctuation character — `^`, and
-// any other symbol written inside a name — obeys the ordinary word-boundary
-// rule instead: it ends a token only at whitespace, so it stays glued to the
-// surrounding word when written without a space (SPEC AQ-VER-002-D/E). Forcing
-// any of them apart here would turn one Symbol token into several, which is
-// exactly the meaning change this formatter must not make. `{`/`}` are not
-// valid Ajisai source characters at all (docs/dev/type-unification-work-order-
-// 2026-08.md): `[ ]` is the sole bracket, for both data and code.
-const STANDALONE_DELIMITERS = new Set(['[', ']']);
-const OPENING_BRACKETS = new Set(['[']);
-const CLOSING_BRACKETS = new Set([']']);
+// `[` and `]` are the one delimiter pair of spec/grammar.json, and like every
+// other word they must stand alone: the tokenizer (rust/src/tokenizer.rs)
+// rejects a bracket glued to adjacent text rather than splitting it off. The
+// formatter supplies that whitespace proactively, so `[1 2 3]` becomes valid,
+// canonical source instead of a tokenizer error. No other character is split
+// out of a word — `^`, `>=`, `#` and `'` inside a name are all part of it — so
+// the atoms of source-atoms.ts are kept whole except for these two.
+const splitBrackets = (word: string): string[] => word.match(/[[\]]|[^[\]]+/g) ?? [];
 
-// Mirrors tokenizer.rs::is_string_close_delimiter: a `'` closes a string when
-// the next character is whitespace (or end of input, checked separately
-// below) — whitespace is the sole token delimiter, so it is the sole string
-// terminator too. Nothing else closes a string any more: `[`, `]`, `#`, `{`,
-// `}`, `(`, `)`, `>`, `=`, `|`, and `^` are all ordinary content when they
-// follow a quote without a space, so `'foo'[1]` never finds a real close and
-// the real tokenizer reports an unclosed literal for it — which this
-// formatter mirrors by refusing to reformat it (see the `closed` check in
-// scanLines) rather than confidently splitting off a `[` that was never a
-// token boundary there.
-const isStringCloseDelimiter = (ch: string | undefined): boolean =>
-    ch === undefined || /\s/.test(ch);
-
-// Tokenize the whole source into lines of token strings. Strings and comments
-// are captured verbatim as single tokens; structural delimiters and words each
-// become their own token. Returns null when the source cannot be safely
+// The source as lines of tokens. Returns null when the source cannot be safely
 // reformatted (unterminated string, or a newline inside a string literal).
 const scanLines = (source: string): string[][] | null => {
     const lines: string[][] = [];
     let line: string[] = [];
-    let word = '';
+    let scanned = 0;
 
-    const pushWord = (): void => {
-        if (word.length > 0) {
-            line.push(word);
-            word = '';
+    // Line breaks live in the whitespace between atoms (and inside a string,
+    // which is refused below), so the line structure is read off the gaps.
+    const advanceTo = (offset: number): void => {
+        for (let i = scanned; i < offset; i += 1) {
+            if (source[i] === '\n') {
+                lines.push(line);
+                line = [];
+            }
         }
+        scanned = offset;
     };
-    const endLine = (): void => {
-        pushWord();
-        lines.push(line);
-        line = [];
-    };
 
-    const chars = Array.from(source);
-    let i = 0;
-
-    while (i < chars.length) {
-        const c = chars[i]!;
-
-        if (c === '\n') {
-            endLine();
-            i += 1;
-            continue;
+    for (const atom of scanAtoms(source)) {
+        advanceTo(atom.start);
+        scanned = atom.end;
+        switch (atom.kind) {
+            case 'string':
+                if (!atom.closed || atom.text.includes('\n')) return null;
+                line.push(atom.text);
+                break;
+            case 'comment':
+                line.push(atom.text.trimEnd());
+                break;
+            case 'word':
+                line.push(...splitBrackets(atom.text));
+                break;
         }
-
-        if (c === '#') {
-            // Comment runs to end of line; keep its inner spacing verbatim.
-            pushWord();
-            let comment = '';
-            while (i < chars.length && chars[i] !== '\n') {
-                comment += chars[i];
-                i += 1;
-            }
-            line.push(comment.replace(/\s+$/, ''));
-            continue;
-        }
-
-        if (c === "'") {
-            pushWord();
-            let str = "'";
-            let j = i + 1;
-            let closed = false;
-            while (j < chars.length) {
-                const cj = chars[j]!;
-                if (cj === '\n') {
-                    return null; // newline inside a string: refuse to reformat
-                }
-                str += cj;
-                if (cj === "'" && isStringCloseDelimiter(chars[j + 1])) {
-                    closed = true;
-                    j += 1;
-                    break;
-                }
-                j += 1;
-            }
-            if (!closed) {
-                return null; // unterminated string: refuse to reformat
-            }
-            line.push(str);
-            i = j;
-            continue;
-        }
-
-        if (/\s/.test(c)) {
-            pushWord();
-            i += 1;
-            continue;
-        }
-
-        if (STANDALONE_DELIMITERS.has(c)) {
-            pushWord();
-            line.push(c);
-            i += 1;
-            continue;
-        }
-
-        word += c;
-        i += 1;
     }
-
-    endLine();
+    advanceTo(source.length);
+    lines.push(line);
     return lines;
 };
 
 const countLeadingClosers = (tokens: string[]): number => {
     let leading = 0;
-    while (leading < tokens.length && CLOSING_BRACKETS.has(tokens[leading]!)) {
-        leading += 1;
-    }
+    while (tokens[leading] === ']') leading += 1;
     return leading;
 };
 
 const netBracketDelta = (tokens: string[]): number => {
     let net = 0;
     for (const token of tokens) {
-        if (OPENING_BRACKETS.has(token)) {
-            net += 1;
-        } else if (CLOSING_BRACKETS.has(token)) {
-            net -= 1;
-        }
+        if (token === '[') net += 1;
+        else if (token === ']') net -= 1;
     }
     return net;
 };
@@ -176,9 +93,7 @@ const renderLines = (lines: string[][]): string => {
     for (const tokens of lines) {
         if (tokens.length === 0) {
             // Collapse runs of blank lines and drop leading/trailing ones.
-            if (out.length > 0) {
-                pendingBlank = true;
-            }
+            if (out.length > 0) pendingBlank = true;
             continue;
         }
 
@@ -199,8 +114,6 @@ const renderLines = (lines: string[][]): string => {
 // unchanged when it cannot be reformatted without risking a semantic change.
 export const formatAjisaiSource = (source: string): string => {
     const lines = scanLines(source);
-    if (lines === null) {
-        return source;
-    }
+    if (lines === null) return source;
     return renderLines(lines);
 };

@@ -94,6 +94,10 @@ describe('tokenizeWithOffsets', () => {
         expect(tokenizeWithOffsets('a#b 1').map((t) => t.text)).toEqual(['a#b', '1']);
     });
 
+    test('a quote glued to a name is part of that name, not a string', () => {
+        expect(tokenizeWithOffsets("a'b c").map((t) => t.text)).toEqual(["a'b", 'c']);
+    });
+
     // Malformed source is passed through rather than repaired: the reader gets
     // the same error a plain run would give, against the text they wrote.
     test('an unclosed bracket becomes one final step, not a silent repair', () => {
