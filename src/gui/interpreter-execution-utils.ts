@@ -6,6 +6,7 @@ import {
 } from '../workers/interpreter-snapshot';
 import { getPlatform } from '../platform';
 import { ExecutionTimeoutError } from '../workers/execution-timeout';
+import { ExecutionAbortedError } from '../workers/execution-aborted';
 import type {
     AjisaiInterpreter,
     ExecuteResult,
@@ -19,15 +20,17 @@ import { renderDiagnosisReport } from './diagnosis-report';
 // (LANG.DICTIONARY.RESOLUTION), so a `DICT@NAME` composite such as `USER@FOO`
 // resolves to null — and `restore_user_words` skips a definition-less word, so
 // a null here would run the worker without the user's words.
-export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    return userWordsInfo.map(wordData => ({
-        dictionary: wordData[0],
-        name: wordData[1],
-        definition: interpreter.lookup_word_definition(wordData[1]),
-        description: interpreter.lookup_word_description(wordData[1])
+export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] =>
+    interpreter.collect_user_words_info().map(([, name]) => ({
+        name,
+        definition: interpreter.lookup_word_definition(name),
+        description: interpreter.lookup_word_description(name)
     }));
-};
+
+/// The one reading of a result's success. The host sets `status` and `error`
+/// together; either says the run did not complete.
+export const isFailure = (result: ExecuteResult): boolean =>
+    result.status !== 'OK' || Boolean(result.error);
 
 export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot =>
     createInterpreterSnapshot({
@@ -141,7 +144,7 @@ export const syncInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult
 ): void => {
-    if (!result || result.error) return;
+    if (isFailure(result)) return;
     applyInterpreterSnapshot(interpreter, {
         stack: result.stack,
         // The worker's lossless snapshot is what restores the post-run stack
@@ -159,7 +162,7 @@ export const resolveExecutionException = (
     showError: (error: Error | string) => void
 ): void => {
     console.error(`[${context}] Execution failed:`, error);
-    if (error instanceof Error && error.message.includes('aborted')) {
+    if (error instanceof ExecutionAbortedError) {
         showInfo('Execution aborted', true);
         return;
     }

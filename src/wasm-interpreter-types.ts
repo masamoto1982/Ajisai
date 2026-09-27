@@ -21,7 +21,6 @@ export interface ExactTerm {
 }
 
 export interface UserWord {
-    dictionary?: string | null;
     name: string;
     definition: string | null;
     // The `#:contract NAME ...` directive text `DEF` captured for this word
@@ -260,11 +259,4 @@ export interface WasmModule {
     default?: () => Promise<any>;
     init?: () => Promise<any>;
     init_panic_hook?: () => void;
-}
-
-declare global {
-    interface Window {
-        AjisaiWasm: WasmModule;
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
 }

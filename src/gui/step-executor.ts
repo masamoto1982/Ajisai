@@ -4,6 +4,7 @@ import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types
 import {
     createExecutionSnapshot,
     describeFailedRunOutput,
+    isFailure,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
@@ -149,7 +150,7 @@ export const createStepExecutor = (
                 showError(error as Error);
             }
 
-            if (result.status === 'OK' && !result.error) {
+            if (!isFailure(result)) {
                 showExecutionResult(result);
             } else {
                 // Same correction Run's error path gets: the `Defined word`

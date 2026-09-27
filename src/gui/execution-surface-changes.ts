@@ -1,5 +1,6 @@
 import type { ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
+import { isFailure } from './interpreter-execution-utils';
 
 const toJson = (value: unknown): string => JSON.stringify(value ?? null);
 
@@ -40,19 +41,14 @@ const checkValuesEqual = (left: unknown, right: unknown): boolean => {
 // Order-insensitive identity of the user dictionary. The pre-execution
 // snapshot and the post-execution read-back can enumerate words in different
 // orders (a synced interpreter rebuilds its dictionaries from scratch), so the
-// set is sorted by fully-qualified name before comparison — otherwise a pure
-// stack op like `2 3 ADD` would look like a dictionary change whenever any user
-// word exists, and wrongly pull the right column to the Words sheet.
+// set is sorted by name before comparison — otherwise a pure stack op like
+// `2 3 ADD` would look like a dictionary change whenever any user word exists,
+// and wrongly pull the right column to the Words sheet.
 const normalizeUserWords = (words: readonly UserWord[]): string =>
     toJson(
         [...words]
-            .map(word => ({
-                dictionary: word.dictionary ?? null,
-                name: word.name,
-                definition: word.definition ?? null
-            }))
-            .sort((a, b) =>
-                `${a.dictionary ?? ''}@${a.name}`.localeCompare(`${b.dictionary ?? ''}@${b.name}`))
+            .map(word => ({ name: word.name, definition: word.definition ?? null }))
+            .sort((a, b) => a.name.localeCompare(b.name))
     );
 
 // A view of the surfaces an execution can touch, read from one interpreter
@@ -71,7 +67,7 @@ export const detectExecutionSurfaceChanges = (
 
     // Errors and diagnostics render into the Output surface, so a failed run
     // changes Output even when the program emitted no text of its own.
-    const hasError = result.status !== 'OK' || Boolean(result.error);
+    const hasError = isFailure(result);
 
     return {
         outputChanged: hasError || Boolean((result.output ?? '').trim()),

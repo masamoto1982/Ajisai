@@ -16,6 +16,8 @@ export interface MobileHandler {
 }
 
 export interface MobileHandlerOptions {
+    /** The surface currently showing (LayoutState.currentMode); a swipe moves from it. */
+    readonly currentMode: () => ViewMode;
     readonly onModeChange?: (mode: ViewMode) => void;
 }
 
@@ -48,16 +50,14 @@ const AREA_FOR_MODE: Record<ViewMode, keyof MobileElements> = {
 
 export const createMobileHandler = (
     elements: MobileElements,
-    options: MobileHandlerOptions = {}
+    options: MobileHandlerOptions
 ): MobileHandler => {
-    let currentMode: ViewMode = 'input';
     // `null` means the gesture in progress is not a candidate swipe: it grew a
     // second finger (a pinch ends two touches, each with a delta of its own).
     // Where it started is not a disqualifier — see touch-gestures.ts.
     let swipeOrigin: GesturePoint | null = null;
 
     const updateView = (mode: ViewMode): void => {
-        currentMode = mode;
         const visible = AREA_FOR_MODE[mode];
         for (const area of Object.values(AREA_FOR_MODE)) {
             elements[area].hidden = area !== visible;
@@ -67,7 +67,7 @@ export const createMobileHandler = (
     const resolveSwipeGesture = (origin: GesturePoint, end: GesturePoint): void => {
         const direction = detectSwipeDirection(origin, end, { thresholdPx: SWIPE_THRESHOLD });
         if (direction === null) return;
-        options.onModeChange?.(resolveNextViewMode(currentMode, direction));
+        options.onModeChange?.(resolveNextViewMode(options.currentMode(), direction));
     };
 
     document.body.addEventListener('touchstart', (e: TouchEvent) => {

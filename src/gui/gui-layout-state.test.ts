@@ -8,27 +8,23 @@ import type { ViewMode } from './mobile-view-switcher';
 
 const makeElement = () => ({ hidden: false }) as HTMLElement;
 
-const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps => {
-    const dictionarySheetSelect = { value: 'core' } as HTMLSelectElement;
-    return {
-        elements: {
-            inputArea: makeElement(),
-            outputArea: makeElement(),
-            stackArea: makeElement(),
-            dictionaryArea: makeElement(),
-            leftPanelSelect: { value: '' } as HTMLSelectElement,
-            rightPanelSelect: { value: '' } as HTMLSelectElement,
-            mobilePanelSelect: { value: '' } as HTMLSelectElement,
-            dictionarySheetSelect,
-        } as unknown as ApplyAreaStateDeps['elements'],
-        state,
-        mobile: {
-            isMobile: () => mobileMode,
-            updateView: vi.fn((mode: ViewMode) => { state.currentMode = mode; }),
-        },
-        switchDictionarySheet: vi.fn(),
-    };
-};
+const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps => ({
+    elements: {
+        inputArea: makeElement(),
+        outputArea: makeElement(),
+        stackArea: makeElement(),
+        dictionaryArea: makeElement(),
+        leftPanelSelect: { value: '' } as HTMLSelectElement,
+        rightPanelSelect: { value: '' } as HTMLSelectElement,
+        mobilePanelSelect: { value: '' } as HTMLSelectElement,
+    } as unknown as ApplyAreaStateDeps['elements'],
+    state,
+    mobile: {
+        isMobile: () => mobileMode,
+        updateView: vi.fn((mode: ViewMode) => { state.currentMode = mode; }),
+    },
+    showDictionarySheet: vi.fn(),
+});
 
 describe('applyExecutionAreaState', () => {
     beforeEach(() => {
@@ -128,8 +124,7 @@ describe('applyExecutionAreaState', () => {
         });
 
         expect(state.currentRightMode).toBe('dictionary');
-        expect(deps.elements.dictionarySheetSelect.value).toBe('user');
-        expect(deps.switchDictionarySheet).toHaveBeenCalledWith('user');
+        expect(deps.showDictionarySheet).toHaveBeenCalledWith('user');
     });
 
     it('lets Dictionary outrank Stack for the desktop right pane when both change', () => {
@@ -148,8 +143,7 @@ describe('applyExecutionAreaState', () => {
         });
 
         expect(state.currentRightMode).toBe('dictionary');
-        expect(deps.elements.dictionarySheetSelect.value).toBe('user');
-        expect(deps.switchDictionarySheet).toHaveBeenCalledWith('user');
+        expect(deps.showDictionarySheet).toHaveBeenCalledWith('user');
     });
 
     it('reveals the changed Words sheet on mobile when the dictionary changes', () => {
@@ -168,8 +162,7 @@ describe('applyExecutionAreaState', () => {
         });
 
         expect(state.currentMode).toBe('dictionary');
-        expect(deps.elements.dictionarySheetSelect.value).toBe('user');
-        expect(deps.switchDictionarySheet).toHaveBeenCalledWith('user');
+        expect(deps.showDictionarySheet).toHaveBeenCalledWith('user');
         expect(deps.elements.mobilePanelSelect.value).toBe('dictionary');
     });
 

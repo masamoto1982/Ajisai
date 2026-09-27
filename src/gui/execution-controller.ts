@@ -8,6 +8,7 @@ import {
     createExecutionSnapshot,
     collectUserWords,
     describeFailedRunOutput,
+    isFailure,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
@@ -122,7 +123,7 @@ export const createExecutionController = (
 
     const applyExecutionResult = (result: ExecuteResult): void => {
         const diagnosis = describeDiagnosis(result);
-        if (result.status === 'OK' && !result.error) {
+        if (!isFailure(result)) {
             showExecutionResult(result);
             clearEditor(false);
         } else {
@@ -194,7 +195,7 @@ export const createExecutionController = (
             await WORKER_MANAGER.resetAllWorkers();
             const result = interpreter.reset();
 
-            if (result.status === 'OK' && !result.error) {
+            if (!isFailure(result)) {
                 clearEditor(true);
                 await fullReset();
                 updateView('input');

@@ -1,5 +1,5 @@
 import { getPlatform } from '../platform';
-import { GUI_INSTANCE, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
+import { createGUI, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
 import type { AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
@@ -222,14 +222,13 @@ export async function initializeApplication(): Promise<void> {
         if (!wasm) {
             throw new Error('WASM initialization failed. Application cannot start.');
         }
-        window.AjisaiWasm = wasm;
 
         console.log('[Main] Creating main thread interpreter...');
-        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter();
-        setHostProfileLabel(window.ajisaiInterpreter);
+        const interpreter = new wasm.AjisaiInterpreter();
+        setHostProfileLabel(interpreter);
 
         console.log('[Main] Initializing GUI...');
-        await GUI_INSTANCE.init();
+        await createGUI(interpreter).init();
 
         console.log('[Main] Application initialization completed successfully');
     } catch (error) {

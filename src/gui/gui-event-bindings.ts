@@ -6,8 +6,7 @@ import type { Persistence } from './interpreter-state-persistence';
 import type { ExecutionController } from './execution-controller';
 import type { VocabularyManager } from './vocabulary-state-controller';
 import type { GUIElements } from './gui-dom-cache';
-import type { LayoutState } from './gui-layout-state';
-import type { LayoutController } from './layout/layout-controller';
+import type { LayoutController, LayoutState } from './gui-layout-state';
 import { createEditorHistory } from './editor-history';
 import {
     checkIsStationary,
@@ -37,13 +36,8 @@ export type GuiEventBindingContext = {
     readonly editor: Editor;
     readonly executionController: ExecutionController;
     readonly persistence: Persistence;
-    readonly switchArea: (mode: ViewMode) => void;
-    readonly updateAllDisplays: () => void;
-    /// Discard every value on the stack, leaving the dictionary alone. Lives on
-    /// the context rather than being reached from here because the interpreter
-    /// client is owned by the application module.
+    /// Discard every value on the stack, leaving the dictionary alone.
     readonly clearStack: () => void;
-    readonly doSwitchDictionarySheet: (sheetId: string) => void;
 };
 
 const debounce = <T extends (...args: unknown[]) => void>(
@@ -58,30 +52,12 @@ const debounce = <T extends (...args: unknown[]) => void>(
 };
 
 function bindLayoutEvents(context: GuiEventBindingContext): void {
-    const {
-        elements,
-        mobile,
-        layoutState,
-        switchArea,
-        doSwitchDictionarySheet,
-        layoutController,
-        persistence
-    } = context;
+    const { elements, mobile, layoutState, layoutController } = context;
+    const switchArea = layoutController.setArea;
 
-    elements.leftPanelSelect.addEventListener('change', () => {
-        switchArea(elements.leftPanelSelect.value as ViewMode);
-    });
-    elements.rightPanelSelect.addEventListener('change', () => {
-        switchArea(elements.rightPanelSelect.value as ViewMode);
-    });
-    elements.mobilePanelSelect.addEventListener('change', () => {
-        switchArea(elements.mobilePanelSelect.value as ViewMode);
-    });
-
-    elements.dictionarySheetSelect.addEventListener('change', () => {
-        doSwitchDictionarySheet(elements.dictionarySheetSelect.value);
-        void persistence.saveCurrentState();
-    });
+    for (const select of [elements.leftPanelSelect, elements.rightPanelSelect, elements.mobilePanelSelect]) {
+        select.addEventListener('change', () => switchArea(select.value as ViewMode));
+    }
 
     const setupDoubleTapToTransition = (
         target: HTMLElement,
@@ -114,7 +90,8 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 }
 
 function bindInteractionEvents(context: GuiEventBindingContext): void {
-    const { elements, vocabulary, editor, mobile, layoutState, switchArea, display, persistence, executionController, clearStack } = context;
+    const { elements, vocabulary, editor, mobile, layoutState, layoutController, display, persistence, executionController, clearStack } = context;
+    const switchArea = layoutController.setArea;
     // Session-lived recall of submitted programs, so a run (which clears the
     // editor) and a Reset are both recoverable. See editor-history.ts.
     const history = createEditorHistory();
