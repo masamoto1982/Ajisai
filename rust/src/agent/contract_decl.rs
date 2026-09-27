@@ -86,8 +86,8 @@ pub(crate) struct DeclFinding {
 /// Result of the declaration check over a whole file.
 pub(crate) struct ContractDeclCheck {
     pub findings: Vec<DeclFinding>,
-    /// True if any finding is an `error`. Drives the `check` exit code;
-    /// `outcome`/`declarations` below are read-only projections (pitfall C).
+    /// True if any finding is an `error`. Drives the `check` exit code and
+    /// the JSON `outcome`, which is `error` exactly when this is true.
     pub violated: bool,
     /// One `(word, outcome)` per successfully-parsed declaration, in source
     /// order — not derived by counting `findings` by severity, since one
@@ -106,16 +106,21 @@ impl ContractDeclCheck {
             .map(|(_, outcome)| *outcome)
             .collect();
         serde_json::json!({
-            "violated": self.violated,
             "findings": self.findings.iter().map(|f| serde_json::json!({
                 "severity": f.severity.as_str(),
                 "message": f.message,
                 "code": f.code,
             })).collect::<Vec<_>>(),
             "gapSummary": gap_summary_json(&outcomes, self.findings.iter().filter_map(|f| f.code)),
-            // Phase 4: LANG.FAILURE.TRICHOTOMY at check time; `findings`/
-            // `violated` stay as the legacy projection of the same result.
-            "outcome": fold_outcomes(&outcomes).as_str(),
+            // LANG.FAILURE.TRICHOTOMY at check time, and the only spelling of
+            // a violation here. A malformed directive is an error too: it
+            // counts toward no declaration, but it fails the check, so the
+            // fold alone would call a failing file `value`.
+            "outcome": if self.violated {
+                CheckOutcome::Error.as_str()
+            } else {
+                fold_outcomes(&outcomes).as_str()
+            },
             "declarations": self
                 .decl_outcomes
                 .iter()

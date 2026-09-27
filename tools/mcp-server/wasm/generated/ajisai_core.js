@@ -33,15 +33,6 @@ class AjisaiInterpreter {
         return ret;
     }
     /**
-     * Runtime counters for the Playground. Counts are session-cumulative and
-     * reset with the interpreter. Observational only.
-     * @returns {any}
-     */
-    collect_runtime_metrics() {
-        const ret = wasm.ajisaiinterpreter_collect_runtime_metrics(this.__wbg_ptr);
-        return ret;
-    }
-    /**
      * @returns {any}
      */
     collect_stack() {

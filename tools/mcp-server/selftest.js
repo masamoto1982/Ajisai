@@ -582,8 +582,9 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     Object.keys(usage ?? {}).every((key) => key in LIMITS),
   );
   check(
-    "the compatibility alias agrees with the resource it mirrors",
-    spent.structuredContent?.runtimeMetrics?.executionSteps === usage?.executionSteps,
+    "a budget is reported once, under resourceUsage, not again beside the optimizer counters",
+    spent.structuredContent?.runtimeMetrics !== undefined &&
+      !("executionSteps" in spent.structuredContent.runtimeMetrics),
   );
 
   // An error report's answer is its diagnosis; the stack is residual state.

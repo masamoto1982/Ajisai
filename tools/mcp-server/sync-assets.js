@@ -23,7 +23,7 @@ const metadata = `${JSON.stringify({
  * The served quickstart is an MCP preface followed by the generated writing
  * protocol, not a copy of `SKILL.md`.
  *
- * `SKILL.md` opens with a CLI run loop (`ajisai run file --json`) — commands a
+ * `SKILL.md` opens with a CLI run loop (`ajisai agent compute file`) — commands a
  * connected MCP client cannot issue and has no reason to read about — and says
  * nothing about which of the four tools to call. A model that read it first
  * learned the language before learning the interface. The preface answers the

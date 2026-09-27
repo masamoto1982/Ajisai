@@ -257,8 +257,8 @@ unsure, grep §9 before writing.**
 ## 1. Run loop
 
 ```sh
-ajisai run program.ajisai --json     # exit 0 = ok, 1 = language error, 2 = usage
-ajisai check program.ajisai --json   # parse + resolve only, no execution
+ajisai agent compute program.ajisai   # exit 0 = ok, 1 = language error, 2 = usage
+ajisai agent check program.ajisai     # parse + resolve only, no execution
 ```
 
 Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
@@ -268,7 +268,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 2. Minimal syntax
 
-- Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] +`.
+- Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] ADD`.
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
 - Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar — **except where a Word takes an *element*** (`PUT`, `GET`, `INDEX-OF`): there `[ 9 ]` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
@@ -276,7 +276,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Named data is a Record, built by `RECORD` from a Vector of keys and a Vector of values: `[ 'x' 'y' ] [ 1 2 ] RECORD`. It is not a Vector and is never code. It displays as `{ 'x' 1/1 'y' 2/1 }`, which is a display, not source: only `[ ]` delimits.
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
-- Every Word consumes the operands it reads. To use a value more than once, name it with `BIND` and read the name: `5 'N' BIND N N 1 +` leaves `5 6`.
+- Every Word consumes the operands it reads. To use a value more than once, name it with `BIND` and read the name: `5 'N' BIND N N 1 ADD` leaves `5 6`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration

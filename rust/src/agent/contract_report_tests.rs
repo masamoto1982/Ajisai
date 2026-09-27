@@ -98,7 +98,7 @@ mod contract_report_tests {
             0,
             "suggested lines produced findings: {decls}"
         );
-        assert_eq!(decls["violated"], false, "decls was: {decls}");
+        assert_ne!(decls["outcome"], "error", "decls was: {decls}");
         assert_eq!(
             decls["declarations"]
                 .as_array()

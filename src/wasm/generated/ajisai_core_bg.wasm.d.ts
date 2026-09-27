@@ -8,7 +8,6 @@ export const agent_infer_contracts: (a: number, b: number) => [number, number];
 export const agent_predict_outcomes: (a: number, b: number) => [number, number];
 export const ajisaiinterpreter_clear_stack: (a: number) => void;
 export const ajisaiinterpreter_collect_core_words_info: (a: number) => any;
-export const ajisaiinterpreter_collect_runtime_metrics: (a: number) => any;
 export const ajisaiinterpreter_collect_stack: (a: number) => any;
 export const ajisaiinterpreter_collect_user_words_info: (a: number) => any;
 export const ajisaiinterpreter_collect_word_identities: (a: number) => any;

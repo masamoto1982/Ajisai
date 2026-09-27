@@ -211,10 +211,10 @@
       "expect": {
         "/status": "ok",
         "/resourceUsage/executionSteps": 22,
-        "/resourceUsage/numericWork": 20,
-        "/runtimeMetrics/executionSteps": 22
+        "/resourceUsage/numericWork": 20
       },
-      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
+      "expectAbsent": ["/runtimeMetrics/executionSteps"],
+      "comment": "RANGE and FOLD are one step each and the block's `MUL` runs twenty times: 22. The step count is a budget, reported once under resourceUsage and not again beside the optimizer counters. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
     }
   ]
 }

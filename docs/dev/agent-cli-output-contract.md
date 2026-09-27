@@ -1,4 +1,4 @@
-# Agent CLI output contract (`ajisai --json`)
+# Agent CLI output contract (`ajisai agent`)
 
 Status: implemented host contract. This document is not an authority for
 language semantics; `SPECIFICATION.html` remains that authority. It documents
@@ -7,10 +7,10 @@ only commands and fields emitted by the current native CLI.
 ## Commands
 
 ```text
-ajisai run <file.ajisai> [--json] [--step-limit <N>]
-ajisai check <file.ajisai> [--json] [--contract]
-ajisai contract <file.ajisai> [--json]
-ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|->
+ajisai run <file.ajisai> [--step-limit <N>]
+ajisai check <file.ajisai> [--contract]
+ajisai contract <file.ajisai>
+ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|-> [--limits <agent|trusted>] [--step-limit <N>]
 ajisai test <file-or-dir> [--json]
 ajisai repl [--json]
 ajisai version [--json]
@@ -30,21 +30,29 @@ leaves no program on disk for the duration of the call.
 | 1 | Ajisai language, check, contract, or test failure |
 | 2 | CLI usage or host file-reading failure; JSON is not guaranteed |
 
-With `--json`, commands that produce a JSON report write one document to
-stdout. Program `PRINT` effects are captured in the document rather than mixed
-into stdout. `--step-limit` is a positive integer and applies only to `run`;
-the default is the host's derived step budget
+`run`, `check` and `contract` are the human-readable forms of `agent compute`,
+`agent check` and `agent infer-contracts`, and take no `--json`: the machine
+form of an operation is its `agent` operation, and there is one. `agent` (and
+`test`/`repl`/`version` with `--json`) write one JSON document to stdout.
+Program `PRINT` effects are captured in the document rather than mixed into
+stdout.
+
+`--limits` chooses the resource ceilings `agent compute` runs under: `agent`
+(the default) is the tighter profile for untrusted, generated programs
+(`agent::api::LOCAL_AGENT_RUNTIME_LIMITS`); `trusted` is the interpreter
+default that `run` uses. `--step-limit` is a positive integer and applies to
+`run` and `agent compute`; the default is the host's derived step budget
 (`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 23,190,000 — see
 `docs/dev/mcp-host-profiles.md`, re-derived per-container and not a value to
 hard-code elsewhere). `--contract` applies only to `check`.
 
-## `run` and `check`
+## `agent compute` and `agent check`
 
-Both commands emit schema version 1:
+Both operations emit schema version 2:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "status": "ok",
   "stack": [],
   "stackDisplay": [],
@@ -85,13 +93,12 @@ module.
 `LANG.CONTRACT.CHECK` fixes exactly three results for `check --contract`:
 verified, cannot verify, violated. A `code` on a finding is the stable *reason*
 behind a cannot-verify result — the breakdown of that one result, not a fourth
-result of its own. `violated` (top-level bool) and each finding's `severity`
-are computed exactly as before; gap identifiers add information, they do not
-change what counts as a violation.
+result of its own. Each finding's `severity` is computed exactly as before;
+gap identifiers add information, they do not change what counts as a
+violation.
 
 ```json
 {
-  "violated": false,
   "findings": [
     {
       "severity": "note",
@@ -128,7 +135,7 @@ change what counts as a violation.
 - `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
   declarations; `verified + cannotVerify + violated` always equals it. A
   malformed directive (one that never became a checkable declaration) still
-  contributes an `error` finding and still sets `violated: true`, but is not
+  contributes an `error` finding and still makes `outcome` `error`, but is not
   one of the three counted here.
 - `gapSummary.byGap` keys are sorted ascending and the object is always
   present (empty when nothing is unverifiable), so a caller can read it
@@ -146,7 +153,6 @@ that correspondence directly, in the runtime's own vocabulary:
 
 ```json
 {
-  "violated": false,
   "findings": [ ... ],
   "gapSummary": { ... },
   "outcome": "nil",
@@ -168,20 +174,19 @@ that correspondence directly, in the runtime's own vocabulary:
   `LANG.FAILURE` rather than chosen: `error` propagates and halts, so one
   `error` anywhere decides the whole file; `nil` flows downstream only once
   nothing halted first, so it decides the file only when no `error` is
-  present; a file with no declarations (or none outstanding) is `value`.
+  present; a file with no declarations (or none outstanding) is `value`. A
+  malformed directive belongs to no declaration but fails the check, so it
+  makes the file-level `outcome` `error` as well.
 - **This does not make `check` evaluate the program.** The correspondence
   classifies outcomes, not mechanisms — division by zero, a failed parse and
   an out-of-range index already share one *outcome* (NIL) while sharing no
   *mechanism*, and an inference that could not decide joins that list on the
   same terms.
-- `findings` and `violated` are **not removed or changed** — `LANG.OBSERVATION.PROTOCOL`
-  permits only additive changes within a schema version, and `SCHEMA_VERSION`
-  does not move for this change. They remain exactly what they were: `findings`
-  / `violated` is a legacy projection of the identical result `outcome` /
-  `declarations` now also states directly, and is planned for removal in a
-  future breaking schema version. The exit code is unaffected either way: it
-  is `1` when `violated` is `true` and `0` otherwise, exactly as before —
-  `outcome: "nil"` (cannot verify) never fails the check.
+- `outcome` is the only spelling of a violation: schema version 2 removed the
+  boolean `violated` that repeated `outcome == "error"`. `findings` stays, as
+  the place each declaration's message is written. The exit code is `1` when
+  `outcome` is `error` and `0` otherwise — `outcome: "nil"` (cannot verify)
+  never fails the check.
 - Merging gap identifiers into the NIL reason registry so a gap could be read
   back through `NIL-REASON` is deliberately **not** done here. See
   `docs/dev/trichotomy-unification.md` for why, and the condition under which
@@ -242,12 +247,10 @@ defect this object exists to fix.
 which fast path fired, how often a plan was rebuilt. Optimizer observations,
 useful for understanding a slowdown and useless for planning against a limit.
 
-`runtimeMetrics.executionSteps` appears in both and carries the same reading. It
-stays there because removing a field is what a schema version is for; it belongs
-in `resourceUsage`. That it sat in the optimizer object is how it went unnoticed
-that nothing ever wrote it: the value was `0` for every program ever run, beside
-the `Interpreter::execution_step_count` that every limit check increments. Two
-counters for one fact, and the reported one was the one that was always zero.
+`executionSteps` is a budget, so it is reported in `resourceUsage` alone.
+Schema version 1 also carried it in `runtimeMetrics`, where it went unnoticed
+for a long time that nothing ever wrote it — two counters for one fact, and the
+reported one was always zero — so version 2 removed that copy.
 
 ### `observationDigest`
 
@@ -468,7 +471,8 @@ language `status: error` is a host transport failure.
 
 ## `contract`
 
-`contract --json` emits a JSON array, not the `run` envelope. Each entry reports
+`agent infer-contracts` returns, under `contracts`, one entry per user Word
+(`contract` prints the same entries for a person). Each entry reports
 a user Word's inferred `name`, `inputs`, `outputs`, `partiality`, `purity`,
 `determinism`, a `cost` object keyed by its three axes
 (`steps`/`numeric`/`collection`, each `"const"`/`"linear"`/`"superlinear"`/
@@ -490,10 +494,7 @@ could only ever check as a note. When no axis is exact, the `cost` keyword
 itself is omitted rather than emitted with zero terms, since the declaration
 grammar rejects a bare `cost`.
 
-The MCP adapter normalizes this legacy bare array into its common result
-envelope under `contracts`; the native CLI shape remains unchanged in schema
-version 1.
-The array itself is produced by `agent::api::infer_contracts` so native and
+The entries are produced by `agent::api::infer_contracts` so native and
 other embedded hosts (including the WASM one-shot entry point) share inference
 rather than reimplementing it.
 
@@ -507,7 +508,7 @@ Ajisai program semantics.
 ## `repl`
 
 The REPL preserves stack and definitions across lines. In JSON mode, every
-submitted program line produces one `run`-shaped JSON document. REPL
+submitted program line produces one `agent compute`-shaped JSON document. REPL
 meta-commands (`:help`, `:stack`, `:reset`, and `:quit`) are host commands, not
 Ajisai Words.
 
@@ -516,16 +517,15 @@ Ajisai Words.
 `version --json` emits:
 
 ```json
-{ "schemaVersion": 1, "status": "ok", "version": "0.2.0-beta.1" }
+{ "schemaVersion": 2, "status": "ok", "version": "0.2.0-beta.1" }
 ```
 
 ## `agent`
 
-`agent` is the stable JSON-only host boundary used by the MCP adapter. Its
-`compute`, `check`, `infer-contracts`, and `outcomes` operations call the
-typed Rust agent API and always return a schema-versioned object. In
-particular, `infer-contracts` returns the array under `contracts`, avoiding
-the legacy bare array emitted by the compatibility `contract --json` command.
+`agent` is the one JSON host boundary, used by the MCP adapter and by the
+repository's own scripts. Its `compute`, `check`, `infer-contracts`, and
+`outcomes` operations call the typed Rust agent API and always return a
+schema-versioned object.
 
 ### `outcomes`
 
@@ -537,7 +537,7 @@ settled before a single Word runs, so it has exactly one predicted outcome.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "status": "ok",
   "outcomes": ["value", "error:nonNumeric", "error:shapeMismatch"],
   "exact": false,

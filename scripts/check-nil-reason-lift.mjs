@@ -137,7 +137,7 @@ let counter = 0;
 function absenceReasons(source) {
   const file = join(scratchDir, `lift-${counter++}.ajisai`);
   writeFileSync(file, `${source}\n`);
-  const result = spawnSync(ajisaiBin, ['run', file, '--json'], { encoding: 'utf8' });
+  const result = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
   if (result.error) throw result.error;
   if (result.status !== 0 && result.status !== 1) {
     throw new Error(

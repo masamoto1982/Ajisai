@@ -186,13 +186,11 @@ mod resource_usage_tests {
     }
 
     #[tokio::test]
-    async fn the_compatibility_alias_agrees_with_the_resource_it_mirrors() {
-        // `runtimeMetrics.executionSteps` stays where it was — removing a field
-        // is what a schema version is for — and now carries the same reading.
+    async fn a_budget_is_reported_once() {
+        // `executionSteps` is a budget, so it lives in `resourceUsage` alone;
+        // `runtimeMetrics` is optimizer counters and carries no second copy.
         let report = agent_json("1 20 RANGE 1 [ MUL ] FOLD").await;
-        assert_eq!(
-            report["runtimeMetrics"]["executionSteps"], report["resourceUsage"]["executionSteps"],
-            "one counter, however many places report it"
-        );
+        assert!(report["runtimeMetrics"].get("executionSteps").is_none());
+        assert_eq!(report["resourceUsage"]["executionSteps"], 22);
     }
 }

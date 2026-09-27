@@ -65,19 +65,13 @@ pub fn get_builtin_word_registry() -> &'static [CorewordMetadata] {
 /// Metadata lookup by bare word name.
 ///
 /// Built-in words form a single flat namespace, so lookup is an exact match on
-/// the upper-cased name. A qualified `DICTIONARY@WORD` token never names a
-/// built-in — it addresses a User dictionary word — and so resolves to `None`.
+/// the upper-cased name.
 pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
     let upper = name.to_uppercase();
     get_builtin_word_registry()
         .iter()
         .find(|m| m.name == upper)
         .cloned()
-}
-
-/// Alias of `get_coreword_metadata`. Use this in new code.
-pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
-    get_coreword_metadata(name)
 }
 
 /// The declared contract row for a Word, by bare name.

@@ -17,11 +17,6 @@ export class AjisaiInterpreter {
      */
     clear_stack(): void;
     collect_core_words_info(): any;
-    /**
-     * Runtime counters for the Playground. Counts are session-cumulative and
-     * reset with the interpreter. Observational only.
-     */
-    collect_runtime_metrics(): any;
     collect_stack(): any;
     collect_user_words_info(): any;
     /**

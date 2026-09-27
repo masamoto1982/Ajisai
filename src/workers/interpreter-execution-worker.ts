@@ -3,28 +3,8 @@
 import type {
     AjisaiInterpreter,
     ExecuteResult,
-    RuntimeMetricsSnapshot,
 } from '../wasm-interpreter-types';
 import { applyInterpreterSnapshot } from './interpreter-snapshot';
-
-// Cost-model counters (LANG.AUTHORITY.FREEDOM) are session-cumulative on the interpreter,
-// and this worker's interpreter is reused across runs, so the per-run
-// activity is the before/after delta around one execute call. Undefined when
-// the wasm bundle predates collect_runtime_metrics.
-const collectMetrics = (interp: AjisaiInterpreter): RuntimeMetricsSnapshot | undefined =>
-    interp.collect_runtime_metrics?.();
-
-const diffMetrics = (
-    before: RuntimeMetricsSnapshot | undefined,
-    after: RuntimeMetricsSnapshot | undefined
-): RuntimeMetricsSnapshot | undefined => {
-    if (!before || !after) return undefined;
-    const delta = {} as Record<keyof RuntimeMetricsSnapshot, number>;
-    for (const key of Object.keys(after) as Array<keyof RuntimeMetricsSnapshot>) {
-        delta[key] = Math.max(0, (after[key] ?? 0) - (before[key] ?? 0));
-    }
-    return delta;
-};
 
 let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;
@@ -100,9 +80,7 @@ self.onmessage = async (event: MessageEvent) => {
 
         if (isAborted) throw new Error('aborted');
 
-        const metricsBefore = collectMetrics(interpreter!);
         const result: ExecuteResult = await interpreter!.execute(event.data.code);
-        result.runtimeMetricsDelta = diffMetrics(metricsBefore, collectMetrics(interpreter!));
 
         // Attach the lossless stack snapshot (LANG.OBSERVATION.FIREWALL): it is the format the
         // main thread restores from, so exact post-run values (CodeBlock,

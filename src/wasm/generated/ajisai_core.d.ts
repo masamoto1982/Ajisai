@@ -17,11 +17,6 @@ export class AjisaiInterpreter {
      */
     clear_stack(): void;
     collect_core_words_info(): any;
-    /**
-     * Runtime counters for the Playground. Counts are session-cumulative and
-     * reset with the interpreter. Observational only.
-     */
-    collect_runtime_metrics(): any;
     collect_stack(): any;
     collect_user_words_info(): any;
     /**
@@ -152,7 +147,6 @@ export interface InitOutput {
     readonly agent_predict_outcomes: (a: number, b: number) => [number, number];
     readonly ajisaiinterpreter_clear_stack: (a: number) => void;
     readonly ajisaiinterpreter_collect_core_words_info: (a: number) => any;
-    readonly ajisaiinterpreter_collect_runtime_metrics: (a: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_word_identities: (a: number) => any;

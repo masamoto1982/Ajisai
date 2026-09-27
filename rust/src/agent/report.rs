@@ -19,7 +19,7 @@ use serde_json::{json, Map, Value as Json};
 /// Version of the top-level `--json` envelope. Bump only on a breaking
 /// change (field removal or rename); purely additive fields keep the same
 /// version. See `docs/dev/agent-cli-output-contract.md`.
-pub(crate) const SCHEMA_VERSION: u64 = 1;
+pub(crate) const SCHEMA_VERSION: u64 = 2;
 
 pub(crate) struct Report {
     pub status: &'static str,
@@ -80,7 +80,7 @@ impl Report {
                 .map(error_flow_event_json)
                 .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
-            "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics, &self.resource_usage),
+            "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "resourceUsage": resource_usage_json(&self.resource_usage),
             "contractDecls": self.contract_decls,
             "stackElided": self.stack_elided,
@@ -200,7 +200,7 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
     Json::Object(obj)
 }
 
-pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics, usage: &ResourceUsage) -> Json {
+pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
     // Diagnostics only: these counters describe *how* the runtime went about
     // its work — which cache answered, which fast path fired. Reading them
     // changes no result, and no Word reads them.
@@ -213,12 +213,6 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics, usage: &ResourceUsa
         "resolveCacheMissCount": metrics.resolve_cache_miss_count,
         "resolveCacheInvalidationCount": metrics.resolve_cache_invalidation_count,
         "tailCallJumpCount": metrics.tail_call_jump_count,
-        // Kept here, and equal to `resourceUsage.executionSteps`, because
-        // removing a field is what a schema version is for. It belongs in
-        // `resourceUsage`: an optimizer counter and a budget an agent plans
-        // against are different kinds of fact, and mixing them is how this one
-        // went unnoticed while reporting zero for every program ever run.
-        "executionSteps": usage.execution_steps,
     })
 }
 

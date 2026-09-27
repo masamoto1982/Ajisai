@@ -6,7 +6,7 @@
 //! (`ReplSession`) is a pure function of `(session, line) -> ReplResponse` with
 //! no I/O, so it is testable without a terminal; the terminal driver
 //! (`run_repl`) is a thin shell over it. Prompts and banners go to stderr, so
-//! stdout carries only results and stays pipe-safe (mirroring `run --json`).
+//! stdout carries only results and stays pipe-safe (mirroring `agent compute`).
 //!
 //! Lines beginning with `:` are REPL *meta-commands* (`:quit`, `:reset`,
 //! `:help`), handled by the host and kept strictly separate from Ajisai
@@ -271,6 +271,7 @@ mod tests {
             json: true,
             contract: false,
             step_limit: None,
+            limits: crate::agent::LimitProfile::Agent,
         };
         run_repl(input, &mut out, &mut err, &opts).unwrap();
         let stdout = String::from_utf8(out).unwrap();
