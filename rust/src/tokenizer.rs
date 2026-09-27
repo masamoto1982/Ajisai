@@ -132,6 +132,15 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // character needs special treatment — `1/2` is a number because the
         // whole token parses as one, and `/` is a name for the same reason.
         if let Some(token) = parse_number_from_string(&token_str) {
+            // `n/0` has the shape of a number and denotes none. Refused here,
+            // with the other source errors, so a program that holds one is
+            // refused before it runs rather than halfway through it.
+            if has_zero_denominator(&token_str) {
+                return Err(format!(
+                    "zero denominator: '{}' is not a valid fraction literal (the denominator must be non-zero)",
+                    token_str
+                ));
+            }
             tokens.push(token);
             spans.push(span_at(start));
             continue;
@@ -141,10 +150,12 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         spans.push(span_at(start));
     }
 
-    check_bracket_matching(input)?;
-    // Keep source entry and token-native entry points on one structural
-    // validator. The source-oriented bracket check above is retained for its
-    // precise diagnostics; this call is the shared semantic acceptance gate.
+    // The one structural gate, over the real tokens, shared with the entry
+    // point that reads a stored Vector as code. A second pass over the raw
+    // text used to run first for a nicer message, but it tracked `#` and `'`
+    // by character rather than by word position, so `[ C# ]` — a name glued
+    // to `#` — read to it as a comment swallowing the `]`, and it reported an
+    // imbalance the program did not have.
     validate_code_tokens(&tokens)?;
     debug_assert_eq!(
         tokens.len(),
@@ -176,13 +187,13 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
             Token::VectorEnd => {
                 depth = depth
                     .checked_sub(1)
-                    .ok_or_else(|| "mismatched code delimiter".to_string())?;
+                    .ok_or_else(|| "Unexpected ']' without matching '['".to_string())?;
             }
             _ => {}
         }
     }
     if depth != 0 {
-        return Err("unclosed code delimiter".into());
+        return Err("Unclosed '[': expected ']'".into());
     }
     Ok(())
 }
@@ -199,71 +210,6 @@ pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
 /// their canonical code-data representation uses their dedicated token tag.
 pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
-}
-
-/// The text-level precheck the grammar documents as deliberately partial: it
-/// may miss an imbalance, never invent one, because [`validate_code_tokens`]
-/// runs afterwards on the real tokens and has the final say. It is kept for
-/// its message, which names the pair and the character.
-fn check_bracket_matching(input: &str) -> Result<(), String> {
-    let mut depth: usize = 0;
-    let mut in_string = false;
-    let mut in_comment = false;
-    let chars: Vec<char> = input.chars().collect();
-    let mut i: usize = 0;
-
-    while i < chars.len() {
-        let c: char = chars[i];
-
-        if c == '\n' {
-            in_comment = false;
-            i += 1;
-            continue;
-        }
-
-        if in_comment {
-            i += 1;
-            continue;
-        }
-
-        if c == '#' {
-            in_comment = true;
-            i += 1;
-            continue;
-        }
-
-        if c == '\'' {
-            if in_string {
-                if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
-                    in_string = false;
-                }
-            } else {
-                in_string = true;
-            }
-            i += 1;
-            continue;
-        }
-
-        if in_string {
-            i += 1;
-            continue;
-        }
-
-        match c {
-            '[' => depth += 1,
-            ']' => match depth.checked_sub(1) {
-                Some(d) => depth = d,
-                None => return Err("Unexpected ']' without matching '['".to_string()),
-            },
-            _ => {}
-        }
-        i += 1;
-    }
-
-    if depth > 0 {
-        return Err("Unclosed '[': expected ']'".to_string());
-    }
-    Ok(())
 }
 
 enum QuoteParseResult {
@@ -324,6 +270,40 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
 /// like every other token boundary.
 fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace()
+}
+
+/// Whether a numeric lexeme is a rational whose denominator is zero.
+fn has_zero_denominator(lexeme: &str) -> bool {
+    lexeme
+        .split_once('/')
+        .is_some_and(|(_, den)| den.chars().all(|c| c == '0'))
+}
+
+/// How many digits the number a numeric lexeme denotes can take to write out:
+/// the digits written, plus the exponent's magnitude, since `1e5000` builds a
+/// 5001-digit integer from five characters. This, not the written length, is
+/// what the numeric-literal ceiling bounds (LANG.MACHINE.LIMITS), at every
+/// entry point that reads the numeric grammar — source, `NUM`, `JSON-DECODE`
+/// — because it is what decides how large an integer the parse builds.
+/// Saturates rather than overflowing for an exponent no machine could build;
+/// a zero mantissa counts only its written digits, since zero is built at no
+/// scale.
+pub(crate) fn denoted_digit_count(lexeme: &str) -> u64 {
+    let (mantissa, exponent) = match lexeme.find(['e', 'E']) {
+        Some(at) => (&lexeme[..at], Some(&lexeme[at + 1..])),
+        None => (lexeme, None),
+    };
+    let written = mantissa.chars().filter(|c| c.is_ascii_digit()).count() as u64;
+    // Zero is zero at any scale, and the parse builds nothing for it.
+    if mantissa.chars().all(|c| !c.is_ascii_digit() || c == '0') {
+        return written;
+    }
+    let scale = exponent.map_or(0, |e| {
+        e.trim_start_matches(['+', '-'])
+            .parse::<u64>()
+            .unwrap_or(u64::MAX)
+    });
+    written.saturating_add(scale)
 }
 
 fn parse_number_from_string(s: &str) -> Option<Token> {

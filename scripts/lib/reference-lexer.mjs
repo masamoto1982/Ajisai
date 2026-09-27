@@ -67,6 +67,10 @@ export function makeLexer(grammar) {
     grammar.characterClasses.lineTerminator,
   );
   const numericPattern = new RegExp(grammar.numericGrammar.pattern, 'u');
+  const namedPatterns = new Map([
+    ['numeric', numericPattern],
+    ['zeroDenominator', new RegExp(grammar.numericGrammar.zeroDenominator.pattern, 'u')],
+  ]);
 
   const scanPhase = grammar.phases.find((p) => p.id === 'scan');
   const positionRules = scanPhase.positionRules;
@@ -141,12 +145,13 @@ export function makeLexer(grammar) {
           hit = rule.match.containsAny.some((c) => lexeme.includes(c));
           break;
         case 'pattern': {
-          if (rule.match.pattern !== 'numeric') {
+          const pattern = namedPatterns.get(rule.match.pattern);
+          if (!pattern) {
             throw new Error(
               `[reference-lexer] grammar references unknown named pattern "${rule.match.pattern}"`,
             );
           }
-          hit = numericPattern.test(lexeme);
+          hit = pattern.test(lexeme);
           break;
         }
         case 'otherwise':
@@ -167,71 +172,20 @@ export function makeLexer(grammar) {
   };
 
   const pairs = grammar.delimiterPairs ?? [];
-  const openerOf = new Map(pairs.map((pair) => [pair.open, pair]));
-  const closerOf = new Map(pairs.map((pair) => [pair.close, pair]));
   const openTokenOf = new Map(pairs.map((pair) => [pair.openToken, pair]));
   const closeTokenOf = new Map(pairs.map((pair) => [pair.closeToken, pair]));
-
-  // The second pass the grammar documents as deliberately partial: it may miss
-  // an imbalance, never invent one, because structural validation below has the
-  // final say. Reproduced here rather than skipped, because it is what decides
-  // WHICH condition a given unbalanced program reports.
-  const bracketPrecheck = (chars) => {
-    const stack = [];
-    let inString = false;
-    let inComment = false;
-    for (let i = 0; i < chars.length; i += 1) {
-      const c = chars[i];
-      if (isLineTerminator(c)) {
-        inComment = false;
-        continue;
-      }
-      if (inComment) continue;
-      if (c === '#') {
-        inComment = true;
-        continue;
-      }
-      if (c === grammar.stringLiteral.open) {
-        if (inString) {
-          if (i + 1 >= chars.length || isWhitespace(chars[i + 1])) {
-            inString = false;
-          }
-        } else {
-          inString = true;
-        }
-        continue;
-      }
-      if (inString) continue;
-      const opener = openerOf.get(c);
-      if (opener) {
-        stack.push(opener);
-        continue;
-      }
-      const closer = closerOf.get(c);
-      if (closer) {
-        const open = stack.pop();
-        if (open === undefined) return closer.precheck.unexpectedClose;
-        // A crossed pair is structural validation's verdict, not this pass's:
-        // the stack has lost an opener, so every later reading of it would be
-        // a guess. Stopping is how the pass stays incapable of inventing.
-        if (open !== closer) return null;
-      }
-    }
-    const unclosed = stack[stack.length - 1];
-    return unclosed ? unclosed.precheck.unclosed : null;
-  };
 
   const structuralValidation = (tokens) => {
     const delimiters = [];
     for (const token of tokens) {
       if (openTokenOf.has(token.id)) delimiters.push(openTokenOf.get(token.id));
       else if (closeTokenOf.has(token.id)) {
-        if (delimiters.pop() !== closeTokenOf.get(token.id)) {
-          return 'mismatchedCodeDelimiter';
-        }
+        const pair = closeTokenOf.get(token.id);
+        if (delimiters.pop() !== pair) return pair.conditions.unexpectedClose;
       }
     }
-    return delimiters.length > 0 ? 'unclosedCodeDelimiter' : null;
+    const unclosed = delimiters[delimiters.length - 1];
+    return unclosed ? unclosed.conditions.unclosed : null;
   };
 
   return function lex(input) {
@@ -285,9 +239,6 @@ export function makeLexer(grammar) {
       if (classified.condition) return { condition: classified.condition };
       tokens.push(classified.token);
     }
-
-    const bracket = bracketPrecheck(chars);
-    if (bracket) return { condition: bracket };
 
     const structural = structuralValidation(tokens);
     if (structural) return { condition: structural };

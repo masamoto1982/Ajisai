@@ -361,18 +361,17 @@ impl Interpreter {
     }
 
     /// Enforce the numeric-literal digit ceiling on every `Token::Number`
-    /// produced from source, before any of them is parsed into a value. Digit
-    /// characters are counted directly (sign, radix point, and `/` excluded),
-    /// so the bound tracks the magnitude of the BigInt that would be built.
+    /// produced from source, before any of them is parsed into a value. The
+    /// count is of the digits the literal denotes — written digits plus the
+    /// exponent's magnitude (`tokenizer::denoted_digit_count`) — so the bound
+    /// tracks the magnitude of the BigInt that would be built: `1e99999999`
+    /// is nine characters and used to spend minutes building its integer.
     pub(crate) fn check_source_numeric_literals(&self, tokens: &[Token]) -> Result<()> {
         for token in tokens {
             if let Token::Number(literal) = token {
-                let digits = literal
-                    .lexeme()
-                    .chars()
-                    .filter(|c| c.is_ascii_digit())
-                    .count();
-                self.runtime_limits.check_numeric_literal_digits(digits)?;
+                let digits = crate::tokenizer::denoted_digit_count(literal.lexeme());
+                self.runtime_limits
+                    .check_numeric_literal_digits(usize::try_from(digits).unwrap_or(usize::MAX))?;
             }
         }
         Ok(())

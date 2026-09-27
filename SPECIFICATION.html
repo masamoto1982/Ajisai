@@ -279,7 +279,7 @@ Kernel and Standard are both ordinary Core Words in one flat dictionary, reached
 <h3 id="lang-source-text">LANG.SOURCE.TEXT — Source domain</h3>
 
 <p>
-A program is Unicode text tokenized by the sealed Ajisai lexical grammar. Tokens distinguish literals, canonical Words, aliases, code blocks, vectors, definitions, and deletion.
+A program is Unicode text tokenized by the sealed Ajisai lexical grammar (<code>spec/grammar.json</code>). There are five kinds of token: a number, a string, a name, and the two delimiters <code>[</code> and <code>]</code>. Everything else — which Word a name is, whether a Vector is code, what a definition is — is decided after tokenizing, not by it.
 </p>
 
 <p>
@@ -287,7 +287,7 @@ A decimal literal carries at least one digit on both sides of the point: <code>0
 </p>
 
 <p>
-This numeric grammar is the single definition of what text denotes a number. A conversion from Text to a Scalar accepts exactly the lexemes a source literal accepts and projects everything else to NIL, so the language has one numeric grammar rather than one per entry point.
+This numeric grammar is the single definition of what text denotes a number. A conversion from Text to a Scalar accepts exactly the lexemes a source literal accepts and projects everything else to NIL, so the language has one numeric grammar rather than one per entry point. A rational whose denominator is zero, <code>1/0</code>, has the shape of a number and denotes none: in source it is a source error, and as text it projects to NIL like any other text that is not a number. How large a number a lexeme may denote is bounded by the numeric-literal ceiling (LANG.MACHINE.LIMITS), counted in the digits it denotes rather than the characters it takes — <code>1e5000</code> denotes a 5001-digit integer — at every entry point that reads this grammar.
 </p>
 
 <p>
@@ -295,7 +295,7 @@ Whitespace is the <em>sole</em> token delimiter and is otherwise insignificant; 
 </p>
 
 <p>
-Malformed delimiters, malformed literals, invalid names, and invalid definition forms are source errors. They do not denote NIL.
+An unclosed string, a delimiter glued to anything, a zero denominator and an unbalanced delimiter are the source errors, and there are no others: every lexeme the other rules decline is a name, so no name is invalid as text. A source error refuses the whole program before any of it runs. It does not denote NIL.
 </p>
 
 <h3 id="lang-source-normalize">LANG.SOURCE.NORMALIZE — Name normalization</h3>
@@ -332,7 +332,7 @@ Producing, storing, displaying, and evaluating a Vector as code are distinct ope
 <p>A block has no stack discipline of its own: the Word that evaluates it decides what the block reaches and what it may leave, and the block's text does not say which rule applies. The difference is whether a <code>+</code> written inside it finds two operands or none. Two rules cover every case.</p>
 
 <div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Rule</th><th>Applies to</th><th>Frame holds</th><th>On leaving</th></tr></thead><tbody><tr><td>Whole-stack</td><td>A user Word's body (<code>DEF</code>) and <code>EXEC</code></td><td>The whole stack</td><td>Leaves whatever it pushes, however many values</td></tr><tr><td>Isolated frame</td><td><code>MAP</code> <code>FILTER</code> — the current element · <code>FOLD</code> <code>SCAN</code> — the accumulator and the current element</td><td>A fixed number of values (one, except <code>FOLD</code>'s two)</td><td>Must leave exactly one; leaving none is ERROR, and anything below the top goes with the frame</td></tr></tbody></table></div>
-<p>A block written inside another block is data where it is written, evaluated only when the Word receiving it runs it, under that Word's rule and not the enclosing block's. This holds regardless of what name the block writes: a name naming the word being defined, reached only through such a nested block, is still a reference to that word for LANG.DICTIONARY.MUTATION's acyclicity rule to see, even though nothing here evaluates it.</p>
+<p>A block written inside another block is data where it is written, evaluated only when the Word receiving it runs it, under that Word's rule and not the enclosing block's. This holds regardless of what name the block writes: a name naming the word being defined, reached only through such a nested block, is still a reference to that word for LANG.DICTIONARY.ACYCLIC to see, even though nothing here evaluates it.</p>
 <p>A frame also holds <strong>local bindings</strong>. <code>BIND</code> consumes a value and a name and makes the name that value for the rest of the frame, however many times it is written; several names destructure a Vector of the same length. The isolation above is of the stack, not of names, so the blocks a Word evaluates read the frame they were written in — and a Word call does not: a body reads its own bindings and its operands and nothing of its caller's, so what a Word means never depends on where it is called. A binding ends with its frame, and a name is a Word or a binding and never both.</p>
 
 <h2 id="lang-values">3. Value Domains</h2>
@@ -430,9 +430,9 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A host bounds a run along several axes, and what distinguishes them is not which resource they meter but which of the three outcomes (LANG.FAILURE.TRICHOTOMY) exhausting one produces:</p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Ceiling</th><th>Bounds</th><th>On exhaustion</th></tr></thead><tbody><tr><td>Execution-step limit</td><td>Total work across the run</td><td>ERROR, category <code>executionLimitExceeded</code></td></tr><tr><td>Materialization ceiling</td><td>Size of one generated collection</td><td>NIL, reason <code>spaceExhausted</code>, for an otherwise well-formed request</td></tr><tr><td>Value and work ceilings</td><td>One value or input (source bytes, digits in a numeric literal, integer width, algebraic term count, nesting depth), or the numeric and collection work the run has accumulated</td><td>ERROR, category <code>resourceLimitExceeded</code></td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Ceiling</th><th>Bounds</th><th>On exhaustion</th></tr></thead><tbody><tr><td>Execution-step limit</td><td>Total work across the run</td><td>ERROR, category <code>executionLimitExceeded</code></td></tr><tr><td>Materialization ceiling</td><td>Size of one generated collection</td><td>NIL, reason <code>spaceExhausted</code>, for an otherwise well-formed request</td></tr><tr><td>Value and work ceilings</td><td>One value or input (source bytes, the digits a numeric literal denotes, integer width, algebraic term count, nesting depth), or the numeric and collection work the run has accumulated</td><td>ERROR, category <code>resourceLimitExceeded</code></td></tr></tbody></table></div>
 
-<p>The middle row differs in kind: a collection too large to build is a well-formed request the host declines, so it projects (LANG.FAILURE.PROJECT), while the other rows are the host refusing to continue at all. Nesting depth sits in both, by the same rule: a generative Word asked for a result nested past the ceiling declines it (LANG.COLLECTIONS.BUDGET), while a value that reaches the ceiling any other way — a literal written that deep, or Words wrapping values that already exist — is refused, because no request was made that the host could decline. That split and each row's category are normative; how many ceilings a host divides the last row into, and every numeric value, is implementation freedom. These are safety controls, not semantic constraints — termination already follows from LANG.DICTIONARY.ACYCLIC, so they bound cost rather than decide it.</p>
+<p>The middle row differs in kind: a collection too large to build is a well-formed request the host declines, so it projects (LANG.FAILURE.PROJECT), while the other rows are the host refusing to continue at all. Nesting depth and the digits of a number sit in both, by the same rule: a Word asked to build from data a result past the ceiling declines it — a shape of too many axes or JSON text nested too deep (LANG.COLLECTIONS.BUDGET), text spelling too large a number to <code>NUM</code> or <code>JSON-DECODE</code> — while the same size reached any other way — a literal written that deep or that long, or Words wrapping values that already exist — is refused, because no request was made that the host could decline. That split and each row's category are normative; how many ceilings a host divides the last row into, and every numeric value, is implementation freedom. These are safety controls, not semantic constraints — termination already follows from LANG.DICTIONARY.ACYCLIC, so they bound cost rather than decide it.</p>
 
 <h2 id="lang-stack">5. Stack and Consumption</h2>
 

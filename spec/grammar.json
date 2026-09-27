@@ -1,11 +1,13 @@
 {
   "schemaVersion": 1,
   "authority": "spec/language-semantics.md",
-  "clauses": ["LANG.SOURCE.TEXT", "LANG.SOURCE.NORMALIZE"],
+  "clauses": [
+    "LANG.SOURCE.TEXT",
+    "LANG.SOURCE.NORMALIZE"
+  ],
   "description": "The lexical grammar: the total correspondence from Unicode source text to either a token sequence or one named source-error condition. This is the single definition of what text is Ajisai source, in the same sense that spec/words.json is the single definition of the vocabulary. It is executable: scripts/lib/reference-lexer.mjs interprets this file and nothing else, and a differential test holds that interpreter to the implementation named below.",
   "implementation": "rust/src/tokenizer.rs",
   "totality": "Every finite sequence of Unicode scalar values is either accepted as exactly one token sequence or rejected with exactly one condition from sourceErrors. There is no third outcome, and no input is left undescribed.",
-
   "characterClasses": {
     "whitespace": {
       "definition": "Unicode White_Space property",
@@ -25,11 +27,15 @@
       "note": "Enumerated rather than delegated to a host predicate, because host predicates disagree at the edges. U+FEFF is deliberately NOT whitespace here: it is not in Unicode White_Space, so a byte-order mark is an ordinary name character and a leading BOM glues to the first word. A host regex class that includes U+FEFF (ECMAScript \\s does) is wrong for Ajisai."
     },
     "lineTerminator": {
-      "codepoints": ["000A"],
+      "codepoints": [
+        "000A"
+      ],
       "note": "Only U+000A ends a line, and the one rule that cares is comment extent. U+000D, U+0085, U+2028 and U+2029 are whitespace and separate tokens, but they do not terminate a comment. A CRLF file therefore behaves exactly like an LF file, because the CR is absorbed as ordinary whitespace before the LF does the work."
     },
     "asciiDigit": {
-      "codepoints": ["0030-0039"],
+      "codepoints": [
+        "0030-0039"
+      ],
       "note": "ASCII only. A full-width digit such as U+FF11 is an ordinary name character, so it never enters the numeric grammar."
     },
     "nameCharacter": {
@@ -37,15 +43,28 @@
       "note": "Ajisai allocates no identifier character class, and no rejected character either. A name is whatever survives to the lexeme rules, which is why Japanese names, '.', '==', '^', '~', ';', '<=', '(', ')' and '|' are all ordinary names with no per-character rule of their own. The only characters a name cannot hold are the two delimiters of `delimiterPairs`, and they are withheld by a whole-lexeme rule rather than a per-character one: a lexeme either is exactly one delimiter or holds none. A character is taken only for something the word rule cannot do, and the one pair is all that needs it; '{', '}', '(' and ')' are ordinary name characters."
     }
   },
-
   "tokens": [
-    { "id": "Number", "carries": "the accepted lexeme" },
-    { "id": "String", "carries": "the decoded contents between the delimiters" },
-    { "id": "Symbol", "carries": "the lexeme as written" },
-    { "id": "VectorStart", "carries": null },
-    { "id": "VectorEnd", "carries": null }
+    {
+      "id": "Number",
+      "carries": "the accepted lexeme"
+    },
+    {
+      "id": "String",
+      "carries": "the decoded contents between the delimiters"
+    },
+    {
+      "id": "Symbol",
+      "carries": "the lexeme as written"
+    },
+    {
+      "id": "VectorStart",
+      "carries": null
+    },
+    {
+      "id": "VectorEnd",
+      "carries": null
+    }
   ],
-
   "phases": [
     {
       "id": "scan",
@@ -53,49 +72,50 @@
       "positionRules": [
         {
           "id": "whitespace",
-          "guard": { "charClass": "whitespace" },
+          "guard": {
+            "charClass": "whitespace"
+          },
           "action": "skip",
           "note": "Consumes exactly one character and emits nothing. A line terminator is whitespace like any other here, so layout never reaches the token sequence."
         },
         {
           "id": "comment",
-          "guard": { "literal": "#" },
+          "guard": {
+            "literal": "#"
+          },
           "action": "consumeToLineTerminator",
           "surface": "#",
           "note": "Reached only at a word position, so '#' glued to a preceding lexeme is part of that name and starts nothing. Consumes up to, not including, the line terminator, which the whitespace rule then skips."
         },
         {
           "id": "string",
-          "guard": { "literal": "'" },
+          "guard": {
+            "literal": "'"
+          },
           "action": "scanStringLiteral",
           "surface": "'",
           "note": "The one sub-grammar that whitespace does not delimit. See stringLiteral below."
         },
         {
           "id": "word",
-          "guard": { "otherwise": true },
+          "guard": {
+            "otherwise": true
+          },
           "action": "scanToWhitespace",
           "note": "Consumes to the next whitespace or end of input. No character is checked for validity on the way, because none is invalid: every scalar value that is not whitespace is a name character, so the completed lexeme is always classified by lexemeRules rather than refused mid-word."
         }
       ]
     },
     {
-      "id": "bracketPrecheck",
-      "summary": "A second pass over the raw text, retained for its precise diagnostics on an unbalanced delimiter.",
-      "conditions": ["unexpectedCloseBracket", "unclosedBracket"],
-      "note": "This pass tracks strings and comments by character rather than by word position, so it sees a quote in the middle of a name as opening a string where the scan phase does not. That makes it a partial check by construction: it is allowed to miss an imbalance, never to invent one, because structuralValidation below runs afterwards on the real tokens and has the final say. Its purpose is the better message, not the verdict."
-    },
-    {
       "id": "structuralValidation",
-      "summary": "The acceptance gate, over the token sequence rather than the text, shared with the entry point that decodes a stored code value.",
+      "summary": "The one delimiter check, over the token sequence rather than the text, shared with the entry point that decodes a stored code value.",
       "conditions": [
-        "mismatchedCodeDelimiter",
-        "unclosedCodeDelimiter"
+        "unexpectedCloseBracket",
+        "unclosedBracket"
       ],
-      "note": "A ']' with no '[' open is mismatched, and a '[' never closed is unclosed. Because this runs on tokens, it is reached identically from source and from a Vector being read as code, which is what keeps the two entry points on one structural grammar."
+      "note": "A ']' with no '[' open is unexpected, and a '[' never closed is unclosed. Because this runs on tokens, it sees exactly the delimiters the scan phase produced — a '#' or a quote glued inside a name is part of that name here, as it is to the scan — and it is reached identically from source and from a Vector being read as code, which keeps the two entry points on one structural grammar. A second pass over the raw text used to run first, for its message; it tracked '#' and quotes by character rather than by word position, so it read `[ C# ] LENGTH` as a comment swallowing the ']' and reported an imbalance the program did not have. Its message is this phase's now, and the pass is gone."
     }
   ],
-
   "delimiterPairs": [
     {
       "id": "vector",
@@ -103,43 +123,65 @@
       "close": "]",
       "openToken": "VectorStart",
       "closeToken": "VectorEnd",
-      "precheck": { "unexpectedClose": "unexpectedCloseBracket", "unclosed": "unclosedBracket" }
+      "conditions": {
+        "unexpectedClose": "unexpectedCloseBracket",
+        "unclosed": "unclosedBracket"
+      }
     }
   ],
-
   "lexemeRules": [
     {
       "id": "vectorStart",
-      "match": { "literal": "[" },
+      "match": {
+        "literal": "["
+      },
       "emits": "VectorStart",
       "surface": "["
     },
     {
       "id": "vectorEnd",
-      "match": { "literal": "]" },
+      "match": {
+        "literal": "]"
+      },
       "emits": "VectorEnd",
       "surface": "]"
     },
     {
       "id": "delimiterGlued",
-      "match": { "containsAny": ["[", "]"] },
+      "match": {
+        "containsAny": [
+          "[",
+          "]"
+        ]
+      },
       "condition": "bracketMustStandAlone",
       "note": "Ordered after the two exact matches, so it catches every remaining lexeme in which a delimiter is glued to anything — '[1', '2]', ']^'. A delimiter is a word like any other and must stand alone."
     },
     {
+      "id": "zeroDenominator",
+      "match": {
+        "pattern": "zeroDenominator"
+      },
+      "condition": "zeroDenominator",
+      "note": "Ordered before the number rule. A rational whose denominator is zero has the shape of a number and denotes none, so it is neither a Number nor a name: it is refused with the other source errors, before the program runs, rather than halfway through it when the literal is reached."
+    },
+    {
       "id": "number",
-      "match": { "pattern": "numeric" },
+      "match": {
+        "pattern": "numeric"
+      },
       "emits": "Number",
       "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and '/' is the DIV name for exactly the same reason."
     },
     {
       "id": "symbol",
-      "match": { "otherwise": true },
+      "match": {
+        "otherwise": true
+      },
       "emits": "Symbol",
       "note": "The total fallback. Every lexeme the earlier rules decline is a name, which is what makes the lexeme classification total without an identifier character class."
     }
   ],
-
   "numericGrammar": {
     "pattern": "^[+-]?[0-9]+(?:/[0-9]+|(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)$",
     "ebnf": "number = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;\nsign = \"-\" | \"+\" ;\ndigits = ascii digit , { ascii digit } ;\nrational = \"/\" , digits ;\nfraction = \".\" , digits ;\nexponent = ( \"e\" | \"E\" ) , [ sign ] , digits ;",
@@ -151,7 +193,21 @@
       "This is the single definition of what text denotes a number. A conversion from Text to a Scalar accepts exactly these lexemes and projects everything else to NIL, so the language has one numeric grammar rather than one per entry point."
     ],
     "examples": {
-      "accepted": ["0", "5", "-5", "+5", "007", "1/2", "-1/2", "0.5", "5.0", "1e5", "1E5", "1e-5", "1.5e+3"],
+      "accepted": [
+        "0",
+        "5",
+        "-5",
+        "+5",
+        "007",
+        "1/2",
+        "-1/2",
+        "0.5",
+        "5.0",
+        "1e5",
+        "1E5",
+        "1e-5",
+        "1.5e+3"
+      ],
       "rejectedAsName": [
         ".5",
         "5.",
@@ -167,9 +223,12 @@
         "/",
         "１"
       ]
+    },
+    "zeroDenominator": {
+      "pattern": "^[+-]?[0-9]+/0+$",
+      "note": "The numeric lexemes that denote no rational. A conversion from Text reads the same grammar and answers these with the NIL it answers any text that is not a number."
     }
   },
-
   "stringLiteral": {
     "open": "'",
     "close": "'",
@@ -182,7 +241,6 @@
     ],
     "condition": "unclosedLiteral"
   },
-
   "sourceErrors": [
     {
       "id": "unclosedLiteral",
@@ -191,6 +249,14 @@
       "summary": "A string literal ran to end of input without a closing quote followed by whitespace.",
       "messageContains": "Unclosed literal",
       "witness": "'foo"
+    },
+    {
+      "id": "zeroDenominator",
+      "phase": "scan",
+      "errorCategory": "malformedSource",
+      "summary": "A rational literal's denominator was zero.",
+      "messageContains": "zero denominator",
+      "witness": "1/0"
     },
     {
       "id": "bracketMustStandAlone",
@@ -202,7 +268,7 @@
     },
     {
       "id": "unexpectedCloseBracket",
-      "phase": "bracketPrecheck",
+      "phase": "structuralValidation",
       "errorCategory": "malformedSource",
       "summary": "']' appeared with no '[' open.",
       "messageContains": "without matching '['",
@@ -210,31 +276,12 @@
     },
     {
       "id": "unclosedBracket",
-      "phase": "bracketPrecheck",
+      "phase": "structuralValidation",
       "errorCategory": "malformedSource",
       "summary": "'[' was never closed.",
       "messageContains": "Unclosed '['",
       "witness": "["
-    },
-    {
-      "id": "mismatchedCodeDelimiter",
-      "phase": "structuralValidation",
-      "errorCategory": "malformedSource",
-      "summary": "A VectorEnd token had no matching VectorStart.",
-      "messageContains": "mismatched code delimiter",
-      "witness": "a'b ]",
-      "witnessNote": "The quote is interior to a name, so the scan phase reads one Symbol and then a VectorEnd. The bracketPrecheck pass tracks quotes by character rather than by word position, so it believes a string opened at the quote and never sees the bracket — which is precisely the partiality the phase documents. Structural validation, running on the real tokens, is what catches it. A witness that bracketPrecheck could also catch would not reach this condition at all."
-    },
-    {
-      "id": "unclosedCodeDelimiter",
-      "phase": "structuralValidation",
-      "errorCategory": "malformedSource",
-      "summary": "A VectorStart token was never closed.",
-      "messageContains": "unclosed code delimiter",
-      "witness": "a'b [",
-      "witnessNote": "Same mechanism as mismatchedCodeDelimiter: bracketPrecheck is blinded by the interior quote, so structural validation is the phase that reports."
     }
   ],
-
   "lexicallyTransparent": []
 }

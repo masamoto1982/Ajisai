@@ -501,7 +501,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "NUM",
         family: "text",
-        summary: "Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.",
+        summary: "Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'`, `'1/0'` — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (`'1e99999999'`), projects NIL(spaceExhausted). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.",
         stack_effect: "[ text ] -> [ n ]",
         hover_summary: "NUM — parse to number",
         hover_syntax: "'42' NUM",
@@ -525,7 +525,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "JSON-DECODE",
         family: "text",
-        summary: "Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).",
+        summary: "Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).",
         stack_effect: "[ text ] -> [ value ]",
         hover_summary: "JSON-DECODE — read JSON text into values and Records",
         hover_syntax: "'{\"a\": 1, \"b\": [true, null]}' JSON-DECODE",
