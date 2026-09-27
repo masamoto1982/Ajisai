@@ -1,24 +1,8 @@
 //! Test suite for `crate::semantic::protocol`.
 
-use super::{AbsenceOrigin, Capability, Recoverability, SemanticKind, ValueOrigin, ValueShape};
+use super::{AbsenceOrigin, Recoverability};
 use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::debug_diagnosis::{CauseClass, ErrorLocusKind, ErrorPhase};
-
-#[test]
-fn semantic_axes_use_lower_camel_case_protocol_strings() {
-    assert_eq!(SemanticKind::Absence.as_protocol_str(), "absence");
-    assert_eq!(ValueShape::CodeBlock.as_protocol_str(), "codeBlock");
-    assert_eq!(Capability::ExactNumeric.as_protocol_str(), "exactNumeric");
-    assert_eq!(
-        Capability::NilPassthrough.as_protocol_str(),
-        "nilPassthrough"
-    );
-    // A live origin: `Value::origin` still produces this one.
-    assert_eq!(
-        ValueOrigin::NilPropagation.as_protocol_str(),
-        "nilPropagation"
-    );
-}
 
 #[test]
 fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
@@ -73,13 +57,11 @@ fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
 #[test]
 fn unknown_is_observed_as_a_nil() {
     // LANG.VALUES.TRUTH: UNKNOWN is NIL read in truth position, not a fourth
-    // variant, so it is observed as a NIL — no truth axis, no truth
-    // capability, and the NIL capabilities every absence has.
+    // variant, so it is observed as a NIL — no truth axis.
     use crate::types::Value;
     let u = Value::nil_with_reason_unknown(NilReason::DomainMiss);
     assert_eq!(u.truth_value(), None);
-    assert!(!u.has_capability(Capability::TruthValued));
-    assert!(u.has_capability(Capability::NilPassthrough));
+    assert!(u.is_nil());
 }
 #[test]
 fn definite_truth_values_expose_truth_value_axis() {
@@ -88,8 +70,6 @@ fn definite_truth_values_expose_truth_value_axis() {
     let f = Value::from_bool(false);
     assert_eq!(t.truth_value(), Some("true"));
     assert_eq!(f.truth_value(), Some("false"));
-    assert!(t.has_capability(Capability::TruthValued));
     // A plain number is not truth-valued.
     assert_eq!(Value::from_int(1).truth_value(), None);
-    assert!(!Value::from_int(1).has_capability(Capability::TruthValued));
 }

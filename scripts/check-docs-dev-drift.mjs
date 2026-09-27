@@ -93,22 +93,6 @@ const KNOWN_FALSE_POSITIVES = new Set([
   // from a present-tense claim by literal match alone.
   'cost-discoverability-work-order-2026-08.md::cost_label',
 
-  // semantic-spine-migration-plan.md §3.3/§3.5/§10 name these as
-  // then-still-present "residue" and "Phase 9 deletion candidates" as of the
-  // plan's writing. Confirmed absent from rust/src and rust/tests entirely
-  // when this gate was added — the document's own top-of-file verification
-  // note (added alongside this gate) records that directly rather than
-  // rewriting the historical section text line by line.
-  'semantic-spine-migration-plan.md::SemanticKind::Unknown',
-  'semantic-spine-migration-plan.md::ValueShape::Unknown',
-  'semantic-spine-migration-plan.md::ValueOrigin::ModuleWord',
-  'semantic-spine-migration-plan.md::AjisaiError::UnknownModule',
-  'semantic-spine-migration-plan.md::ErrorCategory::UnknownModule',
-  'semantic-spine-migration-plan.md::ErrorLocusKind::ModuleWord',
-  'semantic-spine-migration-plan.md::BuiltinExecutorKey::Force',
-  'semantic-spine-migration-plan.md::canonical_module',
-  'semantic-spine-migration-plan.md::module_word_call',
-
   // outcome-space-bijection-work-order-2026-09.md Phase 1 §1.4 pitfall B
   // instructs deleting `AbsenceOrigin::EmptySequence` alongside
   // `NilReason::EmptySequence`, and Phase 1 has since done exactly that
@@ -125,25 +109,15 @@ const KNOWN_FALSE_POSITIVES = new Set([
   // EmptySequence entry above: a work-order instruction, now fulfilled.
   'outcome-space-bijection-work-order-2026-09.md::AjisaiError::Custom',
 
-  // `notAvailable` was the reason NIL-REASON projected for a value that is
-  // not a NIL. It named the condition `domainMiss` already names — a
-  // well-formed operand outside the operation's domain — so the two were
-  // merged and the variant (with its origin) deleted. The migration plan
-  // records the state it was written against.
-  'semantic-spine-migration-plan.md::NilReason::NotAvailable',
-  'semantic-spine-migration-plan.md::AbsenceOrigin::NotAvailable',
-
   // `Token::NilCoalesce` was `OR-NIL`'s token. Both are retired; the last
   // rust/src comment naming them went with the stale note that described
   // `OR-NIL` as a live exception to outcome prediction.
   'outcome-space-bijection-work-order-2026-09.md::Token::NilCoalesce',
 
   // The interpretation-role plane (`Interpretation`, the word-hint override
-  // table) these memos describe as then-present has since been deleted: every
-  // observation of a value is derived from the value itself. The memos record
-  // the state they were written against; the vocabulary-100 work order asked
-  // for exactly this removal.
-  'semantic-spine-migration-plan.md::Interpretation::Text',
+  // table) this memo describes as then-present has since been deleted: every
+  // observation of a value is derived from the value itself. The memo records
+  // the state it was written against; it asked for exactly this removal.
   'vocabulary-100-work-order-2026-09.md::Interpretation::Timestamp',
   'vocabulary-100-work-order-2026-09.md::apply_word_hint_override',
 

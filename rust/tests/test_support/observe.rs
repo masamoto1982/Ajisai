@@ -50,11 +50,7 @@ pub struct AbsenceObservation {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AxisObservation {
-    pub semantic_kind: &'static str,
-    pub shape: &'static str,
-    pub capabilities: Vec<&'static str>,
     pub truth_value: Option<&'static str>,
-    pub origin: &'static str,
     pub absence: Option<AbsenceObservation>,
 }
 
@@ -73,12 +69,6 @@ pub struct ProgramObservation {
 
 /// Observe a value through the semantic axes only (firewall-clean).
 pub fn observe_axes(v: &Value) -> AxisObservation {
-    let mut capabilities: Vec<&'static str> = v
-        .capabilities()
-        .iter()
-        .map(|c| c.as_protocol_str())
-        .collect();
-    capabilities.sort_unstable();
     let absence = v.absence_metadata().map(|absence| AbsenceObservation {
         reason: absence
             .reason
@@ -97,11 +87,7 @@ pub fn observe_axes(v: &Value) -> AxisObservation {
             }),
     });
     AxisObservation {
-        semantic_kind: v.semantic_kind().as_protocol_str(),
-        shape: v.shape_kind().as_protocol_str(),
-        capabilities,
         truth_value: v.truth_value(),
-        origin: v.origin().as_protocol_str(),
         absence,
     }
 }

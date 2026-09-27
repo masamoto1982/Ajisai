@@ -1,14 +1,9 @@
-//! Scalar construction and semantic classification for [`Value`].
-//!
-//! Invariant: storage representation is translated to public semantic axes here;
-//! callers do not infer semantic kind, shape, capability, or origin themselves.
+//! Scalar construction and domain classification for [`Value`].
 
 use super::fraction::Fraction;
 use super::value_tensor::tensor_to_nested_values;
 use super::{DenseTensor, RecordData, Value, ValueData};
-use crate::semantic::{
-    AbsenceMetadata, AbsenceOrigin, Capability, SemanticKind, ValueOrigin, ValueShape,
-};
+use crate::semantic::AbsenceMetadata;
 use std::sync::Arc;
 
 impl Value {
@@ -158,117 +153,6 @@ impl Value {
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
-    }
-
-    #[inline]
-    pub fn semantic_kind(&self) -> SemanticKind {
-        match &self.data {
-            // A Boolean reports `number` on this coarse axis; its distinctness
-            // from a number lives in value identity (`TRUE 1 EQ` is false)
-            // and in the `truthValued` capability.
-            ValueData::Boolean(_) => SemanticKind::Number,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
-            // A String reports `collection` on this coarse axis, matching
-            // the frozen `v1_semantic_kind` (which has always mapped
-            // `KernelValue::String` this way). Its distinctness from a Vector
-            // lives in value identity — `'A' [ 65 ] EQ` is false — not on a
-            // protocol axis, so making String a domain costs V1 nothing.
-            ValueData::Text(_) => SemanticKind::Collection,
-            ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
-            // UNKNOWN is a NIL (LANG.VALUES.TRUTH) and reports `absence`.
-            ValueData::Nil => SemanticKind::Absence,
-            // A Symbol is a bare Word reference — the closest existing
-            // bucket on this coarse axis is `Code`, though a lone Symbol
-            // (distinct from the Vector holding it) is arguably its own
-            // thing; unresolved.
-            ValueData::Symbol(_) => SemanticKind::Code,
-            // A keyed correspondence is its own domain; on this coarse axis it
-            // reports `record`, so a consumer never mistakes it for a Vector.
-            ValueData::Record(_) => SemanticKind::Record,
-        }
-    }
-
-    #[inline]
-    pub fn shape_kind(&self) -> ValueShape {
-        match &self.data {
-            ValueData::Boolean(_) => ValueShape::Scalar,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
-            // As above: `v1_shape` maps a spine String to `vector`.
-            ValueData::Text(_) => ValueShape::Vector,
-            ValueData::Vector(_) => ValueShape::Vector,
-            ValueData::Tensor { .. } => ValueShape::Tensor,
-            ValueData::Nil => ValueShape::Absence,
-            // `ValueShape::CodeBlock` used to mean "the executable domain";
-            // every Vector is executable now, so the `Vector` arm above
-            // already covers what this used to distinguish. Kept for a lone
-            // Symbol only.
-            ValueData::Symbol(_) => ValueShape::CodeBlock,
-            ValueData::Record(_) => ValueShape::Record,
-        }
-    }
-
-    pub fn capabilities(&self) -> Vec<Capability> {
-        let mut capabilities = vec![
-            Capability::StackItem,
-            Capability::Serializable,
-            Capability::Displayable,
-        ];
-        match &self.data {
-            ValueData::Scalar(_) => {
-                capabilities.push(Capability::Numeric);
-                capabilities.push(Capability::ExactNumeric);
-                capabilities.push(Capability::UserEditable);
-            }
-            ValueData::ExactScalar(_) => {
-                capabilities.push(Capability::Numeric);
-                capabilities.push(Capability::ExactNumeric);
-            }
-            ValueData::Vector(_) | ValueData::Tensor { .. } => {
-                capabilities.push(Capability::Iterable);
-                capabilities.push(Capability::Indexable);
-                capabilities.push(Capability::UserEditable);
-                // Every Vector is potentially executable now (EXEC no longer
-                // rejects it) — Callable used to be exclusive to CodeBlock.
-                capabilities.push(Capability::Callable);
-            }
-            // A String keeps the legacy V1 capability set for a string, which
-            // `v1_capabilities` still reconstructs from `KernelValue::String`.
-            ValueData::Text(_) => {
-                capabilities.push(Capability::Iterable);
-                capabilities.push(Capability::Indexable);
-                capabilities.push(Capability::UserEditable);
-            }
-            // Every NIL advertises `nilPassthrough`, UNKNOWN included:
-            // `TRUE NIL AND 1 ADD` answers NIL.
-            ValueData::Nil => {
-                capabilities.push(Capability::NilPassthrough);
-                capabilities.push(Capability::Diagnosable);
-                capabilities.push(Capability::AiExplainable);
-            }
-            // A lone Symbol has no extra capability of its own — it is data
-            // (a Word reference) until the Vector holding it is EXEC'd, at
-            // which point the Vector's Callable capability is what applies.
-            ValueData::Symbol(_) => {}
-            // A Boolean is the one truth-valued domain (LANG.VALUES.TRUTH).
-            ValueData::Boolean(_) => capabilities.push(Capability::TruthValued),
-            // A Record is neither iterable nor indexable by position: its
-            // contents are reached by key (`GET`) or through `KEYS`/`VALUES`.
-            ValueData::Record(_) => {}
-        }
-        capabilities
-    }
-
-    pub fn has_capability(&self, capability: Capability) -> bool {
-        self.capabilities().contains(&capability)
-    }
-
-    pub fn origin(&self) -> ValueOrigin {
-        match self.absence_metadata().map(|metadata| &metadata.origin) {
-            Some(AbsenceOrigin::Literal) => ValueOrigin::Literal,
-            Some(AbsenceOrigin::NilPropagation) => ValueOrigin::NilPropagation,
-            Some(AbsenceOrigin::HostEnvironment) => ValueOrigin::HostEnvironment,
-            _ => ValueOrigin::Unknown,
-        }
     }
 
     /// The value's domain, spelled as LANG.VALUES.DISJOINT spells it. Every

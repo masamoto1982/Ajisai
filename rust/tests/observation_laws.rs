@@ -17,7 +17,6 @@
 
 mod test_support;
 
-use ajisai_core::semantic::Capability;
 use proptest::prelude::*;
 use test_support::generators::*;
 use test_support::observe::{observe_axes, render, run, run_one};
@@ -25,16 +24,14 @@ use test_support::observe::{observe_axes, render, run, run_one};
 // ─────────────────────────── concrete-witness laws ───────────────────────────
 
 /// Finding B at the observation layer: a truth value is observably **not** a
-/// number. `TRUE` carries the `truthValue` axis and the `truthValued`
-/// capability; the scalar `1` carries neither, and they render differently.
+/// number. `TRUE` carries the `truthValue` axis; the scalar `1` does not, and
+/// they render differently.
 #[test]
 fn truth_value_is_observably_not_a_number() {
     let t = observe_axes(&run_one("TRUE"));
     let one = observe_axes(&run_one("1"));
     assert_eq!(t.truth_value, Some("true"));
     assert_eq!(one.truth_value, None);
-    assert!(t.capabilities.contains(&"truthValued"));
-    assert!(!one.capabilities.contains(&"truthValued"));
     assert_ne!(render(&run_one("TRUE")), render(&run_one("1")));
 }
 /// Every observed protocol string is canonical lower-camelCase (LANG.OBSERVATION.FIREWALL):
@@ -57,11 +54,8 @@ fn protocol_strings_are_lower_camel_case() {
     ] {
         for v in run(src) {
             let o = observe_axes(&v);
-            assert!(ok(o.semantic_kind), "semanticKind {:?}", o.semantic_kind);
-            assert!(ok(o.shape), "shape {:?}", o.shape);
-            assert!(ok(o.origin), "origin {:?}", o.origin);
-            for c in &o.capabilities {
-                assert!(ok(c), "capability {c:?}");
+            if let Some(absence) = &o.absence {
+                assert!(ok(absence.origin), "origin {:?}", absence.origin);
             }
             if let Some(tv) = o.truth_value {
                 assert!(ok(tv), "truthValue {tv:?}");
@@ -93,26 +87,5 @@ proptest! {
         let v = run_one(&src);
         let is_boolean = matches!(v.data, ajisai_core::types::ValueData::Boolean(_));
         prop_assert_eq!(v.truth_value().is_some(), is_boolean);
-    }
-
-    /// **Axis coherence** on runtime-produced values (LANG.OBSERVATION.FIREWALL: a truth-valued
-    /// value "also carries the `truthValued` capability"): the `truthValue` axis
-    /// is present iff the `truthValued` capability is present.
-    #[test]
-    fn truth_axis_and_capability_cohere(src in any_value_src()) {
-        let v = run_one(&src);
-        let has_axis = v.truth_value().is_some();
-        let has_cap = v.has_capability(Capability::TruthValued);
-        prop_assert_eq!(has_axis, has_cap);
-    }
-
-    /// Every value advertises the universal stack capabilities (LANG.OBSERVATION.FIREWALL baseline):
-    /// it is a `stackItem`, `serializable`, and `displayable`.
-    #[test]
-    fn every_value_is_a_displayable_stack_item(src in any_value_src()) {
-        let o = observe_axes(&run_one(&src));
-        for cap in ["stackItem", "serializable", "displayable"] {
-            prop_assert!(o.capabilities.contains(&cap), "missing {cap}");
-        }
     }
 }
