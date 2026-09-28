@@ -63,22 +63,25 @@
 
     /* Ink for inputs on the light symbol surface. */
     --input-text:        var(--color-text);
-    /* The placeholder is the editor's only built-in help, so it is held to
-       body-text contrast (4.5:1 on the symbol surface), not left faint. */
-    --input-placeholder: oklch(55% 0.07 55);
+    /* Placeholder text in the editor and the Dictionary search box: faint on
+       purpose — present enough to read when looked at, never competing with
+       what is typed. A deliberate exception to 4.5:1, recorded with its floor
+       in scripts/check-contrast.mjs. */
+    --input-placeholder: oklch(80% 0.07 55);
 
     /* --- Word-category semantics (CVD-safe) ------------------------------ */
-    /* Chip text on white: every one at least 4.5:1 (scripts/check-contrast.mjs).
-       Core and dependency sit apart in lightness as well as hue, so the two
-       warm colours stay distinct without relying on hue alone. */
+    /* Chip text on white (scripts/check-contrast.mjs). Dependency is a light
+       amber, well above Core's orange-red in lightness, which is what tells
+       the two warm colours apart at a glance; it is a recorded exception to
+       4.5:1 rather than darkened toward Core. */
     --color-core:           oklch(57% 0.197 40.3);      /* orange  */
-    --color-dependency:     oklch(48% 0.13 71.0);       /* ochre   */
+    --color-dependency:     oklch(73.4% 0.158 71.0);    /* amber   */
     --color-non-dependency: oklch(52.5% 0.135 161.2);   /* green   */
     --color-stack:          oklch(47.9% 0.220 328.4);   /* magenta */
 
     /* --- Vector bracket depth colours (after Tol's muted palette) ------- */
-    /* Brackets are text, and the top of the stack sits on the consume fill,
-       so each depth reads at 4.5:1 on white and on --color-consume-eat.
+    /* Brackets are text, and the top of the stack sits on its fill, so each
+       depth reads at 4.5:1 on white and on --color-stack-top.
        Darkening the light members of Tol's palette brought them to one
        lightness, so neighbouring depths are told apart by hue: 6 moved from
        Tol's sand to ochre, away from 5's olive. */
@@ -99,14 +102,14 @@
     --color-output-error:   oklch(57.5% 0.202 21.2);   /* red */
     --color-output-info:    oklch(51% 0 0);
 
-    /* --- Stack operand-highlight background ------------------------------ */
+    /* --- Stack top background -------------------------------------------- */
     /* A Word consumes its operands (LANG.STACK.CONSUMPTION): the top item is
        filled with a very pale warm red. A fill rather than a text colour leaves
-       the bracket depth-colours that show Vector nesting intact. */
-    --color-consume-eat: oklch(94% 0.035 25);
-    /* The fill alone is 1.2:1 against white — a mark only colour can see. An
-       edge at 3:1 (WCAG 1.4.11) makes the top of the stack visible as a shape. */
-    --color-consume-edge: oklch(62% 0.13 25);
+       the bracket depth-colours that show Vector nesting intact. The top is
+       also the last item in reading order and set in bold, so the fill is not
+       the only thing that marks it. (Once named `--color-consume-eat`, after a
+       consume/keep mode pair the language no longer has.) */
+    --color-stack-top: oklch(94% 0.035 25);
 
     /* --- Effects ---------------------------------------------------------- */
     --shadow-popover: 0 2px 6px oklch(0% 0 0 / 0.15);
