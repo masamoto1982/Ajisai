@@ -88,22 +88,21 @@ interface ExportDocument {
     readonly words: ExportWord[];
 }
 
-// Keyed by bare name, matching `collect_word_identities`, which reports the
-// User-tier key itself rather than a `DICT@NAME` composite.
+// Keyed by name, as `collect_word_identities` reports it.
 const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, string> => {
     const map = new Map<string, string>();
-    for (const [fqName, id] of interpreter.collect_word_identities()) {
-        map.set(buildWordKey(fqName), id);
+    for (const [name, id] of interpreter.collect_word_identities()) {
+        map.set(buildWordKey(name), id);
     }
     return map;
 };
 
-// Every User Word, unconditionally: the dictionary has two tiers and User is
-// the only exportable one, so there is nothing to filter by.
+// Every User Word, unconditionally: User is the only exportable tier, so there
+// is nothing to filter by.
 export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument => {
     const identities = collectWordIdentityMap(interpreter);
     const words: ExportWord[] = interpreter.collect_user_words_info()
-        .map(([, name]) => {
+        .map(([name]) => {
             const id = identities.get(buildWordKey(name));
             return {
                 name,
@@ -147,7 +146,7 @@ export const namesThatDidNotRestore = (
     requested: readonly UserWord[]
 ): string[] => {
     const present = new Set(
-        interpreter.collect_user_words_info().map(([, name]) => buildWordKey(name))
+        interpreter.collect_user_words_info().map(([name]) => buildWordKey(name))
     );
     return requested
         .filter(word => word.definition && !present.has(buildWordKey(word.name)))
@@ -408,19 +407,19 @@ export const createPersistence = (
                 let deduplicated = 0;
                 const idMismatches: string[] = [];
                 for (const word of importedWords) {
-                    const fqName = buildWordKey(word.name);
+                    const key = buildWordKey(word.name);
                     // A word the interpreter could not take is neither added nor
                     // deduplicated; counting it as imported would report an
                     // arrival that did not happen.
-                    if (notImportedKeys.has(fqName)) continue;
-                    if (before.has(fqName) && before.get(fqName) === after.get(fqName)) {
+                    if (notImportedKeys.has(key)) continue;
+                    if (before.has(key) && before.get(key) === after.get(key)) {
                         deduplicated++;
                     } else {
                         added++;
                     }
                     if (embeddedIds) {
                         const expected = embeddedIds.get(word.name.toUpperCase());
-                        const actual = after.get(fqName);
+                        const actual = after.get(key);
                         if (expected && actual && expected !== actual) {
                             idMismatches.push(word.name);
                         }

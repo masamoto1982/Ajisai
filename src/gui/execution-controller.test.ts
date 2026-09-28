@@ -69,7 +69,7 @@ const createFakeInterpreter = () => {
     const fake: Partial<AjisaiInterpreter> = {
         collect_stack: () => stack,
         collect_user_words_info: () =>
-            [...words.keys()].map(name => ['USER', name, false] as [string, string, boolean]),
+            [...words.keys()].map(name => [name, false] as [string, boolean]),
         lookup_word_definition: (name: string) => words.get(name) ?? null,
         lookup_word_description: () => null,
         snapshot_stack: () => JSON.stringify(stack),

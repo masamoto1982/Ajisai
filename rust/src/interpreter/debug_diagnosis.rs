@@ -29,7 +29,6 @@ pub enum ErrorLocusKind {
 pub struct ErrorLocus {
     pub kind: ErrorLocusKind,
     pub word: Option<String>,
-    pub dictionary: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -238,24 +237,22 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
     }
 }
 
+/// The locus as far as the compiled-in registry can tell: a Core Word, or not
+/// known yet. A User Word is only knowable where the live dictionary is — see
+/// `DebugDiagnosis::with_user_vocabulary`, which completes it there. This used
+/// to recognise a User Word by a `DICT@NAME` prefix, which no name has carried
+/// since the dictionary became two tiers; every failing User Word reported
+/// `kind: unknown`.
 pub(super) fn classify_locus(word: Option<&str>) -> ErrorLocus {
-    let (kind, dictionary) = match word {
-        None => (ErrorLocusKind::Unknown, None),
-        Some(name) => {
-            if let Some(idx) = name.find('@') {
-                let (dictionary, _) = name.split_at(idx);
-                (ErrorLocusKind::UserWord, Some(dictionary.to_string()))
-            } else if crate::coreword_registry::get_coreword_metadata(name).is_some() {
-                (ErrorLocusKind::CoreWord, None)
-            } else {
-                (ErrorLocusKind::Unknown, None)
-            }
+    let kind = match word {
+        Some(name) if crate::coreword_registry::get_coreword_metadata(name).is_some() => {
+            ErrorLocusKind::CoreWord
         }
+        _ => ErrorLocusKind::Unknown,
     };
     ErrorLocus {
         kind,
         word: word.map(|s| s.to_string()),
-        dictionary,
     }
 }
 

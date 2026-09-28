@@ -95,8 +95,7 @@
 }
 
 .area-selector select,
-.dictionary-sheet-select,
-.sheet-selector-native-trigger {
+.dictionary-toolbar select {
     /* Monospace metrics render slightly high in compact controls; asymmetric
        block padding sits the label optically centred. */
     --control-text-y-adjust: 0.0625rem;
@@ -114,18 +113,18 @@
 }
 
 .area-selector select:focus,
-.dictionary-sheet-select:is(:focus, :focus-within),
-.sheet-selector:focus-within .sheet-selector-native-trigger {
+.dictionary-toolbar select:focus {
     outline: none;
     background: var(--color-light);
 }
 
-/* The two selectors that can host Dictionary mode — the desktop right column's
-   and the mobile one — are the same control over the same markup: the mode
-   select and the word search side by side, the select taking the larger share.
-   Only which of the two is shown differs between the modes. */
-.area-selector-right,
-.area-selector-mobile {
+/* The Dictionary area's own toolbar: the Core/User select and the word search
+   side by side, the select taking the larger share. One of it, inside the
+   area, so the search is there whichever area selector brought the Dictionary
+   up — desktop's right column or mobile's single selector. */
+.dictionary-toolbar {
+    display: flex;
+    flex: 0 0 auto;
     align-items: center;
     gap: var(--space-xs);
 
@@ -146,10 +145,9 @@
         min-width: 0;
     }
 
-    /* Too narrow to seat the mode selector and the word search side by side:
-       stack them. Keyed on the panel container, not the viewport, so a slim
-       desktop column reflows on its own. The mobile selector sits above the
-       panel, outside any container, and keeps its single row. */
+    /* Too narrow to seat the select and the word search side by side: stack
+       them. Keyed on the panel container, not the viewport, so a slim desktop
+       column reflows on its own. */
     @container panel (width <= 18rem) {
         flex-wrap: wrap;
 
@@ -186,14 +184,6 @@
     }
 }
 
-/* The word search shows only while its own select is on Dictionary. */
-.area-selector .search-wrapper {
-    display: none;
-}
-
-.area-selector:has(option[value="dictionary"]:checked) .search-wrapper {
-    display: flex;
-}
 
 
 /* ── Input ───────────────────────────────────────────────────────────────── */
@@ -638,10 +628,6 @@
     }
 }
 
-.dictionary-area > .dictionary-sheet-select {
-    flex: 0 0 auto;
-}
-
 .words-display {
     display: flex;
     flex-wrap: wrap;
@@ -758,76 +744,6 @@
     /* 320px-class phones: the one place the type itself steps down. */
     @media (width <= 340px) {
         font-size: 0.65rem;
-    }
-}
-
-/* Custom dictionary sheet selector: the inert native select paints the closed
-   control (text, height, chevron) and the overlaid button owns the popup. The
-   root is only their positioning box, so the control padding of the shared
-   selector rule is cleared here and carried by the two children. */
-.sheet-selector {
-    position: relative;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    transition: none;
-}
-
-.sheet-selector-native-trigger {
-    display: block;
-    pointer-events: none;
-}
-
-.sheet-selector-trigger {
-    position: absolute;
-    inset: 0;
-    padding: calc(var(--space-2xs) + var(--control-text-y-adjust)) var(--space-xs) calc(var(--space-2xs) - var(--control-text-y-adjust));
-    width: 100%;
-    color: transparent;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-main);
-    cursor: pointer;
-
-    &:focus {
-        outline: none;
-    }
-}
-
-/* Native popover (top layer): left/top/width come from the trigger's rect
-   (set in JS just before it opens); only the UA centring is neutralised here. */
-.sheet-selector-panel {
-    position: fixed;
-    inset: auto;
-    margin: 0;
-    padding: 0;
-    max-height: 60vh;
-    overflow-y: auto;
-    background: var(--color-white);
-    border: var(--border-main);
-    border-radius: var(--radius-main);
-    box-shadow: var(--shadow-popover);
-}
-
-.sheet-selector-option {
-    display: block;
-    width: 100%;
-    text-align: left;
-    font-family: var(--font-stack-mono);
-    font-size: var(--text-xs);
-    padding: 0.375rem var(--space-sm);
-    background: transparent;
-    color: var(--color-text);
-    border: none;
-    cursor: pointer;
-
-    &:hover {
-        background: var(--color-light);
-    }
-
-    &.is-selected {
-        font-weight: var(--weight-bold);
-        background: var(--color-light);
     }
 }
 

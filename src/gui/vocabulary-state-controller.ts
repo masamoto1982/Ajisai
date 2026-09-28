@@ -12,7 +12,8 @@ import { toError } from './to-error';
 
 export interface WordInfo {
     readonly name: string;
-    readonly protected?: boolean;
+    /** Another User Word calls this one. */
+    readonly hasDependents: boolean;
 }
 
 export interface VocabularyElements {
@@ -36,19 +37,9 @@ export interface VocabularyManager {
     readonly updateSearchFilter: (filter: string) => void;
 }
 
-export const formatDictionaryTabName = (pathName: string): string => {
-    const displayName = pathName
-        .toLowerCase()
-        .split(/[-_\s]+/)
-        .filter(Boolean)
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-    return displayName.endsWith(' Words') ? displayName : `${displayName} Words`;
-};
-
-const createWordInfoFromTuple = ([, name, isProtected]: UserWordInfo): WordInfo => ({
+const createWordInfoFromTuple = ([name, hasDependents]: UserWordInfo): WordInfo => ({
     name,
-    protected: isProtected
+    hasDependents
 });
 
 // The tooltip text for a User Word: what its author wrote for a reader
@@ -199,7 +190,7 @@ export const createVocabularyManager = (
 
         const fragment = document.createDocumentFragment();
         for (const wordInfo of sortedFiltered) {
-            const className = wordInfo.protected
+            const className = wordInfo.hasDependents
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
             fragment.appendChild(createWordButtonElement(

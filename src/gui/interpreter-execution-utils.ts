@@ -16,13 +16,11 @@ import type {
 import { renderDiagnosisReport } from './diagnosis-report';
 import { toError } from './to-error';
 
-// Every User word with its definition and description, each looked up by bare
-// name. The dictionary has two tiers and User is one of them
-// (LANG.DICTIONARY.RESOLUTION), so a `DICT@NAME` composite such as `USER@FOO`
-// resolves to null — and `restore_user_words` skips a definition-less word, so
-// a null here would run the worker without the user's words.
+// Every User word with its definition and description, looked up by name.
+// `restore_user_words` skips a definition-less word, so a lookup that missed
+// here would run the worker without the user's words.
 export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] =>
-    interpreter.collect_user_words_info().map(([, name]) => ({
+    interpreter.collect_user_words_info().map(([name]) => ({
         name,
         definition: interpreter.lookup_word_definition(name),
         description: interpreter.lookup_word_description(name)

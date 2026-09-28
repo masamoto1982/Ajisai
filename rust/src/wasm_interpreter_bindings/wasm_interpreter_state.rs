@@ -22,18 +22,17 @@ impl AjisaiInterpreter {
         let mut names: Vec<&String> = self.interpreter.user_words.keys().collect();
         names.sort();
         for name in names {
-            let is_protected = self
+            // Another User Word calls this one, so DEL refuses it until that
+            // caller is gone; the host colours it apart.
+            let has_dependents = self
                 .interpreter
                 .dependents
                 .get(name)
                 .is_some_and(|deps| !deps.is_empty());
 
             let item = js_sys::Array::new();
-            // The dictionary slot stays in the shape for the host, which reads
-            // a fixed triple; there is one User tier, so it is constant.
-            item.push(&"USER".into());
             item.push(&name.clone().into());
-            item.push(&is_protected.into());
+            item.push(&has_dependents.into());
 
             js_array.push(&item);
         }
@@ -41,7 +40,7 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    /// Content identity (Section 8.6) of each user word, as `[fqName, id]`
+    /// Content identity (Section 8.6) of each user word, as `[name, id]`
     /// pairs. The host uses these to deduplicate identical definitions on
     /// import and to key shared word groups by content rather than by name.
     #[wasm_bindgen]
@@ -66,9 +65,6 @@ impl AjisaiInterpreter {
         let words_info: Vec<UserWordData> = names
             .into_iter()
             .map(|name| UserWordData {
-                // Kept in the serialized shape for older snapshots to decode
-                // against; there is one User tier, so it no longer selects.
-                dictionary: None,
                 definition: self.interpreter.lookup_word_definition_tokens(&name),
                 description: self.interpreter.lookup_word_description(&name),
                 name,
@@ -199,9 +195,9 @@ impl AjisaiInterpreter {
         let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
-        // A restored word's saved `dictionary` label is legacy state: the
-        // dictionary has two tiers and User is one of them, so every restored
-        // definition lands in the same place.
+        // A saved entry from before the dictionary became two tiers may still
+        // carry a `dictionary` label; it is ignored like any unknown field, and
+        // the definition lands among the User Words with every other.
         let entries = words.into_iter().map(|word| {
             (
                 word.name,

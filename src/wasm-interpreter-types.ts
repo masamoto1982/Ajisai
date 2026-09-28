@@ -3,8 +3,11 @@ export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
-/** One entry of `collect_user_words_info`. The dictionary slot is constant (`USER`). */
-export type UserWordInfo = [dictionary: string, name: string, isProtected: boolean];
+/**
+ * One entry of `collect_user_words_info`: a User Word's name, and whether
+ * another User Word calls it (DEL refuses it until that caller is gone).
+ */
+export type UserWordInfo = [name: string, hasDependents: boolean];
 
 /**
  * One entry of `collect_core_words_info`. `hoverSummary` is the button title
@@ -43,7 +46,7 @@ export interface AjisaiInterpreter {
     collect_user_words_info(): UserWordInfo[];
     // Content identity per user word (LANG.AUTHORITY.FREEDOM).
     // Tuple shape: [fullyQualifiedName, contentId].
-    collect_word_identities(): Array<[string, string]>;
+    collect_word_identities(): Array<[name: string, id: string]>;
     collect_core_words_info(): CoreWordInfo[];
     lookup_word_definition(name: string): string | null;
     // See `UserWord.description`.
@@ -124,8 +127,6 @@ export interface ProtocolDiagnosis {
     where: {
         kind: string;
         word?: string;
-        module?: string;
-        dictionary?: string;
     };
     why: string;
     summary: string;

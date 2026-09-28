@@ -5,11 +5,51 @@ use crate::interpreter::debug_diagnosis::{
     classify_locus, DebugDiagnosis, ErrorLocusKind, ErrorPhase,
 };
 
+/// The registry names a Core Word; a User Word is named where the live
+/// dictionary is. A name the registry does not hold stays unknown until then,
+/// and becomes a User Word only if the dictionary holds it.
 #[test]
-fn qualified_word_is_classified_as_a_user_dictionary_word() {
-    let locus = classify_locus(Some("EXAMPLE@DOUBLE"));
-    assert_eq!(locus.kind, ErrorLocusKind::UserWord);
-    assert_eq!(locus.dictionary.as_deref(), Some("EXAMPLE"));
+fn a_user_word_locus_is_named_from_the_live_dictionary() {
+    assert_eq!(classify_locus(Some("ADD")).kind, ErrorLocusKind::CoreWord);
+    assert_eq!(classify_locus(Some("DOUBLE")).kind, ErrorLocusKind::Unknown);
+
+    let mut diagnosis = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some("DOUBLE"),
+        Some(&ErrorCategory::StackUnderflow),
+        None,
+        0,
+        0,
+        None,
+    );
+    diagnosis.with_user_vocabulary(["DOUBLE", "TWICE"].into_iter());
+    assert_eq!(diagnosis.where_.kind, ErrorLocusKind::UserWord);
+
+    let mut unknown = DebugDiagnosis::from_error_category(
+        ErrorPhase::ResolveWord,
+        Some("FROB"),
+        Some(&ErrorCategory::UnknownWord),
+        None,
+        0,
+        0,
+        None,
+    );
+    unknown.with_user_vocabulary(["DOUBLE"].into_iter());
+    assert_eq!(unknown.where_.kind, ErrorLocusKind::Unknown);
+}
+
+#[tokio::test]
+async fn a_failing_user_word_reports_a_user_word_locus() {
+    let mut interp = crate::interpreter::Interpreter::new();
+    assert!(interp.execute("[ 1 ADD ] 'W' DEF W").await.is_err());
+    let trace = interp.drain_error_flow_trace();
+    let diagnosis = trace
+        .iter()
+        .rev()
+        .find_map(|event| event.diagnosis.as_ref())
+        .expect("the failure carries a diagnosis");
+    assert_eq!(diagnosis.where_.word.as_deref(), Some("W"));
+    assert_eq!(diagnosis.where_.kind, ErrorLocusKind::UserWord);
 }
 
 /// A user Word is only knowable at the failure site, so the suggestion it

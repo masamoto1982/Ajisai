@@ -100,9 +100,9 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     // Session-lived recall of submitted programs, so a run (which clears the
     // editor) and a Reset are both recoverable. See editor-history.ts.
     const history = createEditorHistory();
+    // One word search, in the Dictionary area itself, for both presentations.
     const applySearchFilter = (filter: string): void => {
         elements.dictionarySearch.value = filter;
-        elements.mobileDictionarySearch.value = filter;
         vocabulary.updateSearchFilter(filter);
     };
 
@@ -110,14 +110,8 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         applySearchFilter(elements.dictionarySearch.value);
     }, 150);
 
-    const applyMobileSearchInput = debounce(() => {
-        applySearchFilter(elements.mobileDictionarySearch.value);
-    }, 150);
-
     elements.dictionarySearch.addEventListener('input', applySearchInput);
-    elements.mobileDictionarySearch.addEventListener('input', applyMobileSearchInput);
     elements.dictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
-    elements.mobileDictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
 
     elements.editorClearBtn.addEventListener('click', () => editor.clear());
     // Same control, same corner, same gesture as clearing the editor — the

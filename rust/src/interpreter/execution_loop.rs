@@ -132,6 +132,9 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
             reason.as_protocol_str()
         )),
     );
+    // A User Word that answered the NIL is named as one; only the live
+    // dictionary knows it is.
+    diagnosis.with_user_vocabulary(interp.user_words.keys().map(String::as_str));
     // The absence envelope belongs to the value that actually carries the
     // projection, which for a lifted Word is a lane rather than the result.
     let absence = interp.stack.last().and_then(projected_absence_metadata);

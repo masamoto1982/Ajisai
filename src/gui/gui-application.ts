@@ -1,9 +1,8 @@
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 import { createDisplay } from './output-display-renderer';
-import { createVocabularyManager, formatDictionaryTabName } from './vocabulary-state-controller';
+import { createVocabularyManager } from './vocabulary-state-controller';
 import { createEditor } from './code-input-editor';
 import { createMobileHandler } from './mobile-view-switcher';
-import { createDictionarySheetSelector } from './dictionary-sheet-selector';
 import { createPersistence } from './interpreter-state-persistence';
 import { createExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
@@ -50,7 +49,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         // Canonical names only: the Core list carries no alias, and a User
         // Word is addressed by its bare name.
         const coreWords = interpreter.collect_core_words_info().map(([name]) => name);
-        const userWords = interpreter.collect_user_words_info().map(([, name]) => name);
+        const userWords = interpreter.collect_user_words_info().map(([name]) => name);
         autocompleteWordsCache = [...new Set([...coreWords, ...userWords])].sort((a, b) => a.localeCompare(b));
         return autocompleteWordsCache;
     };
@@ -64,19 +63,17 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         display.init();
 
         // The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), so the
-        // sheet list is fixed: Core and User.
-        const sheetSelector = createDictionarySheetSelector(elements.dictionarySheetSelect, {
-            onChange: (sheetId) => {
-                switchDictionarySheet(elements.dictionaryArea, sheetId);
-                void persistence.saveCurrentState();
-            }
+        // sheet list is fixed — Core and User — and is a plain <select>, like
+        // the two area selectors beside it.
+        const sheetSelect = elements.dictionarySheetSelect;
+        sheetSelect.addEventListener('change', () => {
+            switchDictionarySheet(elements.dictionaryArea, sheetSelect.value);
+            void persistence.saveCurrentState();
         });
-        sheetSelector.setEntries([
-            { sheetId: 'core', label: formatDictionaryTabName('CORE'), kind: 'core' },
-            { sheetId: 'user', label: formatDictionaryTabName('USER'), kind: 'user' },
-        ]);
         const showDictionarySheet = (sheetId: string): void => {
-            sheetSelector.select(sheetId);
+            // A saved id that names no sheet leaves the current one showing.
+            if (![...sheetSelect.options].some((option) => option.value === sheetId)) return;
+            sheetSelect.value = sheetId;
             switchDictionarySheet(elements.dictionaryArea, sheetId);
         };
 
@@ -104,7 +101,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             showError: (error) => display.renderError(error),
             updateDisplays: updateAllDisplays,
             showInfo: (text, append) => display.renderInfo(text, append),
-            readActiveDictionarySheet: () => sheetSelector.current()
+            readActiveDictionarySheet: () => sheetSelect.value
         });
         await persistence.init();
 
