@@ -20,7 +20,7 @@ export class AjisaiInterpreter {
     collect_stack(): any;
     collect_user_words_info(): any;
     /**
-     * Content identity (Section 8.6) of each user word, as `[fqName, id]`
+     * Content identity (Section 8.6) of each user word, as `[name, id]`
      * pairs. The host uses these to deduplicate identical definitions on
      * import and to key shared word groups by content rather than by name.
      */

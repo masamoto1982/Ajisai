@@ -42,11 +42,9 @@ const createFakeInterpreter = (): FakeInterpreter => {
         words,
         setStack: (next: Value[]) => { stack = next; },
         collect_stack: () => stack,
-        // Tuple shape: [dictionary, name, isProtected]. There is one User tier,
-        // so the dictionary slot is a constant label, not an address.
+        // Tuple shape: [name, hasDependents].
         collect_user_words_info: () =>
-            [...words.keys()].sort().map(name => ['USER', name, false] as [string, string, boolean]),
-        // Resolves a bare name only: `USER@FOO` is not a name the dictionary has.
+            [...words.keys()].sort().map(name => [name, false] as [string, boolean]),
         lookup_word_definition: (name: string) => words.get(name.toUpperCase()) ?? null,
         lookup_word_description: () => null,
         snapshot_stack: () => JSON.stringify(stack),

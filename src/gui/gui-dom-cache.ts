@@ -15,7 +15,7 @@ export interface GUIElements {
     readonly userWordsDisplay: HTMLElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
-    readonly dictionarySheetSelect: HTMLElement;
+    readonly dictionarySheetSelect: HTMLSelectElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
@@ -23,10 +23,9 @@ export interface GUIElements {
     readonly leftPanelSelect: HTMLSelectElement;
     readonly rightPanelSelect: HTMLSelectElement;
     readonly mobilePanelSelect: HTMLSelectElement;
-    readonly mobileDictionarySearch: HTMLInputElement;
-    readonly mobileDictionarySearchClearBtn: HTMLButtonElement;
     readonly copyOutputBtn: HTMLButtonElement;
     readonly runStatus: HTMLElement;
+    readonly symbolKeys: HTMLElement;
 }
 
 type ElementConstructor<T extends HTMLElement> = {
@@ -60,7 +59,7 @@ export const cacheElements = (): GUIElements => ({
     userWordsDisplay: requireElement('#user-words-display', HTMLElement),
     dictionarySearch: requireElement('#dictionary-search', HTMLInputElement),
     dictionarySearchClearBtn: requireElement('#dictionary-search-clear-btn', HTMLButtonElement),
-    dictionarySheetSelect: requireElement('#dictionary-sheet-select', HTMLElement),
+    dictionarySheetSelect: requireElement('#dictionary-sheet-select', HTMLSelectElement),
     inputArea: requireElement('.input-area', HTMLElement),
     outputArea: requireElement('.output-area', HTMLElement),
     stackArea: requireElement('.stack-area', HTMLElement),
@@ -68,10 +67,9 @@ export const cacheElements = (): GUIElements => ({
     leftPanelSelect: requireElement('#left-panel-select', HTMLSelectElement),
     rightPanelSelect: requireElement('#right-panel-select', HTMLSelectElement),
     mobilePanelSelect: requireElement('#mobile-panel-select', HTMLSelectElement),
-    mobileDictionarySearch: requireElement('#mobile-dictionary-search', HTMLInputElement),
-    mobileDictionarySearchClearBtn: requireElement('#mobile-dictionary-search-clear-btn', HTMLButtonElement),
     copyOutputBtn: requireElement('#copy-output-btn', HTMLButtonElement),
-    runStatus: requireElement('#run-status', HTMLElement)
+    runStatus: requireElement('#run-status', HTMLElement),
+    symbolKeys: requireElement('#symbol-keys', HTMLElement)
 });
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({

@@ -54,7 +54,7 @@ describe('namesThatDidNotRestore', () => {
     // interpreter surface is not modelled.
     const withWords = (present: string[]): AjisaiInterpreter => ({
         collect_user_words_info: () =>
-            present.map(name => ['USER', name, false] as [string, string, boolean]),
+            present.map(name => [name, false] as [string, boolean]),
     } as unknown as AjisaiInterpreter);
 
     test('names a requested word that is not in the dictionary afterwards', () => {
@@ -91,21 +91,17 @@ describe('namesThatDidNotRestore', () => {
 });
 
 // `createExportData` does not filter: every User Word it is given comes out.
-// `collect_user_words_info` reports a constant "USER" label for every word
-// (the dictionary has one exportable tier), so any filter keyed on a
-// dictionary label could disagree with it and silently drop every word
-// instead of exporting them.
 describe('createExportData', () => {
     const fakeInterpreter = (words: string[]): AjisaiInterpreter => ({
         collect_user_words_info: () =>
-            words.map(name => ['USER', name, false] as [string, string, boolean]),
+            words.map(name => [name, false] as [string, boolean]),
         collect_word_identities: () =>
             words.map(name => [name, `id-${name}`] as [string, string]),
         lookup_word_definition: (name: string) => `[ '${name}' ]`,
         lookup_word_description: () => null,
     } as unknown as AjisaiInterpreter);
 
-    test('exports every user word regardless of any dictionary label', () => {
+    test('exports every user word', () => {
         const data = createExportData(fakeInterpreter(['ALPHA', 'BETA']));
         expect(data.words.map(w => w.name)).toEqual(['ALPHA', 'BETA']);
     });

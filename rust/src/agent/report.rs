@@ -114,9 +114,6 @@ pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
     if let Some(word) = &diagnosis.where_.word {
         where_obj.insert("word".into(), json!(word));
     }
-    if let Some(dictionary) = &diagnosis.where_.dictionary {
-        where_obj.insert("dictionary".into(), json!(dictionary));
-    }
     json!({
         "when": diagnosis.when.as_protocol_str(),
         "why": diagnosis.why.as_protocol_str(),

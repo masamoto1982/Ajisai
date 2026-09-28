@@ -11,7 +11,6 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct UserWordData {
-    pub(crate) dictionary: Option<String>,
     pub(crate) name: String,
     pub(crate) definition: Option<String>,
     /// The `#:contract`-derived hover text (see `execute_def::set_word_

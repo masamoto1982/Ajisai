@@ -10,7 +10,7 @@
 //! a protocol field, so a fact reaches every host that already renders a
 //! diagnosis, and a host that does not read the key is unaffected.
 
-use super::debug_diagnosis::{CauseClass, DebugDiagnosis};
+use super::debug_diagnosis::{CauseClass, DebugDiagnosis, ErrorLocusKind};
 use super::debug_next_checks::spelling_check;
 use super::word_candidates::suggest_words;
 
@@ -64,13 +64,22 @@ impl DebugDiagnosis {
     /// misspelled *user* Word is only knowable at the failure site, which is
     /// the one place that holds the dictionary.
     pub fn with_user_vocabulary<'a>(&mut self, names: impl Iterator<Item = &'a str>) {
+        let names: Vec<&str> = names.collect();
+        let Some(word) = self.where_.word.clone() else {
+            return;
+        };
+        // The locus a registry lookup could not name: a Word the live
+        // dictionary holds is a User Word.
+        if self.where_.kind == ErrorLocusKind::Unknown {
+            let canonical = crate::word_name::canonical_word_name(&word);
+            if names.iter().any(|name| *name == canonical.as_ref()) {
+                self.where_.kind = ErrorLocusKind::UserWord;
+            }
+        }
         if !matches!(self.why, CauseClass::TypoOrUnknownName) {
             return;
         }
-        let Some(word) = self.where_.word.as_deref() else {
-            return;
-        };
-        self.candidates = suggest_words(word, names);
+        self.candidates = suggest_words(&word, names.into_iter());
         // The spelling check names the candidates, so it has to be rebuilt
         // against the list that won: a user Word found here can turn an empty
         // list into a suggestion, and the check would otherwise still say

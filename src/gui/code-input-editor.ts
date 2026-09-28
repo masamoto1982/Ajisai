@@ -11,6 +11,8 @@ export interface Editor {
     readonly updateValue: (value: string) => void;
     readonly clear: (switchView?: boolean) => void;
     readonly insertWord: (word: string) => void;
+    /** Write `text` at the caret exactly as given, as typing it would. */
+    readonly insertText: (text: string) => void;
     readonly removeLastWord: () => void;
     readonly format: () => void;
     readonly focus: () => void;
@@ -94,13 +96,6 @@ const MAX_SUGGESTIONS = 10;
 // results are the ceiling either way (`MAX_SUGGESTIONS`), so a shorter prefix
 // costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
-const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
-    '(', ')', '[', ']', '{', '}',
-    '<', '>', '+', '-', '*', '/',
-    '%', '=', '!', '?', '&', '|',
-    '~', '@', '#', '$', '_', '\\',
-    ':', ';', '.', ',', "'", '"',
-]);
 
 const CARET_MIRROR_STYLE_PROPERTIES = [
     'borderBottomWidth',
@@ -163,7 +158,6 @@ export const createEditor = (
 
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
-    let isSymbolMode = false;
     let lastKnownSelection = lookupSelectionRange(element);
 
     const textareaContainer = element.closest('.input-area');
@@ -186,10 +180,8 @@ export const createEditor = (
 
     const hideSuggestions = (): void => {
         suggestionPanel.style.display = 'none';
-        suggestionPanel.classList.remove('editor-suggestions--symbols');
         currentSuggestions = [];
         selectedSuggestionIndex = 0;
-        isSymbolMode = false;
     };
 
     const computeCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
@@ -229,39 +221,10 @@ export const createEditor = (
             return;
         }
 
-        // Two panels, two anchors, and the symbol palette switches between them
-        // on whether there is anything written yet.
-        //
-        // Word completions belong to the text being typed, so they always
-        // follow the caret. The symbol palette opens at any token boundary,
-        // which includes an empty editor — and there the caret is on line one,
-        // so a caret anchor puts the palette square over the first lines of
-        // the placeholder cheat sheet. On a phone that sheet is the only place
-        // the touch gestures are written down, so tapping in to read how to
-        // run something would hide how to run something. Pinned to the bottom edge
-        // the sheet reads from the top down into the palette instead, and the
-        // corner buttons it would otherwise cover are themselves hidden while
-        // the placeholder shows (`:placeholder-shown` in components.css).
-        //
-        // Once something *is* written those corner buttons are live, and the
-        // bottom edge is where Format sits — so from the first character on,
-        // the palette goes back to the caret.
-        const anchorToBottomEdge = isSymbolMode && element.value.length === 0;
-
-        if (anchorToBottomEdge) {
-            suggestionPanel.style.top = 'auto';
-            suggestionPanel.style.bottom = '0';
-            suggestionPanel.style.left = '0';
-            suggestionPanel.style.right = '0';
-        } else {
-            const { top, left } = computeCursorCoords(element);
-            suggestionPanel.style.top = `${top}px`;
-            suggestionPanel.style.left = `${left + 8}px`;
-            suggestionPanel.style.right = 'auto';
-            suggestionPanel.style.bottom = 'auto';
-        }
-
-        suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
+        // Completions belong to the text being typed, so they follow the caret.
+        const { top, left } = computeCursorCoords(element);
+        suggestionPanel.style.top = `${top}px`;
+        suggestionPanel.style.left = `${left + 8}px`;
 
         suggestionPanel.innerHTML = '';
         currentSuggestions.forEach((suggestion, index) => {
@@ -281,38 +244,24 @@ export const createEditor = (
             suggestionPanel.appendChild(button);
         });
 
-        suggestionPanel.style.display = isSymbolMode ? 'grid' : 'block';
+        suggestionPanel.style.display = 'block';
         suggestionPanel.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
     };
 
     const refreshSuggestions = (): void => {
-        const cursorPos = element.selectionStart;
-        const prevChar = cursorPos > 0 ? element.value[cursorPos - 1] ?? '' : '';
-        const isTokenStart = cursorPos === 0 || /\s/.test(prevChar);
+        // Symbols are the key row's (symbol-key-row.ts); this panel completes
+        // Words, from the second character of one.
         const { token } = extractToken(element.value, element.selectionStart);
-        if (isTokenStart && token.length === 0) {
-            if (!isMobileViewport()) {
-                hideSuggestions();
-                return;
-            }
-            currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice();
-            isSymbolMode = true;
-            selectedSuggestionIndex = 0;
-            renderSuggestions();
-            return;
-        }
-
         if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) {
             hideSuggestions();
             return;
         }
 
         const suggestions = requestSuggestions(token)
-            .filter(word => token.length === 0 || word.toLowerCase().startsWith(token.toLowerCase()))
+            .filter(word => word.toLowerCase().startsWith(token.toLowerCase()))
             .slice(0, MAX_SUGGESTIONS);
 
         currentSuggestions = suggestions;
-        isSymbolMode = false;
         selectedSuggestionIndex = 0;
         renderSuggestions();
     };
@@ -425,6 +374,15 @@ export const createEditor = (
         hideSuggestions();
     };
 
+    const insertText = (text: string): void => {
+        const { start, end } = lookupEditableSelectionRange();
+        replaceRange(element, start, end, text);
+        const newPos = start + text.length;
+        updateSelectionRange(element, newPos, newPos);
+        syncLastKnownSelection();
+        refreshSuggestions();
+    };
+
     const removeLastWord = (): void => {
         const wasFocused = document.activeElement === element;
         const { start } = lookupEditableSelectionRange();
@@ -502,6 +460,7 @@ export const createEditor = (
         updateValue,
         clear,
         insertWord,
+        insertText,
         removeLastWord,
         format,
         focus,
