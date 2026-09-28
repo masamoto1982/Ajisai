@@ -486,6 +486,8 @@
         padding: 0.35rem;
         border-radius: 0;
         background-color: var(--color-consume-eat);
+        outline: 1px solid var(--color-consume-edge);
+        outline-offset: -1px;
     }
 }
 

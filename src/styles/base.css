@@ -27,8 +27,10 @@ a {
     color: var(--color-primary);
     text-decoration: none;
 
+    /* Hover marks the link with a line rather than a lighter colour, which
+       fell to 2.3:1. */
     &:hover {
-        color: var(--color-secondary);
+        text-decoration: underline;
     }
 }
 
@@ -66,7 +68,7 @@ a {
         overflow: visible;
         clip-path: none;
         white-space: normal;
-        outline: 2px solid var(--color-secondary);
+        outline: 2px solid var(--color-primary);
         outline-offset: 2px;
     }
 }

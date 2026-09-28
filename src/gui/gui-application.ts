@@ -200,8 +200,12 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             showDictionarySheet(restored.activeDictionarySheet);
         }
 
+        // Appended, not written over: restoring the session above may already
+        // have said something the reader needs — the Example Words a first
+        // visit loads, or saved Words that could not be restored — and a status
+        // line that cleared Output erased it before it could be read.
         try {
-            display.renderInfo('Initializing...', false);
+            display.renderInfo('Initializing...', true);
             await WORKER_MANAGER.init();
             display.renderInfo('Ready', true);
         } catch (error) {

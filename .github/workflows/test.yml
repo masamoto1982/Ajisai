@@ -85,6 +85,12 @@ jobs:
         # blocklist, so deleting a Word is enough to keep prose honest about it.
         run: npm run check:reading-surfaces
 
+      - name: Playground colours meet WCAG contrast
+        # Every token the stylesheets use as text reaches 4.5:1 on the surfaces
+        # it is drawn on, and focus rings and the top-of-stack edge reach 3:1.
+        # A text colour the check does not measure fails it.
+        run: npm run check:contrast
+
       - name: Reference samples produce the values printed beside them
         # Every sample block in the Reference carries a "Playgroundで開く" button,
         # so a reader runs it. Two COND examples dispatched on one-element

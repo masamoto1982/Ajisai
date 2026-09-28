@@ -35,12 +35,43 @@ export interface Editor {
     readonly getWordAtCursor: () => string;
 }
 
-const insertAt = (
-    text: string,
+// A Dictionary word written at [start, end) of `text`, with a space on either
+// side where it would otherwise run into a neighbouring name: clicking ADD and
+// then SQRT wrote `ADDSQRT`, one unknown Word, where the reader had asked for
+// two. Whitespace (the space written by a click between the word buttons) is
+// written as it is. Exported for `code-input-editor.test.ts`.
+export const separateWord = (text: string, start: number, end: number, word: string): {
+    readonly insertion: string;
+    readonly caretOffset: number;
+} => {
+    if (word.trim() === '') return { insertion: word, caretOffset: word.length };
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    const lead = before !== '' && !/\s$/.test(before) ? ' ' : '';
+    const trail = after !== '' && !/^\s/.test(after) ? ' ' : '';
+    return { insertion: lead + word + trail, caretOffset: lead.length + word.length };
+};
+
+// Replace [start, end) of the textarea with `text` the way typing would, so
+// the change joins the browser's own undo history. Assigning `value` — which
+// every programmatic edit here used to do — empties that history, so one
+// dictionary click or Format made every earlier Ctrl+Z impossible. The
+// browser's editing command acts on the focused field only; an unfocused one
+// (a phone, where focus would raise the keyboard) takes `setRangeText`, which
+// keeps the rest of the text and the caret as the same edit would.
+const replaceRange = (
+    element: HTMLTextAreaElement,
     start: number,
     end: number,
-    insertion: string
-): string => text.substring(0, start) + insertion + text.substring(end);
+    text: string
+): void => {
+    if (document.activeElement === element && typeof document.execCommand === 'function') {
+        element.setSelectionRange(start, end);
+        if (start === end && text === '') return;
+        if (document.execCommand(text === '' ? 'delete' : 'insertText', false, text)) return;
+    }
+    element.setRangeText(text, start, end, 'end');
+};
 
 const updateSelectionRange = (
     element: HTMLTextAreaElement,
@@ -288,7 +319,7 @@ export const createEditor = (
 
     const applySuggestion = (suggestion: string): void => {
         const { start, end } = extractToken(element.value, element.selectionStart);
-        element.value = insertAt(element.value, start, end, suggestion);
+        replaceRange(element, start, end, suggestion);
         const newPos = start + suggestion.length;
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
@@ -354,7 +385,7 @@ export const createEditor = (
     const extractValue = (): string => element.value.trim();
 
     const updateValue = (value: string): void => {
-        element.value = value;
+        replaceRange(element, 0, element.value.length, value);
         const cursor = value.length;
         updateSelectionRange(element, cursor, cursor);
         syncLastKnownSelection();
@@ -370,8 +401,8 @@ export const createEditor = (
 
     const clear = (switchView = true): void => {
         const wasFocused = document.activeElement === element;
-        element.value = '';
         refocus(wasFocused);
+        replaceRange(element, 0, element.value.length, '');
         updateSelectionRange(element, 0, 0);
         syncLastKnownSelection();
         hideSuggestions();
@@ -383,11 +414,14 @@ export const createEditor = (
     const insertWord = (word: string): void => {
         const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
-        element.value = insertAt(element.value, start, end, word);
-        const newPos = start + word.length;
+        const { insertion, caretOffset } = separateWord(element.value, start, end, word);
+        // Focus first where it will be kept anyway, so the edit is the
+        // browser's own and Ctrl+Z takes it back.
+        refocus(wasFocused);
+        replaceRange(element, start, end, insertion);
+        const newPos = start + caretOffset;
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
-        refocus(wasFocused);
         hideSuggestions();
     };
 
@@ -395,13 +429,12 @@ export const createEditor = (
         const wasFocused = document.activeElement === element;
         const { start } = lookupEditableSelectionRange();
         const before = element.value.substring(0, start);
-        const after = element.value.substring(start);
 
         const trimmed = before.replace(/\S+\s*$/, '');
-        element.value = trimmed + after;
+        refocus(wasFocused);
+        replaceRange(element, trimmed.length, start, '');
         updateSelectionRange(element, trimmed.length, trimmed.length);
         syncLastKnownSelection();
-        refocus(wasFocused);
         hideSuggestions();
     };
 
@@ -409,14 +442,15 @@ export const createEditor = (
         const wasFocused = document.activeElement === element;
         const formatted = formatAjisaiSource(element.value);
 
+        refocus(wasFocused);
+
         if (formatted !== element.value) {
-            element.value = formatted;
+            replaceRange(element, 0, element.value.length, formatted);
             const cursor = formatted.length;
             updateSelectionRange(element, cursor, cursor);
             syncLastKnownSelection();
         }
 
-        refocus(wasFocused);
 
         // Focusing the textarea re-runs the focus handler, which would reopen the
         // suggestion panel. Formatting is an explicit, whole-buffer action, so

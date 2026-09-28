@@ -15,7 +15,7 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 
 ## Primary interaction model
 - Main code entry is a textarea.
-- Run via `Shift+Enter`, or a triple-tap (touch) / triple-click (mouse) in the editor. There is deliberately no Run button: one was added and removed again — see "Touch interaction" below.
+- Run via `Shift+Enter`, or a triple-tap (touch) in the editor. A desktop triple-click used to run too, and was removed: it is the line-select gesture of every text field, and a Run cannot be undone. There is deliberately no Run button: one was added and removed again — see "Touch interaction" below.
 - Step execution via `Ctrl+Enter`.
 - Abort via `Escape`. The window-level Escape listener captures and stops propagation, so it asks the editor first (`Editor.dismissSuggestions`): an open suggestion panel takes the key and closes, and Abort gets Escape only when there is no panel to close. Without that hand-off the panel could not be dismissed with Escape at all.
 - Full reset via `Ctrl+Alt+Enter`, which asks first (`RESET_CONFIRM_MESSAGE`).

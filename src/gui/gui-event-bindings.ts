@@ -240,8 +240,11 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         }, { passive: true });
     }
 
-    // On desktop a triple-click on the editor runs the program, as Shift+Enter does.
-    bindClickCount(elements.codeInput, 3, () => !mobile.isMobile(), runEditorCode);
+    // There is no desktop triple-click Run. A triple-click selects a line in
+    // every text field, and a Run cannot be taken back — it changes the stack
+    // and the dictionary — so the gesture that means "select" must not mean
+    // "execute". Shift+Enter is the one desktop Run; triple-tap stays on touch,
+    // where no line-select gesture competes with it.
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -269,8 +272,9 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         // bound on the window rather than their buttons because the Stack area
         // can hold focus, and `e.code` so the binding does not move with the
         // layout. Neither confirms: unlike Reset, Stack clear loses only values
-        // (one re-run away) and Editor clear loses only unsaved typing
-        // (recoverable via Recall).
+        // (one re-run away) and Editor clear is an ordinary edit that Ctrl+Z
+        // takes back. (Recall brings back submitted programs, not unsaved
+        // typing, so it never recovered an Editor clear.)
         if (e.code === 'KeyS' && e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey) {
             clearStack();
             e.preventDefault();

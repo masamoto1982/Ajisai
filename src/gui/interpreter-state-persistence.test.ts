@@ -4,7 +4,7 @@
 // malformed entry looks like (null / name-less / non-string name).
 
 import { describe, expect, test } from 'vitest';
-import { createExportData, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
+import { checkHasSavedDictionary, createExportData, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
 import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 
 describe('parseImportDocument robustness', () => {
@@ -118,5 +118,19 @@ describe('createExportData', () => {
     test('carries each word\'s content identity', () => {
         const data = createExportData(fakeInterpreter(['ALPHA']));
         expect(data.words[0]?.id).toBe('id-ALPHA');
+    });
+});
+
+describe('checkHasSavedDictionary', () => {
+    test('treats an empty saved dictionary as a dictionary, so deleting every User Word survives a reload', () => {
+        expect(checkHasSavedDictionary({ userWords: [] })).toBe(true);
+    });
+
+    test('treats a saved dictionary with words as a dictionary', () => {
+        expect(checkHasSavedDictionary({ userWords: [{ name: 'SQ', definition: '[ 2 POW ]', description: null }] as never })).toBe(true);
+    });
+
+    test('seeds the Example Words only when no dictionary was saved at all', () => {
+        expect(checkHasSavedDictionary({ userWords: undefined as never })).toBe(false);
     });
 });
