@@ -63,6 +63,32 @@ pub struct AbsenceMetadata {
     pub diagnosis: Option<Box<DebugDiagnosis>>,
 }
 
+thread_local! {
+    static MINTED_ABSENCES: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// How many reasoned absences this thread has minted so far.
+///
+/// A reasoned absence is *minted* once, by the Word whose contract projects it
+/// (`with_reason`, `user_declared`), and from then on only *carried*: a data
+/// operand's absence is copied to the result unchanged
+/// (LANG.FAILURE.PASSTHROUGH, `Value::nil_inheriting_absence_from`), an
+/// element's absence is moved with the element. The value itself cannot say
+/// which of the two happened to it — a passed-through NIL is the same value as
+/// the NIL it was passed from (LANG.VALUES.DENOTATION) — so a count of mints is
+/// kept beside it. A Word that ran while the count stood still produced no
+/// absence, whatever its result carries; that is how the error-flow trace tells
+/// the Word that answered `divisionByZero` from the ones that merely handed it
+/// on (`Interpreter::trace_nil_outcome`). Diagnostic only: nothing a program
+/// can observe reads it.
+pub fn minted_absence_count() -> u64 {
+    MINTED_ABSENCES.with(|count| count.get())
+}
+
+fn mint() {
+    MINTED_ABSENCES.with(|count| count.set(count.get().wrapping_add(1)));
+}
+
 impl AbsenceMetadata {
     /// The declared text, when this absence carries one.
     #[inline]
@@ -95,6 +121,7 @@ impl AbsenceMetadata {
         origin: AbsenceOrigin,
         recoverability: Recoverability,
     ) -> Self {
+        mint();
         Self {
             reason: Some(reason),
             detail: None,
@@ -108,6 +135,7 @@ impl AbsenceMetadata {
     /// program's text as its detail. Recoverable, because a caller can choose
     /// a fallback for it exactly as for a projected absence.
     pub fn user_declared(detail: &str) -> Self {
+        mint();
         Self {
             reason: Some(NilReason::UserDeclared),
             detail: Some(std::sync::Arc::new(detail.to_string())),

@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
@@ -89,14 +89,16 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
 /// One lane of an ordering comparison: both operands are past the alignment,
 /// so neither is a Vector here.
 fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Value> {
-    if a_val.is_nil() || b_val.is_nil() {
-        return Ok(Value::nil_with_reason_unknown(
-            a_val
-                .nil_reason()
-                .or_else(|| b_val.nil_reason())
-                .copied()
-                .unwrap_or(NilReason::Literal),
-        ));
+    // The scalar passthrough law, per lane (LANG.FAILURE.PASSTHROUGH): the
+    // leftmost absent operand *is* the result, carried whole. Rebuilding a
+    // NIL from the reason alone dropped the rest of the absence — the text a
+    // `userDeclared` reason carries, which is part of that reason — and
+    // minted a fresh absence for one the lane only received.
+    if a_val.is_nil() {
+        return Ok(Value::nil_inheriting_absence_from(a_val));
+    }
+    if b_val.is_nil() {
+        return Ok(Value::nil_inheriting_absence_from(b_val));
     }
     // `nonNumeric`: LT/GT, the only callers of
     // `compare_lane`, declare it uniformly. EQ never reaches here —

@@ -253,6 +253,98 @@ mod attribution_tests {
     }
 }
 
+/// Which Word *produced* a reasoned NIL, as against which Words it passed
+/// through. A NIL flows like any other value (LANG.FAILURE.PASSTHROUGH): an
+/// absent data operand is the result, reason unchanged, and the primitive does
+/// not run. Every Word downstream of the projection used to record the NIL as
+/// its own, so a host showing the latest event blamed the last Word the NIL
+/// passed.
+#[cfg(test)]
+mod production_attribution_tests {
+    use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
+    use crate::interpreter::Interpreter;
+
+    async fn productions(source: &str) -> Vec<ErrorFlowEvent> {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(source)
+            .await
+            .unwrap_or_else(|e| panic!("`{source}` must compute, got: {e:?}"));
+        interp
+            .drain_error_flow_trace()
+            .into_iter()
+            .filter(|event| event.kind == ErrorFlowEventKind::NilProduced)
+            .collect()
+    }
+
+    fn producers(events: &[ErrorFlowEvent]) -> Vec<&str> {
+        events
+            .iter()
+            .filter_map(|event| event.word.as_deref())
+            .collect()
+    }
+
+    fn inside(event: &ErrorFlowEvent) -> Option<&str> {
+        event
+            .diagnosis
+            .as_ref()?
+            .evidence
+            .iter()
+            .find_map(|e| e.strip_prefix("insideWords="))
+    }
+
+    #[tokio::test]
+    async fn a_nil_passed_through_data_operands_is_produced_once() {
+        let events = productions("1 0 DIV 2 ADD 3 MUL 1 EQ").await;
+        assert_eq!(producers(&events), vec!["DIV"]);
+    }
+
+    /// An element operand carries a NIL as an ordinary value, so a Word that
+    /// collects, joins or extracts it produced nothing either.
+    #[tokio::test]
+    async fn a_nil_carried_as_an_element_is_not_produced_again() {
+        assert_eq!(
+            producers(&productions("1 0 DIV 1 COLLECT [ 2 ] CONCAT 0 GET").await),
+            vec!["DIV"]
+        );
+    }
+
+    /// A NIL that entered a User Word through its operand and left through its
+    /// result was passed through the body's Words and through the Word.
+    #[tokio::test]
+    async fn a_user_word_that_passes_a_nil_through_did_not_produce_it() {
+        let events = productions("[ 2 DIV ] 'HALVE' DEF 1 0 DIV HALVE").await;
+        assert_eq!(producers(&events), vec!["DIV"]);
+        assert_eq!(inside(&events[0]), None);
+    }
+
+    /// A NIL a body's Word projected is that Word's, and the User Word is the
+    /// frame it happened in — innermost first, as a failure's frames are.
+    /// `HALVE`'s body compiles; `TWICE`'s holds a nested quotation the
+    /// compiler leaves to the interpreter, so both body routes are covered and
+    /// must read alike (LANG.AUTHORITY.FREEDOM).
+    #[tokio::test]
+    async fn a_nil_produced_inside_a_user_word_names_the_producer_and_the_frames() {
+        let compiled = productions("[ 0 DIV ] 'HALVE' DEF [ HALVE ] 'OUTER' DEF 1 OUTER").await;
+        assert_eq!(producers(&compiled), vec!["DIV"]);
+        assert_eq!(inside(&compiled[0]), Some("HALVE,OUTER"));
+
+        let interpreted =
+            productions("[ 0 DIV [ ADD ] DROP ] 'TWICE' DEF [ TWICE ] 'OUTER' DEF 1 OUTER").await;
+        assert_eq!(producers(&interpreted), vec!["DIV"]);
+        assert_eq!(inside(&interpreted[0]), Some("TWICE,OUTER"));
+    }
+
+    /// A NIL a block's Word projected under a higher-order Word is the block
+    /// Word's, once per application, inside the higher-order Word.
+    #[tokio::test]
+    async fn a_nil_produced_in_an_applied_block_is_the_block_words() {
+        let events = productions("[ 1 2 ] [ 0 DIV ] MAP").await;
+        assert_eq!(producers(&events), vec!["DIV", "DIV"]);
+        assert!(events.iter().all(|event| inside(event) == Some("MAP")));
+    }
+}
+
 /// An error carries where in the source it happened, so a reader is sent to a
 /// line rather than left to bisect the program. The evidence channel already
 /// carries `key=value` facts (`stackLenBefore=`), so the position needed no new

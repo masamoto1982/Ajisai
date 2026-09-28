@@ -108,11 +108,14 @@ fn exhausted_nil(
         observed,
         progress: None,
     });
-    Value::nil_with_absence(AbsenceMetadata {
-        reason: Some(NilReason::SpaceExhausted),
-        detail: None,
-        origin: AbsenceOrigin::SpaceBudget,
-        recoverability: Recoverability::Unknown,
-        diagnosis: Some(Box::new(diagnosis)),
-    })
+    // Minted through the one constructor every projected absence goes through,
+    // so the ceiling's NIL is counted as produced like any other; only the
+    // diagnosis is this projection's own.
+    let mut absence = AbsenceMetadata::with_reason(
+        NilReason::SpaceExhausted,
+        AbsenceOrigin::SpaceBudget,
+        Recoverability::Unknown,
+    );
+    absence.diagnosis = Some(Box::new(diagnosis));
+    Value::nil_with_absence(absence)
 }

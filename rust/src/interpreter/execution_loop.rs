@@ -1,8 +1,6 @@
-use crate::error::{AjisaiError, NilReason, Result};
-use crate::types::{Token, Value, ValueData};
+use crate::error::{AjisaiError, Result};
+use crate::types::{Token, Value};
 
-use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
-use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
 use super::Interpreter;
 
@@ -28,139 +26,6 @@ fn def_body_tokens_if_literal_precedes_def(
         }
         _ => None,
     }
-}
-
-fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
-    projected_nil_reason(interp.stack.last()?)
-}
-
-/// The reason a Word's result records for an absence *it produced*, or `None`.
-///
-/// Looking only at the value itself missed every lifted projection. A Word
-/// lifted over a collection projects per lane (`LANG.COLLECTIONS.LIFT`), so
-/// the absence it produced sits inside the result rather than being the
-/// result: `6 0 DIV` was traced and `[ 6 ] [ 0 ] DIV` was not, and `[ 4 -1 ] SQRT`
-/// never was, though all three project for a reason the Word can name.
-///
-/// `Literal` is excluded because it is the absence a Word *received*, not one
-/// it made: a `NIL` written in source, and — since a dense lane carries
-/// presence but no reason — any absence that has passed through a tensor. So
-/// `[ 1 NIL 3 ] [ 2 ] MUL` records nothing, which is right: `MUL` propagated that
-/// NIL, it did not produce it.
-///
-/// The first reasoned absence in reading order names the event, keeping one
-/// event per Word call as the trace's shape requires.
-fn projected_nil_reason(value: &Value) -> Option<NilReason> {
-    // UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it is traced like any other.
-    if value.is_nil() {
-        return match value.nil_reason() {
-            Some(NilReason::Literal) | None => None,
-            Some(reason) => Some(*reason),
-        };
-    }
-    // A dense tensor already keeps *why* each absent lane is absent, in a map
-    // holding only the absent ones. Materializing every lane to look for it
-    // read the rare fact out of the common one: `as_vector_view` on a `Tensor`
-    // rebuilds the whole buffer as boxed `Value`s, and this runs after every
-    // Word. The map is the same evidence, in lane order, sized to the failures
-    // rather than to the data.
-    if let ValueData::Tensor { data, .. } = &value.data {
-        return dense_projected_nil_reason(data);
-    }
-    let lanes = value.as_vector_view()?;
-    lanes.iter().find_map(projected_nil_reason)
-}
-
-/// [`projected_nil_reason`] for a dense tensor, read from its absence map.
-///
-/// Equivalent to the materialized walk lane by lane: `absences()` yields the
-/// absent lanes in ascending lane order and screens each against the presence
-/// sentinel, which is exactly the order and the filter a walk over the boxed
-/// lanes applied. A lane the tensor was never told a reason for carries none,
-/// and is skipped here as `with_reasonless_unknown` was skipped there.
-fn dense_projected_nil_reason(data: &crate::types::DenseTensor) -> Option<NilReason> {
-    data.absences()
-        .find_map(|(_, metadata)| match metadata.reason {
-            Some(NilReason::Literal) | None => None,
-            Some(reason) => Some(reason),
-        })
-}
-
-/// The absence envelope of the same value [`projected_nil_reason`] answered
-/// for, so the traced `absence` and the traced reason always describe one
-/// value rather than two.
-fn projected_absence_metadata(value: &Value) -> Option<crate::semantic::AbsenceMetadata> {
-    if value.is_nil() {
-        return match value.nil_reason() {
-            Some(NilReason::Literal) | None => None,
-            Some(_) => value.normalized_absence_metadata(),
-        };
-    }
-    // Same lane, same map, same reason as `projected_nil_reason` picked — see
-    // `dense_projected_nil_reason`. The two must agree on *which* lane they
-    // describe, which is why both read the absence map in its lane order.
-    if let ValueData::Tensor { data, .. } = &value.data {
-        return data
-            .absences()
-            .find_map(|(_, metadata)| match metadata.reason {
-                Some(NilReason::Literal) | None => None,
-                Some(_) => Some(metadata.clone()),
-            });
-    }
-    let lanes = value.as_vector_view()?;
-    lanes.iter().find_map(projected_absence_metadata)
-}
-
-fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_before: usize) {
-    let Some(reason) = top_direct_nil_reason(interp) else {
-        return;
-    };
-
-    // A NIL is reported by its reason and by nothing else: an error category
-    // beside it would name an outcome the run did not have.
-    let stack_len_after = interp.stack.len();
-    let mut diagnosis = DebugDiagnosis::from_error_category(
-        ErrorPhase::ExecuteWord,
-        Some(word),
-        None,
-        Some(&reason),
-        stack_len_before,
-        stack_len_after,
-        Some(format!(
-            "NIL produced by {} reason={}",
-            word,
-            reason.as_protocol_str()
-        )),
-    );
-    // A User Word that answered the NIL is named as one; only the live
-    // dictionary knows it is.
-    diagnosis.with_user_vocabulary(interp.user_words.keys().map(String::as_str));
-    // The absence envelope belongs to the value that actually carries the
-    // projection, which for a lifted Word is a lane rather than the result.
-    let absence = interp.stack.last().and_then(projected_absence_metadata);
-    // The ceiling facts behind a resource projection are decided at the
-    // projection site — the only place that knows which limit fired and at what
-    // size — so they are carried over rather than rebuilt from the category
-    // here, which could only say that *a* limit was crossed.
-    diagnosis.resource_limit = absence
-        .as_ref()
-        .and_then(|metadata| metadata.diagnosis.as_ref())
-        .and_then(|d| d.resource_limit.clone());
-    interp.push_error_flow_trace(ErrorFlowEvent {
-        kind: ErrorFlowEventKind::NilProduced,
-        word: Some(word.to_string()),
-        error_category: None,
-        absence,
-        stack_len_before,
-        stack_len_after,
-        message: format!(
-            "NIL produced by {} reason={}",
-            word,
-            reason.as_protocol_str()
-        ),
-        diagnosis: Some(diagnosis),
-        error_text: String::new(),
-    });
 }
 
 impl Interpreter {
@@ -242,16 +107,14 @@ impl Interpreter {
                     {
                         let upper = canonical;
 
-                        let stack_len_before = self.stack.len();
+                        let witness = self.begin_dispatch();
                         match self.execute_word_core(upper.as_ref()) {
-                            Ok(()) => {
-                                trace_direct_nil_produced(self, upper.as_ref(), stack_len_before);
-                            }
+                            Ok(()) => self.trace_nil_outcome(upper.as_ref(), &witness),
                             Err(err) => {
                                 self.record_word_dispatch_failure(
                                     upper.as_ref(),
                                     &err,
-                                    stack_len_before,
+                                    witness.stack_len_before,
                                 );
                                 return Err(err);
                             }

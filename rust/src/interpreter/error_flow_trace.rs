@@ -42,6 +42,52 @@ impl ErrorFlowEventKind {
 use crate::error::AjisaiError;
 
 impl crate::interpreter::Interpreter {
+    /// What a User Word owes at its call boundary when its body failed.
+    ///
+    /// Attribution stops at a User Word: from the caller's side the Word is
+    /// what failed, since what its body was given is what the caller wrote.
+    /// So the failure is recorded again under the Word's own name, and that
+    /// record is the answer; whatever the body recorded stays in the trace as
+    /// detail. Recording here rather than at the dispatch site is what keeps
+    /// the compiled and interpreted body routes naming one Word
+    /// (LANG.AUTHORITY.FREEDOM).
+    ///
+    /// The one failure the caller cannot have caused is a name in the body
+    /// that resolved to nothing: no operand explains it, the repair is at the
+    /// name (the spelling candidates exist only there), and reporting it as
+    /// this Word's failure put the misspelled name in the message alone. So a
+    /// resolution failure keeps the record the name made, and the site that
+    /// dispatched this Word adds it as the frame the name was written in —
+    /// the same reading a failure inside a block gets.
+    pub(crate) fn record_user_word_failure(
+        &mut self,
+        word: &str,
+        err: &AjisaiError,
+        stack_len_before: usize,
+    ) {
+        if matches!(
+            ErrorCategory::from_error(err),
+            Some(ErrorCategory::UnknownWord)
+        ) {
+            return;
+        }
+        let mut diagnosis =
+            DebugDiagnosis::from_error(err, Some(word), stack_len_before, self.stack.len())
+                .with_source_position(self.current_source_span);
+        diagnosis.with_user_vocabulary(self.user_words.keys().map(String::as_str));
+        self.push_error_flow_trace(ErrorFlowEvent {
+            kind: ErrorFlowEventKind::WordError,
+            word: Some(word.to_string()),
+            error_category: ErrorCategory::from_error(err),
+            absence: None,
+            stack_len_before,
+            stack_len_after: self.stack.len(),
+            message: format!("word error word={} error={}", word, err),
+            diagnosis: Some(diagnosis),
+            error_text: err.to_string(),
+        });
+    }
+
     /// What a Word dispatch owes when it fails, regardless of how the caller
     /// reached it.
     ///

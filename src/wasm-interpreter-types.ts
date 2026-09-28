@@ -123,13 +123,45 @@ export interface ProtocolDebugCheck {
     detail: LocalizedText;
 }
 
+/**
+ * The diagnosis vocabularies, as the engine spells them on the wire
+ * (rust/src/interpreter/debug_diagnosis.rs, each enum's `as_protocol_str`).
+ * The engine owns these lists; this file mirrors the values it emits so a
+ * misspelt comparison fails to compile rather than silently never matching.
+ * `hostGuard` and `hostEnvironment` are the playground's own: the wall-clock
+ * stop is decided by the page, not by a Word, and no engine diagnosis carries
+ * them (gui/interpreter-execution-utils.ts).
+ */
+export type DiagnosisPhase =
+    | 'tokenize'
+    | 'parseStructure'
+    | 'resolveWord'
+    | 'executeWord'
+    | 'hostGuard';
+
+export type DiagnosisLocusKind = 'coreWord' | 'userWord' | 'unknown' | 'hostEnvironment';
+
+export type DiagnosisCauseClass =
+    | 'typoOrUnknownName'
+    | 'stackShape'
+    | 'valueShape'
+    | 'domain'
+    | 'index'
+    | 'shapeMismatch'
+    | 'nilFlow'
+    | 'userLogic'
+    | 'resourceLimit'
+    | 'sourceForm'
+    | 'contractViolation'
+    | 'unknown';
+
 export interface ProtocolDiagnosis {
-    when: string;
+    when: DiagnosisPhase;
     where: {
-        kind: string;
+        kind: DiagnosisLocusKind;
         word?: string;
     };
-    why: string;
+    why: DiagnosisCauseClass;
     summary: string;
     evidence: string[];
     nextChecks: ProtocolDebugCheck[];
@@ -196,7 +228,14 @@ export interface ProtocolValueSemantics {
 }
 
 export interface ErrorFlowTraceEvent {
-    kind: string;
+    /**
+     * `wordError` for a Word that failed; `nilProduced` for a Word that
+     * *produced* a reasoned NIL — the Word whose contract projected it, not
+     * the Words it then passed through (LANG.FAILURE.PASSTHROUGH). A Word
+     * inside which it was produced is named in the event's diagnosis
+     * evidence (`insideWords=`), innermost first.
+     */
+    kind: 'wordError' | 'nilProduced';
     word?: string;
     absence?: ProtocolAbsence;
     stackLenBefore: number;

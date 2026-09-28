@@ -160,3 +160,63 @@ fn only_an_unresolved_locus_is_spell_checked_against_the_live_dictionary() {
     top_level.with_user_vocabulary(["DOUBLE"].into_iter());
     assert_eq!(top_level.candidates, vec!["DOUBLE".to_string()]);
 }
+
+/// Where an unresolved name inside a User Word is reported. The caller cannot
+/// have caused it — no operand explains a dangling name — and the repair (the
+/// spelling candidates) exists only at the name, so the name is the locus and
+/// the User Words it was written inside are its frames.
+#[cfg(test)]
+mod unresolved_name_locus_tests {
+    use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorLocusKind};
+    use crate::interpreter::Interpreter;
+
+    async fn diagnose(source: &str) -> DebugDiagnosis {
+        let mut interp = Interpreter::new();
+        assert!(
+            interp.execute(source).await.is_err(),
+            "`{source}` must fail"
+        );
+        interp
+            .drain_error_flow_trace()
+            .iter()
+            .rev()
+            .find_map(|event| event.diagnosis.clone())
+            .expect("the failure carries a diagnosis")
+    }
+
+    fn inside(diagnosis: &DebugDiagnosis) -> Option<&str> {
+        diagnosis
+            .evidence
+            .iter()
+            .find_map(|e| e.strip_prefix("insideWords="))
+    }
+
+    #[tokio::test]
+    async fn the_unresolved_name_is_the_locus_and_the_user_words_are_its_frames() {
+        let diagnosis = diagnose("[ DORP ] 'W' DEF [ W ] 'V' DEF V").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("DORP"));
+        assert_eq!(diagnosis.where_.kind, ErrorLocusKind::Unknown);
+        assert_eq!(diagnosis.when.as_protocol_str(), "resolveWord");
+        assert_eq!(inside(&diagnosis), Some("W,V"));
+        assert_eq!(
+            diagnosis.candidates.first().map(String::as_str),
+            Some("DROP")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_user_word_applied_by_a_higher_order_word_is_a_frame_too() {
+        let diagnosis = diagnose("[ DORP ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("DORP"));
+        assert_eq!(inside(&diagnosis), Some("S,MAP"));
+    }
+
+    /// The rule is for resolution failures only: a failure the operands
+    /// explain still stops at the User Word.
+    #[tokio::test]
+    async fn an_execution_failure_still_names_the_user_word() {
+        let diagnosis = diagnose("[ 1 ADD ] 'W' DEF W").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("W"));
+        assert_eq!(diagnosis.where_.kind, ErrorLocusKind::UserWord);
+    }
+}

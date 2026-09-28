@@ -95,6 +95,20 @@ async fn a_division_by_zero_reaches_the_top_level_diagnosis_too() {
     );
 }
 
+/// The link names the Word that produced the NIL, not the last Word it passed
+/// through on the way: with `ADD` between the projection and the refusal, the
+/// cause is still `DIV`.
+#[tokio::test]
+async fn the_link_names_the_producer_not_the_last_word_the_nil_passed() {
+    let report = report("1 0 DIV 2 ADD EXEC").await;
+    assert_eq!(report["status"], "error");
+    let evidence = evidence(&report);
+    assert!(
+        evidence.contains(&"upstreamNilProducer=DIV".to_string()),
+        "{evidence:?}"
+    );
+}
+
 /// The negative half, and the one that decides whether the link is worth
 /// having: a plain type error keeps exactly the diagnosis it had. A link that
 /// attached itself to every failure would be a plausible wrong cause on the

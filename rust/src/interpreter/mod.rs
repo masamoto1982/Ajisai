@@ -120,9 +120,10 @@ mod resolve_word;
 
 mod execution_loop;
 #[cfg(test)]
-mod execution_loop_tests;
-#[cfg(test)]
 mod execution_step_parity_tests;
+mod nil_trace;
+#[cfg(test)]
+mod nil_trace_tests;
 mod value_as_code;
 pub(crate) mod vector_literal;
 
