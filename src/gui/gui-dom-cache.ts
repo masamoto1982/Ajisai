@@ -11,11 +11,13 @@ export interface GUIElements {
     readonly importBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
-    readonly builtInWordsDisplay: HTMLElement;
+    readonly coreWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
     readonly dictionarySheetSelect: HTMLSelectElement;
+    readonly dictionaryCoreSheet: HTMLElement;
+    readonly dictionaryUserSheet: HTMLElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
@@ -54,11 +56,13 @@ export const cacheElements = (): GUIElements => ({
     importBtn: requireElement('#import-btn', HTMLButtonElement),
     outputDisplay: requireElement('#output-display', HTMLElement),
     stackDisplay: requireElement('#stack-display', HTMLElement),
-    builtInWordsDisplay: requireElement('#core-words-display', HTMLElement),
+    coreWordsDisplay: requireElement('#core-words-display', HTMLElement),
     userWordsDisplay: requireElement('#user-words-display', HTMLElement),
     dictionarySearch: requireElement('#dictionary-search', HTMLInputElement),
     dictionarySearchClearBtn: requireElement('#dictionary-search-clear-btn', HTMLButtonElement),
     dictionarySheetSelect: requireElement('#dictionary-sheet-select', HTMLSelectElement),
+    dictionaryCoreSheet: requireElement('#dictionary-sheet-core', HTMLElement),
+    dictionaryUserSheet: requireElement('#dictionary-sheet-user', HTMLElement),
     inputArea: requireElement('.input-area', HTMLElement),
     outputArea: requireElement('.output-area', HTMLElement),
     stackArea: requireElement('.stack-area', HTMLElement),
@@ -76,7 +80,7 @@ export const extractDisplayElements = (elements: GUIElements): DisplayElements =
 });
 
 export const extractVocabularyElements = (elements: GUIElements): VocabularyElements => ({
-    builtInWordsDisplay: elements.builtInWordsDisplay,
+    coreWordsDisplay: elements.coreWordsDisplay,
     userWordsDisplay: elements.userWordsDisplay
 });
 

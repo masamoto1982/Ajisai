@@ -154,15 +154,21 @@ export interface ExecutionSurfaceChanges {
     readonly outputChanged: boolean;
     readonly stackChanged: boolean;
     readonly dictionaryChanged: boolean;
-    readonly dictionarySheetId?: string;
 }
+
+// The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), and the
+// Dictionary area shows one at a time.
+export type DictionarySheetId = 'core' | 'user';
+
+export const isDictionarySheetId = (value: unknown): value is DictionarySheetId =>
+    value === 'core' || value === 'user';
 
 export interface ApplyAreaStateDeps {
     readonly elements: GUIElements;
     readonly state: LayoutState;
     readonly mobile: MobileHandler;
     /** Select a dictionary sheet in the selector and show it. */
-    readonly showDictionarySheet: (sheetId: string) => void;
+    readonly showDictionarySheet: (sheetId: DictionarySheetId) => void;
 }
 
 const applyMobileAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
@@ -216,9 +222,9 @@ export const applyExecutionAreaState = (
             nextMode = 'stack';
         }
         if (nextMode) {
-            if (nextMode === 'dictionary' && changes.dictionarySheetId) {
-                deps.showDictionarySheet(changes.dictionarySheetId);
-            }
+            // A run that changed the dictionary defined or deleted a User Word,
+            // so the User sheet is the one to show.
+            if (nextMode === 'dictionary') deps.showDictionarySheet('user');
             deps.state.currentMode = nextMode;
             applyMobileAreaState(deps, nextMode);
         }
@@ -233,7 +239,7 @@ export const applyExecutionAreaState = (
     }
     if (changes.dictionaryChanged) {
         deps.state.currentRightMode = 'dictionary';
-        if (changes.dictionarySheetId) deps.showDictionarySheet(changes.dictionarySheetId);
+        deps.showDictionarySheet('user');
     }
 
     deps.state.currentMode = deps.state.currentRightMode;

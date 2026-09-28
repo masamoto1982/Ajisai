@@ -72,9 +72,7 @@ export const detectExecutionSurfaceChanges = (
     return {
         outputChanged: hasError || Boolean((result.output ?? '').trim()),
         stackChanged: !checkValuesEqual(before.stack, after.stack),
-        dictionaryChanged: userWordsChanged,
-        // Defining your own word lands on the 'user' sheet.
-        dictionarySheetId: userWordsChanged ? 'user' : undefined
+        dictionaryChanged: userWordsChanged
     };
 };
 

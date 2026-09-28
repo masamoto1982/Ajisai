@@ -139,9 +139,6 @@
 
     & .vocabulary-search-input {
         width: 100%;
-        max-width: none;
-        /* Narrower than the base rule's 120px floor: the row cannot grow to
-           seat it, and the overflow would clip the clear button. */
         min-width: 0;
     }
 
@@ -165,8 +162,6 @@
 }
 
 .area-selector-right {
-    display: flex;
-
     @media (width <= 768px) {
         display: none;
     }
@@ -557,8 +552,6 @@
     background-color: var(--color-symbol);
     color: var(--input-text);
     caret-color: var(--input-text);
-    min-width: 120px;
-    max-width: 200px;
     transition: background-color var(--transition-fast);
 
     &:focus {
@@ -741,13 +734,8 @@
         text-align: left;
         cursor: pointer;
 
-        &:hover:not(:disabled) {
+        &:hover {
             background: var(--color-light);
-        }
-
-        &:disabled {
-            color: var(--color-text-light);
-            cursor: not-allowed;
         }
     }
 }

@@ -10,14 +10,8 @@ import {
 import { isFailure } from './interpreter-execution-utils';
 import { toError } from './to-error';
 
-export interface WordInfo {
-    readonly name: string;
-    /** Another User Word calls this one. */
-    readonly hasDependents: boolean;
-}
-
 export interface VocabularyElements {
-    readonly builtInWordsDisplay: HTMLElement;
+    readonly coreWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
 }
 
@@ -32,15 +26,10 @@ export interface VocabularyCallbacks {
 }
 
 export interface VocabularyManager {
-    readonly renderBuiltInWords: () => void;
+    readonly renderCoreWords: () => void;
     readonly updateUserWords: (userWordsInfo: UserWordInfo[]) => void;
     readonly updateSearchFilter: (filter: string) => void;
 }
-
-const createWordInfoFromTuple = ([name, hasDependents]: UserWordInfo): WordInfo => ({
-    name,
-    hasDependents
-});
 
 // The tooltip text for a User Word: what its author wrote for a reader
 // (`#:contract`), or its source when nothing was written. Empty when the
@@ -110,7 +99,7 @@ export const createVocabularyManager = (
         }
     });
 
-    for (const container of [elements.builtInWordsDisplay, elements.userWordsDisplay]) {
+    for (const container of [elements.coreWordsDisplay, elements.userWordsDisplay]) {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
     }
 
@@ -151,7 +140,7 @@ export const createVocabularyManager = (
         }
     };
 
-    const renderBuiltInWordsSorted = (container: HTMLElement): void => {
+    const renderCoreWordsSorted = (container: HTMLElement): void => {
         container.replaceChildren();
         container.classList.remove('is-empty');
 
@@ -178,34 +167,39 @@ export const createVocabularyManager = (
         }
     };
 
-    const renderUserWordButtons = (container: HTMLElement, words: WordInfo[]): void => {
+    const renderUserWordButtons = (container: HTMLElement, words: UserWordInfo[]): void => {
         container.replaceChildren();
 
-        const filteredWords = words.filter(wordInfo =>
-            checkWordMatchesFilter(wordInfo.name, searchFilter)
+        const filteredWords = words.filter(([name]) =>
+            checkWordMatchesFilter(name, searchFilter)
         );
-        const sortedFiltered = [...filteredWords].sort((a, b) =>
-            compareWordName(a.name, b.name)
+        const sortedFiltered = [...filteredWords].sort(([a], [b]) =>
+            compareWordName(a, b)
         );
 
         const fragment = document.createDocumentFragment();
-        for (const wordInfo of sortedFiltered) {
-            const className = wordInfo.hasDependents
+        for (const [name, hasDependents] of sortedFiltered) {
+            // Another User Word calls it, so DEL refuses it until that caller
+            // is gone; it is coloured apart.
+            const className = hasDependents
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
             fragment.appendChild(createWordButtonElement(
-                wordInfo.name,
+                name,
                 className,
-                () => onWordClick(wordInfo.name),
+                () => onWordClick(name),
                 // Read at render rather than on hover: a tooltip has to carry
                 // its text before the pointer arrives.
-                lookupUserWordTooltip(interpreter, wordInfo.name),
-                (event) => renderDeleteContextMenu(event, wordInfo.name)
+                lookupUserWordTooltip(interpreter, name),
+                (event) => renderDeleteContextMenu(event, name)
             ));
         }
         container.appendChild(fragment);
 
-        if (searchFilter && words.length > 0 && filteredWords.length === 0) {
+        // A filter that matches nothing says so, whether or not there are
+        // words to match: an empty User sheet under a filter used to show
+        // neither message.
+        if (searchFilter && filteredWords.length === 0) {
             container.classList.add('is-empty');
             container.appendChild(createNoResultsElement());
             return;
@@ -217,19 +211,19 @@ export const createVocabularyManager = (
             return;
         }
 
-        container.classList.toggle('is-empty', sortedFiltered.length === 0);
+        container.classList.remove('is-empty');
     };
 
-    const renderBuiltInWords = (): void => {
+    const renderCoreWords = (): void => {
         try {
-            renderBuiltInWordsSorted(elements.builtInWordsDisplay);
+            renderCoreWordsSorted(elements.coreWordsDisplay);
         } catch (error) {
             console.error('Failed to render core words:', error);
         }
     };
 
     const renderUserWords = (): void => {
-        renderUserWordButtons(elements.userWordsDisplay, cachedUserWords.map(createWordInfoFromTuple));
+        renderUserWordButtons(elements.userWordsDisplay, cachedUserWords);
     };
 
     const updateUserWords = (userWordsInfo: UserWordInfo[]): void => {
@@ -239,12 +233,12 @@ export const createVocabularyManager = (
 
     const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
-        renderBuiltInWords();
+        renderCoreWords();
         renderUserWords();
     };
 
     return {
-        renderBuiltInWords,
+        renderCoreWords,
         updateUserWords,
         updateSearchFilter
     };

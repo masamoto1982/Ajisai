@@ -16,10 +16,11 @@ import {
     applyExecutionAreaState,
     createLayoutController,
     createLayoutState,
+    isDictionarySheetId,
     updateEditorPlaceholder,
-    type ApplyAreaStateDeps
+    type ApplyAreaStateDeps,
+    type DictionarySheetId
 } from './gui-layout-state';
-import { switchDictionarySheet } from './gui-dictionary-sheet';
 import { bindGuiEvents } from './gui-event-bindings';
 
 /**
@@ -66,16 +67,15 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         // sheet list is fixed — Core and User — and is a plain <select>, like
         // the two area selectors beside it.
         const sheetSelect = elements.dictionarySheetSelect;
+        const showDictionarySheet = (sheetId: DictionarySheetId): void => {
+            sheetSelect.value = sheetId;
+            elements.dictionaryCoreSheet.hidden = sheetId !== 'core';
+            elements.dictionaryUserSheet.hidden = sheetId !== 'user';
+        };
         sheetSelect.addEventListener('change', () => {
-            switchDictionarySheet(elements.dictionaryArea, sheetSelect.value);
+            if (isDictionarySheetId(sheetSelect.value)) showDictionarySheet(sheetSelect.value);
             void persistence.saveCurrentState();
         });
-        const showDictionarySheet = (sheetId: string): void => {
-            // A saved id that names no sheet leaves the current one showing.
-            if (![...sheetSelect.options].some((option) => option.value === sheetId)) return;
-            sheetSelect.value = sheetId;
-            switchDictionarySheet(elements.dictionaryArea, sheetId);
-        };
 
         const mobile = createMobileHandler(extractMobileElements(elements), {
             currentMode: () => layoutState.currentMode,
@@ -188,12 +188,13 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             persistence,
             clearStack
         });
-        vocabulary.renderBuiltInWords();
+        vocabulary.renderCoreWords();
         updateAllDisplays();
 
         const restored = await persistence.loadDatabaseData();
         updateAllDisplays();
-        if (restored.activeDictionarySheet) {
+        // A saved id that names no sheet leaves the current one showing.
+        if (isDictionarySheetId(restored.activeDictionarySheet)) {
             showDictionarySheet(restored.activeDictionarySheet);
         }
 

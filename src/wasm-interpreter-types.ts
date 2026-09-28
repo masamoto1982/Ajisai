@@ -210,7 +210,6 @@ export interface ErrorFlowTraceEvent {
 export interface ExecuteResult {
     status: 'OK' | 'ERROR';
     output?: string;
-    debugOutput?: string;
     message?: string;
     error?: boolean;
     /**
