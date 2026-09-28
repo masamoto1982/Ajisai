@@ -43,10 +43,10 @@ const nil = (reason: string): Value =>
     ({ type: 'nil', value: null, semantics: { absence: { reason } } } as unknown as Value);
 
 const DIV_DIAGNOSIS: ProtocolDiagnosis = {
-    when: 'wordExecution',
+    when: 'executeWord',
     where: { kind: 'coreWord', word: 'DIV' },
     why: 'domain',
-    summary: 'wordExecution / DIV (coreWord) / domain',
+    summary: 'executeWord / DIV (coreWord) / domain (nil:divisionByZero)',
     evidence: [],
     candidates: [],
     nextChecks: []
