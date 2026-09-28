@@ -1,4 +1,5 @@
-import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
+import type { InterpreterStateSnapshot } from '../platform/platform-adapter';
 import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
@@ -16,16 +17,8 @@ import { toError } from './to-error';
 // read.
 export const STATE_FORMAT_VERSION = 5;
 
-export interface InterpreterState {
-    readonly stateVersion: number;
-    // The observation-format stack, persisted for display only.
-    readonly stack: Value[];
-    // The lossless stack snapshot (opaque string) and the only format restore
-    // accepts.
-    readonly stackSnapshot: string;
-    readonly userWords: UserWord[];
-    readonly activeDictionarySheet?: string;
-}
+// The document itself is the shape both stores write (`InterpreterStateSnapshot`).
+export type InterpreterState = InterpreterStateSnapshot;
 
 // Whether a saved session carries a dictionary of its own — including an
 // empty one. An empty dictionary is a choice the user made by deleting every
@@ -63,8 +56,9 @@ const collectCurrentState = (
     activeDictionarySheet: string | undefined
 ): InterpreterState => ({
     stateVersion: STATE_FORMAT_VERSION,
-    // The lossless snapshot is what restore reads; `stack` is display data.
-    stack: interpreter.collect_stack(),
+    // The lossless snapshot is what restore reads. The observation-format
+    // stack used to be saved beside it "for display", and nothing ever read
+    // it back: a 200,000-element stack was serialized twice on every save.
     stackSnapshot: interpreter.snapshot_stack(),
     userWords: collectUserWords(interpreter),
     activeDictionarySheet
