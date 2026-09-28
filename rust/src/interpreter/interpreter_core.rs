@@ -384,37 +384,6 @@ impl Interpreter {
         true
     }
 
-    /// Record a Word's failure in the error-flow trace, attributed to that
-    /// Word and positioned at the top-level token that reached it.
-    pub(crate) fn record_word_failure(
-        &mut self,
-        word: &str,
-        err: &crate::error::AjisaiError,
-        stack_len_before: usize,
-    ) {
-        use super::debug_diagnosis::DebugDiagnosis;
-        use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
-        let stack_len_after = self.stack.len();
-        let mut diagnosis =
-            DebugDiagnosis::from_error(err, Some(word), stack_len_before, stack_len_after)
-                .with_source_position(self.current_source_span);
-        // The compiled-in registry cannot know a user Word, and a misspelled
-        // user Word is exactly the case a fresh vocabulary lookup misses. This
-        // is the one place that holds the live dictionary.
-        diagnosis.with_user_vocabulary(self.user_words.keys().map(String::as_str));
-        self.push_error_flow_trace(ErrorFlowEvent {
-            kind: ErrorFlowEventKind::WordError,
-            word: Some(word.to_string()),
-            error_category: crate::error::ErrorCategory::from_error(err),
-            absence: None,
-            stack_len_before,
-            stack_len_after,
-            message: format!("word error word={} error={}", word, err),
-            diagnosis: Some(diagnosis),
-            error_text: err.to_string(),
-        });
-    }
-
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
         EpochSnapshot {
             global_epoch: self.global_epoch,

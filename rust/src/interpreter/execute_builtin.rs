@@ -124,16 +124,10 @@ impl Interpreter {
         self.call_stack.pop();
         self.call_depth -= 1;
 
-        // A User Word call is where attribution stops. Its body is its own
-        // business: from the caller's side the Word is what failed, and that
-        // has to read the same whether the body ran compiled or interpreted —
-        // the compiled route records nothing from inside a body, so without
-        // this the two routes would name different Words for the same failure
-        // (LANG.AUTHORITY.FREEDOM: compiling a body is unobservable). Any
-        // record the interpreted route already made stays in the trace as
-        // detail; this one is the answer.
+        // Attribution stops at a User Word — see `record_user_word_failure`
+        // for what that means and the one failure it does not cover.
         if let Err(err) = &result {
-            self.record_word_failure(name, err, stack_len_at_call);
+            self.record_user_word_failure(name, err, stack_len_at_call);
         }
 
         result
