@@ -4,14 +4,18 @@
 // Every colour token the stylesheets use as text (`color: var(--…)`) must be
 // listed below with the surfaces it is drawn on, and must reach 4.5:1
 // (WCAG 1.4.3) on each of them. A token used as text that is not listed fails
-// the check too, so a new text colour cannot arrive unmeasured. The few
-// non-text marks listed separately — focus rings and the top-of-stack edge —
-// must reach 3:1 (WCAG 1.4.11).
+// the check too, so a new text colour cannot arrive unmeasured. Focus rings,
+// listed separately, must reach 3:1 (WCAG 1.4.11).
+//
+// Two colours are held below 4.5:1 on purpose, by the maintainer's eye rather
+// than the formula: placeholder text, meant to be readable when looked at and
+// otherwise to recede, and the User Word "dependency" amber, whose lightness is
+// what sets it apart from Core's orange-red. They are listed in EXCEPTIONS
+// with the reason and the ratio they have now, which becomes their floor — a
+// deliberate choice stays one, and does not drift fainter unnoticed.
 //
 // This exists because contrast was never measured: printed output shipped at
-// 1.97:1, the editor's placeholder — its only help — at 1.77:1, User Word
-// chips at 2.43:1, and the top of the stack was marked by a fill 1.21:1 from
-// the panel around it.
+// 1.97:1 and five bracket-depth colours between 1.6:1 and 3.7:1.
 //
 // Tokens are read from src/styles/tokens.css and converted OKLCH → sRGB
 // (gamut-clipped, as a browser renders them) → relative luminance.
@@ -32,13 +36,13 @@ const NON_TEXT_MINIMUM = 3;
 // Text token → the surfaces it is drawn on.
 const PANEL = ['--color-white', '--color-light'];
 const TEXT = {
-  '--color-text': [...PANEL, '--color-symbol', '--color-consume-eat'],
-  '--color-text-light': [...PANEL, '--color-symbol', '--color-consume-eat'],
+  '--color-text': [...PANEL, '--color-symbol', '--color-stack-top'],
+  '--color-text-light': [...PANEL, '--color-symbol', '--color-stack-top'],
   '--input-text': ['--color-symbol'],
   '--input-placeholder': ['--color-symbol'],
   '--color-primary': PANEL,
   '--color-white': ['--color-primary'],
-  '--color-stack': ['--color-white', '--color-consume-eat'],
+  '--color-stack': ['--color-white', '--color-stack-top'],
   '--color-core': PANEL,
   '--color-dependency': PANEL,
   '--color-non-dependency': PANEL,
@@ -46,11 +50,11 @@ const TEXT = {
   '--color-output-program': PANEL,
   '--color-output-error': PANEL,
   '--color-output-info': PANEL,
-  // Brackets are drawn in the Stack, and the top item sits on the consume fill.
+  // Brackets are drawn in the Stack, and the top item sits on its fill.
   ...Object.fromEntries(
     [1, 2, 3, 4, 5, 6, 7, 8, 9].map((depth) => [
       `--bracket-depth-${depth}`,
-      ['--color-white', '--color-consume-eat'],
+      ['--color-white', '--color-stack-top'],
     ]),
   ),
 };
@@ -58,7 +62,19 @@ const TEXT = {
 // Non-text marks → the surfaces they must stand out from.
 const NON_TEXT = {
   '--color-primary': [...PANEL, '--color-symbol'], // focus rings
-  '--color-consume-edge': ['--color-white', '--color-consume-eat'], // top of the stack
+};
+
+// Text colours held below 4.5:1 by design: surface → the floor they may not
+// fall below (their ratio when the decision was made).
+const EXCEPTIONS = {
+  '--input-placeholder': {
+    reason: 'placeholder text recedes behind what is typed',
+    floors: { '--color-symbol': 1.77 },
+  },
+  '--color-dependency': {
+    reason: 'the light amber is what tells a depended-on User Word from a Core Word',
+    floors: { '--color-white': 2.43, '--color-light': 2.3 },
+  },
 };
 
 function readTokens(css) {
@@ -111,10 +127,20 @@ for (const [pairs, minimum, kind] of [
     for (const surface of surfaces) {
       const ratio = contrast(token(foreground), token(surface));
       measured += 1;
-      if (ratio < minimum) {
-        failures.push(`${kind} ${foreground} on ${surface}: ${ratio.toFixed(2)}:1, needs ${minimum}:1`);
+      const floor = kind === 'text' ? EXCEPTIONS[foreground]?.floors[surface] : undefined;
+      const required = floor ?? minimum;
+      if (ratio + 0.005 < required) {
+        failures.push(
+          `${kind} ${foreground} on ${surface}: ${ratio.toFixed(2)}:1, needs ${required}:1` +
+            (floor === undefined ? '' : ` (the floor of a design exception: ${EXCEPTIONS[foreground].reason})`),
+        );
       }
     }
+  }
+}
+for (const [name, { floors }] of Object.entries(EXCEPTIONS)) {
+  for (const surface of Object.keys(floors)) {
+    if (!TEXT[name]?.includes(surface)) failures.push(`exception ${name} on ${surface} is not a measured pair`);
   }
 }
 
@@ -134,6 +160,7 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `[contrast] ${measured} colour pairs meet WCAG contrast (text ${TEXT_MINIMUM}:1, non-text ${NON_TEXT_MINIMUM}:1); ` +
+  `[contrast] ${measured} colour pairs meet WCAG contrast (text ${TEXT_MINIMUM}:1, non-text ${NON_TEXT_MINIMUM}:1) ` +
+    `or their recorded design-exception floor (${Object.keys(EXCEPTIONS).join(', ')}); ` +
     `all ${usedAsText.size} text-colour tokens are measured.`,
 );
