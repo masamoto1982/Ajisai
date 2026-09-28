@@ -594,7 +594,27 @@
      "type": "string"
     },
     "where": {
-     "type": "object"
+     "type": "object",
+     "description": "The locus the diagnosis is about: a Core Word, a User Word the live dictionary holds, or a name that resolved to nothing.",
+     "properties": {
+      "kind": {
+       "type": "string",
+       "enum": [
+        "coreWord",
+        "userWord",
+        "unknown"
+       ]
+      },
+      "word": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "kind"
+     ]
     },
     "evidence": {
      "type": "array",
