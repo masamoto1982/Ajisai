@@ -1,6 +1,6 @@
 use super::wasm_interpreter_state::{error_flow_trace_to_js, json_to_js};
 use super::{set_js_prop, AjisaiInterpreter};
-use crate::agent::report::ai_payload_json;
+use crate::agent::report::{ai_payload_json, diagnosis_json};
 use crate::agent::run_render::failed_run_diagnosis;
 use crate::error::ErrorCategory;
 use wasm_bindgen::prelude::*;
@@ -36,12 +36,15 @@ impl AjisaiInterpreter {
                 // orphaned output from surfacing at the head of the next run.
                 set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
                 // The failure's category travels where the CLI puts it,
-                // `aiDiagnostic.kind`, built by the same functions — never
-                // parsed back out of `message`, which is display text.
+                // `aiDiagnostic.category`, built by the same functions — never
+                // parsed back out of `message`, which is display text. So does
+                // its diagnosis: the top-level `diagnosis`, the one copy, which
+                // the trace's error event no longer repeats.
                 let trace = self.interpreter.drain_error_flow_trace();
                 let diagnosis = failed_run_diagnosis(&self.interpreter, &e, &trace);
                 let category = ErrorCategory::from_error(&e);
-                let ai = ai_payload_json(&diagnosis.ai_payload(Some(&category)));
+                let ai = ai_payload_json(&diagnosis.ai_payload(category.as_ref()));
+                set_js_prop(&obj, "diagnosis", &json_to_js(diagnosis_json(&diagnosis)));
                 set_js_prop(&obj, "aiDiagnostic", &json_to_js(ai));
                 set_js_prop(&obj, "errorFlowTrace", &error_flow_trace_to_js(&trace));
                 // An ERROR result carries no `userWords`, which is the

@@ -113,7 +113,7 @@ pub fn observe_program(src: &str) -> ProgramObservation {
         let mut interp = Interpreter::new();
         let error_category = match interp.execute(src).await {
             Ok(()) => None,
-            Err(err) => Some(ErrorCategory::from_error(&err).as_protocol_str()),
+            Err(err) => ErrorCategory::from_error(&err).map(|category| category.as_protocol_str()),
         };
         ProgramObservation {
             stack: interp.get_stack().iter().map(observe_value).collect(),

@@ -87,7 +87,7 @@ pub(crate) fn build_next_checks(
 
     match why {
         CauseClass::Domain => {
-            if matches!(category, Some(ErrorCategory::DivisionByZero)) {
+            if matches!(nil_reason, Some(NilReason::DivisionByZero)) {
                 // Name the Word that actually met the zero rather than
                 // hard-coding `DIV`: any Word that declares the same
                 // `divisorEqualsZero` condition must send the reader to an

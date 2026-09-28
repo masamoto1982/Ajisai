@@ -268,7 +268,7 @@ ajisai agent check program.ajisai     # parse + resolve only, no execution
 
 Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 1. `status` / exit code. On ok: `stackDisplay` (final stack, bottom→top) and `output` (PRINT lines).
-2. On error: `diagnosis.why` + `diagnosis.where` locate the failure; follow `diagnosis.nextChecks` in order; `aiDiagnostic.recoverability` says what kind of change fixes it (`fixProgram` / `fixInput` / `fixHost` ...).
+2. On error: `diagnosis.why` + `diagnosis.where` locate the failure; follow `diagnosis.nextChecks` in order; `aiDiagnostic.category` is the spec/outcomes.json error category, and `aiDiagnostic.repair: "program"` says the program is what to change (absent: an operand is wrong).
 3. Even on ok, scan `errorFlowTrace` for `nilProduced` events if a NIL surprised you.
 
 ## 2. Minimal syntax
@@ -382,35 +382,35 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 
 - **Typo / unknown word** — `[ 1 ] ADDD`
   → exit 1, `message: "Unknown word: ADDD"`, `diagnosis: { when: "resolveWord", why: "typoOrUnknownName" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkSpelling`. `diagnosis.candidates: ["ADD","AND"]`.
+  `aiDiagnostic: { category: "unknownWord", repair: "program" }`, first nextCheck code: `checkSpelling`. `diagnosis.candidates: ["ADD","AND"]`.
   Fix: Grep §9 for the word you meant (here: `ADD`). Word names are upper-cased automatically.
 - **Stack underflow: operands must be pushed first** — `ADD`
   → exit 1, `message: "ADD: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
+  `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
   Fix: Push both operands before the operator: `[ 1 ] [ 2 ] ADD`. Ajisai is postfix; there is no infix form.
 - **FOLD without an initial value** — `[ 1 2 3 ] [ ADD ] FOLD`
   → exit 1, `message: "FOLD: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
+  `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
   Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD`.
 - **SELECT takes three operands: both candidates, then the truth** — `[ 'big' ] [ 5 ] [ 3 ] GT SELECT`
   → exit 1, `message: "SELECT: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
+  `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
   Fix: SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.
 - **SELECT needs a truth value, not a number** — `[ 'y' ] [ 'n' ] 1 SELECT`
   → exit 1, `message: "SELECT: expected a truth value, got Scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
-  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
+  `aiDiagnostic: { category: "nonTruthValue" }`, first nextCheck code: `checkFiredCondition`.
   Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] ADD`
   → exit 1, `message: "ADD: expected shapes that align, got [2] and [3] (axis 0 is 2 and 3, and neither is 1)"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
-  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
+  `aiDiagnostic: { category: "shapeMismatch" }`, first nextCheck code: `checkFiredCondition`.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
   → exit 1, `message: "NUM: expected a String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
-  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
+  `aiDiagnostic: { category: "nonText" }`, first nextCheck code: `checkFiredCondition`.
   Fix: NUM accepts strings: `'42' NUM`. There is no boolean→number cast.
 - **Old one-vector RANGE form** — `[ 0 5 ] RANGE`
   → exit 1, `message: "RANGE: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
+  `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
   Fix: RANGE takes two bounds: `0 5 RANGE`. A stride is a multiplication: `0 5 RANGE 2 MUL`.
 
 These raise. The next one does not — it succeeds and answers something other

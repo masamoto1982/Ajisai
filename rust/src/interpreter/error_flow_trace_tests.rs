@@ -1,6 +1,6 @@
 //! Test suite for `crate::interpreter::error_flow_trace`.
 
-use crate::error::{ErrorCategory, NilReason};
+use crate::error::NilReason;
 use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
 use crate::interpreter::Interpreter;
 
@@ -105,9 +105,13 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
         .diagnosis
         .as_ref()
         .expect("NilProduced event should carry a diagnosis");
+    // A NIL is not an error: it names no error category, and so no repair.
+    // `divisionByZero` is a NIL reason in spec/outcomes.json and never a
+    // category, which is what this event used to report it as.
+    assert_eq!(event.error_category, None);
     let payload = diagnosis.ai_payload(event.error_category.as_ref());
-    assert_eq!(payload.kind.as_deref(), Some("divisionByZero"));
-    assert_eq!(payload.recoverability, "fixInput");
+    assert_eq!(payload.category, None);
+    assert_eq!(payload.repair, None);
     assert_eq!(payload.word.as_deref(), Some("DIV"));
     assert_eq!(payload.family.as_deref(), Some("exactArithmetic"));
     // The NIL's reason is the event's absence, where every host reads it.
@@ -119,10 +123,17 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
             .map(|reason| reason.as_protocol_str()),
         Some("divisionByZero")
     );
-    assert!(payload
+    assert!(diagnosis
         .next_checks
         .iter()
         .any(|check| check.code == "checkDivisor"));
+    assert!(
+        diagnosis
+            .summary
+            .starts_with("executeWord / DIV / domain (nil:divisionByZero)"),
+        "{}",
+        diagnosis.summary
+    );
 }
 
 #[tokio::test]
@@ -135,8 +146,10 @@ async fn error_flow_trace_records_direct_projection_from_word() {
             .iter()
             .any(|e| e.kind == ErrorFlowEventKind::NilProduced
                 && e.word.as_deref() == Some("DIV")
-                && e.error_category == Some(ErrorCategory::DivisionByZero)),
-        "expected NilProduced(DIV, DivisionByZero), got {:?}",
+                && e.error_category.is_none()
+                && e.absence.as_ref().and_then(|a| a.reason.as_ref())
+                    == Some(&NilReason::DivisionByZero)),
+        "expected NilProduced(DIV) with reason divisionByZero, got {:?}",
         trace
     );
 }

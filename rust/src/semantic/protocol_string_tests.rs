@@ -12,10 +12,6 @@ fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
     );
     assert_eq!(Recoverability::Recoverable.as_protocol_str(), "recoverable");
     assert_eq!(
-        ErrorCategory::DivisionByZero.as_protocol_str(),
-        "divisionByZero"
-    );
-    assert_eq!(
         ErrorCategory::RecursionLimitExceeded.as_protocol_str(),
         "recursionLimitExceeded"
     );

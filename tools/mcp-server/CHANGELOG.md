@@ -6,6 +6,23 @@ still alpha and makes no compatibility promise; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.5.0
+
+Result envelope `schemaVersion` 3 (engine report `SCHEMA_VERSION` 3). The error
+vocabulary is the outcome registry's, and each error says it once.
+
+### Changed
+
+- **`aiDiagnostic`** classifies an error and nothing else:
+  - `kind` is renamed `category`.
+  - `recoverability`, a seven-value scale of the engine's own (`fixInput`, `fixProgram`, `fixHost`, …), is replaced by the registry's `repair`. It is `"program"` exactly when `spec/outcomes.json` marks the category so, and absent otherwise, as in the registry.
+  - Its copies of `nextChecks`, `candidates` and `resourceLimit` are gone; they are `diagnosis`'s.
+  - `result.schema.json` now types these four fields.
+- **One diagnosis per error.** The `wordError` event in `errorFlowTrace` no longer repeats the top-level `diagnosis`. A `nilProduced` event keeps its own, since a NIL has no other. `1 ADD` fell from 12,172 to 7,170 bytes as sent, and `FROBNICATE` from 9,206 to 6,090.
+- **`divisionByZero` is no longer an error category.** It is a NIL reason in `spec/outcomes.json` and nothing else. The trace used to report a NIL from `DIV` under an error category of that name as well.
+- **`diagnosis.summary`** uses protocol spellings and outcome ids: `executeWord / ADD / stackShape (error:stackUnderflow) …` instead of `ExecuteWord / ADD / StackShape (stackUnderflow) …`, and `(nil:divisionByZero)` in place of `(divisionByZero) nil=DivisionByZero`.
+- **`responseBytes`** is enforced on the response as sent: the structured result, its serialized text mirror and provenance together. The backends still refuse early on their single copy. Before this, a result that fit that copy could arrive at more than twice the declared ceiling.
+
 ## 0.4.0
 
 The contract surfaces are brought back in line with the engine and with each

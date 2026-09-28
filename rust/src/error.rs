@@ -145,7 +145,6 @@ impl ResourceLimit {
 pub enum ErrorCategory {
     StackUnderflow,
     UnknownWord,
-    DivisionByZero,
     MalformedSource,
     ExecutionLimitExceeded,
     /// A named `RuntimeLimits` ceiling other than the step budget. Separate
@@ -165,7 +164,6 @@ impl ErrorCategory {
         match self {
             ErrorCategory::StackUnderflow => "stackUnderflow",
             ErrorCategory::UnknownWord => "unknownWord",
-            ErrorCategory::DivisionByZero => "divisionByZero",
             ErrorCategory::MalformedSource => "malformedSource",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
@@ -174,17 +172,26 @@ impl ErrorCategory {
         }
     }
 
-    pub fn from_error(err: &AjisaiError) -> Self {
-        match err {
+    /// The spec/outcomes.json error category `err` reports as, or `None` for
+    /// the one variant that is not an outcome at all.
+    ///
+    /// `DivisionByZero` used to map to a `divisionByZero` *error* category —
+    /// an id spec/outcomes.json declares only as a NIL reason. DIV never ends a
+    /// run with it (the signal is projected to `NIL(divisionByZero)` before it
+    /// can), so the category existed only to label NIL-producing trace events
+    /// and surfaced there as an error id the registry does not have. A NIL is
+    /// reported by its reason; the internal signal has no category to give.
+    pub fn from_error(err: &AjisaiError) -> Option<Self> {
+        Some(match err {
             AjisaiError::StackUnderflow { .. } => ErrorCategory::StackUnderflow,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
-            AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
+            AjisaiError::DivisionByZero => return None,
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
             AjisaiError::DeclaredCondition { condition, .. } => ErrorCategory::Declared(condition),
-        }
+        })
     }
 }
 
@@ -240,6 +247,11 @@ pub enum AjisaiError {
         word: Option<&'static str>,
     },
     UnknownWord(String),
+    /// A zero divisor met by the rational kernel. Not an ERROR a program can
+    /// end with: DIV projects it to `NIL(divisionByZero)` (LANG.FAILURE.PROJECT)
+    /// by re-running the operation lane-wise, so this is only the signal that
+    /// asks for that re-run. It has no outcome category — see
+    /// `ErrorCategory::from_error`.
     DivisionByZero,
     /// Program text that does not parse: an unclosed or crossed delimiter, a
     /// delimiter glued to a name, an unclosed string. The fault is in the

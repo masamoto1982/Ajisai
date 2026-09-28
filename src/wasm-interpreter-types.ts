@@ -200,6 +200,8 @@ export interface ErrorFlowTraceEvent {
     stackLenBefore: number;
     stackLenAfter: number;
     message: string;
+    // Only on a `nilProduced` event: an ERROR's diagnosis is the result's
+    // top-level `diagnosis`, which the error event does not repeat.
     diagnosis?: ProtocolDiagnosis;
 }
 
@@ -210,11 +212,19 @@ export interface ExecuteResult {
     message?: string;
     error?: boolean;
     /**
-     * On an ERROR result, the same `aiDiagnostic` the CLI reports: `kind` is
-     * the failure's category (spec/outcomes.json), the machine-readable name
-     * a host branches on instead of the display text in `message`.
+     * On an ERROR result, the same `aiDiagnostic` the CLI reports: `category`
+     * is the failure's spec/outcomes.json error category, the machine-readable
+     * name a host branches on instead of the display text in `message`;
+     * `repair` is `'program'` exactly when the registry says so.
      */
-    aiDiagnostic?: { kind: string } | null;
+    aiDiagnostic?: {
+        category: string | null;
+        repair?: 'program';
+        word: string | null;
+        family: string | null;
+    } | null;
+    /** On an ERROR result, its diagnosis — the one copy the report carries. */
+    diagnosis?: ProtocolDiagnosis;
 
     // The observation-format stack, for display only.
     stack?: Value[];

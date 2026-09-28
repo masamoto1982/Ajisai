@@ -5,13 +5,11 @@
 //! told to "read the message", which is what they had already read. The
 //! registry declares, per Word, the conditions it raises under; these pin that
 //! a raise names one of them, that the name survives to `why` and to
-//! `aiDiagnostic.kind`, and that the declared vocabulary is classified as a
+//! `aiDiagnostic.category`, and that the declared vocabulary is classified as a
 //! vocabulary rather than Word by Word.
 
 use crate::error::ErrorCategory;
-use crate::interpreter::debug_declared_checks::{
-    cause_class_for_declared_condition, repair_for_declared_condition,
-};
+use crate::interpreter::debug_declared_checks::cause_class_for_declared_condition;
 use crate::interpreter::debug_diagnosis::CauseClass;
 use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
 use crate::interpreter::Interpreter;
@@ -57,11 +55,12 @@ fn declared_condition_vocabulary_is_classified() {
 }
 
 /// `spec/outcomes.json` says which conditions are repaired in the program
-/// (`repair: "program"`), and `partiality` is derived from it; the diagnosis
-/// says the same thing through the cause class. The two are one fact, so they
-/// may not disagree for any condition a Word declares.
+/// (`repair: "program"`), and `partiality` is derived from it. The diagnosis
+/// reports that field as the registry has it — present as `program`, absent
+/// otherwise — for every condition a Word declares, rather than a second
+/// classification of its own that could disagree.
 #[test]
-fn declared_repair_agrees_with_the_diagnosis() {
+fn declared_repair_is_the_registrys() {
     let outcomes: serde_json::Value =
         serde_json::from_str(include_str!("../../../spec/outcomes.json")).unwrap();
     let program: std::collections::HashSet<&str> = outcomes["errorCategories"]
@@ -75,14 +74,22 @@ fn declared_repair_agrees_with_the_diagnosis() {
         .iter()
         .flat_map(|word| word.error_when.iter().copied())
     {
-        let diagnosed =
-            repair_for_declared_condition(&cause_class_for_declared_condition(condition));
-        let declared = if program.contains(condition) {
-            "fixProgram"
-        } else {
-            "fixInput"
-        };
-        assert_eq!(diagnosed, declared, "{condition}");
+        let diagnosis = crate::interpreter::debug_diagnosis::DebugDiagnosis::from_error_category(
+            crate::interpreter::debug_diagnosis::ErrorPhase::ExecuteWord,
+            None,
+            Some(&ErrorCategory::Declared(condition)),
+            None,
+            0,
+            0,
+            None,
+        );
+        let payload = diagnosis.ai_payload(Some(&ErrorCategory::Declared(condition)));
+        assert_eq!(payload.category.as_deref(), Some(condition));
+        assert_eq!(
+            payload.repair,
+            program.contains(condition).then_some("program"),
+            "{condition}"
+        );
     }
 }
 
@@ -114,7 +121,7 @@ async fn a_named_condition_is_one_the_word_declares() {
             declared
                 .error_when
                 .iter()
-                .any(|c| condition.contains(&format!("({})", c))),
+                .any(|c| condition.contains(&format!("(error:{})", c))),
             "{:?} answered a condition {} does not declare ({:?}): {}",
             code,
             word,

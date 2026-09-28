@@ -158,7 +158,9 @@ async fn an_empty_axis_against_a_longer_one_still_mismatches() {
         .await
         .expect_err("shapes [2] and [0] do not broadcast");
     assert_eq!(
-        crate::error::ErrorCategory::from_error(&error).as_protocol_str(),
+        crate::error::ErrorCategory::from_error(&error)
+            .expect("a program ERROR has a category")
+            .as_protocol_str(),
         "shapeMismatch",
         "got {error}"
     );

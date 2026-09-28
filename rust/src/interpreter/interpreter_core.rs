@@ -413,7 +413,7 @@ impl Interpreter {
         self.push_error_flow_trace(ErrorFlowEvent {
             kind: ErrorFlowEventKind::WordError,
             word: Some(word.to_string()),
-            error_category: Some(crate::error::ErrorCategory::from_error(err)),
+            error_category: crate::error::ErrorCategory::from_error(err),
             absence: None,
             stack_len_before,
             stack_len_after,

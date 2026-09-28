@@ -190,6 +190,18 @@ unmatched name the same way, in `suggestions`.
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
 Match on `code`; the display text is localized and free to be reworded.
 
+`diagnosis` is the one copy of an error's diagnosis. `aiDiagnostic` only
+classifies it — `category` (the `spec/outcomes.json` error category, the same
+id as in `outcome`), `repair: "program"` when the registry says the program is
+what to change (absent: an operand is wrong), `word` and `family` — and the
+error's `errorFlowTrace` event does not repeat it. A `nilProduced` event keeps
+its own diagnosis, since a NIL has no other. Repeating the diagnosis three times
+is what made `1 ADD` a 12 KB response; it is now 7 KB.
+
+`responseBytes` bounds the response as sent: the structured result, its
+serialized text mirror and provenance together. A result whose single copy
+fits the ceiling but whose response does not is `responseTooLarge`.
+
 A resource-limit failure carries `diagnosis.resourceLimit`
 (`{ resource, limit, observed }`), where `resource` is the name of the very
 entry in `mcp.limits` that fired.

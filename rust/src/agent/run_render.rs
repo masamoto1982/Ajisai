@@ -70,7 +70,7 @@ pub(crate) fn completed_run_report(
             error_report(
                 interp,
                 &diagnosis,
-                Some(&category),
+                category.as_ref(),
                 message,
                 output,
                 trace,

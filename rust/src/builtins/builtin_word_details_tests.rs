@@ -79,7 +79,9 @@ async fn every_hover_syntax_calls_its_word_and_runs() {
         if spec.name == "FAIL" {
             let err = outcome.expect_err("FAIL's hover_syntax must raise");
             assert_eq!(
-                crate::error::ErrorCategory::from_error(&err).as_protocol_str(),
+                crate::error::ErrorCategory::from_error(&err)
+                    .expect("a program ERROR has a category")
+                    .as_protocol_str(),
                 "declaredFailure"
             );
         } else {

@@ -80,7 +80,7 @@ impl crate::interpreter::Interpreter {
         self.push_error_flow_trace(ErrorFlowEvent {
             kind: ErrorFlowEventKind::WordError,
             word: Some(word.to_string()),
-            error_category: Some(category),
+            error_category: category,
             absence: None,
             stack_len_before,
             stack_len_after: self.stack.len(),
