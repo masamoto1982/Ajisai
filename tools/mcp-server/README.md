@@ -109,6 +109,19 @@ stay inside a ceiling, or produce a value rather than a NIL. Nothing that only
 a run can decide is decided here. Read it as "this will get as far as
 executing", and read `compute` for what executing it does.
 
+The four source tools answer one program consistently, and
+`tool-consistency.test.js` (part of `npm run selftest`) holds them to it over
+every golden and corpus source:
+
+- `compute`'s `outcome` is always in the set `outcomes` predicts.
+- Source that does not parse is `malformedSource` to all four — `infer_contracts`
+  included — and `outcomes` answers it exactly.
+- `check` ok means the run does not fail on the program's form or its names.
+- `check` is stricter than a run: it rejects a name nothing defines even inside
+  a Word that is never called, which a run never reaches. `outcomes` still
+  allows for `unknownWord` there, and `infer_contracts` reports that Word as
+  `partial` with a `gap.unresolvedWord` gap.
+
 ### Three outcomes, kept distinct
 
 | Ajisai outcome | `status` | `outcome` (compute) | `isError` |

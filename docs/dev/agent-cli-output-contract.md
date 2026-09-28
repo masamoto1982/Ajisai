@@ -497,6 +497,14 @@ declaration — the same keys, in the same vocabulary, as a registered Word's
 contract.
 Inference registers definitions without executing their bodies.
 
+Source that does not tokenize or balance its vector delimiters is answered
+exactly as `agent check` answers it — `status: "error"`, exit 1,
+`aiDiagnostic.category: "malformedSource"` — rather than as a success with no
+contracts. A body that calls a name nothing defines is `partiality: "partial"`
+with the `gap.unresolvedWord` gap: that call raises `unknownWord`, a
+`repair: program` category, so the Word is partial by the registry's own
+derivation.
+
 `suggested` carries only terms the declaration checker can parse — arity,
 purity, NIL behavior and `cost`. The space class is reported but never
 suggested: there is no `space:` production in the declaration grammar, so a
