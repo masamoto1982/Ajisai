@@ -331,38 +331,59 @@
         background: var(--color-light);
     }
 
-    /* Word completions only; the symbol palette keeps its own cells. */
     @media (width <= 768px) {
         min-height: 2.75rem;
         font-size: var(--text-base);
     }
 }
 
-/* The symbol palette. On mobile it is pinned to the bottom edge of the empty
-   editor (inline, in `renderSuggestions`) so the placeholder cheat sheet
-   reads from the top down into it. */
-.editor-suggestions--symbols {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 2px;
-    padding: 4px;
-    min-width: 13rem;
-    max-width: calc(100% - 1rem);
-    max-height: none;
-    overflow-y: visible;
+/* The mobile symbol key row (src/gui/symbol-key-row.ts): one row under the
+   editor, six symbol keys and a page key, shown on a phone only while the
+   editor has focus — which it keeps, since a key never takes it. In flow
+   rather than over the text, so it costs the editor one row and never hides
+   the line being written; the corner controls step up to stay clear of it. */
+.symbol-keys {
+    display: none;
+}
 
-    & .editor-suggestion-item {
-        width: auto;
-        min-height: 2.25rem;
-        padding: 0.35rem 0;
-        text-align: center;
-        font-size: 1rem;
-        line-height: 1;
-    }
+@media (width <= 768px) {
+    .input-area:focus-within {
+        & .symbol-keys {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: var(--space-3xs);
+            flex: 0 0 auto;
+        }
 
-    @media (width <= 768px) {
-        max-width: none;
-        border-top: var(--border-main);
+        & #editor-format-btn,
+        & .run-status {
+            bottom: calc(2.75rem + var(--space-xs));
+        }
     }
+}
+
+.symbol-key {
+    min-height: 2.75rem;
+    padding: 0;
+    touch-action: manipulation;
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    background: var(--color-white);
+    color: var(--color-text);
+    font-family: var(--font-stack-mono);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:active {
+        background: var(--color-light);
+    }
+}
+
+/* Where the row is, not a symbol: quieter, and small enough for "5/5". */
+.symbol-key-page {
+    color: var(--color-text-light);
+    font-size: var(--text-xs);
 }
 
 

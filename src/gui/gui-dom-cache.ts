@@ -25,6 +25,7 @@ export interface GUIElements {
     readonly mobilePanelSelect: HTMLSelectElement;
     readonly copyOutputBtn: HTMLButtonElement;
     readonly runStatus: HTMLElement;
+    readonly symbolKeys: HTMLElement;
 }
 
 type ElementConstructor<T extends HTMLElement> = {
@@ -67,7 +68,8 @@ export const cacheElements = (): GUIElements => ({
     rightPanelSelect: requireElement('#right-panel-select', HTMLSelectElement),
     mobilePanelSelect: requireElement('#mobile-panel-select', HTMLSelectElement),
     copyOutputBtn: requireElement('#copy-output-btn', HTMLButtonElement),
-    runStatus: requireElement('#run-status', HTMLElement)
+    runStatus: requireElement('#run-status', HTMLElement),
+    symbolKeys: requireElement('#symbol-keys', HTMLElement)
 });
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({

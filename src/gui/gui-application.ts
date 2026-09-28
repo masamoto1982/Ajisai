@@ -2,6 +2,7 @@ import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 import { createDisplay } from './output-display-renderer';
 import { createVocabularyManager } from './vocabulary-state-controller';
 import { createEditor } from './code-input-editor';
+import { createSymbolKeyRow } from './symbol-key-row';
 import { createMobileHandler } from './mobile-view-switcher';
 import { createPersistence } from './interpreter-state-persistence';
 import { createExecutionController } from './execution-controller';
@@ -109,6 +110,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             onSwitchToInputMode: () => layoutController.setArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
+        createSymbolKeyRow(elements.symbolKeys, (symbol) => editor.insertText(symbol));
 
         const vocabulary = createVocabularyManager(interpreter, extractVocabularyElements(elements), {
             // One behaviour in both presentations, as the mobile placeholder
