@@ -337,28 +337,6 @@
     }
 }
 
-/* The symbol pad: all 30 symbols, six to a row, opened at the caret on a phone
-   (src/gui/code-input-editor.ts places it, above the caret line when the
-   keyboard leaves no room below). Mobile items take a 44px floor above; the
-   pad's cells keep a smaller one of their own, so five rows stay compact. */
-.editor-suggestions--symbols {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 2px;
-    padding: 4px;
-    min-width: 13rem;
-    max-height: none;
-    overflow-y: visible;
-
-    & .editor-suggestion-item {
-        width: auto;
-        min-height: 2.25rem;
-        padding: 0.35rem 0;
-        text-align: center;
-        font-size: 1rem;
-        line-height: 1;
-    }
-}
-
 
 /* ── Output ──────────────────────────────────────────────────────────────── */
 

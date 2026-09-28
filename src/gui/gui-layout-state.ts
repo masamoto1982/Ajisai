@@ -78,7 +78,6 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'format → lower-right icon',
     'clear  → × upper right',
     '',
-    'tap a symbol below to type',
     'tap a Dictionary word too',
     'two letters → suggestions',
     '',

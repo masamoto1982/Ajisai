@@ -94,17 +94,6 @@ const MAX_SUGGESTIONS = 10;
 // results are the ceiling either way (`MAX_SUGGESTIONS`), so a shorter prefix
 // costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
-// The symbol pad: on a phone, at the start of a token, every symbol a phone
-// keyboard hides behind a layer switch, six to a row. It opens at the caret —
-// the one place the OS keyboard never covers, since the browser keeps the
-// caret in view above it.
-const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
-    '(', ')', '[', ']', '{', '}',
-    '<', '>', '+', '-', '*', '/',
-    '%', '=', '!', '?', '&', '|',
-    '~', '@', '#', '$', '_', '\\',
-    ':', ';', '.', ',', "'", '"',
-]);
 
 const CARET_MIRROR_STYLE_PROPERTIES = [
     'borderBottomWidth',
@@ -167,7 +156,6 @@ export const createEditor = (
 
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
-    let isSymbolMode = false;
     let lastKnownSelection = lookupSelectionRange(element);
 
     const textareaContainer = element.closest('.input-area');
@@ -190,15 +178,11 @@ export const createEditor = (
 
     const hideSuggestions = (): void => {
         suggestionPanel.style.display = 'none';
-        suggestionPanel.classList.remove('editor-suggestions--symbols');
         currentSuggestions = [];
         selectedSuggestionIndex = 0;
-        isSymbolMode = false;
     };
 
-    const computeCursorCoords = (
-        el: HTMLTextAreaElement
-    ): { top: number; left: number; lineHeight: number } => {
+    const computeCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
         const style = getComputedStyle(el);
         const lineHeight = parseFloat(style.lineHeight) || 20;
         const mirror = document.createElement('div');
@@ -226,24 +210,7 @@ export const createEditor = (
 
         mirror.remove();
 
-        return { top, left, lineHeight };
-    };
-
-    // Below the caret line when the panel fits there, above it when only that
-    // fits: the phone keyboard takes the bottom of the screen, and a panel that
-    // opens behind it cannot be pressed. `top` is the caret line's bottom, in
-    // the coordinates of the panel's container.
-    const placeAtCaret = (top: number, lineHeight: number): number => {
-        if (!textareaContainer) return top;
-        const container = textareaContainer.getBoundingClientRect();
-        const viewport = window.visualViewport;
-        const visibleTop = (viewport?.offsetTop ?? 0) - container.top;
-        const visibleBottom = (viewport ? viewport.offsetTop + viewport.height : window.innerHeight) - container.top;
-        const height = suggestionPanel.offsetHeight;
-        const above = top - lineHeight - height;
-        if (top + height <= visibleBottom) return top;
-        if (above >= visibleTop) return above;
-        return visibleBottom - top >= top - lineHeight - visibleTop ? top : above;
+        return { top, left };
     };
 
     const renderSuggestions = (): void => {
@@ -252,16 +219,19 @@ export const createEditor = (
             return;
         }
 
-        suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
+        // Completions belong to the text being typed, so they follow the caret.
+        const { top, left } = computeCursorCoords(element);
+        suggestionPanel.style.top = `${top}px`;
+        suggestionPanel.style.left = `${left + 8}px`;
+
         suggestionPanel.innerHTML = '';
         currentSuggestions.forEach((suggestion, index) => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'editor-suggestion-item';
             button.setAttribute('role', 'option');
-            // The item Tab will accept, moved by ArrowUp/ArrowDown. The symbol
-            // pad is pressed, never chosen from the keyboard, so it has none.
-            const selected = !isSymbolMode && index === selectedSuggestionIndex;
+            // The item Tab will accept, moved by ArrowUp/ArrowDown.
+            const selected = index === selectedSuggestionIndex;
             button.classList.toggle('is-selected', selected);
             button.setAttribute('aria-selected', String(selected));
             button.textContent = suggestion;
@@ -272,33 +242,14 @@ export const createEditor = (
             suggestionPanel.appendChild(button);
         });
 
-        suggestionPanel.style.display = isSymbolMode ? 'grid' : 'block';
-
-        // Both panels belong to the text being typed, so they follow the caret.
-        const { top, left, lineHeight } = computeCursorCoords(element);
-        suggestionPanel.style.left = `${left + 8}px`;
-        suggestionPanel.style.top = `${placeAtCaret(top, lineHeight)}px`;
+        suggestionPanel.style.display = 'block';
         suggestionPanel.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
     };
 
     const refreshSuggestions = (): void => {
-        const cursorPos = element.selectionStart;
-        const prevChar = cursorPos > 0 ? element.value[cursorPos - 1] ?? '' : '';
-        const isTokenStart = cursorPos === 0 || /\s/.test(prevChar);
+        // Symbols come from the device's own keyboard; this panel completes
+        // Words, from their second character.
         const { token } = extractToken(element.value, element.selectionStart);
-        if (isTokenStart && token.length === 0) {
-            if (!isMobileViewport()) {
-                hideSuggestions();
-                return;
-            }
-            currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice();
-            isSymbolMode = true;
-            selectedSuggestionIndex = 0;
-            renderSuggestions();
-            return;
-        }
-
-        // Words complete from their second character.
         if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) {
             hideSuggestions();
             return;
@@ -309,7 +260,6 @@ export const createEditor = (
             .slice(0, MAX_SUGGESTIONS);
 
         currentSuggestions = suggestions;
-        isSymbolMode = false;
         selectedSuggestionIndex = 0;
         renderSuggestions();
     };
@@ -345,16 +295,8 @@ export const createEditor = (
         element.addEventListener('keyup', syncLastKnownSelection);
         element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
 
-        // The keyboard rises after focus, so an open panel is placed again once
-        // it has taken its share of the screen.
-        window.visualViewport?.addEventListener('resize', () => {
-            if (currentSuggestions.length > 0) renderSuggestions();
-        });
-
         element.addEventListener('keydown', (e) => {
             if (currentSuggestions.length === 0) return;
-            // A keyboard types its own symbols; of the pad it only closes it.
-            if (isSymbolMode && e.key !== 'Escape') return;
 
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
