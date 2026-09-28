@@ -46,6 +46,7 @@ pub(crate) mod naming_convention_checker;
 mod ordering_ops;
 #[cfg(test)]
 mod ordering_ops_tests;
+pub(crate) mod outcome_repair;
 mod power_ops;
 #[cfg(test)]
 mod power_words_tests;

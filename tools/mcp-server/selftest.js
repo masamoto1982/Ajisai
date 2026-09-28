@@ -417,6 +417,23 @@ for (const limit of limitCases()) {
   }
 }
 
+// `responseBytes` bounds the response as sent — the result twice (structured
+// and serialized) plus provenance — not the one copy a backend produces. The
+// gap between the two used to let a 2.29 MB answer through a 1 MiB ceiling.
+for (const [source, mustRefuse] of [["0 5000 RANGE", false], ["0 7000 RANGE", true]]) {
+  const observed = await client.callTool({ name: "compute", arguments: { source } });
+  const sent = Buffer.byteLength(
+    JSON.stringify({ content: observed.content, structuredContent: observed.structuredContent }),
+    "utf8",
+  );
+  const refused = observed.structuredContent?.error?.code === "responseTooLarge";
+  check(
+    `responseBytes bounds the whole response to \`${source}\` (${sent} bytes sent)`,
+    sent <= LIMITS.responseBytes && refused === mustRefuse &&
+      (refused || observed.structuredContent?.status === "ok"),
+  );
+}
+
 // `wallTimeMs` is a deadline the adapter holds around execution, not a budget
 // the engine spends, and since the collection meter landed no source program
 // reaches it — the named ceilings answer first, which is the outcome they exist

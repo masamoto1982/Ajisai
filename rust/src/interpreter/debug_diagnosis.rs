@@ -104,18 +104,16 @@ pub struct ResourceLimitFacts {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct AiDiagnosticPayload {
-    pub kind: Option<String>,
-    pub recoverability: String,
+    /// The spec/outcomes.json error category, the id `error:<category>` names.
+    pub category: Option<String>,
+    /// `Some("program")` when the registry marks the category `repair:
+    /// program`; absent otherwise, as in the registry.
+    pub repair: Option<&'static str>,
     pub word: Option<String>,
     /// The Word's semantic family as `spec/words.json` declares it, or
     /// `None` when no Core Word is at fault. The one classification of a
     /// Word the diagnosis reports is the registry's own.
     pub family: Option<String>,
-    pub next_checks: Vec<DebugCheck>,
-    /// Known Words within a small edit distance of an unrecognized name,
-    /// best match first. Empty for every other cause class.
-    pub candidates: Vec<String>,
-    pub resource_limit: Option<ResourceLimitFacts>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -193,7 +191,6 @@ impl CauseClass {
         match category {
             ErrorCategory::StackUnderflow => CauseClass::StackShape,
             ErrorCategory::UnknownWord => CauseClass::TypoOrUnknownName,
-            ErrorCategory::DivisionByZero => CauseClass::Domain,
             ErrorCategory::MalformedSource => CauseClass::SourceForm,
             // LANG.MACHINE.LIMITS calls the step and recursion budgets host
             // safety controls rather than language semantics, and the two
@@ -283,7 +280,7 @@ impl DebugDiagnosis {
         let mut diagnosis = Self::from_error_category(
             ErrorPhase::ExecuteWord,
             word,
-            Some(&category),
+            category.as_ref(),
             None,
             stack_len_before,
             stack_len_after,
@@ -357,18 +354,20 @@ impl DebugDiagnosis {
     /// strings. It describes an ERROR: a NIL's reason, a truth value and an
     /// effect are observed on the stack and in the output, not here — the
     /// three fields that once carried them here were always null.
+    ///
+    /// It classifies and nothing more. `nextChecks`, `candidates` and
+    /// `resourceLimit` are the diagnosis's, and used to be copied here too, so
+    /// every error report carried them twice (three times, with the trace).
     pub fn ai_payload(&self, category: Option<&ErrorCategory>) -> AiDiagnosticPayload {
         let word = self.where_.word.as_deref();
+        let category = category.map(ErrorCategory::as_protocol_str);
         AiDiagnosticPayload {
-            kind: category.map(|c| c.as_protocol_str().to_string()),
-            recoverability: recoverability_for(&self.why, category).to_string(),
+            category: category.map(str::to_string),
+            repair: category.and_then(super::outcome_repair::repair_for_category),
             word: self.where_.word.clone(),
             family: word
                 .and_then(crate::kernel::generated::generated_word)
                 .map(|w| w.family.as_spec_str().to_string()),
-            next_checks: self.next_checks.clone(),
-            candidates: self.candidates.clone(),
-            resource_limit: self.resource_limit.clone(),
         }
     }
 }
@@ -402,31 +401,6 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
     }
 }
 
-fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'static str {
-    match category {
-        Some(ErrorCategory::DivisionByZero) => "fixInput",
-        Some(ErrorCategory::UnknownWord)
-        | Some(ErrorCategory::StackUnderflow)
-        | Some(ErrorCategory::MalformedSource) => "fixProgram",
-        Some(ErrorCategory::ExecutionLimitExceeded)
-        | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",
-        // A size ceiling is not fixed by letting the program run longer: the
-        // work itself has to get smaller, or the host has to declare a larger
-        // ceiling.
-        Some(ErrorCategory::ResourceLimitExceeded) => "reduceWorkOrRaiseLimit",
-        // A declared condition answers by what it names: a wrong operand is
-        // repaired in the input, a broken rule in the program.
-        Some(ErrorCategory::Declared(_)) => {
-            super::debug_declared_checks::repair_for_declared_condition(why)
-        }
-        None => match why {
-            CauseClass::Environment | CauseClass::Effect => "fixHost",
-            CauseClass::NilFlow => "handleUnknownOrNil",
-            _ => "inspectContext",
-        },
-    }
-}
-
 fn build_summary(
     when: &ErrorPhase,
     locus: &ErrorLocus,
@@ -439,18 +413,25 @@ fn build_summary(
         .word
         .clone()
         .unwrap_or_else(|| locus.kind.as_protocol_str().to_string());
-    let category_str = category
-        .map(|c| c.as_protocol_str().to_string())
-        .unwrap_or_else(|| "UnknownCategory".to_string());
-    let nil_str = nil_reason
-        .map(|r| format!(" nil={:?}", r))
-        .unwrap_or_default();
+    // The outcome in the ids spec/outcomes.json and `outcomes` use, not the
+    // engine's own type names: this line used to read
+    // `ExecuteWord / DIV / Domain (divisionByZero) nil=DivisionByZero`, four
+    // spellings for one fact, two of them Rust `Debug` output.
+    let outcome = match (nil_reason, category) {
+        (Some(reason), _) => format!("nil:{}", reason.as_protocol_str()),
+        (None, Some(category)) => format!("error:{}", category.as_protocol_str()),
+        (None, None) => "unknown".to_string(),
+    };
     let msg_str = message
         .map(|m| format!(" msg=\"{}\"", m))
         .unwrap_or_default();
     format!(
-        "{:?} / {} / {:?} ({}){}{}",
-        when, where_str, why, category_str, nil_str, msg_str
+        "{} / {} / {} ({}){}",
+        when.as_protocol_str(),
+        where_str,
+        why.as_protocol_str(),
+        outcome,
+        msg_str
     )
 }
 

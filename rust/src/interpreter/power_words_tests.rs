@@ -25,6 +25,7 @@ mod power_words_tests {
         let mut interp = Interpreter::new();
         let err = interp.execute(code).await.expect_err("must raise an ERROR");
         crate::error::ErrorCategory::from_error(&err)
+            .expect("a program ERROR has a category")
             .as_protocol_str()
             .to_string()
     }

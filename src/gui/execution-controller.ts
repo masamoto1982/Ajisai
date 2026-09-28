@@ -122,17 +122,28 @@ export const createExecutionController = (
     const describeDiagnosis = (
         result: ExecuteResult
     ): { readonly text: string; readonly aboutNil: boolean } | null => {
+        // An ERROR's diagnosis is the result's own; its trace event says only
+        // where the stack stood when the Word was called.
+        if (result.diagnosis) {
+            const event = result.errorFlowTrace
+                ?.filter((candidate) => candidate.kind === 'wordError')
+                .at(-1);
+            return {
+                text: renderDiagnosisReport(result.diagnosis, { stackLenBefore: event?.stackLenBefore }),
+                aboutNil: false
+            };
+        }
+        // A reasoned NIL is one of the three outcomes, not a failure, and the
+        // trace event that produced it is the only place its diagnosis lives —
+        // so the presentation can follow the language instead of reporting
+        // every NIL as though something went wrong.
         const event = result.errorFlowTrace
-            ?.filter((candidate) => Boolean(candidate.diagnosis))
+            ?.filter((candidate) => candidate.kind === 'nilProduced' && Boolean(candidate.diagnosis))
             .at(-1);
         if (!event?.diagnosis) return null;
         return {
             text: renderDiagnosisReport(event.diagnosis, { stackLenBefore: event.stackLenBefore }),
-            // A reasoned NIL is one of the three outcomes, not a failure. The
-            // trace says which this was, so the presentation can follow the
-            // language instead of reporting every NIL as though something
-            // went wrong.
-            aboutNil: event.kind === 'nilProduced'
+            aboutNil: true
         };
     };
 

@@ -9,7 +9,7 @@
 //! introduced here.
 
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
-use crate::interpreter::error_flow_trace::ErrorFlowEvent;
+use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
 use crate::types::value_protocol::{exact_terms, value_to_protocol, ProtocolNode, ProtocolValue};
@@ -19,7 +19,13 @@ use serde_json::{json, Map, Value as Json};
 /// Version of the top-level `--json` envelope. Bump only on a breaking
 /// change (field removal or rename); purely additive fields keep the same
 /// version. See `docs/dev/agent-cli-output-contract.md`.
-pub(crate) const SCHEMA_VERSION: u64 = 2;
+///
+/// 3: `aiDiagnostic` classifies only (`category`, `repair`, `word`,
+/// `family`) — `kind` became `category`, `recoverability` gave way to the
+/// registry's `repair`, and the copies of `nextChecks`/`candidates`/
+/// `resourceLimit` went; an error's trace event no longer repeats the
+/// top-level `diagnosis`.
+pub(crate) const SCHEMA_VERSION: u64 = 3;
 
 pub(crate) struct Report {
     pub status: &'static str,
@@ -152,15 +158,16 @@ fn resource_limit_json(facts: &crate::interpreter::debug_diagnosis::ResourceLimi
 }
 
 pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
-    json!({
-        "kind": payload.kind,
-        "recoverability": payload.recoverability,
-        "word": payload.word,
-        "family": payload.family,
-        "nextChecks": payload.next_checks.iter().map(check_json).collect::<Vec<_>>(),
-        "candidates": payload.candidates,
-        "resourceLimit": payload.resource_limit.as_ref().map(resource_limit_json),
-    })
+    let mut obj = Map::new();
+    obj.insert("category".into(), json!(payload.category));
+    // As in spec/outcomes.json: present only as `program`; absent means the
+    // operand is what is wrong.
+    if let Some(repair) = payload.repair {
+        obj.insert("repair".into(), json!(repair));
+    }
+    obj.insert("word".into(), json!(payload.word));
+    obj.insert("family".into(), json!(payload.family));
+    Json::Object(obj)
 }
 
 fn absence_json(absence: &AbsenceMetadata) -> Json {
@@ -194,7 +201,11 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
     obj.insert("stackLenBefore".into(), json!(event.stack_len_before));
     obj.insert("stackLenAfter".into(), json!(event.stack_len_after));
     obj.insert("message".into(), json!(event.message));
-    if let Some(diagnosis) = &event.diagnosis {
+    // A NIL has no diagnosis anywhere else, so its event carries one. An
+    // ERROR's is the report's top-level `diagnosis` — built from this very
+    // event (`run_render::failed_run_diagnosis`) — and sending it here as well
+    // doubled every error report for no information.
+    if let (ErrorFlowEventKind::NilProduced, Some(diagnosis)) = (&event.kind, &event.diagnosis) {
         obj.insert("diagnosis".into(), diagnosis_json(diagnosis));
     }
     Json::Object(obj)

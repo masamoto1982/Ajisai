@@ -88,7 +88,7 @@ function predict(ajisaiBin, scratchDir, counter, source) {
 // comment gives (importing the table generator would rebuild the table).
 function classifyOutcome(json) {
   if (json.status === 'error') {
-    const kind = json.aiDiagnostic?.kind ?? json.diagnosis?.why;
+    const kind = json.aiDiagnostic?.category ?? json.diagnosis?.why;
     if (typeof kind !== 'string' || kind === '') {
       throw new Error(`error report names no category: ${JSON.stringify(json)}`);
     }

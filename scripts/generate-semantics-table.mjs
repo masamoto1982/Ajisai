@@ -172,23 +172,23 @@ function selectWords(words) {
 
 function classifyOutcome(json) {
   if (json.status === 'error') {
-    // `aiDiagnostic.kind` is the fine per-condition `ErrorCategory` protocol
+    // `aiDiagnostic.category` is the fine per-condition `ErrorCategory` protocol
     // string (`"indexOutOfBounds"`, `"stackUnderflow"`, a Word's own declared
     // condition...); `diagnosis.why` is the coarse ~17-bucket `CauseClass`
     // (`"valueShape"`, `"index"`...). Classifying by `why` alone is what made
     // the pre-Phase-3 table collapse dozens of distinct declared conditions
-    // into one `error:valueShape` bucket. `kind` is `null` only for a raw
+    // into one `error:valueShape` bucket. `category` is `null` only for a raw
     // tokenize-time failure that predates word resolution (confirmed:
     // rust/src/agent/api.rs and cli/mod.rs pass `category: None` to
     // `error_report` on that one path) — no domain-tuple program reaches it,
     // but the fallback keeps this generator from crashing if one ever does.
-    const kind = json.aiDiagnostic?.kind;
-    if (typeof kind === 'string' && kind !== '') {
-      return `error:${kind}`;
+    const category = json.aiDiagnostic?.category;
+    if (typeof category === 'string' && category !== '') {
+      return `error:${category}`;
     }
     const why = json.diagnosis?.why;
     if (typeof why !== 'string' || why === '') {
-      fail(`error report has neither aiDiagnostic.kind nor diagnosis.why: ${JSON.stringify(json)}`);
+      fail(`error report has neither aiDiagnostic.category nor diagnosis.why: ${JSON.stringify(json)}`);
     }
     return `error:${why}`;
   }

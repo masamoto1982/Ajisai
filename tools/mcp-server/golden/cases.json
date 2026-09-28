@@ -27,7 +27,7 @@
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
-        "/aiDiagnostic/kind": "unknownWord",
+        "/aiDiagnostic/category": "unknownWord",
         "/errorFlowTrace/0/kind": "wordError",
         "/diagnosis/nextChecks/0/code": "checkSpelling",
         "/diagnosis/candidates": []
@@ -133,7 +133,7 @@
       "expect": {
         "/status": "error",
         "/diagnosis/why": "resourceLimit",
-        "/aiDiagnostic/kind": "executionLimitExceeded",
+        "/aiDiagnostic/category": "executionLimitExceeded",
         "/errorFlowTrace/0/kind": "wordError",
         "/errorFlowTrace/0/word": "ADD",
         "/diagnosis/resourceLimit/resource": "executionSteps"

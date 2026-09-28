@@ -229,7 +229,40 @@
    "type": [
     "object",
     "null"
-   ]
+   ],
+   "description": "On an `error`, its classification — and only that: the checks, candidates and ceiling facts are `diagnosis`'s, the report's one copy. A NIL never appears here; its reason is the value's `semantics.absence.reason`.",
+   "additionalProperties": false,
+   "required": [
+    "category",
+    "word",
+    "family"
+   ],
+   "properties": {
+    "category": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The spec/outcomes.json error category — the id `outcome` names as `error:<category>`."
+    },
+    "repair": {
+     "const": "program",
+     "description": "Present exactly when spec/outcomes.json marks the category `repair: program`: the program is what to change. Absent, as in the registry, means an operand is what is wrong."
+    },
+    "word": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "family": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The failing Word's spec/words.json family, when a Core Word is at fault."
+    }
+   }
   },
   "runtimeMetrics": {
    "type": "object",

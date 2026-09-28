@@ -56,7 +56,7 @@
           "/error/retryable": false
         }
       },
-      "note": "Both backends measure the same thing: UTF-8 bytes of the schema-1 envelope text. `backend/parity-test.js` runs this pair against both, which is what the native-only `maxBuffer` implementation could never have shown."
+      "note": "Both backends refuse early on the same measure — UTF-8 bytes of the one result copy they produce — and `backend/parity-test.js` runs this pair against both, which is what the native-only `maxBuffer` implementation could never have shown. The declared ceiling itself is applied by the adapter to the whole response as sent (structured result, its serialized text mirror and provenance); `selftest.js` pins the gap between the two measures."
     },
     "executionSteps": {
       "coverage": "boundary",
@@ -74,7 +74,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "executionLimitExceeded",
+          "/aiDiagnostic/category": "executionLimitExceeded",
           "/diagnosis/resourceLimit/resource": "executionSteps",
           "/diagnosis/resourceLimit/limit": 100000
         }
@@ -126,7 +126,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "numericLiteralDigits",
           "/diagnosis/resourceLimit/limit": 4096,
           "/diagnosis/resourceLimit/observed": 4097
@@ -153,7 +153,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "numericWork",
           "/diagnosis/resourceLimit/limit": 10000000,
           "/diagnosis/resourceLimit/observed": 10200112
@@ -178,7 +178,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "collectionWork",
           "/diagnosis/resourceLimit/limit": 20000000,
           "/diagnosis/resourceLimit/observed": 20000007,
@@ -208,7 +208,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "bigintBits",
           "/diagnosis/resourceLimit/limit": 262144,
           "/diagnosis/resourceLimit/observed": 272133
@@ -234,7 +234,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "algebraicTerms",
           "/diagnosis/resourceLimit/limit": 512,
           "/diagnosis/resourceLimit/observed": 1024
@@ -259,7 +259,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "nestingDepth",
           "/diagnosis/resourceLimit/limit": 256,
           "/diagnosis/resourceLimit/observed": 257

@@ -194,7 +194,10 @@ describe('Step', () => {
                 status: 'ERROR',
                 error: true,
                 message: 'Unknown word: FOO',
-                errorFlowTrace: [{ ...nilEvent('FOO'), kind: 'wordError' }]
+                // An ERROR's diagnosis is the result's; the trace's error event
+                // does not repeat it.
+                diagnosis: DIV_DIAGNOSIS,
+                errorFlowTrace: [{ ...nilEvent('FOO'), kind: 'wordError', diagnosis: undefined }]
             };
         });
 

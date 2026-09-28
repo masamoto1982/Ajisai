@@ -35,7 +35,7 @@ const resultSchemaPath = join(here, "result.schema.json");
 // (`rust/src/agent/report.rs::SCHEMA_VERSION`), which the adapter's own
 // envelopes — a host error, a `word_contract` answer — repeat rather than
 // numbering separately. The selftest checks the two agree.
-export const ENVELOPE_SCHEMA_VERSION = 2;
+export const ENVELOPE_SCHEMA_VERSION = 3;
 
 export const LIMITS = Object.freeze({
   sourceBytes: 64 * 1024,
@@ -444,9 +444,26 @@ function withoutEmptyFields(value) {
  *
  * Both shapes are built from one object, so the mirror cannot drift.
  */
-function envelope(value) {
+function envelope(value, context = "tool call") {
   const result = withoutEmptyFields(value);
-  return { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
+  const toolResult = { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
+  // `responseBytes` bounds what the caller receives, and what it receives is
+  // this: the result twice — structured, and serialized into the text block
+  // (where every quote is escaped again) — plus provenance. The backends
+  // apply the same number to the one copy they produce, which is the right
+  // early refusal and the wrong final one: a stack that fit it arrived as
+  // more than twice the declared ceiling (`0 12000 RANGE` measured 2.29 MB
+  // against 1 MiB). The ceiling is enforced here, on the response as sent.
+  if (Buffer.byteLength(JSON.stringify(toolResult), "utf8") > LIMITS.responseBytes) {
+    return fail(
+      new HostError(
+        "responseTooLarge",
+        `The result exceeds the ${LIMITS.responseBytes}-byte response limit. Reduce the size of the value left on the stack.`,
+      ),
+      context,
+    );
+  }
+  return toolResult;
 }
 
 /**
@@ -499,7 +516,7 @@ function fail(error, context = "tool call") {
  */
 export function outcomeOf(result) {
   if (result.status === "error") {
-    const category = result.aiDiagnostic?.kind ?? result.diagnosis?.why;
+    const category = result.aiDiagnostic?.category ?? result.diagnosis?.why;
     return typeof category === "string" && category !== "" ? `error:${category}` : undefined;
   }
   if (result.status !== "ok") return undefined;
@@ -561,7 +578,7 @@ async function runAgent(source, command) {
       if (id) result.outcome = id;
     }
     result.mcp = provenance();
-    return envelope(result);
+    return envelope(result, command);
   } catch (error) {
     // A backend throw is always a host failure (timeout, spawn/worker
     // failure, an oversized or non-JSON response) — never a translated Ajisai

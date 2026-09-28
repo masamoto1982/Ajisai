@@ -142,7 +142,7 @@ export const createVocabularyManager = (
             const result = await interpreter.execute(`'${wordName}' DEL`);
             if (isFailure(result)) {
                 const message = result.message || 'Unknown error';
-                if (result.aiDiagnostic?.kind === DEPENDENCY_DELETE_CATEGORY) {
+                if (result.aiDiagnostic?.category === DEPENDENCY_DELETE_CATEGORY) {
                     showInfo?.(message, true);
                 } else {
                     showError?.(new Error(`Failed to delete word: ${message}`));

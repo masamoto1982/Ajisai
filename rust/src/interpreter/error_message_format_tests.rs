@@ -65,7 +65,7 @@ fn combinations(arity: usize) -> Vec<Vec<&'static str>> {
 }
 
 fn check(word: &str, source: &str, error: &AjisaiError) -> Result<(), String> {
-    let ErrorCategory::Declared(condition) = ErrorCategory::from_error(error) else {
+    let Some(ErrorCategory::Declared(condition)) = ErrorCategory::from_error(error) else {
         return Ok(());
     };
     if condition == "declaredFailure" {

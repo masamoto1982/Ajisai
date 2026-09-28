@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::types::{Token, Value, ValueData};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -27,26 +27,6 @@ fn def_body_tokens_if_literal_precedes_def(
             Some(tokens[start + 1..start + consumed - 1].to_vec())
         }
         _ => None,
-    }
-}
-
-fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
-    match reason {
-        NilReason::DivisionByZero => Some(ErrorCategory::DivisionByZero),
-        // No `ErrorCategory` names a domain miss, an unavailable diagnostic,
-        // or an index past the end, and inventing one would add a category
-        // with no `AjisaiError` behind it — `None` here means the trace's
-        // `category` evidence is simply absent, not a catch-all category
-        // standing in for it. `indexOutOfBounds` joined this group when `TAKE`
-        // and `PUT` stopped raising it: no Word raises past-the-end any more,
-        // so the reason names a projection and nothing else.
-        NilReason::IndexOutOfBounds
-        | NilReason::NotFound
-        | NilReason::InvalidEncoding
-        | NilReason::SpaceExhausted
-        | NilReason::DomainMiss
-        | NilReason::Literal
-        | NilReason::UserDeclared => None,
     }
 }
 
@@ -136,12 +116,13 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
         return;
     };
 
-    let category = error_category_for_nil_reason(&reason);
+    // A NIL is reported by its reason and by nothing else: an error category
+    // beside it would name an outcome the run did not have.
     let stack_len_after = interp.stack.len();
     let mut diagnosis = DebugDiagnosis::from_error_category(
         ErrorPhase::ExecuteWord,
         Some(word),
-        category.as_ref(),
+        None,
         Some(&reason),
         stack_len_before,
         stack_len_after,
@@ -165,7 +146,7 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
     interp.push_error_flow_trace(ErrorFlowEvent {
         kind: ErrorFlowEventKind::NilProduced,
         word: Some(word.to_string()),
-        error_category: category,
+        error_category: None,
         absence,
         stack_len_before,
         stack_len_after,

@@ -44,7 +44,6 @@ fn every_check_carries_a_code_and_both_locales() {
     ];
     let categories = [
         None,
-        Some(ErrorCategory::DivisionByZero),
         Some(ErrorCategory::ExecutionLimitExceeded),
         Some(ErrorCategory::ResourceLimitExceeded),
         Some(ErrorCategory::RecursionLimitExceeded),
@@ -332,7 +331,6 @@ mod diagnosis_vocabulary_is_real {
             None,
             Some(ErrorCategory::StackUnderflow),
             Some(ErrorCategory::UnknownWord),
-            Some(ErrorCategory::DivisionByZero),
             Some(ErrorCategory::Declared("shapeMismatch")),
             Some(ErrorCategory::MalformedSource),
             Some(ErrorCategory::Declared("nameConflict")),
@@ -393,7 +391,7 @@ mod diagnosis_vocabulary_is_real {
         let checks = checks_for(
             &CauseClass::Domain,
             Some("DIV"),
-            Some(&ErrorCategory::DivisionByZero),
+            None,
             Some(&NilReason::DivisionByZero),
         );
         let advice = checks

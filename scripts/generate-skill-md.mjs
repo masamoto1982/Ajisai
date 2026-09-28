@@ -312,7 +312,7 @@ function renderCommonErrors() {
       return [
         `- **${entry.title}** — \`${entry.code}\``,
         `  → exit 1, \`message: ${JSON.stringify(json.message)}\`, \`diagnosis: { when: "${d.when}", why: "${d.why}" }\`,`,
-        `  \`aiDiagnostic.recoverability: "${json.aiDiagnostic.recoverability}"\`, first nextCheck code: \`${firstCheck}\`.${candidates}`,
+        `  \`aiDiagnostic: { category: "${json.aiDiagnostic.category}"${json.aiDiagnostic.repair ? `, repair: "${json.aiDiagnostic.repair}"` : ''} }\`, first nextCheck code: \`${firstCheck}\`.${candidates}`,
         `  Fix: ${entry.fix}`,
       ].join('\n');
     })
@@ -410,7 +410,7 @@ ajisai agent check program.ajisai     # parse + resolve only, no execution
 
 Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 1. \`status\` / exit code. On ok: \`stackDisplay\` (final stack, bottom→top) and \`output\` (PRINT lines).
-2. On error: \`diagnosis.why\` + \`diagnosis.where\` locate the failure; follow \`diagnosis.nextChecks\` in order; \`aiDiagnostic.recoverability\` says what kind of change fixes it (\`fixProgram\` / \`fixInput\` / \`fixHost\` ...).
+2. On error: \`diagnosis.why\` + \`diagnosis.where\` locate the failure; follow \`diagnosis.nextChecks\` in order; \`aiDiagnostic.category\` is the spec/outcomes.json error category, and \`aiDiagnostic.repair: "program"\` says the program is what to change (absent: an operand is wrong).
 3. Even on ok, scan \`errorFlowTrace\` for \`nilProduced\` events if a NIL surprised you.
 
 ## 2. Minimal syntax

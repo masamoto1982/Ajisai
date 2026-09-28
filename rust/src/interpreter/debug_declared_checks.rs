@@ -62,18 +62,6 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
     }
 }
 
-/// Where a declared condition is repaired: in the operand it names, or in the
-/// program that broke the rule it names.
-pub(crate) fn repair_for_declared_condition(why: &CauseClass) -> &'static str {
-    match why {
-        CauseClass::ValueShape
-        | CauseClass::Index
-        | CauseClass::ShapeMismatch
-        | CauseClass::Domain => "fixInput",
-        _ => "fixProgram",
-    }
-}
-
 fn check(code: &'static str, title: (&str, &str), detail: (&str, &str)) -> DebugCheck {
     DebugCheck {
         code,

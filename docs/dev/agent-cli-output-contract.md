@@ -57,7 +57,7 @@ Both operations emit schema version 2:
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "status": "ok",
   "stack": [],
   "stackDisplay": [],
@@ -439,11 +439,21 @@ truncated continued fraction, and was removed once the two became the same.
 
 `diagnosis` is a structured failure explanation with `when`, `why`, `summary`,
 `where`, `evidence`, `nextChecks`, `candidates`, and
-`resourceLimit`. `aiDiagnostic` is its machine-oriented classification of an
-ERROR: `kind`, `recoverability`, `word`, `family`, `nextChecks`, `candidates`
-and `resourceLimit`. A NIL's reason is read from the value's
-`semantics.absence`, not from here. Consumers must treat new
+`resourceLimit`. It is the report's one copy of the diagnosis: the trace's
+`wordError` event does not repeat it, and `aiDiagnostic` does not copy its
+checks.
+
+`aiDiagnostic` classifies an ERROR and nothing more: `category` (the
+spec/outcomes.json error category — the id `error:<category>` names),
+`repair` (`"program"` exactly when spec/outcomes.json marks the category
+`repair: program`, absent otherwise, as in the registry), `word` and `family`.
+A NIL's reason is read from the value's `semantics.absence`, not from here; a
+NIL is never reported under an error category. Consumers must treat new
 protocol-string variants as opaque values rather than rejecting the report.
+
+`summary` is one display line in protocol spellings:
+`executeWord / ADD / stackShape (error:stackUnderflow) msg="…"`, or
+`(nil:divisionByZero)` for a NIL's diagnosis. Read it; branch on the fields.
 
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
 `code` is the stable identifier — match on it. `title` and `detail` are display
@@ -465,13 +475,14 @@ record sits in the diagnosis of a NIL a generative Word declined with
 `bigintBits`, `algebraicTerms`, `nestingDepth`, `materializedElements`,
 `executionSteps`) — the same identifier a host publishes in
 its limit profile, so "too big" says what was too big and against what. A size
-ceiling reports `aiDiagnostic.kind: "resourceLimitExceeded"` and
-`recoverability: "reduceWorkOrRaiseLimit"`; the step budget keeps
-`executionLimitExceeded` and `addBudgetOrFixRecursion`, because letting the
-program run longer fixes one and not the other.
+ceiling reports `aiDiagnostic.category: "resourceLimitExceeded"`; the step
+budget keeps `executionLimitExceeded`, because letting the program run longer
+fixes one and not the other.
 
 `errorFlowTrace` records Word errors and reason-carrying NIL production. A
-successful run may therefore have a non-empty trace. Neither NIL nor an Ajisai
+`nilProduced` event carries that NIL's `diagnosis`, which lives nowhere else;
+a `wordError` event carries none, since the report's top-level `diagnosis` is
+built from it. A successful run may therefore have a non-empty trace. Neither NIL nor an Ajisai
 language `status: error` is a host transport failure.
 
 ## `contract`
@@ -523,7 +534,7 @@ Ajisai Words.
 `version --json` emits:
 
 ```json
-{ "schemaVersion": 2, "status": "ok", "version": "0.2.0-alpha.1" }
+{ "schemaVersion": 3, "status": "ok", "version": "0.2.0-alpha.1" }
 ```
 
 ## `agent`
@@ -543,7 +554,7 @@ settled before a single Word runs, so it has exactly one predicted outcome.
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "status": "ok",
   "outcomes": ["value", "error:nonNumeric", "error:shapeMismatch"],
   "exact": false,

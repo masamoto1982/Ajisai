@@ -82,13 +82,13 @@ function resolveAjisaiBin() {
 
 function classifyOutcome(json) {
   if (json.status === 'error') {
-    const kind = json.aiDiagnostic?.kind;
-    if (typeof kind === 'string' && kind !== '') {
-      return `error:${kind}`;
+    const category = json.aiDiagnostic?.category;
+    if (typeof category === 'string' && category !== '') {
+      return `error:${category}`;
     }
     const why = json.diagnosis?.why;
     if (typeof why !== 'string' || why === '') {
-      throw new Error(`error report has neither aiDiagnostic.kind nor diagnosis.why: ${JSON.stringify(json)}`);
+      throw new Error(`error report has neither aiDiagnostic.category nor diagnosis.why: ${JSON.stringify(json)}`);
     }
     return `error:${why}`;
   }
