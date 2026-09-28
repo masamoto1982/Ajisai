@@ -55,6 +55,7 @@ const createFakeInterpreter = (): FakeInterpreter => {
                 if (!word.definition) continue;
                 words.set(word.name.toUpperCase(), word.definition);
             }
+            return [] as Array<[string, string]>;
         },
         reset: () => {
             words.clear();

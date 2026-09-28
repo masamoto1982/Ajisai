@@ -165,13 +165,28 @@ export class AjisaiInterpreter {
         }
     }
     /**
+     * Restore saved User Words, and name the entries that could not be
+     * restored as `[name, reason]` pairs.
+     *
+     * Restoring skips an unreadable entry rather than raising, which is what
+     * keeps the rest of a dictionary (`restore_user_word_definitions`); the
+     * skipped entries come back here instead of being thrown, since a throw
+     * would abort the host's own post-restore work and leave the session
+     * holding a half-restored dictionary. The host used to learn only the
+     * *names* that did not arrive, by comparing what it asked for against
+     * the dictionary afterwards — which could not see a refused
+     * redefinition (the old body is still there, so the name is present) and
+     * could not say why anything was left out. The `Err` case is a list that
+     * does not deserialize at all.
      * @param {any} words_js
+     * @returns {any}
      */
     restore_user_words(words_js) {
         const ret = wasm.ajisaiinterpreter_restore_user_words(this.__wbg_ptr, words_js);
-        if (ret[1]) {
-            throw takeFromExternrefTable0(ret[0]);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
         }
+        return takeFromExternrefTable0(ret[0]);
     }
     /**
      * Override the execution step budget (water level, LANG.MACHINE.LIMITS) for

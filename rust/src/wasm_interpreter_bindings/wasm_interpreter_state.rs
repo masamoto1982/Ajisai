@@ -182,8 +182,21 @@ impl AjisaiInterpreter {
         }
     }
 
+    /// Restore saved User Words, and name the entries that could not be
+    /// restored as `[name, reason]` pairs.
+    ///
+    /// Restoring skips an unreadable entry rather than raising, which is what
+    /// keeps the rest of a dictionary (`restore_user_word_definitions`); the
+    /// skipped entries come back here instead of being thrown, since a throw
+    /// would abort the host's own post-restore work and leave the session
+    /// holding a half-restored dictionary. The host used to learn only the
+    /// *names* that did not arrive, by comparing what it asked for against
+    /// the dictionary afterwards — which could not see a refused
+    /// redefinition (the old body is still there, so the name is present) and
+    /// could not say why anything was left out. The `Err` case is a list that
+    /// does not deserialize at all.
     #[wasm_bindgen]
-    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<(), String> {
+    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<JsValue, String> {
         let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
@@ -198,21 +211,21 @@ impl AjisaiInterpreter {
             )
         });
 
-        // Skipping an unreadable entry rather than raising is what keeps the
-        // rest of a dictionary: see `restore_user_word_definitions`. The
-        // skipped names are not raised here either — throwing would abort the
-        // host's own post-restore reconciliation and leave the session holding
-        // a half-restored dictionary, which is the outcome this avoids. The
-        // host reports them by comparing what it asked for against
-        // `collect_user_words_info`.
-        let _skipped = self
+        let skipped = self
             .interpreter
             .restore_user_word_definitions(entries)
             .map_err(|e| e.to_string())?;
 
         let _ = self.interpreter.collect_output();
 
-        Ok(())
+        let js_array = js_sys::Array::new();
+        for entry in skipped {
+            let item = js_sys::Array::new();
+            item.push(&entry.name.into());
+            item.push(&entry.reason.into());
+            js_array.push(&item);
+        }
+        Ok(js_array.into())
     }
 }
 

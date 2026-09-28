@@ -44,8 +44,8 @@ export interface AjisaiInterpreter {
     reset(): ExecuteResult;
     collect_stack(): Value[];
     collect_user_words_info(): UserWordInfo[];
-    // Content identity per user word (LANG.AUTHORITY.FREEDOM).
-    // Tuple shape: [fullyQualifiedName, contentId].
+    // Content identity per user word (LANG.AUTHORITY.FREEDOM), as
+    // `[name, id]` pairs.
     collect_word_identities(): Array<[name: string, id: string]>;
     collect_core_words_info(): CoreWordInfo[];
     lookup_word_definition(name: string): string | null;
@@ -77,14 +77,16 @@ export interface AjisaiInterpreter {
     // the session untouched. Clearing values is a host action, not a language
     // one — no Word does it — so it lives here rather than in the vocabulary.
     clear_stack(): void;
-    // Throws on a malformed word list: the Rust side returns
-    // `Result<(), String>`, which wasm-bindgen compiles to a synchronous call
-    // that throws the `Err` — a Promise comes only from an `async fn`. Not
-    // `Promise<void>`, which would invite a `.catch` that dies on `undefined`
-    // and an `await` reading as a suspension point where there is none:
-    // `applyInterpreterSnapshot` calls this synchronously and needs the words
-    // in the dictionary when it returns.
-    restore_user_words(words: UserWord[]): void;
+    // Restores every word it can and answers with the entries it could not,
+    // as `[name, reason]` pairs: a body that does not read under today's
+    // rules, a Core name, a redefinition of a word another word still calls.
+    // A definition-less entry is passed over without a report. Throws only on
+    // a list that does not deserialize at all: the Rust side returns
+    // `Result<JsValue, String>`, which wasm-bindgen compiles to a synchronous
+    // call that throws the `Err` — a Promise comes only from an `async fn`.
+    // Synchronous on purpose: `applyInterpreterSnapshot` needs the words in
+    // the dictionary when it returns.
+    restore_user_words(words: UserWord[]): Array<[name: string, reason: string]>;
     // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and falls back to its own
