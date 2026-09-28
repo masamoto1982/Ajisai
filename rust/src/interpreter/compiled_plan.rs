@@ -271,20 +271,40 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 // own refusal escape unattributed — and the ceiling firing on a
                 // Word *is* that Word failing, which is what the interpreted
                 // route records when its charge, made inside the dispatch, fails.
-                let stack_len_before = interp.stack.len();
+                let witness = interp.begin_dispatch();
                 let mut outcome = interp.charge_execution_step();
                 if outcome.is_ok() {
                     outcome = execute_compiled_call(interp, call)
                         .and_then(|()| interp.check_fresh_nesting());
                 }
-                if let Err(err) = outcome {
-                    interp.record_word_dispatch_failure(&call.name, &err, stack_len_before);
-                    return Err(err);
+                match outcome {
+                    Ok(()) => interp.trace_nil_outcome(&call.name, &witness),
+                    Err(err) => {
+                        interp.record_word_dispatch_failure(
+                            &call.name,
+                            &err,
+                            witness.stack_len_before,
+                        );
+                        return Err(err);
+                    }
                 }
             }
+            // A User Word call is a dispatch like the Symbol dispatch the
+            // interpreted route makes for it, and owes the same records: the
+            // NIL it answered, or the frame it encloses when the failure or the
+            // NIL is a Word's inside its body.
             CompiledOp::CallUserWord(name) => {
-                interp.execute_word_core(name)?;
+                let witness = interp.begin_dispatch();
+                match interp.execute_word_core(name) {
+                    Ok(()) => interp.trace_nil_outcome(name, &witness),
+                    Err(err) => {
+                        interp.record_word_dispatch_failure(name, &err, witness.stack_len_before);
+                        return Err(err);
+                    }
+                }
             }
+            // Unreachable: a line holding any fallback token is re-interpreted
+            // whole, above.
             CompiledOp::FallbackToken(_) => {}
         }
     }

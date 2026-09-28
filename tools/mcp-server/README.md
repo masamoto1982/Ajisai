@@ -220,7 +220,8 @@ classifies it — `category` (the `spec/outcomes.json` error category, the same
 id as in `outcome`), `repair: "program"` when the registry says the program is
 what to change (absent: an operand is wrong), `word` and `family` — and the
 error's `errorFlowTrace` event does not repeat it. A `nilProduced` event keeps
-its own diagnosis, since a NIL has no other. Repeating the diagnosis three times
+its own diagnosis, since a NIL has no other; it is recorded once, at the Word
+that projected the NIL, and the Words it then passed through record nothing. Repeating the diagnosis three times
 is what made `1 ADD` a 12 KB response; it is now 7 KB.
 
 `responseBytes` bounds the response as sent: the structured result, its

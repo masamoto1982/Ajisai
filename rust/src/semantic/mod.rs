@@ -1,7 +1,7 @@
 pub mod absence;
 pub mod protocol;
 
-pub use absence::{AbsenceMetadata, AbsenceOrigin, Recoverability};
+pub use absence::{minted_absence_count, AbsenceMetadata, AbsenceOrigin, Recoverability};
 #[cfg(test)]
 mod absence_metadata_tests;
 #[cfg(test)]

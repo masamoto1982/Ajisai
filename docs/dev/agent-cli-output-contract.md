@@ -482,7 +482,13 @@ fixes one and not the other.
 `errorFlowTrace` records Word errors and reason-carrying NIL production. A
 `nilProduced` event carries that NIL's `diagnosis`, which lives nowhere else;
 a `wordError` event carries none, since the report's top-level `diagnosis` is
-built from it. A successful run may therefore have a non-empty trace. Neither NIL nor an Ajisai
+built from it. A successful run may therefore have a non-empty trace. The
+event is recorded at the Word whose contract projected the NIL and not at the
+Words it then passed through (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 2 ADD` holds
+one `nilProduced` event, for `DIV`. A Word inside whose run it was produced —
+a `MAP` applying the block, the User Word whose body ran `DIV` — is named in
+that event's diagnosis evidence as `insideWords=`, innermost first, the same
+way a `wordError` names the frames a failure happened in. Neither NIL nor an Ajisai
 language `status: error` is a host transport failure.
 
 ## `contract`
