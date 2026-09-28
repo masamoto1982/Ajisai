@@ -40,9 +40,9 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    /// Content identity (Section 8.6) of each user word, as `[name, id]`
-    /// pairs. The host uses these to deduplicate identical definitions on
-    /// import and to key shared word groups by content rather than by name.
+    /// Content identity of each user word, as `[name, id]` pairs. The host
+    /// uses these to deduplicate identical definitions on import and to key
+    /// shared word groups by content rather than by name.
     #[wasm_bindgen]
     pub fn collect_word_identities(&self) -> JsValue {
         let js_array = js_sys::Array::new();
@@ -124,14 +124,6 @@ impl AjisaiInterpreter {
         super::set_js_prop(&obj, "kind", &JsValue::from_str(kind));
         super::set_js_prop(&obj, "text", &JsValue::from_str(&text));
         obj.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn remove_word(&mut self, name: &str) {
-        let upper_name = name.to_uppercase();
-        if self.interpreter.user_words.remove(&upper_name).is_some() {
-            let _ = self.interpreter.rebuild_dependencies();
-        }
     }
 
     /// Discard every value on the stack, leaving the dictionary, the output

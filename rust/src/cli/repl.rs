@@ -1,7 +1,7 @@
 //! `ajisai repl` — an interactive read-eval-print loop (Phase 8A).
 //!
-//! The REPL keeps one stateful interpreter across lines, so user dictionaries,
-//! imports, and the stack persist within a session — the same production Core
+//! The REPL keeps one stateful interpreter across lines, so the User Words
+//! and the stack persist within a session — the same production Core
 //! the `run` command drives, never the Python reference. The evaluation core
 //! (`ReplSession`) is a pure function of `(session, line) -> ReplResponse` with
 //! no I/O, so it is testable without a terminal; the terminal driver
@@ -128,7 +128,7 @@ impl ReplSession {
 
 const HELP: &str = "REPL commands:\n  \
     :help   show this help\n  \
-    :reset  clear the stack, dictionaries, and imports\n  \
+    :reset  clear the stack and the User Words\n  \
     :quit   leave the REPL (Ctrl-D also works)\n\
 Anything else is evaluated as Ajisai; the stack and definitions persist.";
 

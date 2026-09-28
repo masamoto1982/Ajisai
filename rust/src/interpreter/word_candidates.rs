@@ -119,9 +119,9 @@ mod tests {
 
     #[test]
     fn user_words_are_matched_beside_the_compiled_in_vocabulary() {
-        let user = ["EXAMPLE@DOUBLE".to_string()];
-        let candidates = suggest_words("EXAMPLE@DOUBEL", user.iter().map(String::as_str));
-        assert_eq!(candidates, vec!["EXAMPLE@DOUBLE".to_string()]);
+        let user = ["DOUBLE".to_string()];
+        let candidates = suggest_words("DOUBEL", user.iter().map(String::as_str));
+        assert_eq!(candidates, vec!["DOUBLE".to_string()]);
     }
 
     #[test]

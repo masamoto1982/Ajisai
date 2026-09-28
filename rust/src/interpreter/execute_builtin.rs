@@ -41,20 +41,13 @@ impl Interpreter {
         // meant allocating a copy of the one in hand — a `String` from
         // `to_uppercase` and an `Arc<str>` built from it — on every dispatch.
         let def = self.definition_of(name).ok_or_else(|| {
-            let ambiguous = self.check_ambiguity(name);
-            // All three arms are the same resolution failure — the name did
-            // not resolve to a usable Word — with progressively more specific
-            // messages about why. `UnknownWord` is the one structural
-            // category LANG.DICTIONARY.RESOLUTION's failure has; ambiguity
-            // and out-of-scope binding are refinements of it, not conditions
-            // any Word's own contract could declare.
-            if !ambiguous.is_empty() {
-                AjisaiError::UnknownWord(format!(
-                    "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
-                    name,
-                    ambiguous.join(", ")
-                ))
-            } else if self.binding_exists_beyond_barrier(name) {
+            // Both arms are the same resolution failure — the name did not
+            // resolve to a usable Word — with a more specific message where
+            // there is one. `UnknownWord` is the one structural category
+            // LANG.DICTIONARY.RESOLUTION's failure has; an out-of-scope
+            // binding is a refinement of it, not a condition any Word's own
+            // contract could declare.
+            if self.binding_exists_beyond_barrier(name) {
                 // The reader can see the name in their own source, so the bare
                 // "unknown word" is the least useful true thing to say. What
                 // went wrong is the scope, and naming it is the difference

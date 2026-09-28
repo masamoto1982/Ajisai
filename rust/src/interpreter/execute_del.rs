@@ -16,10 +16,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    // A name that no User Word holds is `wordNotFound`. DEL used to reach this
-    // through a dictionary-owner search that also accepted `DICT@WORD`; with
-    // two tiers the name is the whole address, so the question is simply
-    // whether the User tier holds it.
+    // A name that no User Word holds is `wordNotFound`: with two tiers the
+    // name is the whole address, so the question is simply whether the User
+    // tier holds it.
     if !interp.user_words.contains_key(&word_name) {
         return Err(AjisaiError::declared(
             "wordNotFound",
@@ -27,40 +26,37 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    // DEL used to also delete a whole named dictionary when the name matched
-    // one. There are no named dictionaries to delete now.
-    // A word's own self-reference does not lock it: see
-    // `collect_external_dependents`.
-    let dependents = interp.collect_external_dependents(&word_name);
-
     // A referenced word is not deletable. There is no force modifier: the
     // vocabulary has no Word that overrides this, so the refusal is final and
-    // the caller's only route is to delete the dependents first.
+    // the caller's only route is to delete the dependents first. A word's own
+    // self-reference does not lock it: see `collect_external_dependents`.
+    let dependents = interp.collect_external_dependents(&word_name);
     if !dependents.is_empty() {
         // The same dependency-graph rule DEF declares as `definitionConflict`:
         // the dictionary's existing bindings refuse this change.
-        let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
         return Err(AjisaiError::declared(
             "definitionConflict",
             format!(
                 "Cannot delete '{}': referenced by {}. Delete those words first.",
-                word_name, dep_list
+                word_name,
+                super::execute_def::sorted_names(&dependents)
             ),
         ));
     }
 
-    let removed_def = interp.user_words.remove(&word_name);
-
-    if let Some(removed_def) = removed_def {
+    // The index holds exactly the edges the definitions hold (`DEF` records
+    // both directions, a forward reference included once its target is
+    // defined), so the word's own edges are the ones to drop. Its dependents
+    // entry is empty by the check above; the words that still *name* it keep
+    // the name in `text_references` and will depend on it again if it is
+    // defined again.
+    if let Some(removed_def) = interp.user_words.remove(&word_name) {
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
                 deps.remove(&word_name);
             }
         }
         interp.dependents.remove(&word_name);
-        for deps in interp.dependents.values_mut() {
-            deps.remove(&word_name);
-        }
     }
 
     interp

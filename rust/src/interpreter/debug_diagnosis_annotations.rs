@@ -79,7 +79,16 @@ impl DebugDiagnosis {
         if !matches!(self.why, CauseClass::TypoOrUnknownName) {
             return;
         }
-        self.candidates = suggest_words(&word, names.into_iter());
+        // Only a locus that resolved to nothing is a misspelling to correct.
+        // A Core or User Word in the locus is spelled right — it resolved —
+        // and the unresolved name is inside it, or is its operand
+        // (`wordNotFound` is `DEL`'s condition, and spelling `DEL` against
+        // the vocabulary offered "DEF").
+        self.candidates = if self.where_.kind == ErrorLocusKind::Unknown {
+            suggest_words(&word, names.into_iter())
+        } else {
+            Vec::new()
+        };
         // The spelling check names the candidates, so it has to be rebuilt
         // against the list that won: a user Word found here can turn an empty
         // list into a suggestion, and the check would otherwise still say

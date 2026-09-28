@@ -47,9 +47,9 @@ export class AjisaiInterpreter {
         return ret;
     }
     /**
-     * Content identity (Section 8.6) of each user word, as `[name, id]`
-     * pairs. The host uses these to deduplicate identical definitions on
-     * import and to key shared word groups by content rather than by name.
+     * Content identity of each user word, as `[name, id]` pairs. The host
+     * uses these to deduplicate identical definitions on import and to key
+     * shared word groups by content rather than by name.
      * @returns {any}
      */
     collect_word_identities() {
@@ -122,14 +122,6 @@ export class AjisaiInterpreter {
         this.__wbg_ptr = ret;
         AjisaiInterpreterFinalization.register(this, this.__wbg_ptr, this);
         return this;
-    }
-    /**
-     * @param {string} name
-     */
-    remove_word(name) {
-        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.ajisaiinterpreter_remove_word(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * @returns {any}

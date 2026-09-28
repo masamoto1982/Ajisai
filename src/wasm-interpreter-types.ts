@@ -85,7 +85,6 @@ export interface AjisaiInterpreter {
     // `applyInterpreterSnapshot` calls this synchronously and needs the words
     // in the dictionary when it returns.
     restore_user_words(words: UserWord[]): void;
-    remove_word(name: string): void;
     // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and falls back to its own

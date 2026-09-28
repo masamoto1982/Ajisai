@@ -20,9 +20,9 @@ export class AjisaiInterpreter {
     collect_stack(): any;
     collect_user_words_info(): any;
     /**
-     * Content identity (Section 8.6) of each user word, as `[name, id]`
-     * pairs. The host uses these to deduplicate identical definitions on
-     * import and to key shared word groups by content rather than by name.
+     * Content identity of each user word, as `[name, id]` pairs. The host
+     * uses these to deduplicate identical definitions on import and to key
+     * shared word groups by content rather than by name.
      */
     collect_word_identities(): any;
     execute(code: string): Promise<any>;
@@ -50,7 +50,6 @@ export class AjisaiInterpreter {
      */
     lookup_word_description(name: string): any;
     constructor();
-    remove_word(name: string): void;
     reset(): any;
     /**
      * Answer the host's lookup of `name` against the current dictionary.

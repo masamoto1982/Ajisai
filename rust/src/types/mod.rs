@@ -425,13 +425,12 @@ pub struct WordDefinition {
     /// Every uppercased Symbol name written anywhere in the body — including
     /// one that does not currently resolve to anything, unlike
     /// `dependencies`. A forward reference to a not-yet-defined word is
-    /// invisible to `dependencies` (it cannot resolve yet) but must still be
-    /// visible here, or a two-step mutual recursion (define A naming B, then
-    /// define B naming A) would slip past the DEF-time acyclicity check that
-    /// `dependencies` alone cannot support.
+    /// absent from `dependencies` until that word is defined (`DEF` adds the
+    /// edge then) but must be visible here from the start, or a two-step
+    /// mutual recursion (define A naming B, then define B naming A) would slip
+    /// past the DEF-time acyclicity check that `dependencies` alone cannot
+    /// support.
     pub text_references: HashSet<String>,
-    pub original_source: Option<String>,
-    pub namespace: Option<String>,
     pub registration_order: u64,
     /// The compiled plan for this Word's body, once one has been built and
     /// while it is still valid for the current dictionary epoch.

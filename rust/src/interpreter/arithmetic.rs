@@ -488,8 +488,8 @@ fn exact_flat_leaf_lanes(a: &Value, b: &Value) -> Option<(Vec<ExactReal>, Vec<Ex
 
 /// Structural broadcast for operands containing irrational `ExactScalar`
 /// lanes. Returns `Ok(false)` (leaving the stack untouched) for the cases the
-/// caller still routes elsewhere — Stack target mode and top-level NIL — so the
-/// existing NIL-passthrough and reduction paths keep their behavior.
+/// caller still routes elsewhere — a top-level NIL — so the existing
+/// NIL-passthrough and reduction paths keep their behavior.
 pub(crate) fn push_exact_real_broadcast_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,

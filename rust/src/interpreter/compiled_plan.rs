@@ -38,10 +38,6 @@ pub enum CompiledOp {
     PushVectorLiteral(Value),
     CallBuiltin(Arc<CompiledCall>),
     CallUserWord(String),
-    CallQualifiedWord {
-        namespace: String,
-        word: String,
-    },
     // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
     // - directives / control markers (NilCoalesce)
     // - unresolved symbols at compile time
@@ -62,14 +58,7 @@ fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> Compiled
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(Arc::new(CompiledCall::resolve(symbol)))
             } else if let Some((resolved, _)) = interp.resolve_word_entry(symbol) {
-                if let Some((namespace, word)) = resolved.split_once('@') {
-                    CompiledOp::CallQualifiedWord {
-                        namespace: namespace.to_string(),
-                        word: word.to_string(),
-                    }
-                } else {
-                    CompiledOp::CallUserWord(resolved.to_string())
-                }
+                CompiledOp::CallUserWord(resolved.to_string())
             } else {
                 CompiledOp::FallbackToken(token.clone())
             }
@@ -295,10 +284,6 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
             }
             CompiledOp::CallUserWord(name) => {
                 interp.execute_word_core(name)?;
-            }
-            CompiledOp::CallQualifiedWord { namespace, word } => {
-                let full_name = format!("{}@{}", namespace, word);
-                interp.execute_word_core(&full_name)?;
             }
             CompiledOp::FallbackToken(_) => {}
         }

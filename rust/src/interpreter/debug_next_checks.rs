@@ -190,8 +190,8 @@ pub(crate) fn build_next_checks(
                 "checkUserDefinitions",
                 ("Check user definitions", "ユーザー定義を確認する"),
                 (
-                    "Check the user Word's definition and the dictionary it belongs to.",
-                    "user word の定義と所属 dictionary を確認する",
+                    "Check that the User Word is defined (DEF) and spelled as defined.",
+                    "その User Word が DEF で定義済みで、定義どおりの綴りかを確認する",
                 ),
             ));
         }
@@ -363,8 +363,8 @@ pub(crate) fn build_next_checks(
                     "checkProtection",
                     ("Check protection", "保護を確認する"),
                     (
-                        "A mutating operation was requested against a built-in Word.",
-                        "built-in word に対する不可変操作が要求されている",
+                        "A dictionary change was asked of a Core Word, which the dictionary seals.",
+                        "Core Word に対する辞書の変更が求められたが、Core は封印されている",
                     ),
                 ));
             } else {

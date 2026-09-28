@@ -116,7 +116,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Bind | Def => (Linear, false),
         Del => (Const, false),
         Print => (Linear, false),
-        // The Words promoted out of the deleted MATH and ALGO modules.
+        // The remaining number Words: element-wise like the rest of the family.
         Min | Max | Sqrt => (Linear, false),
         // The number-closing Words: element-wise like the rest of the family.
         Pow | Gcd | Ratio => (Linear, false),
