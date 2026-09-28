@@ -311,13 +311,6 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
     Ok(())
 }
 
-pub fn plan_is_all_fallback(plan: &CompiledPlan) -> bool {
-    plan.line
-        .ops
-        .iter()
-        .all(|op| matches!(op, CompiledOp::FallbackToken(_)))
-}
-
 pub fn arc_plan(plan: CompiledPlan) -> Arc<CompiledPlan> {
     Arc::new(plan)
 }

@@ -285,19 +285,22 @@ impl Interpreter {
 
         self.runtime_metrics.compiled_plan_cache_miss_count += 1;
 
-        let plan = self.build_or_reuse_compiled_plan(resolved_name, def);
+        let plan = self.build_compiled_plan(def);
         self.store_compiled_plan_for_word(resolved_name, plan.clone());
-        plan
+        Some(plan)
     }
 
+    /// Keep the plan on the definition, so the next call finds it. The
+    /// definition is copied once per build — once per Word per dictionary
+    /// epoch, since a stored plan stays valid until the dictionary changes.
     fn store_compiled_plan_for_word(
         &mut self,
         resolved_name: &str,
-        plan: Option<std::sync::Arc<super::compiled_plan::CompiledPlan>>,
+        plan: std::sync::Arc<super::compiled_plan::CompiledPlan>,
     ) {
         if let Some(old_def) = self.user_words.get(resolved_name).cloned() {
             let mut updated = (*old_def).clone();
-            updated.compiled_plan = plan;
+            updated.compiled_plan = Some(plan);
             self.user_words
                 .insert(resolved_name.to_string(), std::sync::Arc::new(updated));
         }

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use crate::error::Result;
 use crate::types::WordDefinition;
 
-use super::compiled_plan::{arc_plan, compile_word_definition, plan_is_all_fallback, CompiledPlan};
+use super::compiled_plan::{arc_plan, compile_word_definition, CompiledPlan};
 use super::interpreter_core::RuntimeMetrics;
 use super::Interpreter;
 
@@ -123,21 +123,20 @@ impl Interpreter {
         crate::builtins::register_builtins(&mut self.core_vocabulary);
     }
 
-    /// Compile a word body into a `CompiledPlan`, or decline when the compiled
-    /// form would be all-fallback. Compilation is unobservable: a run produces
-    /// the same result whether it went through a plan or the plain path.
-    pub(crate) fn build_or_reuse_compiled_plan(
-        &mut self,
-        _resolved_name: &str,
-        def: &Arc<WordDefinition>,
-    ) -> Option<Arc<CompiledPlan>> {
+    /// Compile a word body into a `CompiledPlan`. Compilation is unobservable:
+    /// a run produces the same result whether it went through a plan or the
+    /// plain path.
+    ///
+    /// Every body gets a plan, including one the compiler could lower none
+    /// of. Such a plan runs its source tokens through the interpreter, exactly
+    /// as a body with no plan would — `execute_compiled_plan` re-interprets
+    /// any line holding a fallback token whole — so declining it bought
+    /// nothing, and cost a recompile and a copy of the definition on every
+    /// call, since nothing remembered that the body had been declined.
+    pub(crate) fn build_compiled_plan(&mut self, def: &Arc<WordDefinition>) -> Arc<CompiledPlan> {
         let compiled = compile_word_definition(def, self);
-        if plan_is_all_fallback(&compiled) {
-            return None;
-        }
-
         self.bump_execution_epoch();
         self.runtime_metrics.compiled_plan_build_count += 1;
-        Some(arc_plan(compiled))
+        arc_plan(compiled)
     }
 }
