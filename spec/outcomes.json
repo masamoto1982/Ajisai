@@ -60,7 +60,7 @@
       "id": "definitionConflict",
       "kind": "declared",
       "repair": "program",
-      "documentation": "DEF or DEL asked for a dictionary change its existing bindings refuse: DEF named a word the dictionary already binds in a way this definition cannot resolve, or DEL named a word other words still reference."
+      "documentation": "DEF or DEL asked for a dictionary change the words that call the named word refuse: DEF redefined, or DEL deleted, a User Word that other User Words still reference. Those words have to go first; there is no override."
     },
     {
       "id": "duplicateKey",
@@ -81,12 +81,12 @@
     {
       "id": "invalidDefinitionBody",
       "kind": "declared",
-      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or an empty one."
+      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, an empty one, or one carrying a NIL that has a reason — a definition is kept as its source, and no source text denotes such a NIL (the NIL name denotes the literal NIL); produce it inside the body instead."
     },
     {
       "id": "invalidName",
       "kind": "declared",
-      "documentation": "DEF, DEL or BIND was given a name that cannot be a name at all (empty, wrong lexical shape)."
+      "documentation": "DEF or BIND was given a name that cannot be a name at all (empty, wrong lexical shape). DEL takes any name, so a word saved under a rule that has since changed stays removable."
     },
     {
       "id": "invalidShape",

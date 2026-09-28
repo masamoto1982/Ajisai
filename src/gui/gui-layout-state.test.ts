@@ -120,7 +120,6 @@ describe('applyExecutionAreaState', () => {
             outputChanged: false,
             stackChanged: false,
             dictionaryChanged: true,
-            dictionarySheetId: 'user',
         });
 
         expect(state.currentRightMode).toBe('dictionary');
@@ -139,7 +138,6 @@ describe('applyExecutionAreaState', () => {
             outputChanged: false,
             stackChanged: true,
             dictionaryChanged: true,
-            dictionarySheetId: 'user',
         });
 
         expect(state.currentRightMode).toBe('dictionary');
@@ -158,7 +156,6 @@ describe('applyExecutionAreaState', () => {
             outputChanged: false,
             stackChanged: false,
             dictionaryChanged: true,
-            dictionarySheetId: 'user',
         });
 
         expect(state.currentMode).toBe('dictionary');

@@ -52,7 +52,6 @@ describe('detectExecutionSurfaceChanges', () => {
 
         expect(changes.stackChanged).toBe(true);
         expect(changes.dictionaryChanged).toBe(false);
-        expect(changes.dictionarySheetId).toBeUndefined();
     });
 
     it('flags a dictionary change and the user sheet when a word is defined', () => {
@@ -62,7 +61,6 @@ describe('detectExecutionSurfaceChanges', () => {
             okResult()
         );
         expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('user');
     });
 
     it('treats a failed run as an Output change even with no program output', () => {

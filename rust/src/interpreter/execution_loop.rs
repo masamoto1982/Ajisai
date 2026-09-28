@@ -305,6 +305,10 @@ impl Interpreter {
         self.numeric_work_used = 0;
         self.collection_work_used = 0;
         self.dictionary_changes_this_run.clear();
+        // A literal captured for a `DEF` that never ran — the dispatch failed
+        // before `op_def` took it — must not become the body of the next run's
+        // first `DEF`.
+        self.pending_def_body_tokens = None;
         self.reset_binding_scopes();
         // Merge rather than replace: a `#:contract` line and the `DEF` it
         // documents can arrive in separate `execute()` calls (the Playground

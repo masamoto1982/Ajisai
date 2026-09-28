@@ -7,7 +7,7 @@ use super::Interpreter;
 impl Interpreter {
     /// The definition an **already canonical** name resolves to, against the
     /// dictionary LANG.DICTIONARY.RESOLUTION describes: "The dictionary has two
-    /// tiers. **Core** holds the 66 canonical Words and is sealed ... **User**
+    /// tiers. **Core** holds the canonical Words and is sealed ... **User**
     /// holds definitions made by `DEF`. Resolution is a deterministic function
     /// of the normalized name and the current dictionary, and User never shadows
     /// Core." And: "Those two tiers are the whole dictionary." Core is probed
@@ -37,12 +37,6 @@ impl Interpreter {
             return Some(def.clone());
         }
         self.user_words.get(canonical_name).cloned()
-    }
-
-    /// A bare name is never ambiguous: there is one User tier, so a name is in
-    /// it or it is not. Retained as the single place the answer is stated.
-    pub(crate) fn check_ambiguity(&self, _name: &str) -> Vec<String> {
-        vec![]
     }
 
     /// Resolve a name to the Word it names, and the canonical name it resolved
@@ -82,12 +76,9 @@ impl Interpreter {
     }
 
     pub fn rebuild_dependencies(&mut self) -> crate::error::Result<()> {
-        // Quiescent recompute point (also reached after import, which does not
-        // bump the dictionary epoch on its own). Invalidate the resolve cache so
-        // a name that was previously cached as a single resolution cannot be
-        // revived once a divergent same-named word is introduced and the bare
-        // name becomes ambiguous (Section 8.6). Entries written by the scan
-        // below are tagged with the fresh epoch and stay valid.
+        // A quiescent recompute point, reached after a bulk restore: every
+        // edge is derived again from the bodies, and the epoch moves so no
+        // compiled plan from before the restore matches the dictionary after it.
         self.bump_dictionary_epoch();
 
         self.dependents.clear();
@@ -128,15 +119,13 @@ impl Interpreter {
         Ok(())
     }
 
-    /// Words that directly reference `word_name`, as fully-qualified names.
+    /// Words that directly reference `word_name`.
     ///
     /// This reads the maintained reverse-dependency index (`self.dependents`) —
     /// an inverted index from a word to the set of words that depend on it,
-    /// which `DEF`, `DEL`, and `rebuild_dependencies` keep in sync. It replaces
-    /// the previous O(N) rescan of every user dictionary with an O(1) index
-    /// lookup; for a redefinition or deletion that touches a word referenced
-    /// across a large dictionary this turns a full-corpus walk into a single
-    /// map probe.
+    /// which `DEF`, `DEL`, and `rebuild_dependencies` keep in sync — so a
+    /// redefinition or deletion that touches a word referenced across a large
+    /// dictionary is a single map probe rather than a walk of every body.
     ///
     /// In debug builds a `debug_assert_eq!` cross-checks the index against the
     /// authoritative full scan (`collect_dependents_by_scan`) on every call, so
@@ -156,20 +145,12 @@ impl Interpreter {
     /// The direct dependents of `word_name` *other than itself*.
     ///
     /// This is the set that decides whether a word may be redefined or deleted.
-    /// A recursive word depends on itself, and once that self-edge is in the
-    /// index (`rebuild_dependencies` records it, and so does a second `DEF` of
-    /// an already-defined recursive word), the plain dependents set is never
-    /// empty. `DEF` and `DEL` then refused with "referenced by FIB — delete
-    /// those words first", naming the very word being deleted: a recursive word
-    /// could not be corrected or removed by any Word in the vocabulary, only by
-    /// discarding the whole User dictionary. That contradicts
-    /// LANG.DICTIONARY.MUTATION, under which a User Word is redefinable.
-    ///
     /// The refusal exists to protect *other* words from losing the definition
     /// they call, and a word cannot be its own such victim: redefining it
-    /// replaces the body the self-call resolves through, and deleting it removes
-    /// caller and callee together. So the self-edge is kept in the index — it is
-    /// real, and word identity depends on it — and excluded here.
+    /// replaces the body a self-call would resolve through, and deleting it
+    /// removes caller and callee together. LANG.DICTIONARY.ACYCLIC refuses a
+    /// self-referential definition at `DEF`, so no self-edge exists today; the
+    /// exclusion states the rule rather than relying on that.
     pub fn collect_external_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut dependents = self.collect_dependents(word_name);
         dependents.remove(word_name);
@@ -191,13 +172,6 @@ impl Interpreter {
         result
     }
 
-    /// Transitive closure of `collect_dependents`: every word that depends on
-    /// `word_name` directly or through a chain of intermediate words, as
-    /// fully-qualified names. Built by breadth-first traversal of the
-    /// reverse-dependency index. The starting word itself is not included unless
-    /// it participates in a dependency cycle. This is the impact set that a
-    /// redefinition or deletion of `word_name` can affect, and the scope a later
-    /// stage uses to invalidate dependent cached artifacts.
     /// LANG.DICTIONARY.ACYCLIC's acyclicity check: would naming `referenced` from the body
     /// of `defining` (a word not yet in `user_words`, or about to replace its
     /// current entry) close a cycle back onto `defining`?
@@ -246,6 +220,10 @@ impl Interpreter {
         None
     }
 
+    /// Transitive closure of `collect_dependents`: every word that depends on
+    /// `word_name` directly or through a chain of intermediate words, by
+    /// breadth-first traversal of the reverse-dependency index. The impact set
+    /// a redefinition or deletion of `word_name` can affect.
     pub fn collect_transitive_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
         let mut queue: VecDeque<String> = self

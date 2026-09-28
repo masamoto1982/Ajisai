@@ -167,21 +167,13 @@ pub struct Interpreter {
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
 
-    /// Owning user dictionary of the word currently being defined,
-    /// dependency-scanned, or executed. Bare names resolve through this
-    /// dictionary's words first (Section 8.6), so an imported word group is
-    /// self-referential regardless of which other dictionaries are loaded.
-    /// `None` at top level, where resolution falls back to the global order.
-
-    /// Content identity of each user word, keyed by fully-qualified name
-    /// (Section 8.6). Derived state: recomputed whenever the user-word graph
-    /// changes.
+    /// Content identity of each user word, keyed by name. Derived state:
+    /// recomputed whenever the user-word graph changes.
     pub(crate) word_identities: HashMap<String, String>,
 
-    /// Content store for definition bodies (Section 8.6), keyed by content key.
-    /// Textually identical bodies share a single `Arc<[Token]>`, so
-    /// re-importing or copying a word group does not duplicate its code in
-    /// memory.
+    /// Content store for definition bodies, keyed by content key. Textually
+    /// identical bodies share a single `Arc<[Token]>`, so restoring or copying
+    /// a word group does not duplicate its code in memory.
     pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::Token]>>,
 
     /// When set, `recompute_word_identities` is a no-op. Bulk operations (e.g.

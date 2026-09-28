@@ -355,25 +355,16 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderExecutionResult = (result: ExecuteResult): void => {
-        const debug = (result.debugOutput || '').trim();
         const program = (result.output || '').trim();
 
-        mainOutput = [debug, program].filter(Boolean).join('\n');
+        mainOutput = program;
         elements.outputDisplay.replaceChildren();
-
-        if (debug) {
-            appendSpan(debug, 'debug');
-        }
-
-        if (debug && program) {
-            elements.outputDisplay.appendChild(document.createElement('br'));
-        }
 
         if (program) {
             appendSpan(program, 'program');
         }
 
-        if (!debug && !program && !isFailure(result)) {
+        if (!program && !isFailure(result)) {
             appendSpan('OK', 'debug');
         }
     };

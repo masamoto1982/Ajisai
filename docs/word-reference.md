@@ -1129,7 +1129,7 @@ Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTR
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
 - **Syntax:** `[ 1 ] 'W' DEF 'W' DEL`
-- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`, `definitionConflict`
+- **ERROR conditions:** `wordNotFound`, `protectedWord`, `nonText`, `definitionConflict`
 
 ## `DIGEST`
 

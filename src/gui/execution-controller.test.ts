@@ -76,6 +76,7 @@ const createFakeInterpreter = () => {
         restore_stack_snapshot: (snapshot: string) => { stack = JSON.parse(snapshot) as Value[]; },
         restore_user_words: (restored: UserWord[]) => {
             for (const word of restored) if (word.definition) words.set(word.name, word.definition);
+            return [] as Array<[string, string]>;
         },
         reset: () => {
             stack = [];

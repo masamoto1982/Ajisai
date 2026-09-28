@@ -1,7 +1,7 @@
 //! Resolution laws for `crate::interpreter::resolve_word`.
 //!
 //! LANG.DICTIONARY.RESOLUTION: "The dictionary has two tiers. **Core** holds
-//! the 57 canonical Words and is sealed: a Core name cannot be redefined or
+//! the canonical Words and is sealed: a Core name cannot be redefined or
 //! deleted. **User** holds definitions made by `DEF`. Resolution is a
 //! deterministic function of the normalized name and the current dictionary,
 //! and User never shadows Core." And: "Those two tiers are the whole
@@ -76,9 +76,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_qualified_path_is_not_a_name() {
+    async fn an_at_sign_is_an_ordinary_name_character() {
         // `DICT@WORD` addressed a tier that no longer exists. It is now just a
-        // name that nothing holds.
+        // name: held by nothing until defined, and by that word once it is.
         let mut interp = Interpreter::new();
         define(&mut interp, "INC", "1 ADD");
 
@@ -90,20 +90,16 @@ mod tests {
         ] {
             assert!(
                 interp.resolve_word_entry(path).is_none(),
-                "{path} must not resolve"
+                "{path} resolves to nothing"
             );
         }
-    }
 
-    #[tokio::test]
-    async fn a_bare_name_is_never_ambiguous() {
-        // Ambiguity was a consequence of several dictionaries holding a name.
-        // With one User tier a name is held or it is not.
-        let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
-        assert!(interp.check_ambiguity("INC").is_empty());
-        assert!(interp.check_ambiguity("ADD").is_empty());
-        assert!(interp.check_ambiguity("NOPE").is_empty());
+        define(&mut interp, "EXAMPLE@INC", "2 ADD");
+        let (name, def) = interp
+            .resolve_word_entry("example@inc")
+            .expect("a defined name resolves, case-folded like any other");
+        assert_eq!(name.as_ref(), "EXAMPLE@INC");
+        assert!(!def.is_builtin);
     }
 
     #[tokio::test]

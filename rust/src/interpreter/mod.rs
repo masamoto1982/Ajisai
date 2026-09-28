@@ -150,6 +150,8 @@ mod declared_condition_tests;
 #[cfg(test)]
 mod definable_name_tests;
 #[cfg(test)]
+mod definition_source_tests;
+#[cfg(test)]
 mod dependents_index_tests;
 #[cfg(test)]
 mod dictionary_operation_tests;

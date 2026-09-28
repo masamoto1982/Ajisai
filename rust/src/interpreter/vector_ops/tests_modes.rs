@@ -72,7 +72,7 @@ async fn test_collect_error_negative_count() {
 }
 
 #[tokio::test]
-async fn test_get_consume_mode() {
+async fn test_get_consumes_its_operands() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] 0 GET").await;
@@ -85,7 +85,7 @@ async fn test_get_consume_mode() {
 }
 
 #[tokio::test]
-async fn test_length_consume_mode() {
+async fn test_length_consumes_its_operand() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 1 2 3 4 5 ] LENGTH").await;

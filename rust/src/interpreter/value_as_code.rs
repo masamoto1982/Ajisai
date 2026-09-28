@@ -19,10 +19,16 @@
 //! Scalar are `EQ` and were always meant to be indistinguishable once built.
 //! A value no source text denotes — an exact irrational, a NIL with its
 //! reason, a Record — crosses as a `Token::Value` carrying it whole, so
-//! running the Vector pushes exactly the element it holds.
+//! running the Vector pushes exactly the element it holds. `DEF` is the one
+//! caller that keeps the tokens: a definition is its source, so it writes
+//! such a value back as the source that builds it (`body_tokens_as_source`).
 
-use crate::error::Result;
+use crate::error::{AjisaiError, Result};
+use crate::types::exact::value::ExactReal;
+use crate::types::fraction::Fraction;
 use crate::types::{Token, Value, ValueData};
+use num_bigint::BigInt;
+use num_traits::One;
 
 pub(crate) fn value_elements_to_tokens(elements: &[Value]) -> Result<Vec<Token>> {
     let mut tokens = Vec::with_capacity(elements.len());
@@ -68,5 +74,177 @@ fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
         // a literal denotes a rational), so it too is carried whole.
         ValueData::ExactScalar(_) => out.push(Token::Value(Box::new(value.clone()))),
     }
+    Ok(())
+}
+
+/// A definition body with every carried value written back as source.
+///
+/// A definition is kept as its source (LANG.DICTIONARY.MUTATION): the
+/// dictionary saves, exports, shows and identifies a Word by the text of its
+/// body, and a session restores it by running that text through `DEF` again.
+/// A body built from a computed Vector can carry a value no source text
+/// denotes — `value_elements_to_tokens` would carry it as a `Token::Value`;
+/// its saved text was a display form, and a restored session read
+/// `{ 'k' 5/1 }` as `unknownWord: {`. So `DEF` writes each such value back as
+/// the source that builds it — a Record as `[ keys ] [ values ] RECORD`, an
+/// exact irrational as its normal form `0 m SQRT c MUL ADD …`, a Vector that
+/// holds either as `… n COLLECT` (a Symbol inside one is read out of a
+/// literal, `[ V ] 0 GET`, so it stays data) — and the body it keeps is the
+/// same body in every session. The one value no source can build, a NIL
+/// carrying a reason (the `NIL` name denotes the literal NIL and no other),
+/// is refused.
+///
+/// The conversion works from the elements, not from tokens: a value carried
+/// inside a Vector literal cannot be expanded in place, since inside `[ ]`
+/// the expansion would be data.
+pub(crate) fn value_elements_to_source_tokens(elements: &[Value]) -> Result<Vec<Token>> {
+    let mut tokens = Vec::with_capacity(elements.len());
+    for element in elements {
+        match &element.data {
+            // At the top level of a body a bare name is a call, as it is for
+            // any Vector run as code.
+            ValueData::Symbol(name) => tokens.push(Token::Symbol(name.clone())),
+            _ => push_source_expression(element, &mut tokens)?,
+        }
+    }
+    Ok(tokens)
+}
+
+/// Whether `value` is written as itself inside a vector literal: a number, a
+/// String, a Boolean, a literal NIL, a Symbol (data inside `[ ]`), or a Vector
+/// of such. A Record, an algebraic irrational and a reasoned NIL are not.
+fn writes_as_literal(value: &Value) -> bool {
+    match &value.data {
+        ValueData::Symbol(_)
+        | ValueData::Text(_)
+        | ValueData::Scalar(_)
+        | ValueData::Boolean(_) => true,
+        ValueData::ExactScalar(exact) => matches!(exact, ExactReal::Rational(_)),
+        ValueData::Nil => value
+            .nil_reason()
+            .is_none_or(|reason| matches!(reason, crate::error::NilReason::Literal)),
+        ValueData::Record(_) => false,
+        ValueData::Vector(children) => children.iter().all(writes_as_literal),
+        ValueData::Tensor { .. } => value
+            .as_vector_view()
+            .is_some_and(|children| children.iter().all(writes_as_literal)),
+    }
+}
+
+/// The literal spelling of a value `writes_as_literal` admits.
+fn push_literal(value: &Value, out: &mut Vec<Token>) {
+    match &value.data {
+        ValueData::Symbol(name) => out.push(Token::Symbol(name.clone())),
+        ValueData::Text(s) => out.push(Token::String(s.clone())),
+        ValueData::Scalar(f) => out.push(Token::number_from_value(f.clone())),
+        ValueData::ExactScalar(ExactReal::Rational(f)) => {
+            out.push(Token::number_from_value(f.clone()))
+        }
+        ValueData::Boolean(true) => out.push(Token::Symbol("TRUE".into())),
+        ValueData::Boolean(false) => out.push(Token::Symbol("FALSE".into())),
+        ValueData::Nil => out.push(Token::Symbol("NIL".into())),
+        ValueData::Vector(_) | ValueData::Tensor { .. } => {
+            out.push(Token::VectorStart);
+            if let Some(children) = value.as_vector_view() {
+                for child in children.iter() {
+                    push_literal(child, out);
+                }
+            }
+            out.push(Token::VectorEnd);
+        }
+        ValueData::ExactScalar(ExactReal::Algebraic(_)) | ValueData::Record(_) => {
+            unreachable!("writes_as_literal admits no Record or irrational")
+        }
+    }
+}
+
+/// Source that, run at the top level of a body, pushes `value`.
+fn push_source_expression(value: &Value, out: &mut Vec<Token>) -> Result<()> {
+    match &value.data {
+        // At the top level a bare name is a call; the Symbol stays data by
+        // being read out of a literal.
+        ValueData::Symbol(name) => {
+            out.push(Token::VectorStart);
+            out.push(Token::Symbol(name.clone()));
+            out.push(Token::VectorEnd);
+            out.push(Token::number_from_value(integer(0)));
+            out.push(Token::Symbol("GET".into()));
+            Ok(())
+        }
+        ValueData::Nil if !writes_as_literal(value) => {
+            let reason = value
+                .nil_reason()
+                .map(|reason| reason.as_protocol_str().to_string())
+                .unwrap_or_default();
+            Err(AjisaiError::declared(
+                "invalidDefinitionBody",
+                format!(
+                    "expected a definition body writable as source, got one holding a NIL that carries a reason ({reason}) — no source text denotes it, so the definition could not be saved or restored. Produce the NIL inside the body instead."
+                ),
+            ))
+        }
+        _ if writes_as_literal(value) => {
+            push_literal(value, out);
+            Ok(())
+        }
+        // The multiquadratic normal form ∑ cₘ·√m, replayed through the
+        // public arithmetic exactly as the persistence format does.
+        ValueData::ExactScalar(exact) => {
+            out.push(Token::number_from_value(integer(0)));
+            for (monomial, coefficient) in exact
+                .algebraic_terms()
+                .expect("an algebraic value has normal-form terms")
+            {
+                out.push(Token::number_from_value(Fraction::new(
+                    monomial.clone(),
+                    BigInt::one(),
+                )));
+                out.push(Token::Symbol("SQRT".into()));
+                out.push(Token::number_from_value(coefficient.clone()));
+                out.push(Token::Symbol("MUL".into()));
+                out.push(Token::Symbol("ADD".into()));
+            }
+            Ok(())
+        }
+        ValueData::Record(record) => {
+            push_vector_expression(record.keys(), out)?;
+            push_vector_expression(record.values(), out)?;
+            out.push(Token::Symbol("RECORD".into()));
+            Ok(())
+        }
+        ValueData::Vector(_) | ValueData::Tensor { .. } => {
+            let children = value
+                .as_vector_view()
+                .expect("a Vector or Tensor has a Vector view");
+            push_vector_expression(&children, out)
+        }
+        ValueData::Nil | ValueData::Text(_) | ValueData::Scalar(_) | ValueData::Boolean(_) => {
+            unreachable!("written as a literal above")
+        }
+    }
+}
+
+fn integer(n: i64) -> Fraction {
+    Fraction::new(BigInt::from(n), BigInt::one())
+}
+
+/// A Vector of `children`: the literal when every child has one, otherwise
+/// each child's expression and then `n COLLECT`.
+fn push_vector_expression(children: &[Value], out: &mut Vec<Token>) -> Result<()> {
+    if children.iter().all(writes_as_literal) {
+        out.push(Token::VectorStart);
+        for child in children {
+            push_literal(child, out);
+        }
+        out.push(Token::VectorEnd);
+        return Ok(());
+    }
+    for child in children {
+        push_source_expression(child, out)?;
+    }
+    out.push(Token::number_from_value(integer(
+        i64::try_from(children.len()).expect("a Vector shorter than i64::MAX"),
+    )));
+    out.push(Token::Symbol("COLLECT".into()));
     Ok(())
 }

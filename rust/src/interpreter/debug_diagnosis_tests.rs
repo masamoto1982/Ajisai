@@ -91,3 +91,72 @@ fn a_user_word_found_late_reaches_the_spelling_check_too() {
         .en;
     assert!(after.contains("TWICE"), "{after}");
 }
+
+/// `wordNotFound` is `DEL`'s condition about its operand. The locus is `DEL`,
+/// which is spelled right, so no candidate is offered against it: spelling
+/// `DEL` against the vocabulary used to answer "DEF".
+#[test]
+fn word_not_found_offers_no_candidates_for_the_deleting_word() {
+    let diagnosis = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some("DEL"),
+        Some(&ErrorCategory::Declared("wordNotFound")),
+        None,
+        1,
+        0,
+        Some("Word 'FOO' is not defined".to_string()),
+    );
+    assert!(
+        diagnosis.candidates.is_empty(),
+        "{:?}",
+        diagnosis.candidates
+    );
+}
+
+/// The same holds once the live dictionary is consulted: a User Word named
+/// `DEE` is not a correction for the `DEL` that raised `wordNotFound`. And
+/// an unknown name inside a User Word is not a misspelling of that User
+/// Word: the locus resolved, so nothing is offered against it.
+#[test]
+fn only_an_unresolved_locus_is_spell_checked_against_the_live_dictionary() {
+    let mut not_found = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some("DEL"),
+        Some(&ErrorCategory::Declared("wordNotFound")),
+        None,
+        1,
+        0,
+        Some("Word 'FOO' is not defined".to_string()),
+    );
+    not_found.with_user_vocabulary(["DEE"].into_iter());
+    assert!(
+        not_found.candidates.is_empty(),
+        "{:?}",
+        not_found.candidates
+    );
+
+    let mut inside = DebugDiagnosis::from_error_category(
+        ErrorPhase::ResolveWord,
+        Some("W"),
+        Some(&ErrorCategory::UnknownWord),
+        None,
+        0,
+        0,
+        Some("Unknown word: FROB".to_string()),
+    );
+    inside.with_user_vocabulary(["W", "V"].into_iter());
+    assert_eq!(inside.where_.kind, ErrorLocusKind::UserWord);
+    assert!(inside.candidates.is_empty(), "{:?}", inside.candidates);
+
+    let mut top_level = DebugDiagnosis::from_error_category(
+        ErrorPhase::ResolveWord,
+        Some("DOUBEL"),
+        Some(&ErrorCategory::UnknownWord),
+        None,
+        0,
+        0,
+        Some("Unknown word: DOUBEL".to_string()),
+    );
+    top_level.with_user_vocabulary(["DOUBLE"].into_iter());
+    assert_eq!(top_level.candidates, vec!["DOUBLE".to_string()]);
+}

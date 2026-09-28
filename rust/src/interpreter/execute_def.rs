@@ -86,13 +86,15 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // contract engine's vector-depth gate (`word_contract_widen.rs`) reads to
     // tell code from data. `None` here just means the body came from a
     // computed Vector rather than a literal, and the bridge is the only way
-    // to get tokens from it.
+    // to get tokens from it — the source-writing bridge, since a definition
+    // is kept as its source and a value the Vector carries whole has to be
+    // written as what builds it.
     let tokens = match interp.pending_def_body_tokens.take() {
         Some(tokens) => tokens,
         None => match def_val.as_vector_view() {
             // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
             Some(elements) => {
-                crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?
+                crate::interpreter::value_as_code::value_elements_to_source_tokens(&elements)?
             }
             None => {
                 return Err(AjisaiError::declared(
@@ -117,6 +119,21 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
+    // Every refusal comes first, and every change to the dictionary after: a
+    // definition commits whole or not at all (LANG.DICTIONARY.MUTATION). The
+    // old order removed the word's previous dependency edges before the empty-
+    // body and cycle checks, so a refused redefinition left the old definition
+    // in place with its edges gone — and `DEL` then deleted a word it still
+    // called.
+    // A definition is kept as its source: the only bridge that carries a
+    // value whole into a body, `op_def`'s, writes it back as the source that
+    // builds it (`value_elements_to_source_tokens`), so the body every check
+    // below sees, and the one the dictionary keeps, is the body a saved
+    // session gets back.
+    debug_assert!(
+        !tokens.iter().any(|token| matches!(token, Token::Value(_))),
+        "a definition body is source: no value is carried whole"
+    );
     crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
     // A Word is reached by writing its name as one token, so a name that
@@ -159,37 +176,21 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         )));
     }
 
-    if let Some(warning) =
-        crate::interpreter::naming_convention_checker::check_word_name_convention(name)
-    {
-        interp.output_buffer.push_str(&format!("{}\n", warning));
-    }
-
-    // One User tier (LANG.DICTIONARY.RESOLUTION), so a Word's name is its
-    // whole address: no active dictionary to pick, no `DICT@WORD` to build.
-    if let Some(existing) = interp.user_words.get(&upper_name) {
-        // A word's own self-reference does not lock it: see
-        // `collect_external_dependents`.
+    // A referenced word is not redefinable. There is no force modifier: the
+    // vocabulary has no Word that overrides this, so the refusal is final and
+    // the caller's only route is to delete the dependents first. A word's own
+    // self-reference does not lock it: see `collect_external_dependents`.
+    if interp.user_words.contains_key(&upper_name) {
         let dependents = interp.collect_external_dependents(&upper_name);
-
-        // A referenced word is not redefinable. There is no force modifier: the
-        // vocabulary has no Word that overrides this, so the refusal is final
-        // and the caller's only route is to delete the dependents first.
         if !dependents.is_empty() {
-            let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             return Err(AjisaiError::declared(
                 "definitionConflict",
                 format!(
                     "Cannot redefine '{}': referenced by {}. Delete those words first.",
-                    upper_name, dep_list
+                    upper_name,
+                    sorted_names(&dependents)
                 ),
             ));
-        }
-
-        for dep_name in &existing.dependencies {
-            if let Some(dependents) = interp.dependents.get_mut(dep_name) {
-                dependents.remove(&upper_name);
-            }
         }
     }
 
@@ -200,44 +201,32 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         ));
     }
 
-    // Content store (Section 8.6): share one stored body across textually
-    // identical definitions so copying or re-importing a word group does not
-    // duplicate its code.
-    let body_key = crate::interpreter::word_identity::body_content_key(tokens);
-    let body: Arc<[Token]> = match interp.body_store.get(&body_key) {
-        Some(shared) => shared.clone(),
-        None => {
-            let arc: Arc<[Token]> = tokens.into();
-            interp.body_store.insert(body_key, arc.clone());
-            arc
-        }
-    };
-
-    // Section 8.6: resolve this word's references through its own dictionary
-    let mut new_dependencies = HashSet::new();
-    // Section 8.7: every named symbol, resolved or not — the acyclicity check
-    // below needs to see a forward reference to a word that does not exist
-    // yet, which `new_dependencies` cannot represent.
-    let mut new_text_references = HashSet::new();
     // Every name the body holds, a Symbol inside a Record it carries whole
     // included (`body_symbols`): one it could reach at run time is one this
-    // check has to see.
-    for s in crate::interpreter::body_symbols::body_symbol_names(&body) {
+    // check has to see. `text_references` keeps every one, resolved or not —
+    // the acyclicity check needs to see a forward reference to a word that
+    // does not exist yet, which `dependencies` cannot represent.
+    let mut new_dependencies = HashSet::new();
+    let mut new_text_references = HashSet::new();
+    for s in crate::interpreter::body_symbols::body_symbol_names(tokens) {
         let upper_s = crate::word_name::canonical_word_name(&s);
         new_text_references.insert(upper_s.to_string());
         if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
-            if !resolved_def.is_builtin || resolved_name.contains('@') {
+            // Only User Words are dependencies: Core is sealed, so nothing
+            // can invalidate a reference to it.
+            if !resolved_def.is_builtin {
                 new_dependencies.insert(resolved_name.to_string());
             }
         }
     }
 
-    // Section 8.7: the User dictionary's reference graph is acyclic — no Word
-    // may name itself, directly or through any chain of other User words.
-    // Repetition is expressed only through the bounded higher-order Words
-    // (`MAP`, `FILTER`, `FOLD`, `SCAN`) over an already-finite Vector,
-    // never through a Word calling itself: every evaluation is then
-    // structurally finite, not merely bounded by a runtime step budget.
+    // LANG.DICTIONARY.ACYCLIC: the User dictionary's reference graph is
+    // acyclic — no Word may name itself, directly or through any chain of
+    // other User words. Repetition is expressed only through the bounded
+    // higher-order Words (`MAP`, `FILTER`, `FOLD`, `SCAN`) over an
+    // already-finite Vector, never through a Word calling itself: every
+    // evaluation is then structurally finite, not merely bounded by a runtime
+    // step budget.
     if let Some(cycle) = interp.find_reference_cycle(&upper_name, &new_text_references) {
         return Err(AjisaiError::declared(
             "selfReferentialDefinition",
@@ -248,6 +237,35 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             ),
         ));
     }
+
+    // Nothing below refuses.
+
+    if let Some(warning) =
+        crate::interpreter::naming_convention_checker::check_word_name_convention(name)
+    {
+        interp.output_buffer.push_str(&format!("{}\n", warning));
+    }
+
+    // A redefinition drops the edges of the body it replaces.
+    if let Some(existing) = interp.user_words.get(&upper_name) {
+        for dep_name in &existing.dependencies {
+            if let Some(dependents) = interp.dependents.get_mut(dep_name) {
+                dependents.remove(&upper_name);
+            }
+        }
+    }
+
+    // Content store: share one stored body across textually identical
+    // definitions so copying a word group does not duplicate its code.
+    let body_key = crate::interpreter::word_identity::body_content_key(tokens);
+    let body: Arc<[Token]> = match interp.body_store.get(&body_key) {
+        Some(shared) => shared.clone(),
+        None => {
+            let arc: Arc<[Token]> = tokens.into();
+            interp.body_store.insert(body_key, arc.clone());
+            arc
+        }
+    };
 
     for dep_name in &new_dependencies {
         interp
@@ -263,8 +281,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         description: None,
         dependencies: new_dependencies,
         text_references: new_text_references,
-        original_source: None,
-        namespace: None,
         registration_order: interp.next_registration_order(),
         compiled_plan: None,
         // A User Word has no registry entry: `DEF` cannot define a Core Word
@@ -276,13 +292,46 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     interp
         .user_words
         .insert(upper_name.clone(), Arc::new(new_def));
+
+    // A name resolves at call time against the dictionary as it is then, so
+    // a word written before this one and naming it calls it from now on: that
+    // word depends on this one. Its `text_references` kept the name while it
+    // resolved to nothing; the dependency and the reverse edge are recorded
+    // now, or `DEL` would delete a word still called and the caller's
+    // identity would not see what it calls (LANG.DICTIONARY.MUTATION).
+    let referrers: Vec<String> = interp
+        .user_words
+        .iter()
+        .filter(|(referrer, def)| {
+            *referrer != &upper_name && def.text_references.contains(&upper_name)
+        })
+        .map(|(referrer, _)| referrer.clone())
+        .collect();
+    for referrer in referrers {
+        if let Some(def) = interp.user_words.get_mut(&referrer) {
+            Arc::make_mut(def).dependencies.insert(upper_name.clone());
+        }
+        interp
+            .dependents
+            .entry(upper_name.clone())
+            .or_default()
+            .insert(referrer);
+    }
+
     interp.recompute_word_identities();
     interp.gc_body_store();
     interp
         .output_buffer
-        .push_str(&format!("Defined word: {}\n", name));
-    interp.dictionary_changes_this_run.push(name.to_string());
+        .push_str(&format!("Defined word: {}\n", upper_name));
+    interp.dictionary_changes_this_run.push(upper_name.clone());
 
     interp.bump_dictionary_epoch();
     Ok(())
+}
+
+/// A refusal names the words that lock a definition in one order every time.
+pub(crate) fn sorted_names(names: &HashSet<String>) -> String {
+    let mut names: Vec<&str> = names.iter().map(String::as_str).collect();
+    names.sort_unstable();
+    names.join(", ")
 }

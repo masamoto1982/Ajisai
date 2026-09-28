@@ -1,4 +1,5 @@
-import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
+import type { InterpreterStateSnapshot } from '../platform/platform-adapter';
 import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
@@ -16,16 +17,8 @@ import { toError } from './to-error';
 // read.
 export const STATE_FORMAT_VERSION = 5;
 
-export interface InterpreterState {
-    readonly stateVersion: number;
-    // The observation-format stack, persisted for display only.
-    readonly stack: Value[];
-    // The lossless stack snapshot (opaque string) and the only format restore
-    // accepts.
-    readonly stackSnapshot: string;
-    readonly userWords: UserWord[];
-    readonly activeDictionarySheet?: string;
-}
+// The document itself is the shape both stores write (`InterpreterStateSnapshot`).
+export type InterpreterState = InterpreterStateSnapshot;
 
 // Whether a saved session carries a dictionary of its own — including an
 // empty one. An empty dictionary is a choice the user made by deleting every
@@ -63,8 +56,9 @@ const collectCurrentState = (
     activeDictionarySheet: string | undefined
 ): InterpreterState => ({
     stateVersion: STATE_FORMAT_VERSION,
-    // The lossless snapshot is what restore reads; `stack` is display data.
-    stack: interpreter.collect_stack(),
+    // The lossless snapshot is what restore reads. The observation-format
+    // stack used to be saved beside it "for display", and nothing ever read
+    // it back: a 200,000-element stack was serialized twice on every save.
     stackSnapshot: interpreter.snapshot_stack(),
     userWords: collectUserWords(interpreter),
     activeDictionarySheet
@@ -126,41 +120,87 @@ const DEFAULT_EXPORT_NAME = 'user-words';
 // The whole key of a User-tier word: its normalized name.
 const buildWordKey = (name: string): string => name.toUpperCase();
 
-// Names that were handed to `restore_user_words` with a body but are not in the
-// dictionary afterwards.
+// `NAME (why)` for each entry, in the order the interpreter gave them.
+const describeSkipped = (skipped: readonly SkippedWord[]): string =>
+    skipped.map(({ name, reason }) => `${name} (${reason})`).join('; ');
+
+/** One saved entry the interpreter could not restore, and its reason. */
+export interface SkippedWord {
+    readonly name: string;
+    readonly reason: string;
+}
+
+export interface ImportSummary {
+    /** Words the dictionary holds now and did not hold with this content before. */
+    readonly added: string[];
+    /** Words already present with identical content (deduplicated by content identity). */
+    readonly unchanged: string[];
+    /** Entries the interpreter refused, with its reason for each. */
+    readonly skipped: SkippedWord[];
+    /** Words whose embedded content identity is not the identity they have here. */
+    readonly idMismatches: string[];
+}
+
+export const toSkippedWords = (
+    skipped: ReadonlyArray<readonly [name: string, reason: string]>
+): SkippedWord[] => skipped.map(([name, reason]) => ({ name, reason }));
+
+// What an import did, told from what the interpreter answered rather than
+// guessed from the dictionary afterwards.
 //
-// A saved definition is source text, so a restore re-runs the lexer and `DEF`
-// against today's rules: a dictionary saved before a lexical or naming rule
-// changed can hold an entry this build does not accept. The interpreter skips
-// such an entry rather than abandoning the rest of the dictionary with it —
-// which is what keeps `parseImportDocument`'s promise (valid words in a
-// partially corrupt file still import) true for corruption only the lexer can
-// see. Nothing is lost silently, so ask which names did not arrive.
-//
-// This sees an entry that is simply absent. It does not see a *redefinition*
-// that was skipped — the previous definition of that name is still there, and
-// keeping it is the right outcome — but on the import path the identity check
-// against the exported `id` already reports that as a mismatch.
-export const namesThatDidNotRestore = (
-    interpreter: AjisaiInterpreter,
-    requested: readonly UserWord[]
-): string[] => {
-    const present = new Set(
-        interpreter.collect_user_words_info().map(([name]) => buildWordKey(name))
-    );
-    return requested
-        .filter(word => word.definition && !present.has(buildWordKey(word.name)))
-        .map(word => word.name);
+// A restore skips an entry it cannot take and names it; comparing identities
+// before and after tells an added word from one already there. The old
+// reading compared only the dictionaries and so mis-told two cases: a
+// refused redefinition of a word another word still calls left the old body
+// in place, which read as "unchanged (deduplicated by content identity)" —
+// the file's body was different, and it was refused; and an entry with no
+// body, which the interpreter passes over, counted as imported.
+export const summarizeImport = (
+    requested: readonly UserWord[],
+    skipped: readonly SkippedWord[],
+    before: ReadonlyMap<string, string>,
+    after: ReadonlyMap<string, string>,
+    embeddedIds: ReadonlyMap<string, string> | null
+): ImportSummary => {
+    const skippedKeys = new Set(skipped.map(entry => buildWordKey(entry.name)));
+    const seen = new Set<string>();
+    const added: string[] = [];
+    const unchanged: string[] = [];
+    const idMismatches: string[] = [];
+    for (const word of requested) {
+        const key = buildWordKey(word.name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (skippedKeys.has(key)) continue;
+        // Passed over without a report: an entry with no body asked for
+        // nothing, so its absence is not an arrival to count.
+        if (!after.has(key)) continue;
+        if (before.has(key) && before.get(key) === after.get(key)) {
+            unchanged.push(word.name);
+        } else {
+            added.push(word.name);
+        }
+        const expected = embeddedIds?.get(key);
+        const actual = after.get(key);
+        if (expected && actual && expected !== actual) {
+            idMismatches.push(word.name);
+        }
+    }
+    return { added, unchanged, skipped: [...skipped], idMismatches };
 };
 
-// Validate a single raw word entry from an (untrusted) import file. Returns a
-// normalized word, or null when the entry is malformed. A word is only usable
-// downstream if it has a string `name`; `definition` and `id` are optional and
-// must be strings when present. This keeps `parseImportDocument` a total
-// function: a hostile or hand-corrupted file with `null`, numeric, or
-// name-less entries is parsed or cleanly rejected, never thrown out of the
-// `.map` or out of `word.name.toUpperCase()` in `importUserWords`.
-const normalizeImportWord = (
+// Validate a single raw word entry from an untrusted source — an import file,
+// or the saved session, which a hand edit or an older build can have left
+// malformed. Returns a normalized word, or null when the entry is malformed.
+// A word is only usable downstream if it has a string `name`; `definition`
+// and `id` are optional and must be strings when present. This keeps
+// `parseImportDocument` a total function: a hostile or hand-corrupted file
+// with `null`, numeric, or name-less entries is parsed or cleanly rejected,
+// never thrown out of the `.map` or out of `buildWordKey`. The saved session
+// goes through it for the same reason: `restore_user_words` throws on a list
+// it cannot deserialize, and one malformed entry would otherwise cost the
+// whole dictionary.
+export const normalizeWordEntry = (
     raw: unknown
 ): { name: string; definition: string | null; description?: string | null; id?: string } | null => {
     if (!raw || typeof raw !== 'object') return null;
@@ -187,7 +227,7 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
         const embeddedIds = new Map<string, string>();
         const words: UserWord[] = [];
         for (const raw of rawWords) {
-            const word = normalizeImportWord(raw);
+            const word = normalizeWordEntry(raw);
             if (!word) continue;
             if (word.id) embeddedIds.set(word.name.toUpperCase(), word.id);
             words.push({ name: word.name, definition: word.definition, description: word.description });
@@ -325,25 +365,33 @@ export const createPersistence = (
                     await loadExampleWords();
                     return {};
                 }
-                if (typeof state.stackSnapshot === 'string') {
-                    interpreter.restore_stack_snapshot(state.stackSnapshot);
-                }
-
+                // The dictionary first, and on its own: a saved stack that
+                // does not decode is a lost stack, not a lost dictionary. The
+                // two used to be restored stack-first inside one `try`, so a
+                // bad snapshot — or one malformed word entry, which makes
+                // `restore_user_words` throw — skipped the dictionary, and the
+                // next auto-save wrote the empty session over the saved one.
                 if (!checkHasSavedDictionary(state)) {
                     await loadExampleWords();
                 } else if (state.userWords.length > 0) {
-                    const wordsToRestore = state.userWords;
-
-                    interpreter.restore_user_words(wordsToRestore);
-
-                    const notRestored = namesThatDidNotRestore(
-                        interpreter,
-                        wordsToRestore
-                    );
-                    if (notRestored.length > 0) {
+                    const wordsToRestore = (state.userWords as unknown[])
+                        .map(normalizeWordEntry)
+                        .filter((word): word is NonNullable<typeof word> => word !== null)
+                        .map(({ name, definition, description }) => ({ name, definition, description }));
+                    const skipped = toSkippedWords(interpreter.restore_user_words(wordsToRestore));
+                    if (skipped.length > 0) {
                         showError?.(new Error(
-                            `${notRestored.length} saved word(s) could not be restored and were left out: ${notRestored.join(', ')}. The rest of the dictionary was restored.`
+                            `${skipped.length} saved word(s) could not be restored and were left out: ${describeSkipped(skipped)}. The rest of the dictionary was restored.`
                         ));
+                    }
+                }
+
+                if (typeof state.stackSnapshot === 'string') {
+                    try {
+                        interpreter.restore_stack_snapshot(state.stackSnapshot);
+                    } catch (error) {
+                        console.error('Failed to restore the saved stack:', error);
+                        showError?.(new Error('The saved stack could not be restored and starts empty; the dictionary was restored.'));
                     }
                 }
 
@@ -394,49 +442,31 @@ export const createPersistence = (
                 // after the merge. Words whose identity is unchanged were already
                 // present with identical content and count as deduplicated.
                 const before = collectWordIdentityMap(interpreter);
-                interpreter.restore_user_words(importedWords);
+                const skipped = toSkippedWords(interpreter.restore_user_words(importedWords));
                 const after = collectWordIdentityMap(interpreter);
-
-                const notImported = namesThatDidNotRestore(
-                    interpreter,
-                    importedWords
+                const { added, unchanged, idMismatches } = summarizeImport(
+                    importedWords,
+                    skipped,
+                    before,
+                    after,
+                    embeddedIds
                 );
-                const notImportedKeys = new Set(notImported.map(buildWordKey));
-
-                let added = 0;
-                let deduplicated = 0;
-                const idMismatches: string[] = [];
-                for (const word of importedWords) {
-                    const key = buildWordKey(word.name);
-                    // A word the interpreter could not take is neither added nor
-                    // deduplicated; counting it as imported would report an
-                    // arrival that did not happen.
-                    if (notImportedKeys.has(key)) continue;
-                    if (before.has(key) && before.get(key) === after.get(key)) {
-                        deduplicated++;
-                    } else {
-                        added++;
-                    }
-                    if (embeddedIds) {
-                        const expected = embeddedIds.get(word.name.toUpperCase());
-                        const actual = after.get(key);
-                        if (expected && actual && expected !== actual) {
-                            idMismatches.push(word.name);
-                        }
-                    }
-                }
 
                 updateDisplays?.();
                 await saveCurrentState();
 
-                const summary = deduplicated > 0
-                    ? `${added} user words imported, ${deduplicated} unchanged (deduplicated by content identity)`
-                    : `${added} user words imported and saved`;
+                const summary = unchanged.length > 0
+                    ? `${added.length} user words imported, ${unchanged.length} unchanged (deduplicated by content identity)`
+                    : `${added.length} user words imported and saved`;
                 showInfo?.(summary, true);
-                if (notImported.length > 0) {
-                    showError?.(new Error(
-                        `${notImported.length} word(s) in the file could not be read by this build and were not imported: ${notImported.join(', ')}.`
-                    ));
+                // Appended under the count rather than shown as an error: an
+                // error is written in place of the output, and the count
+                // belongs beside what was left out.
+                if (skipped.length > 0) {
+                    showInfo?.(
+                        `${skipped.length} word(s) in the file were not imported: ${describeSkipped(skipped)}.`,
+                        true
+                    );
                 }
                 if (idMismatches.length > 0) {
                     showInfo?.(

@@ -1,19 +1,8 @@
 import type {
-    ExportData,
     InterpreterStateSnapshot,
     Persistence,
-    TablePayload
+    StoredInterpreterState
 } from '../platform-adapter';
-
-// The record shapes this store writes are the shapes `exportAll` hands back,
-// so they are read off `ExportData` rather than restated. They used to be two
-// local `interface`s spelling out the same fields — a copy that had already
-// dropped the `readonly` markers, and that a new field on `ExportData` would
-// have left behind silently: the writes below would keep compiling and keep
-// omitting it, and only an export would show the gap. The Tauri store next
-// door derives its own `StoredData` the same way.
-type TableData = ExportData['tables'][number];
-type InterpreterState = NonNullable<ExportData['interpreterState']>;
 
 const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
     new Promise((resolve, reject) => {
@@ -32,11 +21,16 @@ const withObjectStore = <T>(
     return action(store, transaction);
 };
 
+// One record, under one key, in one object store. A second store, `tables`,
+// was created, cleared, exported and migrated for years without anything
+// ever writing a row to it; version 5 drops it.
+const STATE_STORE = 'interpreter_state';
+const STATE_KEY = 'interpreter_state';
+const RETIRED_TABLES_STORE = 'tables';
+
 class WebPersistence implements Persistence {
     private dbName = 'AjisaiDB';
-    private version = 4;
-    private storeName = 'tables';
-    private stateStoreName = 'interpreter_state';
+    private version = 5;
     private db: IDBDatabase | null = null;
     private openPromise: Promise<IDBDatabase> | null = null;
 
@@ -71,12 +65,12 @@ class WebPersistence implements Persistence {
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
 
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    db.createObjectStore(this.storeName, { keyPath: 'name' });
+                if (db.objectStoreNames.contains(RETIRED_TABLES_STORE)) {
+                    db.deleteObjectStore(RETIRED_TABLES_STORE);
                 }
 
-                if (!db.objectStoreNames.contains(this.stateStoreName)) {
-                    db.createObjectStore(this.stateStoreName, { keyPath: 'key' });
+                if (!db.objectStoreNames.contains(STATE_STORE)) {
+                    db.createObjectStore(STATE_STORE, { keyPath: 'key' });
                 }
             };
         });
@@ -84,51 +78,12 @@ class WebPersistence implements Persistence {
         await this.openPromise;
     }
 
-    async saveTable(name: string, schema: unknown, records: unknown): Promise<void> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
-            const tableData: TableData = {
-                name,
-                schema,
-                records,
-                updatedAt: new Date().toISOString()
-            };
-            await promisifyRequest(store.put(tableData));
-        });
-    }
-
-    async loadTable(name: string): Promise<TablePayload | null> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readonly', async store => {
-            const result = await promisifyRequest(store.get(name));
-            return result ? { schema: result.schema, records: result.records } : null;
-        });
-    }
-
-    async collectTableNames(): Promise<string[]> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readonly', async store =>
-            (await promisifyRequest(store.getAllKeys())) as string[]
-        );
-    }
-
-    async deleteTable(name: string): Promise<void> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
-            await promisifyRequest(store.delete(name));
-        });
-    }
-
     async saveInterpreterState(state: InterpreterStateSnapshot): Promise<void> {
         if (!this.db) await this.open();
 
-        return withObjectStore(this.db!, this.stateStoreName, 'readwrite', async store => {
-            const stateData: InterpreterState = {
-                key: 'interpreter_state',
+        return withObjectStore(this.db!, STATE_STORE, 'readwrite', async store => {
+            const stateData: StoredInterpreterState = {
+                key: STATE_KEY,
                 ...state,
                 updatedAt: new Date().toISOString()
             };
@@ -137,99 +92,35 @@ class WebPersistence implements Persistence {
     }
 
     async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store => {
-            const result = await promisifyRequest(store.get('interpreter_state'));
-            if (!result) {
-                return null;
-            }
-            return {
-                stateVersion: Number(result.stateVersion),
-                stack: result.stack as InterpreterStateSnapshot['stack'],
-                stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
-                userWords: result.userWords as InterpreterStateSnapshot['userWords'],
-                activeDictionarySheet: result.activeDictionarySheet
-            };
-        });
+        const result = await this.exportInterpreterState();
+        if (!result) {
+            return null;
+        }
+        return {
+            stateVersion: Number(result.stateVersion),
+            stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
+            userWords: result.userWords as InterpreterStateSnapshot['userWords'],
+            activeDictionarySheet: result.activeDictionarySheet
+        };
     }
 
     async clearAll(): Promise<void> {
         if (!this.db) await this.open();
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readwrite');
-
-            const tableStore = transaction.objectStore(this.storeName);
-            const stateStore = transaction.objectStore(this.stateStoreName);
-
-            tableStore.clear();
-            stateStore.clear();
-
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
+        return withObjectStore(this.db!, STATE_STORE, 'readwrite', async store => {
+            await promisifyRequest(store.clear());
         });
     }
 
-    async exportAll(): Promise<ExportData> {
+    async exportInterpreterState(): Promise<StoredInterpreterState | null> {
         if (!this.db) await this.open();
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readonly');
-
-            const result: ExportData = {
-                tables: [],
-                interpreterState: null
-            };
-
-            const tableStore = transaction.objectStore(this.storeName);
-            const tableRequest = tableStore.getAll();
-
-            tableRequest.onsuccess = () => {
-                result.tables = tableRequest.result as ExportData['tables'];
-
-                const stateStore = transaction.objectStore(this.stateStoreName);
-                const stateRequest = stateStore.get('interpreter_state');
-
-                stateRequest.onsuccess = () => {
-                    result.interpreterState = stateRequest.result as ExportData['interpreterState'];
-                    resolve(result);
-                };
-            };
-
-            tableRequest.onerror = () => reject(tableRequest.error);
-        });
-    }
-
-    async importAll(data: ExportData): Promise<void> {
-        if (!this.db) await this.open();
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readwrite');
-
-            const tableStore = transaction.objectStore(this.storeName);
-            const stateStore = transaction.objectStore(this.stateStoreName);
-
-            tableStore.clear();
-            stateStore.clear();
-
-            if (data.tables && data.tables.length > 0) {
-                for (const table of data.tables) {
-                    tableStore.put(table);
-                }
-            }
-
-            if (data.interpreterState) {
-                stateStore.put(data.interpreterState);
-            }
-
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-        });
+        return withObjectStore(this.db!, STATE_STORE, 'readonly', async store =>
+            ((await promisifyRequest(store.get(STATE_KEY))) as StoredInterpreterState | undefined) ?? null
+        );
     }
 }
 
 const DB = new WebPersistence();
 
-export { WebPersistence };
 export default DB;

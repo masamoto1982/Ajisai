@@ -207,8 +207,9 @@ or a vector of rationals, whose `stackDisplay` is already the whole value.
 ### Diagnostics
 
 An unknown Word answers with `diagnosis.candidates` — the closest known names,
-best match first, drawn from the compiled-in vocabulary, the live dictionary
-and (for `check`) the Words the same source defines. `word_contract` answers an
+best match first, drawn from the compiled-in vocabulary and the Words the same
+source defines (each call runs in a fresh session, so the same source is the
+whole User dictionary). `word_contract` answers an
 unmatched name the same way, in `suggestions`.
 
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.

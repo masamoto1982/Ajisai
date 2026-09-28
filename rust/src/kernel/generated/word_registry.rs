@@ -2999,7 +2999,6 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         standard_kind: None,
         effects: &["dictionaryDelete"],
         error_when: &[
-            "invalidName",
             "wordNotFound",
             "protectedWord",
             "nonText",

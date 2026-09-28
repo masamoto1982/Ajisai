@@ -2,7 +2,7 @@ use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use crate::coreword_registry::Partiality;
 use crate::kernel::generated::{generated_word, OperandRole, VocabularyTier};
 
-/// Render the LOOKUP body for a built-in word: the base sections (Family /
+/// Render the host lookup text for a Core Word: the base sections (Family /
 /// Summary / Stack Effect), the Word's one correct call (Examples), and the sections
 /// derived from the LANG.CONTRACT.REGISTRY contract metadata (Failure baseline, Side
 /// Effects, Vocabulary) — derived so they can never drift from the

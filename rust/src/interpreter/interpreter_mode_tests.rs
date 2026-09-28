@@ -5,19 +5,15 @@ mod tests {
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
-    async fn test_consume_mode_default() {
+    async fn a_word_consumes_its_operands() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 ] [ 2 ] ADD").await;
-        assert!(
-            result.is_ok(),
-            "Default consume mode should work: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "ADD should succeed: {:?}", result);
 
         assert_eq!(
             interp.stack.len(),
             1,
-            "Stack should have 1 element after consume mode operation"
+            "both operands leave, the result stays"
         );
     }
 }

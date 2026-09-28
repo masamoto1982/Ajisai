@@ -20,9 +20,9 @@ export class AjisaiInterpreter {
     collect_stack(): any;
     collect_user_words_info(): any;
     /**
-     * Content identity (Section 8.6) of each user word, as `[name, id]`
-     * pairs. The host uses these to deduplicate identical definitions on
-     * import and to key shared word groups by content rather than by name.
+     * Content identity of each user word, as `[name, id]` pairs. The host
+     * uses these to deduplicate identical definitions on import and to key
+     * shared word groups by content rather than by name.
      */
     collect_word_identities(): any;
     execute(code: string): Promise<any>;
@@ -50,7 +50,6 @@ export class AjisaiInterpreter {
      */
     lookup_word_description(name: string): any;
     constructor();
-    remove_word(name: string): void;
     reset(): any;
     /**
      * Answer the host's lookup of `name` against the current dictionary.
@@ -71,7 +70,22 @@ export class AjisaiInterpreter {
      * values (CodeBlock, ExactScalar, …).
      */
     restore_stack_snapshot(snapshot_json: string): void;
-    restore_user_words(words_js: any): void;
+    /**
+     * Restore saved User Words, and name the entries that could not be
+     * restored as `[name, reason]` pairs.
+     *
+     * Restoring skips an unreadable entry rather than raising, which is what
+     * keeps the rest of a dictionary (`restore_user_word_definitions`); the
+     * skipped entries come back here instead of being thrown, since a throw
+     * would abort the host's own post-restore work and leave the session
+     * holding a half-restored dictionary. The host used to learn only the
+     * *names* that did not arrive, by comparing what it asked for against
+     * the dictionary afterwards — which could not see a refused
+     * redefinition (the old body is still there, so the name is present) and
+     * could not say why anything was left out. The `Err` case is a list that
+     * does not deserialize at all.
+     */
+    restore_user_words(words_js: any): any;
     /**
      * Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
      * subsequent executions. A runtime safety control, not a language

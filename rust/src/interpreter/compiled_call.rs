@@ -1,11 +1,9 @@
 //! Pre-resolved builtin call sites for compiled plans.
 //!
 //! A builtin call site, specialized once at compile time so the per-call
-//! dispatch work (name canonicalization, linear registry scan,
-//! mode-preservation lookup) is never repeated at runtime.
-//! This is the call-site analogue of the resolve cache's epoch discipline:
-//! everything precomputed here depends only on static tables, never on
-//! dictionary state, so no epoch guard is needed.
+//! dispatch work (name canonicalization, linear registry scan) is never
+//! repeated at runtime. Everything precomputed here depends only on static
+//! tables, never on dictionary state, so no epoch guard is needed.
 //!
 //! See `docs/dev/hidden-class-shape-optimizations.md` for the design note.
 

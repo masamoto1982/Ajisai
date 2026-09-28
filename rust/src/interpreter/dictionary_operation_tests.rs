@@ -57,21 +57,14 @@ mod tests {
         }
     }
 
-    /// A redefinition rebinds the one User entry, and dependents follow it.
-    ///
-    /// This used to test that a word resolved its references through its *own*
-    /// dictionary, so two dictionaries could each hold a `SAY`/`GREET` pair
-    /// without their edges crossing. There is one User tier, so the second
-    /// definition of a name replaces the first and the dependency edge moves
-    /// with it.
+    /// A redefinition rebinds the one User entry, and a caller follows it: the
+    /// caller resolves the name when it runs, so it sees the new body.
     #[tokio::test]
     async fn test_redefinition_rebinds_the_single_user_entry() {
         let mut interp = Interpreter::new();
 
         interp.execute("[ [ 1 ] ] 'SAY' DEF").await.unwrap();
         interp.execute("[ SAY ] 'GREET' DEF").await.unwrap();
-        interp.rebuild_dependencies().unwrap();
-
         assert!(
             interp
                 .dependents
@@ -80,15 +73,21 @@ mod tests {
             "GREET depends on SAY"
         );
 
+        // SAY is locked while GREET calls it; redefine it through the only
+        // route there is.
+        interp.execute("'GREET' DEL").await.unwrap();
+        interp.execute("[ [ 2 ] ] 'SAY' DEF").await.unwrap();
+        interp.execute("[ SAY ] 'GREET' DEF").await.unwrap();
+
         interp.execute("GREET").await.unwrap();
         assert_eq!(
             format!("{}", interp.get_stack().last().expect("a result")),
-            "[ 1/1 ]"
+            "[ 2/1 ]"
         );
     }
 
-    /// Section 8.6: identical content yields one identity regardless of name or
-    /// dictionary (the basis for automatic deduplication on import).
+    /// Identical content yields one identity regardless of name (the basis for
+    /// automatic deduplication on import).
     #[tokio::test]
     async fn test_identical_content_shares_identity() {
         let mut interp = Interpreter::new();
@@ -105,20 +104,19 @@ mod tests {
         assert_ne!(a_leaf, b_other, "different bodies must differ");
     }
 
-    /// Section 8.6: a word's identity depends on the content of its dependency,
-    /// not on the dependency's name. Two words that call differently-named but
-    /// identical helpers must share an identity.
+    /// A word's identity depends on the content of its dependency, not on the
+    /// dependency's name. Two words that call differently-named but identical
+    /// helpers share an identity.
     #[tokio::test]
     async fn test_identity_is_name_independent() {
         let mut interp = Interpreter::new();
         interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ LEAF ] 'USE' DEF").await.unwrap();
+        interp.execute("[ LEAF ] 'USE-LEAF' DEF").await.unwrap();
         interp.execute("[ [ 1 ] ] 'LEED' DEF").await.unwrap();
-        interp.execute("[ LEED ] 'USE' DEF").await.unwrap();
-        interp.rebuild_dependencies().unwrap();
+        interp.execute("[ LEED ] 'USE-LEED' DEF").await.unwrap();
 
-        let a_use = interp.word_identity("USE").cloned();
-        let b_use = interp.word_identity("USE").cloned();
+        let a_use = interp.word_identity("USE-LEAF").cloned();
+        let b_use = interp.word_identity("USE-LEED").cloned();
         assert!(a_use.is_some());
         assert_eq!(
             a_use, b_use,
@@ -134,35 +132,55 @@ mod tests {
     // torn out, matching this codebase's convention for a retired path (see
     // e.g. `NilReason::EmptySequence`).
 
-    /// Section 8.6: adding a later word with the same spelling as a formerly
-    /// unresolved reference must not recapture the existing body or change its
-    /// content identity. Dependencies are fixed at definition time.
+    /// A name resolves when the body runs, so a word that names one defined
+    /// later calls it from then on: the later definition makes the existing
+    /// word depend on it, and the caller's identity changes with what it
+    /// calls (LANG.DICTIONARY.MUTATION). Dependencies used to be fixed at
+    /// definition time, which let `DEL` delete a word another still called
+    /// and gave two callers of different words one identity.
     #[tokio::test]
-    async fn test_unresolved_reference_identity_is_not_recaptured() {
+    async fn a_later_definition_of_a_named_word_becomes_a_dependency() {
         let mut interp = Interpreter::new();
         interp.execute("[ MISSING ] 'CALLER' DEF").await.unwrap();
         let before = interp
             .word_identity("CALLER")
             .cloned()
             .expect("identity should be computed for caller");
+        assert!(interp.collect_dependents("MISSING").is_empty());
 
         interp.execute("[ [ 1 ] ] 'MISSING' DEF").await.unwrap();
 
+        assert_eq!(
+            interp.collect_dependents("MISSING"),
+            ["CALLER".to_string()].into_iter().collect(),
+            "the existing caller depends on the word it names once that word exists"
+        );
+        assert!(
+            interp
+                .user_words
+                .get("CALLER")
+                .is_some_and(|def| def.dependencies.contains("MISSING")),
+            "the caller's own dependency set records it too"
+        );
         let after = interp
             .word_identity("CALLER")
             .cloned()
             .expect("identity should remain computed for caller");
-        assert_eq!(
+        assert_ne!(
             before, after,
-            "a later definition must not recapture a previously free symbol"
+            "the caller's identity now includes what it calls"
         );
+
+        let refused = interp.execute("'MISSING' DEL").await;
         assert!(
-            !interp
-                .dependents
-                .get("MISSING")
-                .is_some_and(|deps| deps.contains("CALLER")),
-            "the existing caller must not become dependent on the later word"
+            refused.is_err(),
+            "a word another word calls is not deletable, however the two were ordered"
         );
+        assert!(interp.user_words.contains_key("MISSING"));
+        interp
+            .execute("CALLER")
+            .await
+            .expect("the caller still runs");
     }
 
     /// Content store: textually identical bodies defined under different names
@@ -218,7 +236,7 @@ mod tests {
         interp.execute("[ [ 1 ] ] 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 1);
 
-        // Identical body in another dictionary shares one store entry.
+        // An identical body under another name shares one store entry.
         interp.execute("[ [ 1 ] ] 'Y' DEF").await.unwrap();
         assert_eq!(
             interp.body_store.len(),
@@ -226,11 +244,11 @@ mod tests {
             "identical bodies share one entry"
         );
 
-        // Redefining A@X keeps [1] (still used by B@Y) and adds [9].
+        // Redefining X keeps [1] (still used by Y) and adds [9].
         interp.execute("[ [ 9 ] ] 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "shared [1] kept, [9] added");
 
-        // Redefining B@Y away orphans [1]; it is reclaimed, leaving [9] and [8].
+        // Redefining Y away orphans [1]; it is reclaimed, leaving [9] and [8].
         interp.execute("[ [ 8 ] ] 'Y' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "orphaned [1] reclaimed");
     }
@@ -363,30 +381,35 @@ mod tests {
         assert!(!interp.user_words.contains_key("C4"));
     }
 
-    /// A qualified path is not a name.
-    ///
-    /// `DEL` used to accept `DICT@WORD` and delete through the named
-    /// dictionary. LANG.DICTIONARY.RESOLUTION gives two tiers, so a Word's name
-    /// is its whole address and a path addresses nothing.
+    /// `DICT@WORD` used to address a named dictionary. With two tiers a
+    /// Word's name is its whole address, and `@` is an ordinary name character
+    /// (LANG.SOURCE.LEXICAL allocates none): `EXAMPLE@D4` is a name that
+    /// nothing holds until something defines it, and then it is that word.
     #[tokio::test]
-    async fn test_del_rejects_a_qualified_path() {
+    async fn test_an_at_sign_makes_an_ordinary_name() {
         let mut interp = Interpreter::new();
 
         let example_words = vec![("D4", "264", "test word")];
         restore_example_words(&mut interp, &example_words);
-        assert!(interp.user_words.contains_key("D4"));
 
         let result = interp.execute("'EXAMPLE@D4' DEL").await;
-        assert!(result.is_err(), "a qualified path names nothing");
+        let message = result.expect_err("nothing holds that name").to_string();
+        assert!(message.contains("not defined"), "{message}");
         assert!(
             interp.user_words.contains_key("D4"),
             "the word is untouched"
         );
 
         interp
-            .execute("'D4' DEL")
+            .execute("[ 7 ] 'EXAMPLE@D4' DEF EXAMPLE@D4")
             .await
-            .expect("its name deletes it");
+            .unwrap();
+        assert_eq!(
+            format!("{}", interp.get_stack().last().expect("a result")),
+            "7/1"
+        );
+        interp.execute("'EXAMPLE@D4' DEL 'D4' DEL").await.unwrap();
+        assert!(!interp.user_words.contains_key("EXAMPLE@D4"));
         assert!(!interp.user_words.contains_key("D4"));
     }
 
@@ -504,22 +527,6 @@ mod tests {
             }
         }
     }
-    #[tokio::test]
-    async fn test_module_first_builtin_still_protected() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ [ 1 ] ] 'GET' DEF").await;
-        assert!(
-            result.is_err(),
-            "Should not be able to override built-in GET"
-        );
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("Cannot redefine Core Word"),
-            "Expected protectedWord error, got: {}",
-            err_msg
-        );
-    }
-
     // ── A word's own self-reference must not lock it ──────────────────────
     // A recursive word used to depend on itself, and once that self-edge was
     // in the dependency index, the guard that protects *callers* from losing

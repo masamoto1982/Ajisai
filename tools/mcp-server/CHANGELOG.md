@@ -6,6 +6,18 @@ still alpha and makes no compatibility promise; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.6.1
+
+The diagnosis locus is typed, and the tool text says that DEF does not
+outlive its call.
+
+### Changed
+
+- **`result.schema.json` types `diagnosis.where`.** It was an untyped object; it is `{ kind: "coreWord" | "userWord" | "unknown", word }`, the shape the engine has emitted since its `dictionary` field went. `userWord` names a Word the live dictionary holds; `unknown` a name that resolved to nothing, which is the one the `candidates` are spelled against.
+- **The `compute` description says each call runs in a fresh session with no User Words**, so a `DEF` lasts for that source only. The README's account of `diagnosis.candidates` says the same, in place of "the live dictionary".
+- **Engine (0.2.0-alpha.1 at a later commit): a definition is kept as its source.** A body built from a computed Vector that carries a Record or an exact irrational whole is written back by `DEF` as the source that builds it, so the definition a `check` or `infer_contracts` sees is one text; a body carrying a NIL with a reason, which no source denotes, is `error:invalidDefinitionBody`.
+- **Engine: `wordNotFound` no longer offers candidates** — `'FOO' DEL` used to suggest `DEF`, the spelling of `DEL` against the vocabulary — and the "check the user Word's definition and the dictionary it belongs to" next check reads "check that the User Word is defined (DEF) and spelled as defined". `DEL` no longer declares `invalidName`, which it never raised.
+
 ## 0.6.0
 
 The four source tools give one answer about one program.

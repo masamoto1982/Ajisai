@@ -4,10 +4,10 @@
 //
 // Name addressing is what that rests on. The dictionary has two tiers and User
 // is one of them (LANG.DICTIONARY.RESOLUTION), so a word is addressed by its
-// bare name and a `DICT@NAME` composite resolves to null; `restore_user_words`
-// skips a definition-less word, so a host that composed one would run the
-// worker without the user's words and the post-execution sync would wipe them
-// from the main interpreter.
+// bare name, the one `collect_user_words_info` reports; `restore_user_words`
+// skips a definition-less word, so a host that looked a definition up under
+// any other spelling would run the worker without the user's words and the
+// post-execution sync would wipe them from the main interpreter.
 //
 // The fake below reproduces exactly those three contracts of the wasm boundary
 // (bare-name lookup, definition-less words skipped on restore, session reset
@@ -55,6 +55,7 @@ const createFakeInterpreter = (): FakeInterpreter => {
                 if (!word.definition) continue;
                 words.set(word.name.toUpperCase(), word.definition);
             }
+            return [] as Array<[string, string]>;
         },
         reset: () => {
             words.clear();
@@ -92,7 +93,7 @@ const runOneExecution = (
 };
 
 describe('collectUserWords', () => {
-    it('reads a definition by bare name, not by a DICT@NAME composite', () => {
+    it('reads a definition by the bare name the dictionary reports', () => {
         const interpreter = createFakeInterpreter();
         interpreter.words.set('ADD10', '10 ADD');
 
@@ -115,7 +116,6 @@ describe('execution round trip with user words present', () => {
 
         expect(changes.stackChanged).toBe(true);
         expect(changes.dictionaryChanged).toBe(false);
-        expect(changes.dictionarySheetId).toBeUndefined();
         // The words survived the worker round trip rather than being wiped.
         expect(collectUserWords(main)).toEqual([
             { name: 'ADD10', definition: '10 ADD', description: null }
@@ -143,7 +143,6 @@ describe('execution round trip with user words present', () => {
         });
 
         expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('user');
     });
 
     it('still reports a dictionary change when a word is deleted', () => {
@@ -157,7 +156,6 @@ describe('execution round trip with user words present', () => {
         });
 
         expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('user');
     });
 });
 

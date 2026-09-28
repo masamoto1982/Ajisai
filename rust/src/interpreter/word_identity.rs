@@ -84,8 +84,8 @@ fn value_identity(value: &crate::types::Value) -> String {
 
 /// Canonical content key for a word body, independent of references' identities
 /// (references are keyed by their canonical spelling). Two textually identical
-/// bodies — e.g. the same definition exported and re-imported into another
-/// dictionary — produce the same key and can share one stored body (LANG.AUTHORITY.FREEDOM
+/// bodies — e.g. the same definition exported and imported again under another
+/// name — produce the same key and can share one stored body (LANG.AUTHORITY.FREEDOM
 /// content store). Exact-rational numbers are normalized so `1` and `1/1` agree.
 pub(crate) fn body_content_key(body: &[Token]) -> String {
     let mut bytes = Vec::new();
@@ -98,7 +98,7 @@ pub(crate) fn body_content_key(body: &[Token]) -> String {
 
 /// One canonical element of a word body.
 enum Atom {
-    /// A reference to another user word (a dependency), by fully-qualified name.
+    /// A reference to another user word (a dependency), by name.
     Ref(String),
     /// Any other token, already serialized to canonical bytes.
     Raw(Vec<u8>),
@@ -221,8 +221,8 @@ fn tarjan_sccs(nodes: &HashSet<String>, adj: &HashMap<String, Vec<String>>) -> V
 
 impl Interpreter {
     /// Content identity of a user word, if it has been computed.
-    pub(crate) fn word_identity(&self, fq_name: &str) -> Option<&String> {
-        self.word_identities.get(fq_name)
+    pub(crate) fn word_identity(&self, name: &str) -> Option<&String> {
+        self.word_identities.get(name)
     }
 
     /// Reclaim content-store bodies no longer referenced by any definition.

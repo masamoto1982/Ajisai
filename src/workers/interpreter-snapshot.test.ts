@@ -10,7 +10,7 @@ const makeMock = () => {
     const fns = {
         reset: vi.fn(() => ({})),
         restore_stack_snapshot: vi.fn(),
-        restore_user_words: vi.fn(),
+        restore_user_words: vi.fn(() => []),
         set_max_execution_steps: vi.fn(),
     };
     return { fns, interpreter: fns as unknown as AjisaiInterpreter };

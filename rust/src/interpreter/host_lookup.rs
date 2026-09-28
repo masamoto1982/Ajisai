@@ -49,10 +49,6 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
         ));
     }
 
-    if let Some(original_source) = &def.original_source {
-        return Ok(HostLookup::Definition(original_source.clone()));
-    }
-
     let definition = interp
         .lookup_word_definition_tokens(&canonical_name)
         .unwrap_or_default();

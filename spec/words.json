@@ -3884,7 +3884,6 @@
         "reason": null
       },
       "errorWhen": [
-        "invalidName",
         "wordNotFound",
         "protectedWord",
         "nonText",

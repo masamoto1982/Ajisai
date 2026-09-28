@@ -319,9 +319,13 @@ impl DebugDiagnosis {
         let evidence = build_evidence(category, nil_reason, stack_len_before, stack_len_after);
         // Candidates first: the spelling check is written against them, and a
         // check that promises a list there is none is the failure this order
-        // prevents.
-        let candidates = match (&why, word) {
-            (CauseClass::TypoOrUnknownName, Some(name)) => suggest_words(name, std::iter::empty()),
+        // prevents. Only `unknownWord` puts the misspelled name in the locus;
+        // `wordNotFound` is raised by `DEL` about its operand, and spelling
+        // `DEL` against the vocabulary offered "DEF".
+        let candidates = match (&why, word, category) {
+            (CauseClass::TypoOrUnknownName, Some(name), Some(ErrorCategory::UnknownWord)) => {
+                suggest_words(name, std::iter::empty())
+            }
             _ => Vec::new(),
         };
         let next_checks = build_next_checks(

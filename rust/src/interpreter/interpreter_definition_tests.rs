@@ -130,11 +130,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_del_of_a_builtin_is_refused() {
+    async fn test_del_of_a_core_word_is_refused() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("'+' DEL").await;
-        assert!(result.is_err());
+        let error = interp
+            .execute("'ADD' DEL")
+            .await
+            .expect_err("Core is sealed");
+        assert!(
+            matches!(
+                crate::error::ErrorCategory::from_error(&error),
+                Some(crate::error::ErrorCategory::Declared("protectedWord"))
+            ),
+            "{error}"
+        );
+        assert!(interp.resolve_word("ADD").is_some_and(|def| def.is_builtin));
     }
 
     #[tokio::test]
