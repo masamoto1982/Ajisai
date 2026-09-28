@@ -338,10 +338,12 @@
 }
 
 /* The mobile symbol key row (src/gui/symbol-key-row.ts): one row under the
-   editor, six symbol keys and a page key, shown on a phone only while the
-   editor has focus — which it keeps, since a key never takes it. In flow
-   rather than over the text, so it costs the editor one row and never hides
-   the line being written; the corner controls step up to stay clear of it. */
+   editor, six symbol keys between two chevrons that turn the page, shown on a
+   phone only while the editor has focus — which it keeps, since a key never
+   takes it. In flow rather than over the text, so it costs the editor one row
+   and never hides the line being written; the corner controls step up to stay
+   clear of it. The keys stand apart by the same gap that holds the row off the
+   editor, the surface's one stacking gap. */
 .symbol-keys {
     display: none;
 }
@@ -350,8 +352,8 @@
     .input-area:focus-within {
         & .symbol-keys {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: var(--space-3xs);
+            grid-template-columns: auto repeat(6, 1fr) auto;
+            gap: var(--space-xs);
             flex: 0 0 auto;
         }
 
@@ -362,10 +364,15 @@
     }
 }
 
-.symbol-key {
+.symbol-key,
+.symbol-page-key {
     min-height: 2.75rem;
     padding: 0;
     touch-action: manipulation;
+    cursor: pointer;
+}
+
+.symbol-key {
     border: var(--border-main);
     border-radius: var(--radius-main);
     background: var(--color-white);
@@ -373,17 +380,36 @@
     font-family: var(--font-stack-mono);
     font-size: 1.1rem;
     line-height: 1;
-    cursor: pointer;
 
     &:active {
         background: var(--color-light);
     }
 }
 
-/* Where the row is, not a symbol: quieter, and small enough for "5/5". */
-.symbol-key-page {
-    color: var(--color-text-light);
-    font-size: var(--text-xs);
+/* A page turn, not a symbol: no box and no glyph, only a chevron drawn in the
+   keys' own border line, standing at each end of the row as its frame. */
+.symbol-page-key {
+    position: relative;
+    width: 0.75rem;
+    border: none;
+    background: none;
+
+    /* Pinned to the key, so the drawing follows the row and never sizes it. */
+    & svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        fill: none;
+        stroke: var(--color-border);
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    &:active svg {
+        stroke: var(--color-text-light);
+    }
 }
 
 
