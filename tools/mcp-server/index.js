@@ -11,8 +11,8 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NativeCliBackend } from "./backend/native-cli.js";
 import { WasmWorkerBackend } from "./backend/wasm-worker.js";
@@ -20,9 +20,6 @@ import { HostError, logHostError } from "./host-error.js";
 import { suggestWords } from "./word-candidates.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = process.env.AJISAI_REPO
-  ? resolve(process.env.AJISAI_REPO)
-  : resolve(here, "..", "..");
 const assetsPath = join(here, "assets");
 const manifestPath = join(assetsPath, "word-manifest.json");
 const contractsPath = join(assetsPath, "words.json");
@@ -62,13 +59,46 @@ export const LIMITS = Object.freeze({
  */
 export const CAPACITY_WAIT_MS = 1_000;
 
-function resolveAjisaiBin() {
-  if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
-  for (const profile of ["debug", "release"]) {
-    const candidate = join(repoRoot, "rust", "target", profile, "ajisai");
-    if (existsSync(candidate)) return candidate;
+/**
+ * The Ajisai checkout this server may discover a native binary in, or `null`.
+ *
+ * Discovery used to look at `../../rust/target` from wherever the package sat.
+ * From a checkout that is this repository; from an installed package it is two
+ * directories above `node_modules/ajisai-mcp-server` — somewhere in the user's
+ * own project, where a binary named `ajisai` is nothing this package built.
+ * So the parent counts only when this package is the checkout's
+ * `tools/mcp-server` (not a copy under `node_modules`) and the parent is an
+ * Ajisai source tree. `AJISAI_REPO` names a checkout explicitly.
+ */
+export function checkoutRoot() {
+  if (process.env.AJISAI_REPO) return resolve(process.env.AJISAI_REPO);
+  let self;
+  try {
+    self = realpathSync(here);
+  } catch {
+    return null;
   }
-  return null;
+  if (self.split(sep).includes("node_modules")) return null;
+  const candidate = resolve(self, "..", "..");
+  return existsSync(join(candidate, "rust", "Cargo.toml")) ? candidate : null;
+}
+
+/**
+ * A native binary for this server to run, or `null` for the packaged WASM
+ * backend: `AJISAI_BIN` when set, otherwise the most recently built of the
+ * checkout's release and debug binaries. A fixed order let whichever profile
+ * came first shadow a fresher build of the other.
+ */
+export function resolveAjisaiBin() {
+  if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
+  const root = checkoutRoot();
+  if (!root) return null;
+  const built = ["release", "debug"]
+    .map((profile) => join(root, "rust", "target", profile, "ajisai"))
+    .filter((candidate) => existsSync(candidate))
+    .map((candidate) => ({ candidate, mtimeMs: statSync(candidate).mtimeMs }))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return built[0]?.candidate ?? null;
 }
 
 // Backend selection: the packaged WASM worker needs neither `AJISAI_REPO` nor

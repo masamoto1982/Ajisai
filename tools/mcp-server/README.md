@@ -55,6 +55,17 @@ only working example — is an optional override, not a prerequisite:
 - `AJISAI_REPO` is a development-only fallback for discovering a locally built
   binary without naming it.
 
+Without either, a native binary is discovered only when this package is run
+from an Ajisai checkout (`tools/mcp-server` beside `rust/Cargo.toml`), and then
+the more recently built of `rust/target/release` and `rust/target/debug` is
+used. An installed copy under `node_modules` never looks outside itself: it
+runs the packaged WASM backend.
+
+The published package holds only what the server runs — the adapter, its two
+backends, the packaged assets and WASM module, `README.md`, `CHANGELOG.md` and
+`LICENSE`. The evaluation harness, its corpora and the tests stay in the
+repository (`npm run test:pack` fails if one ships).
+
 Both backends answer identically (see [Backends and
 provenance](#backends-and-provenance)); the override is about deployment, not
 about results.

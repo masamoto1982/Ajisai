@@ -6,6 +6,21 @@ still alpha and makes no compatibility promise; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.5.1
+
+Packaging only; nothing a tool answers changes.
+
+### Changed
+
+- **The package ships `LICENSE`.** `sync-assets.js` copies the repository's MIT licence into the package, and its `--check` (run by `prepack`) fails if the copy drifts.
+- **The package holds only what the server runs**, 21 files instead of 37. The evaluation harness (`eval.js`, `benchmark.js`, the scorers and validators), its corpora under `eval/`, the golden cases and `backend/parity-test.js` are no longer published. None of them could run from an installed copy. `npm run test:pack` now fails if a development-only file ships.
+- **`ajv` is a development dependency.** Only the self-test imports it; the server does not.
+- **Native binary discovery stays inside a checkout.**
+  - Before, an installed copy looked at `../../rust/target` relative to itself, which is the installing project's own directory, and ran any `ajisai` binary it found there.
+  - Now discovery happens only when the package is an Ajisai checkout's `tools/mcp-server`, or `AJISAI_REPO` names one. An installed copy under `node_modules` always runs the packaged WASM backend unless `AJISAI_BIN` says otherwise.
+  - When both a release and a debug build exist, the more recently built one is used. Before, debug always won.
+  - `npm run test:pack` plants a decoy binary where the old discovery looked and asserts the installed copy ignores it.
+
 ## 0.5.0
 
 Result envelope `schemaVersion` 3 (engine report `SCHEMA_VERSION` 3). The error
