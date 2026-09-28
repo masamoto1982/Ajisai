@@ -186,6 +186,17 @@ impl AccumulatedContract {
         }
     }
 
+    /// A name the body calls that nothing defines. The call raises
+    /// `unknownWord` when it is reached — a `repair: program` category — so
+    /// the Word is `partial` by the registry's own derivation, as a builtin
+    /// that declares such a condition is. It used to stay `total` with the
+    /// gap noted beside it: a contract that promised no failure for a body
+    /// `check` rejects and `compute` fails on the moment the Word runs.
+    pub(crate) fn note_unresolved_word(&mut self) {
+        self.partiality = self.partiality.max(ContractPartiality::Partial);
+        self.gaps.push(GapCode::UnresolvedWord);
+    }
+
     pub(crate) fn widen_with(&mut self, other: &WordContract) {
         self.purity = self.purity.max(other.purity);
         for effect in &other.effects {
@@ -333,7 +344,7 @@ impl Interpreter {
                         flow.go_dynamic();
                         sim.feed_unresolved();
                         cost_sim.feed_unresolved();
-                        acc.gaps.push(GapCode::UnresolvedWord);
+                        acc.note_unresolved_word();
                         continue;
                     };
                     let dep_contract = if dep_def.is_builtin {

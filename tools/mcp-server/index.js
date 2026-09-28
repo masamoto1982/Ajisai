@@ -248,7 +248,7 @@ export const TOOLS = [
   },
   {
     name: "infer_contracts",
-    description: "Infer machine-readable contracts for user-defined Words without executing their bodies, under the same keys and in the same vocabulary as a registered Word's contract (`inputs`, `outputs`, `partiality`, `purity`, `determinism`, `cost`, `effects`) plus `confidence` and `gaps`.",
+    description: "Infer machine-readable contracts for user-defined Words without executing their bodies, under the same keys and in the same vocabulary as a registered Word's contract (`inputs`, `outputs`, `partiality`, `purity`, `determinism`, `cost`, `effects`) plus `confidence` and `gaps`. Source that does not parse is the same `malformedSource` error check reports; a body calling a Word nothing defines is `partial`, with a `gap.unresolvedWord` gap.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
     annotations: READ_ONLY_ANNOTATIONS,

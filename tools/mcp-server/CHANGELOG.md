@@ -6,6 +6,22 @@ still alpha and makes no compatibility promise; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.6.0
+
+The four source tools give one answer about one program.
+
+### Changed
+
+- **`infer_contracts` reports malformed source as an error.**
+  - Source that does not tokenize or balance its brackets is now `status: "error"` with `aiDiagnostic.category: "malformedSource"`. This is the same report `check` gives.
+  - It used to be `status: "ok"` with no contracts, while `compute`, `check` and `outcomes` all called the same source malformed.
+  - A caller that took every `infer_contracts` answer as a success must now branch on `status`.
+- **A Word whose body calls an undefined name is `partial`.** That call raises `unknownWord`, which the registry marks `repair: program`, so the Word is `partial` by the registry's own rule. Inference used to report it as `total` next to its own `gap.unresolvedWord` gap. (The native CLI's `agent infer-contracts` also exits 1 on malformed source.)
+
+### Added
+
+- **`tool-consistency.test.js`**, part of `npm run selftest`. It runs every golden and evaluation‑corpus source, plus edge cases, through `compute`, `check`, `infer_contracts` and `outcomes`, and fails when their answers contradict each other. It fails on the previous engine at exactly the two cases above.
+
 ## 0.5.1
 
 Packaging only; nothing a tool answers changes.

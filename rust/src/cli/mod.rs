@@ -343,7 +343,10 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
             let response = agent_api::check(&source, true);
             (response.to_json(), response.exit_code())
         }
-        "infer-contracts" => (agent_api::infer_contracts(&source).to_json(), 0),
+        "infer-contracts" => {
+            let response = agent_api::infer_contracts(&source);
+            (response.to_json(), response.exit_code())
+        }
         "outcomes" => (
             agent_api::predict_outcomes(&source, compute_options(opts)).to_json(),
             0,
