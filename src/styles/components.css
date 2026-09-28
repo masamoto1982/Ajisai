@@ -337,78 +337,25 @@
     }
 }
 
-/* The mobile symbol key row (src/gui/symbol-key-row.ts): one row under the
-   editor, six symbol keys between two chevrons that turn the page, shown on a
-   phone only while the editor has focus — which it keeps, since a key never
-   takes it. In flow rather than over the text, so it costs the editor one row
-   and never hides the line being written; the corner controls step up to stay
-   clear of it. The keys stand apart by the same gap that holds the row off the
-   editor, the surface's one stacking gap. */
-.symbol-keys {
-    display: none;
-}
+/* The symbol pad: all 30 symbols, six to a row, opened at the caret on a phone
+   (src/gui/code-input-editor.ts places it, above the caret line when the
+   keyboard leaves no room below). Mobile items take a 44px floor above; the
+   pad's cells keep a smaller one of their own, so five rows stay compact. */
+.editor-suggestions--symbols {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    padding: 4px;
+    min-width: 13rem;
+    max-height: none;
+    overflow-y: visible;
 
-@media (width <= 768px) {
-    .input-area:focus-within {
-        & .symbol-keys {
-            display: grid;
-            grid-template-columns: auto repeat(6, 1fr) auto;
-            gap: var(--space-xs);
-            flex: 0 0 auto;
-        }
-
-        & #editor-format-btn,
-        & .run-status {
-            bottom: calc(2.75rem + var(--space-xs));
-        }
-    }
-}
-
-.symbol-key,
-.symbol-page-key {
-    min-height: 2.75rem;
-    padding: 0;
-    touch-action: manipulation;
-    cursor: pointer;
-}
-
-.symbol-key {
-    border: var(--border-main);
-    border-radius: var(--radius-main);
-    background: var(--color-white);
-    color: var(--color-text);
-    font-family: var(--font-stack-mono);
-    font-size: 1.1rem;
-    line-height: 1;
-
-    &:active {
-        background: var(--color-light);
-    }
-}
-
-/* A page turn, not a symbol: no box and no glyph, only a chevron drawn in the
-   keys' own border line, standing at each end of the row as its frame. */
-.symbol-page-key {
-    position: relative;
-    width: 0.75rem;
-    border: none;
-    background: none;
-
-    /* Pinned to the key, so the drawing follows the row and never sizes it. */
-    & svg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        fill: none;
-        stroke: var(--color-border);
-        stroke-width: 1.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-
-    &:active svg {
-        stroke: var(--color-text-light);
+    & .editor-suggestion-item {
+        width: auto;
+        min-height: 2.25rem;
+        padding: 0.35rem 0;
+        text-align: center;
+        font-size: 1rem;
+        line-height: 1;
     }
 }
 
