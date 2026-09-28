@@ -152,9 +152,9 @@ impl ExactReal {
     /// The multiquadratic normal-form terms `(monomial, coefficient)` of a
     /// Tier 1 value, or `None` for a rational. Used by the lossless state
     /// persistence codec (`crate::types::value_persist`) to capture the
-    /// exact algebraic value; the reader reconstructs it by replaying
-    /// `∑ cₘ·√m`, which the canonical normal form makes exact.
-    #[cfg(any(test, feature = "wasm"))]
+    /// exact algebraic value, and by `DEF` to write such a value back as
+    /// source (`crate::interpreter::value_as_code`); both readers reconstruct
+    /// it by replaying `∑ cₘ·√m`, which the canonical normal form makes exact.
     pub(crate) fn algebraic_terms(&self) -> Option<Vec<(BigInt, Fraction)>> {
         match self {
             Self::Algebraic(a) => Some(

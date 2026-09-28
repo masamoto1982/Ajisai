@@ -81,7 +81,7 @@
     {
       "id": "invalidDefinitionBody",
       "kind": "declared",
-      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or an empty one."
+      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, an empty one, or one carrying a NIL that has a reason — a definition is kept as its source, and no source text denotes such a NIL (the NIL name denotes the literal NIL); produce it inside the body instead."
     },
     {
       "id": "invalidName",

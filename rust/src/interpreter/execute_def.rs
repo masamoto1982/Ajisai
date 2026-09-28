@@ -86,13 +86,15 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // contract engine's vector-depth gate (`word_contract_widen.rs`) reads to
     // tell code from data. `None` here just means the body came from a
     // computed Vector rather than a literal, and the bridge is the only way
-    // to get tokens from it.
+    // to get tokens from it — the source-writing bridge, since a definition
+    // is kept as its source and a value the Vector carries whole has to be
+    // written as what builds it.
     let tokens = match interp.pending_def_body_tokens.take() {
         Some(tokens) => tokens,
         None => match def_val.as_vector_view() {
             // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
             Some(elements) => {
-                crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?
+                crate::interpreter::value_as_code::value_elements_to_source_tokens(&elements)?
             }
             None => {
                 return Err(AjisaiError::declared(
@@ -123,6 +125,15 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // body and cycle checks, so a refused redefinition left the old definition
     // in place with its edges gone — and `DEL` then deleted a word it still
     // called.
+    // A definition is kept as its source: the only bridge that carries a
+    // value whole into a body, `op_def`'s, writes it back as the source that
+    // builds it (`value_elements_to_source_tokens`), so the body every check
+    // below sees, and the one the dictionary keeps, is the body a saved
+    // session gets back.
+    debug_assert!(
+        !tokens.iter().any(|token| matches!(token, Token::Value(_))),
+        "a definition body is source: no value is carried whole"
+    );
     crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
     // A Word is reached by writing its name as one token, so a name that
