@@ -27,6 +27,16 @@ export interface InterpreterState {
     readonly activeDictionarySheet?: string;
 }
 
+// Whether a saved session carries a dictionary of its own — including an
+// empty one. An empty dictionary is a choice the user made by deleting every
+// User Word, and restoring it as empty is what keeps that choice: reseeding
+// the Example Words whenever the saved list was empty brought back, on every
+// reload, the words the user had just deleted. The Example Words seed a
+// session that has no saved dictionary at all — a first visit, or a document
+// of another format — and Reset, which asks for them.
+export const checkHasSavedDictionary = (state: Pick<InterpreterState, 'userWords'>): boolean =>
+    Array.isArray(state.userWords);
+
 export interface RestoredSelection {
     readonly activeDictionarySheet?: string;
 }
@@ -320,7 +330,9 @@ export const createPersistence = (
                     interpreter.restore_stack_snapshot(state.stackSnapshot);
                 }
 
-                if (state.userWords && state.userWords.length > 0) {
+                if (!checkHasSavedDictionary(state)) {
+                    await loadExampleWords();
+                } else if (state.userWords.length > 0) {
                     const wordsToRestore = state.userWords;
 
                     interpreter.restore_user_words(wordsToRestore);
@@ -334,9 +346,6 @@ export const createPersistence = (
                             `${notRestored.length} saved word(s) could not be restored and were left out: ${notRestored.join(', ')}. The rest of the dictionary was restored.`
                         ));
                     }
-
-                } else {
-                    await loadExampleWords();
                 }
 
                 return {
