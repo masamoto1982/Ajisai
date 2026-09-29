@@ -75,9 +75,15 @@ export const createStepExecutor = (callbacks: StepExecutorCallbacks): StepExecut
 
     const isActive = (): boolean => state.active;
 
+    // Only a highlight step mode drew is taken back. Run and Reset call this
+    // too, to end any step mode in progress, and collapsing the selection
+    // unconditionally moved the caret to the start of the text on every one
+    // of them — so a Run that failed left its text in place but the caret at
+    // the top of it.
     const reset = (): void => {
+        const wasActive = state.active;
         state = createInitialState();
-        highlightSourceRange(0, 0);
+        if (wasActive) highlightSourceRange(0, 0);
     };
 
     const abort = (): void => {

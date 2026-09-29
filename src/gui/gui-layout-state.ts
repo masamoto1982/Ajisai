@@ -61,8 +61,10 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
 //
 // Ordered by what a reader reaches for: run it, move between surfaces, fix the
 // text, then what types for you, then the stack's own control. The last block
-// is the honest one — four operations have a shortcut and no touch control,
-// and saying so beats letting someone hunt for a button that is not there.
+// is the honest one — five operations have a shortcut and no touch control,
+// and saying so beats letting someone hunt for a button that is not there
+// (spec/gui-semantics.md, rule 4: nothing a surface is reached by goes
+// unsaid, and recall of a submitted program is reached only by Ctrl+Up).
 //
 // Every line is kept under 27 characters on purpose. A textarea placeholder
 // wraps on width, and a hand-aligned continuation (`'    or the list above'`)
@@ -88,6 +90,7 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'step    Ctrl+Enter',
     'stop    Escape',
     'look up Ctrl+Alt+L',
+    'recall  Ctrl+Up / Down',
     'reset   Ctrl+Alt+Enter'
 ].join('\n');
 

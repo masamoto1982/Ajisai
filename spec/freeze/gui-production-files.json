@@ -16,8 +16,7 @@
   "mobileVisibleSurfaces": 1,
   "dictionarySheets": [
     "core",
-    "user",
-    "module"
+    "user"
   ],
   "shortcuts": [
     "Run → Shift+Enter",
@@ -25,6 +24,8 @@
     "Reset → Ctrl+Alt+Enter",
     "Abort → Escape",
     "Format → Shift+Alt+F",
-    "Clear stack → Shift+Alt+C"
+    "Stack clear → Ctrl+Alt+S",
+    "Editor clear → Ctrl+Alt+E",
+    "Lookup → Ctrl+Alt+L"
   ]
 }

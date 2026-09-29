@@ -1,5 +1,6 @@
 import { isMobileViewport } from '../platform/viewport';
 import { formatAjisaiSource } from './code-formatter';
+import { countLeadingSourceWhitespace, isSourceWhitespace, trimSource } from './source-atoms';
 
 export interface EditorCallbacks {
     readonly onSwitchToInputMode?: () => void;
@@ -44,11 +45,11 @@ export const separateWord = (text: string, start: number, end: number, word: str
     readonly insertion: string;
     readonly caretOffset: number;
 } => {
-    if (word.trim() === '') return { insertion: word, caretOffset: word.length };
+    if (trimSource(word) === '') return { insertion: word, caretOffset: word.length };
     const before = text.substring(0, start);
     const after = text.substring(end);
-    const lead = before !== '' && !/\s$/.test(before) ? ' ' : '';
-    const trail = after !== '' && !/^\s/.test(after) ? ' ' : '';
+    const lead = before !== '' && !isSourceWhitespace(before[before.length - 1]!) ? ' ' : '';
+    const trail = after !== '' && !isSourceWhitespace(after[0]!) ? ' ' : '';
     return { insertion: lead + word + trail, caretOffset: lead.length + word.length };
 };
 
@@ -127,24 +128,34 @@ const copyCaretMirrorStyle = (
     });
 };
 
-const extractToken = (
+// The word the cursor touches, as Lookup and the suggestion panel read it.
+// A name is any run of non-whitespace (spec/grammar.json,
+// characterClasses.nameCharacter), so a User Word spelled `X.Y`, `A|B` or
+// `合計` is one word here, and Lookup identifies the entry execution would —
+// an ASCII letter class used to hand Lookup `X` for a cursor on `X.Y`, and
+// nothing at all for a Japanese name. The one split made is the formatter's:
+// `[` and `]` must stand alone whatever they are glued to, so the word in
+// `[SQRT]` is `SQRT`, and a cursor on a bracket, like one on whitespace,
+// touches no word. Exported for `code-input-editor.test.ts`.
+export const extractToken = (
     text: string,
     cursorPosition: number
 ): { token: string; start: number; end: number } => {
     const safeCursor = Math.max(0, Math.min(cursorPosition, text.length));
-    const left = text.slice(0, safeCursor);
-    const right = text.slice(safeCursor);
-    const leftMatch = left.match(/[A-Za-z0-9_?!+\-*/<>=]+$/);
-    const rightMatch = right.match(/^[A-Za-z0-9_?!+\-*/<>=]*/);
+    let start = safeCursor;
+    while (start > 0 && !isSourceWhitespace(text[start - 1]!)) start -= 1;
+    let end = safeCursor;
+    while (end < text.length && !isSourceWhitespace(text[end]!)) end += 1;
 
-    const tokenLeft = leftMatch?.[0] ?? '';
-    const tokenRight = rightMatch?.[0] ?? '';
-
-    return {
-        token: `${tokenLeft}${tokenRight}`,
-        start: safeCursor - tokenLeft.length,
-        end: safeCursor + tokenRight.length
-    };
+    let pieceStart = start;
+    for (const piece of text.slice(start, end).match(/[[\]]|[^[\]]+/g) ?? []) {
+        const pieceEnd = pieceStart + piece.length;
+        if (piece !== '[' && piece !== ']' && pieceStart <= safeCursor && safeCursor <= pieceEnd) {
+            return { token: piece, start: pieceStart, end: pieceEnd };
+        }
+        pieceStart = pieceEnd;
+    }
+    return { token: '', start: safeCursor, end: safeCursor };
 };
 
 export const createEditor = (
@@ -324,12 +335,12 @@ export const createEditor = (
         });
     };
 
-    if (element.value.trim() === '') {
+    if (trimSource(element.value) === '') {
         element.value = '';
     }
     registerEventListeners();
 
-    const extractValue = (): string => element.value.trim();
+    const extractValue = (): string => trimSource(element.value);
 
     const updateValue = (value: string): void => {
         replaceRange(element, 0, element.value.length, value);
@@ -341,9 +352,20 @@ export const createEditor = (
     };
 
     // On a phone, taking focus raises the keyboard over the surface the user
-    // is looking at, so focus is only kept where it already was.
+    // is looking at, so focus is only kept where it already was. A field that
+    // is not on screen cannot take focus at all: on desktop the left column
+    // can show Output while the right shows Dictionary (a run that changed
+    // both leaves it so), and a Dictionary word clicked then was written into
+    // the hidden editor, unseen and outside the undo history. The Input
+    // surface is shown first where focus was refused, so the edit lands
+    // where the spec puts it — on the Input surface, as an ordinary edit.
     const refocus = (wasFocused: boolean): void => {
-        if (wasFocused || !isMobileViewport()) element.focus();
+        if (!wasFocused && isMobileViewport()) return;
+        element.focus();
+        if (document.activeElement !== element) {
+            switchToInputMode();
+            element.focus();
+        }
     };
 
     const clear = (switchView = true): void => {
@@ -377,10 +399,16 @@ export const createEditor = (
         const { start } = lookupEditableSelectionRange();
         const before = element.value.substring(0, start);
 
-        const trimmed = before.replace(/\S+\s*$/, '');
+        // The last word before the caret and the whitespace after it, by the
+        // grammar's whitespace class; nothing is taken when no word precedes.
+        let wordEnd = before.length;
+        while (wordEnd > 0 && isSourceWhitespace(before[wordEnd - 1]!)) wordEnd -= 1;
+        let wordStart = wordEnd;
+        while (wordStart > 0 && !isSourceWhitespace(before[wordStart - 1]!)) wordStart -= 1;
+        const cut = wordStart === wordEnd ? start : wordStart;
         refocus(wasFocused);
-        replaceRange(element, trimmed.length, start, '');
-        updateSelectionRange(element, trimmed.length, trimmed.length);
+        replaceRange(element, cut, start, '');
+        updateSelectionRange(element, cut, cut);
         syncLastKnownSelection();
         hideSuggestions();
     };
@@ -428,7 +456,7 @@ export const createEditor = (
     // with the text.
     const revealRange = (start: number, end: number): void => {
         const raw = element.value;
-        const offset = raw.length - raw.trimStart().length;
+        const offset = countLeadingSourceWhitespace(raw);
         const from = Math.min(offset + start, raw.length);
         const to = Math.min(offset + end, raw.length);
         element.focus();
