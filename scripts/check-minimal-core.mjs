@@ -10,36 +10,13 @@ SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DIGEST PRINT`.
 const STANDARD = new Set(`SUB ROUND MIN MAX GCD RATIO
 TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP GROUP INDEX-OF MEMBER? BSEARCH FILTER SCAN
 TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
-// The alpha Words retired in the phase-1 vocabulary freeze. `UNIQUE` is not
-// among them any more: it was cut as one of several overlapping collection
-// Words and has come back on its own terms, with a contract, a law witness and
-// a conformance case — see `core.unique` in the coverage manifest. `CEIL` came
-// back the same way in the vocabulary-100 work order's Phase 1
-// (docs/dev/vocabulary-100-work-order-2026-09.md §7), as the closure of the
-// rounding family rather than a convenience: `FLOOR` reflected through zero.
-// `REPLACE` came back in Phase 3, as INDEX-OF's substitution counterpart for
-// Text, retained natively for cost.
-// `NEQ` and `PROBE` were retired after the vocabulary-100 work order's
-// review (docs/dev/vocabulary-100-work-order-2026-09.md §7.2): `NEQ` is
-// `EQ NOT` at the same cost, and `PROBE` was `CONTRACT` over a block. The
-// two slots went to `UPPER` and `LOWER`, the top of the waiting list.
-// The thirteen after them went together, each for being a phrase over what
-// remains rather than a capability: `NEG` is `-1 MUL`, `DEFINED?` is
-// `CONTRACT NIL? NOT`, `RANK` is nested `MAP`s (and `MAP` took its Kernel
-// seat), `ANY`/`ALL` are `MAP` then a `FOLD` of the truth values, `RANDOM` a
-// user-written generator, and `OR LTE GTE CEIL QUANTIZE ABS MOD` were the
-// derivable Standards no program in the lexicon pilot
-// (tools/lexicon-emergence/runs/pilot-2026-09-23) wrote once.
-// `PI EXP LN SIN COS ATAN` went with the computable-real tier they alone
-// built: each answered a value no comparison could always decide, so the
-// numeric domain is now the exact field `SQRT` builds and comparison is total.
-// `AT` and `WITH` went into `GET` and `PUT`: reading and writing a Record by
-// key is what reading and writing a Vector by index is, so one pair of Words
-// covers both containers, and `PUT` took `WITH`'s Kernel seat.
-const REMOVED = new Set(`SIGN INSERT REMOVE SPLIT REORDER CONTAINS
-STARTS-WITH? ENDS-WITH? CHR EAT NEQ PROBE
-DEFINED? NEG RANDOM RANK ANY ALL OR LTE GTE CEIL QUANTIZE ABS MOD
-PI EXP LN SIN COS ATAN AT WITH`.split(/\s+/));
+// The retired names live in spec/retired-words.json, the one representation
+// this gate and rust/tests/beta_removed_words.rs both read: this side asserts
+// none of them is canonical, the Rust side asserts the runtime does not
+// resolve them. The reasons travel with the names there.
+const retired = JSON.parse(readFileSync('spec/retired-words.json', 'utf8'));
+const REMOVED_LIST = retired.groups.flatMap((group) => group.names);
+const REMOVED = new Set(REMOVED_LIST);
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
@@ -100,6 +77,7 @@ if (standardWords.size !== 30) errors.push(`Standard vocabulary has ${standardWo
 
 if (words.length !== 78) errors.push(`canonical inventory has ${words.length} Words; expected 78`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
+if (REMOVED.size !== REMOVED_LIST.length) errors.push('spec/retired-words.json names the same Word twice');
 
 for (const word of words) {
   const witness = bySurface.get(word.name);

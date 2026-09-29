@@ -12,6 +12,7 @@ it defines Ajisai semantics.
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
 | `outcomes.json` (`outcomes.schema.json`) | The complete outcome space — every NIL reason and every error category a Word's contract can name |
 | `semantic-families.json` | The shared laws Words select |
+| `retired-words.json` | The names that were once Words and must stay unknown — read by both the registry gate and the runtime test |
 | `gui-semantics.md` | Presentation |
 | `host-protocol.schema.json` | The host protocol boundary between them |
 
