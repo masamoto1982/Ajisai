@@ -36,15 +36,28 @@ fn exec_block(interp: &mut Interpreter) -> Result<()> {
             format!("expected a Vector ([ ... ]) as the code operand, got {got}"),
         ));
     };
-    let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {
+    // Every refusal before the block starts puts the operand back (the ERROR
+    // discipline of every Core Word, LANG.STACK.CONSUMPTION). Once the block
+    // runs, the frame is the whole stack and what it leaves is the state.
+    //
+    // The elements are values already built, not lexemes: the numeric-literal
+    // ceiling (LANG.MACHINE.LIMITS) bounds what a lexeme may denote at the
+    // entry points that read the numeric grammar, and this is not one of
+    // them. A Scalar the program computed within its `bigintBits` used to be
+    // refused here as a "literal" of too many digits, while the same block
+    // applied by `MAP` ran it — the outcome depended on the route.
+    let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements)
+        .and_then(|tokens| {
+            crate::tokenizer::validate_code_tokens(&tokens)
+                .map_err(AjisaiError::MalformedSource)
+                .map(|()| tokens)
+        }) {
         Ok(t) => t,
         Err(e) => {
             interp.stack.push(target);
             return Err(e);
         }
     };
-    crate::tokenizer::validate_code_tokens(&tokens).map_err(AjisaiError::MalformedSource)?;
-    interp.check_source_numeric_literals(&tokens)?;
     // The block `EXEC` runs is its own token stream and is never the enclosing
     // word's tail position — see `Interpreter::execute_nested_block`.
     interp.execute_nested_block(&tokens)

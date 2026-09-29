@@ -1,11 +1,23 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::Interpreter;
+use crate::types::Value;
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
-    let name = extract_word_name_from_value(&val)?;
+    // A refusal puts the name back as it was written (the ERROR discipline of
+    // every Core Word, LANG.STACK.CONSUMPTION): the operand is consumed only
+    // once the Word is gone from the dictionary.
+    let outcome = delete_named(interp, &val);
+    if outcome.is_err() {
+        interp.stack.push(val);
+    }
+    outcome
+}
+
+fn delete_named(interp: &mut Interpreter, val: &Value) -> Result<()> {
+    let name = extract_word_name_from_value(val)?;
 
     let word_name = name.to_uppercase();
 

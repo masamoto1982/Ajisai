@@ -34,10 +34,14 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
     ) -> Result<usize> {
-        // Every execution route (EXEC and higher-order Words included) shares
-        // the source-entry numeric ceiling; dynamically reflected tokens may
-        // not bypass it.
-        self.check_source_numeric_literals(&tokens[start_index..])?;
+        // The numeric-literal ceiling is not re-applied here. Every stream
+        // that reaches this loop was already held to it where its lexemes were
+        // read — the program's own text in `execute`, a body at `DEF` — and
+        // the streams bridged from values (`EXEC`, a higher-order block) carry
+        // Scalars already built within `bigintBits`, which the compiled route
+        // for the same block never held to the literal ceiling either.
+        // Checking them here made a block's outcome depend on which route ran
+        // it (LANG.AUTHORITY.FREEDOM).
 
         // Depth 1 is the program's own token stream, the one `source_spans`
         // describes. A nested block, a word body or a COND clause is a

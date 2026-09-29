@@ -25,6 +25,8 @@ pub mod epoch;
 pub mod error_flow_trace;
 #[cfg(test)]
 mod error_message_format_tests;
+#[cfg(test)]
+mod error_operand_restore_tests;
 pub mod execute_def;
 pub mod execute_del;
 #[cfg(test)]
