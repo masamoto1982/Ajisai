@@ -330,11 +330,13 @@ impl std::hash::Hash for Value {
 /// written, `format_token_to_string` echoes source back, and the tokenizer's own
 /// round-trip check compares a lexeme against itself.
 ///
-/// **A malformed lexeme is not an error here.** `1/0` tokenizes as a Number and is
-/// refused when it is *reached* — and `1 PRINT 1/0` really does print `1/1` before
-/// failing, so refusing it at tokenize time would erase a host effect a program
-/// was entitled to. Such a lexeme has no `integer` either, and [`Self::parsed`]
-/// raises the identical message at the point it was always raised.
+/// **A malformed lexeme is not an error here.** This type validates nothing: it
+/// keeps whatever spelling it is handed. A lexeme that denotes no rational never
+/// arrives from source — `1/0` is the `zeroDenominator` source error of
+/// `spec/grammar.json`, refused by the tokenizer before anything runs
+/// (LANG.SOURCE.TEXT) — but a `NumberLiteral` built directly from such a lexeme
+/// simply has no `integer`, and [`Self::parsed`] reports the parse's own message
+/// when the value is read.
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct NumberLiteral {
     lexeme: Arc<str>,

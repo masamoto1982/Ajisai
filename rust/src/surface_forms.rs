@@ -7,14 +7,14 @@
 //! delimiters, never runtime words.
 //!
 //! Every form listed here is live. There is no entry for a character the
-//! tokenizer refuses, because it refuses none: `(`, `)` and a bare `|` were
-//! once carried here as reserved markers and retired forms, and are now
-//! ordinary name characters with no per-character rule of their own
+//! tokenizer refuses, because it refuses none: `(`, `)`, `{`, `}` and a bare
+//! `|` were once carried here as reserved markers and retired forms, and are
+//! now ordinary name characters with no per-character rule of their own
 //! (`spec/grammar.json`, characterClasses.nameCharacter). A form earns a place
-//! in this table by *doing* something the word rule does not — which is what
-//! `{` and `}` came back for: they were freed with those three and then
-//! allocated as the Record literal's delimiters (LANG.RECORDS.STRUCTURE),
-//! the second of the grammar's two delimiter pairs.
+//! in this table by *doing* something the word rule does not. `{` and `}`
+//! briefly did — they were allocated as the Record literal's delimiters — and
+//! were freed again when that literal was retired: `[` and `]` are the
+//! grammar's one delimiter pair.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SurfaceFormKind {
@@ -129,11 +129,12 @@ mod tests {
     /// The table is generated into the word manifest, SKILL.md and the
     /// quickstart, so an entry here is a claim that the character does
     /// something the word rule does not. `(`, `)` and `|` no longer do: they
-    /// lex as ordinary Symbols. Re-adding one would put a dead concept name
-    /// back into every generated reading surface, which is the same defect as
-    /// before with the sign flipped — the test that a form in the table is
-    /// live (above) is what tells that apart from allocating a character, as
-    /// `{` and `}` were allocated for the Record literal.
+    /// lex as ordinary Symbols, and so do `{` and `}` since the Record literal
+    /// was retired. Re-adding one would put a dead concept name back into
+    /// every generated reading surface, which is the same defect as before
+    /// with the sign flipped — the test that a form in the table is live
+    /// (above) is what tells that apart from allocating a character, as `{`
+    /// and `}` once were for the Record literal.
     #[test]
     fn a_freed_character_is_an_ordinary_name_and_is_not_listed() {
         for surface in FREED {

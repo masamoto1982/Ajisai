@@ -4,8 +4,8 @@
 //! execution and report assembly. It performs no filesystem or terminal I/O.
 
 use super::{
-    check_structure, contract_decl, contract_report, error_report, outcome_report, print_payloads,
-    report::Report, resolve_words, run_render,
+    contract_decl, contract_report, error_report, outcome_report, print_payloads, report::Report,
+    resolve_words, run_render,
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -150,6 +150,11 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
 /// `malformedSource` before anything else can be said about it. `Err` carries
 /// the finished error report.
 ///
+/// Both refusals come from the one call: the tokenizer's structural phase
+/// (`spec/grammar.json`, structuralValidation) runs on every `tokenize`
+/// result, so an unbalanced bracket is a tokenize failure here exactly as it
+/// is to `compute` — one phase, one message, for every tool.
+///
 /// `check` had this gate and `infer_contracts` did not, so `[ 1 2` was a
 /// `malformedSource` error to `compute`, `check` and `outcomes` and an `ok`
 /// with no contracts to inference — four tools, two answers about one source.
@@ -157,17 +162,14 @@ fn tokens_of_well_formed(
     interp: &Interpreter,
     source: &str,
 ) -> Result<Vec<crate::types::Token>, Box<AgentResponse>> {
-    let (phase, message) = match crate::tokenizer::tokenize(source) {
-        Ok(tokens) => match check_structure(&tokens) {
-            Ok(()) => return Ok(tokens),
-            Err(message) => (ErrorPhase::ParseStructure, message),
-        },
-        Err(message) => (ErrorPhase::Tokenize, message),
+    let message = match crate::tokenizer::tokenize(source) {
+        Ok(tokens) => return Ok(tokens),
+        Err(message) => message,
     };
     // The same category `run` reports for an unbalanced bracket.
     let category = ErrorCategory::MalformedSource;
     let diagnosis = DebugDiagnosis::from_error_category(
-        phase,
+        ErrorPhase::Tokenize,
         None,
         Some(&category),
         None,

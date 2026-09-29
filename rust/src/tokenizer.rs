@@ -111,8 +111,9 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // The two structural words of `spec/grammar.json`'s one delimiter
         // pair: like every other Ajisai word (and like Forth's own `[` and
         // `]`), they must stand alone, separated by whitespace. A delimiter
-        // glued to anything else — `[1`, `2]`, `[[1]]` — is a source error asking for the space, rather than a silently
-        // accepted (and meaningless) name containing a delimiter. This is a
+        // glued to anything else — `[1`, `2]`, `[[1]]` — is a source error
+        // asking for the space, rather than a silently accepted (and
+        // meaningless) name containing a delimiter. This is a
         // whole-lexeme rule, not a per-character one: no character is checked
         // on the way in, and a lexeme either *is* one delimiter or holds none.
         if let Some(token) = delimiter_token(&token_str) {
@@ -206,8 +207,9 @@ pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
 }
 
 /// Whether `lexeme` is exactly one Symbol token under the canonical lexer.
-/// Control directives and delimiter spellings deliberately fail this test:
-/// their canonical code-data representation uses their dedicated token tag.
+/// A delimiter spelling, a number, a comment start and an unclosed quote all
+/// fail this test: none of them can be written as one name at a word
+/// position, so none of them can name a Word or a binding.
 pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
 }
@@ -339,7 +341,6 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     }
 
     if i < chars.len() && chars[i] == '/' {
-        let _slash_pos = i;
         i += 1;
 
         if i >= chars.len() || !chars[i].is_ascii_digit() {

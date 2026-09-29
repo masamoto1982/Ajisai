@@ -170,26 +170,6 @@ pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
     crate::types::display::render_stack(interp.get_stack())
 }
 
-/// execution — this only front-loads the same failure for `check`.
-pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
-    let mut depth: usize = 0;
-    for token in tokens {
-        match token {
-            Token::VectorStart => depth += 1,
-            Token::VectorEnd => {
-                depth = depth
-                    .checked_sub(1)
-                    .ok_or_else(|| "Unexpected vector end".to_string())?;
-            }
-            _ => {}
-        }
-    }
-    if depth > 0 {
-        return Err("Unclosed vector".to_string());
-    }
-    Ok(())
-}
-
 pub(crate) fn normalize_word(symbol: &str) -> String {
     symbol.to_uppercase()
 }
@@ -326,7 +306,8 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
 }
 
 /// The frame region of every token (see [`resolve_words`]). Assumes the
-/// bracket structure already passed [`check_structure`].
+/// bracket structure already passed the tokenizer's structural validation
+/// (`tokenizer::validate_code_tokens`, which `tokenize` runs on every result).
 fn frame_regions(tokens: &[Token]) -> Vec<usize> {
     // Match every `[` to its `]` first, so a block can be recognised as a
     // DEF body from its opening side.
