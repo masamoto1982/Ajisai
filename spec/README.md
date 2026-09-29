@@ -34,10 +34,6 @@ fields, but existing fields, meanings, and tuple shapes cannot be removed,
 renamed, reordered, or changed. A breaking change raises the protocol version
 and supersedes the previous one; exactly one protocol is current at a time.
 
-The `freeze/` fixtures pin representative protocol payloads and the production
-GUI surface. Contract tests deliberately inspect the existing sources rather
-than duplicating GUI behavior in a replacement implementation.
-
 `SPECIFICATION.html` is a distribution artifact assembled from the semantic
 sources, the implementation-rules fragment, and `specification.template.html`.
 
