@@ -354,6 +354,30 @@ mod tensor_boundary_tests {
         );
     }
 
+    /// `from_exact_real` with `Rational(nil)` — what the nil-propagating
+    /// exact arithmetic answers for an absent operand — is a NIL, not a
+    /// `Scalar` around the `0/0` sentinel that displayed as `NIL` while
+    /// answering `NIL?` with FALSE and naming its domain `Scalar`.
+    #[test]
+    fn from_exact_real_translates_the_nil_sentinel_like_from_fraction() {
+        use crate::types::exact::ExactReal;
+
+        let value = Value::from_exact_real(ExactReal::Rational(Fraction::nil()));
+        assert!(value.is_nil(), "got {:?}", value.data);
+        assert_eq!(value, Value::from_fraction(Fraction::nil()));
+        assert_eq!(value.domain_name(), "NIL");
+
+        // A present rational still takes the Scalar fast path, and an
+        // irrational still keeps its exact form.
+        let three = Value::from_exact_real(ExactReal::from_integer(3));
+        assert_eq!(three, Value::from_int(3));
+        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::from(2)).expect("√2");
+        assert!(matches!(
+            Value::from_exact_real(sqrt2).data,
+            ValueData::ExactScalar(_)
+        ));
+    }
+
     #[test]
     fn big_fraction_tensor_falls_back_without_losing_shape() {
         use num_bigint::BigInt;

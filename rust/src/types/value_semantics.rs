@@ -119,9 +119,13 @@ impl Value {
 
     #[inline]
     pub fn from_exact_real(er: crate::types::exact::ExactReal) -> Self {
-        // If the ExactReal is already rational, use the fast Fraction path.
+        // A rational takes the `Fraction` path — through `from_fraction`, so
+        // that `Rational(nil)` (what the nil-propagating exact arithmetic
+        // answers for an absent operand) becomes `ValueData::Nil` here as it
+        // does everywhere else, never a `Scalar` wrapping the `0/0` sentinel
+        // that displays as `NIL` while answering `NIL?` with FALSE.
         if let Some(f) = er.as_rational() {
-            return Self::new(ValueData::Scalar(f.clone()), None);
+            return Self::from_fraction(f.clone());
         }
         Self::new(ValueData::ExactScalar(er), None)
     }

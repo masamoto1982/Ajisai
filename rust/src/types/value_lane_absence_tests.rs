@@ -295,3 +295,41 @@ fn promotion_carries_an_existing_tensors_lanes_and_reasons_in() {
         "the second copy's hole is offset by the first copy's length"
     );
 }
+
+/// **A `userDeclared` lane's detail is part of its identity across
+/// representations, as it already is within one.**
+///
+/// `Value::eq` compares a NIL's detail beside its reason, and
+/// `DenseTensor::eq` compares a lane's detail beside its reason; the walk
+/// that decides a nested `Vector` against a `Tensor` compared the reason
+/// alone. So `[ 'a' ABSENT 1 ]` and `[ 'b' ABSENT 1 ]` were different values
+/// as two vectors, different as two tensors, and *equal* as one of each —
+/// an equality that depended on which storage each side happened to have.
+#[test]
+fn cross_representation_equality_reads_the_user_declared_detail() {
+    let nested = |detail: &str| {
+        Value::from_vector(vec![Value::nil_user_declared(detail), Value::from_int(1)])
+    };
+    let dense = |detail: &str| {
+        Value::from_vector_promoted(vec![Value::nil_user_declared(detail), Value::from_int(1)])
+    };
+    assert!(dense("a").is_tensor(), "a NIL lane promotes");
+
+    assert_eq!(
+        nested("a"),
+        dense("a"),
+        "same detail, either representation"
+    );
+    assert_eq!(dense("a"), nested("a"));
+    assert_ne!(nested("a"), nested("b"), "as two vectors");
+    assert_ne!(dense("a"), dense("b"), "as two tensors");
+    assert_ne!(nested("a"), dense("b"), "as a vector and a tensor");
+    assert_ne!(dense("a"), nested("b"), "and the other way round");
+
+    // The same walk decides a Tensor child of a nested Vector.
+    let outer_nested = |detail: &str| Value::from_vector(vec![dense(detail)]);
+    let outer_dense = |detail: &str| Value::from_vector_promoted(vec![dense(detail)]);
+    assert!(outer_dense("a").is_tensor(), "a tensor child promotes");
+    assert_eq!(outer_nested("a"), outer_dense("a"));
+    assert_ne!(outer_nested("a"), outer_dense("b"));
+}

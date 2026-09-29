@@ -678,3 +678,53 @@ mod scientific_exponent_overflow {
         assert_eq!(f.unwrap(), small(0, 1));
     }
 }
+
+// ---------------------------------------------------------------------------
+// `abs` and `as_usize` at the edges of the machine word (regression)
+// DUT: rust/src/types/fraction_arithmetic.rs `Fraction::abs`,
+//      rust/src/types/fraction.rs `Fraction::as_usize`
+//
+// `abs` took `i64::abs()` on the `Small` numerator, which overflows on
+// `i64::MIN` — a debug panic, and in release the same negative value handed
+// back as its own magnitude. `as_usize` cast with `as usize`, which on a
+// 32-bit target (wasm32) truncates a count past `u32::MAX` to a small wrong
+// count rather than declining it.
+// ---------------------------------------------------------------------------
+mod machine_word_edges {
+    use super::*;
+
+    #[test]
+    fn abs_of_i64_min_is_its_exact_magnitude() {
+        let magnitude = small(i64::MIN, 1).abs();
+        assert_eq!(
+            magnitude,
+            Fraction::new(-BigInt::from(i64::MIN), BigInt::from(1))
+        );
+        assert!(magnitude.is_positive());
+        // The denominator survives too.
+        assert_eq!(
+            small(i64::MIN, 3).abs(),
+            Fraction::new(-BigInt::from(i64::MIN), BigInt::from(3))
+        );
+        // Every other `Small` stays `Small`.
+        assert_eq!(small(-7, 2).abs(), small(7, 2));
+        assert!(small(-7, 2).abs().is_small());
+    }
+
+    #[test]
+    fn as_usize_declines_what_usize_cannot_hold() {
+        assert_eq!(small(7, 1).as_usize(), Some(7));
+        assert_eq!(small(-1, 1).as_usize(), None);
+        assert_eq!(small(7, 2).as_usize(), None);
+        // `i64::MAX` fits a 64-bit `usize` and no 32-bit one; either way the
+        // answer is what `usize` can hold, never a truncation of it.
+        assert_eq!(
+            small(i64::MAX, 1).as_usize(),
+            usize::try_from(i64::MAX).ok()
+        );
+        assert_eq!(
+            small(u32::MAX as i64 + 2, 1).as_usize(),
+            usize::try_from(u32::MAX as i64 + 2).ok()
+        );
+    }
+}
