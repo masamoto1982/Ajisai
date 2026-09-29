@@ -549,11 +549,6 @@ impl Fraction {
     pub fn gt(&self, other: &Fraction) -> bool {
         self.cmp(other) == std::cmp::Ordering::Greater
     }
-
-    #[inline]
-    pub fn ge(&self, other: &Fraction) -> bool {
-        self.cmp(other) != std::cmp::Ordering::Less
-    }
 }
 
 impl PartialOrd for Fraction {
