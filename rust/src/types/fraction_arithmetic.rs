@@ -189,7 +189,17 @@ impl Fraction {
             return self.clone();
         }
         match &self.repr {
-            FractionRepr::Small(n, d) => Fraction::from_repr(FractionRepr::Small(n.abs(), *d)),
+            // `i64::MIN` has no positive i64 counterpart, so `i64::abs()`
+            // overflows on it (a panic in debug, the same negative value back
+            // in release). `checked_abs` declines instead, and that one
+            // operand widens to `Big`, as `round` and `compute_gcd_i64` do.
+            FractionRepr::Small(n, d) => match n.checked_abs() {
+                Some(magnitude) => Fraction::from_repr(FractionRepr::Small(magnitude, *d)),
+                None => Fraction::from_repr(FractionRepr::Big {
+                    numerator: -BigInt::from(*n),
+                    denominator: BigInt::from(*d),
+                }),
+            },
             FractionRepr::Big {
                 numerator,
                 denominator,

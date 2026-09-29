@@ -373,11 +373,13 @@ impl Fraction {
     pub fn as_usize(&self) -> Option<usize> {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 1 && *n >= 0 {
-                    Some(*n as usize)
-                } else {
-                    None
+                if *d != 1 || *n < 0 {
+                    return None;
                 }
+                // Not `as usize`: on a 32-bit target (wasm32) that cast
+                // truncates, so a count past `u32::MAX` came back as a small,
+                // wrong count instead of "not a usize".
+                usize::try_from(*n).ok()
             }
             FractionRepr::Big {
                 numerator,
