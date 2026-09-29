@@ -31,7 +31,9 @@ pub(crate) struct Report {
     pub status: &'static str,
     pub stack: Json,
     /// Human display strings for the stack, bottom to top — the same text
-    /// the GUI and PRINT render. Carried in the JSON envelope as
+    /// the GUI's Stack projection renders. Not the text `PRINT` writes: a
+    /// top-level String is displayed quoted (`'a'`) and printed raw (`a`),
+    /// see `types::display::format_for_output`. Carried in the JSON envelope as
     /// `stackDisplay` so agents and the SKILL.md generator can show
     /// "code → expected stack" pairs without re-deriving display rules.
     pub stack_display: Vec<String>,

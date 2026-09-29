@@ -416,6 +416,16 @@ impl Interpreter {
         &self.host_effects
     }
 
+    /// Take the structured host effects produced so far, leaving the log
+    /// empty. A host that holds one interpreter across many runs (the
+    /// Playground's WASM instance) reads each run's output once, and without
+    /// draining, every `PRINT` payload of the session stayed in memory for as
+    /// long as the interpreter lived. `execute` itself never clears the log,
+    /// because the REPL reads it across lines by index (`cli::repl`).
+    pub fn take_host_effects(&mut self) -> Vec<super::HostEffect> {
+        std::mem::take(&mut self.host_effects)
+    }
+
     pub(crate) fn emit_host_effect(&mut self, effect: super::HostEffect) {
         self.host_env.emit_effect(&effect);
         self.host_effects.push(effect);

@@ -305,6 +305,16 @@ const formatErrorMessage = (error: Error | { message?: string } | string): strin
 
 type OutputKind = 'debug' | 'program' | 'error' | 'info';
 
+// The host writes each `PRINT` emission as one line, so the stream ends in the
+// terminator of its last emission. Only that terminator is presentation; every
+// other character is the observation itself (LANG.EFFECTS.OUTPUT), so nothing
+// else is trimmed: `'' PRINT` is one empty emission and not a run that printed
+// nothing, `'  x' PRINT` keeps its indentation, and `'' PRINT 'a' PRINT` keeps
+// its first line. Trimming the whole string collapsed all three into their
+// neighbours and made the Output projection disagree with the CLI's `output`.
+const stripEmissionTerminator = (output: string): string =>
+    output.endsWith('\n') ? output.slice(0, -1) : output;
+
 const createSpanElement = (text: string, kind: OutputKind): HTMLSpanElement => {
     const span = document.createElement('span');
     span.className = `output-${kind}`;
@@ -355,16 +365,17 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderExecutionResult = (result: ExecuteResult): void => {
-        const program = (result.output || '').trim();
+        const output = result.output ?? '';
+        const program = stripEmissionTerminator(output);
 
         mainOutput = program;
         elements.outputDisplay.replaceChildren();
 
-        if (program) {
+        if (output) {
             appendSpan(program, 'program');
         }
 
-        if (!program && !isFailure(result)) {
+        if (!output && !isFailure(result)) {
             appendSpan('OK', 'debug');
         }
     };
@@ -380,14 +391,14 @@ export const createDisplay = (elements: DisplayElements): Display => {
         precedingOutput = ''
     ): void => {
         const errorMessage = formatErrorMessage(error);
-        const printed = precedingOutput.trim();
+        const printed = stripEmissionTerminator(precedingOutput);
 
         elements.outputDisplay.replaceChildren();
-        if (printed) {
+        if (precedingOutput) {
             appendSpan(printed, 'program');
             elements.outputDisplay.appendChild(document.createElement('br'));
         }
-        mainOutput = printed ? `${printed}\n${errorMessage}` : errorMessage;
+        mainOutput = precedingOutput ? `${printed}\n${errorMessage}` : errorMessage;
 
         appendSpan(errorMessage, 'error');
     };

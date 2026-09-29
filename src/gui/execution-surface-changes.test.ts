@@ -81,6 +81,18 @@ describe('detectExecutionSurfaceChanges', () => {
         expect(changes.outputChanged).toBe(true);
     });
 
+    // `'' PRINT` is one emission — the host writes it as one empty line — and
+    // an emission is a change to Output whatever its characters are.
+    it('treats an empty or whitespace-only emission as an Output change', () => {
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult({ output: '\n' })).outputChanged).toBe(true);
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult({ output: '  \n' })).outputChanged).toBe(true);
+    });
+
+    it('does not flag Output for a run that emitted nothing', () => {
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult({ output: '' })).outputChanged).toBe(false);
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult()).outputChanged).toBe(false);
+    });
+
     // The stack comparison walks the values structurally instead of stringifying
     // the whole stack twice per run (a stack can legally hold hundreds of
     // thousands of elements). These pin the equality it has to reproduce.

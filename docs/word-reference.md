@@ -1147,7 +1147,7 @@ The content identity of a Word, or the digest of a value's denotation, as text: 
 
 ## `PRINT`
 
-Write a value to the output, consuming it: `42 PRINT` writes `42` and leaves nothing. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).
+Write a value to the output, consuming it: `42 PRINT` writes `42/1` and leaves nothing. A value other than a text is written as the stack shows it. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `output`

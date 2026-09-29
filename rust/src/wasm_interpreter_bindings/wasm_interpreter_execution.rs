@@ -15,7 +15,11 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 set_js_prop(&obj, "status", &("OK".into()));
                 let output = self.interpreter.collect_output();
-                set_js_prop(&obj, "output", &(output.clone().into()));
+                // This host reads the text buffer; the structured effect log
+                // carries the same emissions and is drained with it, so a
+                // long session does not keep every payload it ever printed.
+                self.interpreter.take_host_effects();
+                set_js_prop(&obj, "output", &(output.into()));
                 set_js_prop(&obj, "stack", &(self.collect_stack()));
                 set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
@@ -35,6 +39,7 @@ impl AjisaiInterpreter {
                 // nothing else. Draining the buffer here also stops the
                 // orphaned output from surfacing at the head of the next run.
                 set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
+                self.interpreter.take_host_effects();
                 // The failure's category travels where the CLI puts it,
                 // `aiDiagnostic.category`, built by the same functions — never
                 // parsed back out of `message`, which is display text. So does

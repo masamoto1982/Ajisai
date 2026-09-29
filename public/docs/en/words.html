@@ -1520,7 +1520,7 @@ Every one is an ordinary Core Word reached by its plain name.</p>
 </section>
 <section id="word-PRINT" aria-labelledby="word-PRINT-name">
 <h2 id="word-PRINT-name"><code>PRINT</code></h2>
-<p>Write a value to the output, consuming it: <code>42 PRINT</code> writes <code>42</code> and leaves nothing. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).</p>
+<p>Write a value to the output, consuming it: <code>42 PRINT</code> writes <code>42/1</code> and leaves nothing. A value other than a text is written as the stack shows it. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).</p>
 <dl>
 <dt>Syntax</dt><dd><code>42 PRINT</code></dd>
 <dt>Stack effect</dt><dd><code>[ x ] -&gt; [ ]</code></dd>

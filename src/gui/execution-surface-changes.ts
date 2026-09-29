@@ -69,8 +69,11 @@ export const detectExecutionSurfaceChanges = (
     // changes Output even when the program emitted no text of its own.
     const hasError = isFailure(result);
 
+    // Any emission changes Output, an empty or whitespace-only one included:
+    // `'' PRINT` writes a line, so the surface it wrote to is shown
+    // (spec/gui-semantics.md, "a Run shows each surface it changed").
     return {
-        outputChanged: hasError || Boolean((result.output ?? '').trim()),
+        outputChanged: hasError || Boolean(result.output),
         stackChanged: !checkValuesEqual(before.stack, after.stack),
         dictionaryChanged: userWordsChanged
     };
