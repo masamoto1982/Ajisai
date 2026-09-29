@@ -43,8 +43,6 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | 文書 | 説明 | 状態 |
 | --- | --- | --- |
 | `agent-cli-output-contract.md` | `ajisai` CLI の `--json` 出力契約 | `[設計根拠]` |
-| `cli-repl-phase8a-design.md` | `ajisai repl` の設計メモ | `[設計根拠]` |
-| `cli-test-phase8a-design.md` | `ajisai test` の設計メモ（`#@` directive コメント） | `[設計根拠]` |
 | `gui-current-design-memory.md` | GUI 現行設計メモ | `[設計根拠]` |
 | `mcp-host-profiles.md` | ホストごとの資源上限プロファイル対照表と、意図された差分 | `[設計根拠]` |
 | `mcp-readiness.md` | MCP 製品化の実装トラッカー（達成した exit criteria のみを記録する） | `[方針記録]` |
@@ -61,4 +59,3 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |
 | `cost-contract-design.md` | `#:contract` のコスト軸（steps/numeric/collection）の設計根拠。クラス格子・join規則・多項式を今やらない理由・機械非依存性の正確な意味 | `[設計根拠]` |
 | `cost-discoverability-work-order-2026-08.md` | 推論されたコストを `ajisai contract` に出す改修指示書。付録 A に SHA-256→BLAKE3 置換を採用しない根拠と再検討条件 | `[設計根拠]` |
-| `reference-ja-restructure-handoff.md` | **破棄・非推奨**（2026-09-14）。水のメタファー導入を計画していたが、方針が逆転し撤去された。制御構造の集約という §2.2 の指摘のみ今も有効 | `[方針記録]` |

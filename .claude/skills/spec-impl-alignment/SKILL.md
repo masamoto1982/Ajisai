@@ -13,7 +13,7 @@ Canonical spec lives in `spec/` (5 sources: `language-semantics.md`,
 `words.json`+`words.schema.json`, `semantic-families.json`,
 `gui-semantics.md`, `host-protocol.schema.json`) and is regenerated into
 `SPECIFICATION.html` via `npm run specification:generate`. Nothing else
-defines Ajisai semantics — not `docs/dev/`, not `CLAUDE.md`.
+defines Ajisai semantics — not `docs/dev/`.
 
 Work one phase to a clean, tested, committed state before starting the
 next. Each phase's fixes get their own PR (small, verifiable diffs beat
