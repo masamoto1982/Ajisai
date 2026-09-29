@@ -22,7 +22,21 @@ fn def_body_tokens_if_literal_precedes_def(
     j += 1;
     match tokens.get(j) {
         Some(Token::Symbol(s)) if crate::word_name::canonical_word_name(s).as_ref() == "DEF" => {
-            Some(tokens[start + 1..start + consumed - 1].to_vec())
+            let body = &tokens[start + 1..start + consumed - 1];
+            // A stream bridged from a Vector (`EXEC`, a higher-order block —
+            // `value_as_code.rs`) carries a value no source denotes whole, as
+            // a `Token::Value`, and such a literal is not the body as
+            // written: a definition is kept as its source
+            // (LANG.DICTIONARY.MUTATION), and only `op_def`'s fallback writes
+            // a carried value back as what builds it, or refuses one that
+            // nothing builds. Declining sends the body there. Taken as
+            // written, `… [ 'X' DEF ] CONCAT EXEC` kept a Record as its
+            // display text `{ 'k' 1/1 }`, which no later session could read,
+            // and let a reasoned NIL past `invalidDefinitionBody`.
+            if body.iter().any(|token| matches!(token, Token::Value(_))) {
+                return None;
+            }
+            Some(body.to_vec())
         }
         _ => None,
     }

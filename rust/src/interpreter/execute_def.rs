@@ -104,6 +104,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
             Some(elements) => {
                 crate::interpreter::value_as_code::value_elements_to_source_tokens(&elements)
+                    .and_then(|tokens| {
+                        check_source_radicands_within_budget(interp, &elements)?;
+                        Ok(tokens)
+                    })
             }
             None => Err(AjisaiError::declared(
                 "invalidDefinitionBody",
@@ -127,6 +131,39 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         set_word_description(interp, &name_str, Some(description));
     }
     Ok(())
+}
+
+/// The source written for an irrational takes the root of each radicand of
+/// its normal form (`m SQRT`, `value_as_code::push_source_expression`), and
+/// `SQRT` reduces a radicand to its square-free part by factoring it, against
+/// the run's numeric-work ceiling (`radicand_budget.rs`). The value in hand
+/// was not necessarily built by that root: `MUL` makes √p·√q into √(pq) with
+/// no factoring, since a product of coprime square-free radicands is
+/// square-free, so the radicand can be one the ceiling cannot factor — and
+/// the source would then define a Word that neither runs nor restores. So
+/// `DEF` takes each root now, charging the run exactly as `SQRT` would, and
+/// the ceiling that would have fired on the first call fires here instead,
+/// with both operands put back.
+fn check_source_radicands_within_budget(
+    interp: &mut Interpreter,
+    elements: &[crate::types::Value],
+) -> Result<()> {
+    let mut radicands = Vec::new();
+    crate::interpreter::value_as_code::algebraic_radicands(elements, &mut radicands);
+    radicands.retain(|monomial| !num_traits::One::is_one(monomial));
+    if radicands.is_empty() {
+        return Ok(());
+    }
+    let budget = crate::interpreter::radicand_budget::RadicandBudget::of(interp);
+    let mut outcome = Ok(());
+    for monomial in radicands {
+        let radicand = crate::types::fraction::Fraction::new(monomial, num_bigint::BigInt::from(1));
+        if let Err(e) = budget.sqrt(radicand) {
+            outcome = Err(e);
+            break;
+        }
+    }
+    budget.settle(interp).and(outcome)
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
