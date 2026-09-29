@@ -3,7 +3,8 @@ import { createGUI, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
 import { toError } from '../gui/to-error';
 import { initWasm } from '../wasm-module-loader';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
-import type { AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter } from '../wasm-interpreter-types';
+import { parseHostProfile } from './host-profile-parse';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
 declare const __AJISAI_RELEASE_VERSION__: string;
@@ -103,12 +104,17 @@ function setPlaygroundBadgeTooltip(lines: string[]): void {
  * See docs/dev/mcp-host-profiles.md for the comparison.
  */
 export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
-    let profile: HostProfile;
+    // Best effort throughout: this is a label, and nothing below it may throw
+    // into initializeApplication() and take the GUI down with it. The call
+    // itself sits inside the guard for the same reason as the parse.
+    let reported: string;
     try {
-        profile = JSON.parse(interpreter.host_profile()) as HostProfile;
+        reported = interpreter.host_profile();
     } catch {
         return;
     }
+    const profile = parseHostProfile(reported);
+    if (!profile) return;
     const text = `resource limits: ${profile.profile}`;
     const limitLines = [
         ...Object.entries(profile.limits).map(([name, value]) => `${name}: ${value.toLocaleString()}`),
@@ -163,15 +169,27 @@ export function initSplashScreen(): void {
     const splash = document.querySelector<HTMLElement>('#splash-screen');
     if (!splash) return;
 
-    // Read before the GUI strips the hash (gui-application.ts
-    // applyPlaygroundCodeFromUrl), which it only does once the wasm is up —
-    // long after this runs at DOMContentLoaded.
+    const SESSION_KEY = 'ajisai-splash-seen';
+    const markSeen = (): void => {
+        try {
+            sessionStorage.setItem(SESSION_KEY, '1');
+        } catch {
+            // Best effort only; worst case the splash reappears next reload.
+        }
+    };
+
+    // Read before the GUI strips the hash (gui-application.ts init, which
+    // only does so once the wasm is up — long after this runs at
+    // DOMContentLoaded). Marked seen as well: the GUI replaces the URL
+    // without the fragment, so a reload in this tab arrives with no hash, and
+    // that reload is exactly the mid-session one the splash must not
+    // interrupt.
     if (window.location.hash.startsWith(PLAYGROUND_CODE_HASH_MARKER)) {
+        markSeen();
         splash.remove();
         return;
     }
 
-    const SESSION_KEY = 'ajisai-splash-seen';
     try {
         if (sessionStorage.getItem(SESSION_KEY) === '1') {
             splash.remove();
@@ -192,11 +210,7 @@ export function initSplashScreen(): void {
     const dismiss = (): void => {
         if (dismissed) return;
         dismissed = true;
-        try {
-            sessionStorage.setItem(SESSION_KEY, '1');
-        } catch {
-            // Best effort only; worst case the splash reappears next reload.
-        }
+        markSeen();
         splash.classList.add('splash-dismissing');
         splash.addEventListener('transitionend', (event) => {
             // The detail rows' own reveal transitions bubble up here too, and

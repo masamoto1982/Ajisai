@@ -63,7 +63,7 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 
 ## Technical composition
 - GUI implemented as modular TS components under `src/gui/`.
-- Entry bootstrap (`src/entry/entry-bootstrap.ts`) detects runtime and loads `entry-web.ts` / `entry-tauri.ts`; common startup is in `entry-common.ts`.
+- Entry bootstrap (`src/entry/entry-bootstrap.ts`) waits for the DOM and calls `bootstrapApplication()` in `entry-common.ts`, which starts the splash, labels and WASM/GUI initialization; the web/Tauri difference lives in the `src/platform/` adapter it goes through, not in separate entry files.
 - Worker manager used for parallel execution and abort handling.
 - Persistence/file I/O go through `src/platform/` adapters:
   - Web: IndexedDB + browser file APIs (`src/platform/web/*`)
