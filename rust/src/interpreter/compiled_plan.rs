@@ -70,7 +70,7 @@ fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> Compiled
 /// `VectorStart`). Mirrors `Interpreter::collect_vector` for the literal subset
 /// — same element values, nesting, and promotion — but returns
 /// `None` the moment a non-literal element appears (a bare symbol that could be
-/// a user word, a `|` separator, an unclosed/empty vector, excessive nesting),
+/// a user word, a `|` separator, an unclosed vector, excessive nesting),
 /// so those keep the interpreter's `collect_vector` behavior via `FallbackToken`.
 /// On success returns the element values and the tokens consumed (including
 /// both brackets).
@@ -93,8 +93,6 @@ fn try_collect_literal_vector(
     while i < tokens.len() {
         match &tokens[i] {
             Token::VectorStart => {
-                // A nested empty vector returns `None` from the recursive call
-                // above (the interpreter rejects it), so `nested` is non-empty.
                 let (nested, consumed) =
                     try_collect_literal_vector(tokens, i, depth + 1, max_depth)?;
                 values.push(Value::from_vector_promoted(nested));
@@ -104,14 +102,12 @@ fn try_collect_literal_vector(
                 values.push((**value).clone());
                 i += 1;
             }
-            Token::VectorEnd => {
-                if values.is_empty() {
-                    // The interpreter rejects `[ ]`; leave it as a fallback so
-                    // that error is raised rather than silently building a NIL.
-                    return None;
-                }
-                return Some((values, i - start + 1));
-            }
+            // `[ ]` included: the empty Vector is a value on the interpreter
+            // path too, built by the same promotion, so both routes lower it
+            // alike. It was left as a fallback from when the interpreter
+            // rejected it, which only sent a body holding one off the
+            // compiled route.
+            Token::VectorEnd => return Some((values, i - start + 1)),
             Token::Number(literal) => {
                 values.push(Value::from_number(literal.value()?));
                 i += 1;

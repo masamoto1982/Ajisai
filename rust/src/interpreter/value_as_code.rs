@@ -21,7 +21,8 @@
 //! reason, a Record — crosses as a `Token::Value` carrying it whole, so
 //! running the Vector pushes exactly the element it holds. `DEF` is the one
 //! caller that keeps the tokens: a definition is its source, so it writes
-//! such a value back as the source that builds it (`body_tokens_as_source`).
+//! such a value back as the source that builds it
+//! (`value_elements_to_source_tokens`).
 
 use crate::error::{AjisaiError, Result};
 use crate::types::exact::value::ExactReal;
@@ -111,14 +112,14 @@ pub(crate) fn value_elements_to_source_tokens(elements: &[Value]) -> Result<Vec<
 }
 
 /// Whether `value` is written as itself inside a vector literal: a number, a
-/// String, a Boolean, a literal NIL, a Symbol (data inside `[ ]`), or a Vector
-/// of such. A Record, an algebraic irrational and a reasoned NIL are not.
+/// String the lexer reads back whole, a Boolean, a literal NIL, a Symbol
+/// (data inside `[ ]`), or a Vector of such. A Record, an algebraic
+/// irrational, a reasoned NIL and a String holding a quote right before
+/// whitespace (`tokenizer::is_string_token_content`) are not.
 fn writes_as_literal(value: &Value) -> bool {
     match &value.data {
-        ValueData::Symbol(_)
-        | ValueData::Text(_)
-        | ValueData::Scalar(_)
-        | ValueData::Boolean(_) => true,
+        ValueData::Symbol(_) | ValueData::Scalar(_) | ValueData::Boolean(_) => true,
+        ValueData::Text(text) => crate::tokenizer::is_string_token_content(text),
         ValueData::ExactScalar(exact) => matches!(exact, ExactReal::Rational(_)),
         ValueData::Nil => value
             .nil_reason()
@@ -169,6 +170,28 @@ fn push_source_expression(value: &Value, out: &mut Vec<Token>) -> Result<()> {
             out.push(Token::VectorEnd);
             out.push(Token::number_from_value(integer(0)));
             out.push(Token::Symbol("GET".into()));
+            Ok(())
+        }
+        // A text no one String literal spells — a quote right before
+        // whitespace would close it early — is the texts that do have one,
+        // joined: `[ 'a'' ' b' ] JOIN`. Each piece ends at such a quote, so
+        // the whitespace that would have closed it opens the next piece
+        // instead, and every piece has a literal.
+        ValueData::Text(text) if !writes_as_literal(value) => {
+            out.push(Token::VectorStart);
+            for piece in string_literal_pieces(text) {
+                if !crate::tokenizer::is_string_token_content(&piece) {
+                    return Err(AjisaiError::declared(
+                        "invalidDefinitionBody",
+                        format!(
+                            "expected a definition body writable as source, got one holding a String no source text spells ({text:?})"
+                        ),
+                    ));
+                }
+                out.push(Token::String(piece.into()));
+            }
+            out.push(Token::VectorEnd);
+            out.push(Token::Symbol("JOIN".into()));
             Ok(())
         }
         ValueData::Nil if !writes_as_literal(value) => {
@@ -226,6 +249,54 @@ fn push_source_expression(value: &Value, out: &mut Vec<Token>) -> Result<()> {
 
 fn integer(n: i64) -> Fraction {
     Fraction::new(BigInt::from(n), BigInt::one())
+}
+
+/// `text` cut after every quote that whitespace follows, so that no piece
+/// holds a quote right before whitespace and each piece is one String
+/// literal: `a' b` is `a'` and ` b`.
+fn string_literal_pieces(text: &str) -> Vec<String> {
+    let mut pieces = Vec::new();
+    let mut current = String::new();
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        current.push(c);
+        if c == '\'' && chars.peek().is_some_and(|next| next.is_whitespace()) {
+            pieces.push(std::mem::take(&mut current));
+        }
+    }
+    if !current.is_empty() {
+        pieces.push(current);
+    }
+    pieces
+}
+
+/// Every radicand the source written for `elements` takes a root of: each
+/// monomial of an algebraic value's normal form, wherever the value sits —
+/// at the top level, inside a Vector, or inside a Record. `DEF` takes those
+/// roots before it commits (`execute_def::check_source_radicands_within_budget`).
+pub(crate) fn algebraic_radicands(elements: &[Value], out: &mut Vec<BigInt>) {
+    for value in elements {
+        match &value.data {
+            ValueData::ExactScalar(exact) => {
+                if let Some(terms) = exact.algebraic_terms() {
+                    out.extend(terms.into_iter().map(|(monomial, _)| monomial));
+                }
+            }
+            ValueData::Vector(children) => algebraic_radicands(children, out),
+            ValueData::Record(record) => {
+                algebraic_radicands(record.keys(), out);
+                algebraic_radicands(record.values(), out);
+            }
+            // A dense tensor holds rationals only; the other domains hold no
+            // number.
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
+            | ValueData::Boolean(_)
+            | ValueData::Text(_)
+            | ValueData::Symbol(_)
+            | ValueData::Nil => {}
+        }
+    }
 }
 
 /// A Vector of `children`: the literal when every child has one, otherwise

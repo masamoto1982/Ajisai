@@ -214,6 +214,21 @@ pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
 }
 
+/// Whether `content`, written between quotes as `'content'`, is exactly one
+/// String token holding it under the canonical lexer. A quote closes the
+/// string only when whitespace or the end of input follows it
+/// (`is_string_close_delimiter`), so the one text with no spelling is one
+/// holding a quote right before whitespace: `'a' b'` reads as the String `a`
+/// and the name `b'`. The bridge that writes a value back as source
+/// (`interpreter::value_as_code`) asks this before writing a String literal,
+/// so what it writes is what this lexer reads back.
+pub(crate) fn is_string_token_content(content: &str) -> bool {
+    matches!(
+        tokenize(&format!("'{content}'")).ok().as_deref(),
+        Some([Token::String(value)]) if value.as_ref() == content
+    )
+}
+
 enum QuoteParseResult {
     StringSuccess(Token, usize),
 
