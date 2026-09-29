@@ -629,7 +629,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "PRINT",
         family: "output",
-        summary: "Write a value to the output, consuming it: `42 PRINT` writes `42` and leaves nothing. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).",
+        summary: "Write a value to the output, consuming it: `42 PRINT` writes `42/1` and leaves nothing. A value other than a text is written as the stack shows it. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).",
         stack_effect: "[ x ] -> [ ]",
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",

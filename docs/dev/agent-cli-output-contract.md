@@ -53,7 +53,7 @@ hard-code elsewhere). `--contract` applies only to `check`.
 
 ## `agent compute` and `agent check`
 
-Both operations emit schema version 2:
+Both operations emit schema version 3:
 
 ```json
 {

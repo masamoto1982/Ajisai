@@ -52,6 +52,29 @@ mod tests {
         assert_eq!(output.trim(), "T'ES'T", "unexpected output: {:?}", output);
     }
 
+    /// A host that reads the text buffer run by run drains the structured
+    /// effect log with it: the second run's log holds the second run's
+    /// emissions only, and nothing of the first run's stays behind.
+    #[tokio::test]
+    async fn test_take_host_effects_drains_the_log_per_run() {
+        use crate::interpreter::HostEffect;
+        let mut interp = Interpreter::new();
+        interp.execute("1 PRINT").await.unwrap();
+        let _ = interp.collect_output();
+        assert_eq!(
+            interp.take_host_effects(),
+            vec![HostEffect::Print("1/1".to_string())]
+        );
+        assert!(interp.host_effects().is_empty());
+
+        interp.execute("2 PRINT").await.unwrap();
+        assert_eq!(interp.collect_output(), "2/1\n");
+        assert_eq!(
+            interp.take_host_effects(),
+            vec![HostEffect::Print("2/1".to_string())]
+        );
+    }
+
     /// Non-text values print exactly as they render on the stack.
     #[tokio::test]
     async fn test_print_numbers_and_booleans_unchanged() {
