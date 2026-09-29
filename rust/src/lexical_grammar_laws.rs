@@ -165,11 +165,12 @@ fn the_grammar_declares_no_rejected_character() {
 
 /// The characters that per-character rule used to refuse now lex as ordinary
 /// names wherever they sit in a word — the delimiter rule is the only rule.
-/// `{` and `}` were freed with these three and then allocated as a delimiter
-/// pair, so the law that holds them is `a_delimiter_stands_alone` below.
+/// `{` and `}` were freed with these three, allocated as the Record literal's
+/// delimiter pair for a while, and freed again when that literal was retired;
+/// the grammar's one pair, `[` and `]`, is held by `a_delimiter_stands_alone`.
 #[test]
 fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
-    for ch in ["(", ")", "|"] {
+    for ch in ["(", ")", "|", "{", "}"] {
         for source in [
             ch.to_string(),
             format!("a{ch}"),
@@ -239,8 +240,9 @@ fn a_delimiter_stands_alone() {
 }
 
 /// A line terminator must also be whitespace. The scan rules read the two
-/// classes independently, so a terminator outside the whitespace class would
-/// never be reached by the rule that emits LineBreak.
+/// classes independently — only the comment rule cares about a terminator —
+/// so a terminator outside the whitespace class would glue into a name
+/// instead of ending the comment's line and separating the tokens around it.
 #[test]
 fn line_terminators_are_whitespace() {
     let g = grammar();

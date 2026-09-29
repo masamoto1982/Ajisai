@@ -5,6 +5,10 @@ use crate::error::{AjisaiError, ErrorCategory, NilReason};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorPhase {
     Tokenize,
+    /// Kept as a name in the diagnosis vocabulary (`DiagnosisPhase` in
+    /// `src/wasm-interpreter-types.ts`), but no longer produced: the
+    /// tokenizer runs the grammar's structural phase itself, so an unbalanced
+    /// bracket is reported as `Tokenize` like every other source error.
     ParseStructure,
     ResolveWord,
     ExecuteWord,

@@ -3,10 +3,11 @@
 //!
 //! Two properties carry the whole change. The `i64` fast path must never
 //! disagree with the full parse — otherwise a literal would denote one number in
-//! a block and another in straight-line code. And a lexeme that denotes no
-//! rational must still be refused *at the point it is reached*, because work
-//! before it is work a program is entitled to: `1 PRINT 1/0` prints `1/1` and
-//! then fails, so refusing at tokenize time would erase a host effect.
+//! a block and another in straight-line code. And the type itself validates
+//! nothing: a lexeme that denotes no rational is refused by the tokenizer as a
+//! source error (`1/0` is `zeroDenominator` in `spec/grammar.json`), so a
+//! `NumberLiteral` holding one can only be built directly, and reading its value
+//! must then report the parse's own message rather than panic.
 
 #[cfg(test)]
 mod number_literal_tests {
@@ -97,8 +98,9 @@ mod number_literal_tests {
     }
 
     /// A lexeme denoting no rational carries no value and reports the parse's own
-    /// message when reached — not at construction, which is what keeps the
-    /// refusal where it has always been.
+    /// message when read — not at construction. Source never builds one (the
+    /// tokenizer refuses `n/0` as a source error), so this pins the type's own
+    /// contract: it stores a spelling and never validates it.
     #[test]
     fn a_lexeme_that_denotes_no_rational_defers_its_refusal() {
         for lexeme in ["1/0", "0/0", "-1/0"] {

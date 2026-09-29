@@ -74,7 +74,7 @@ for (const condition of declaredConditions) {
 
 // Each condition's witness is run, not inspected: the grammar must actually
 // reach the condition it says the witness reaches. The same witnesses are the
-// corpus the Rust side runs in rust/tests/lexical_grammar_laws.rs, so the two
+// corpus the Rust side runs in rust/src/lexical_grammar_laws.rs, so the two
 // implementations are held to one shared set of programs.
 for (const entry of grammar.sourceErrors) {
   const result = lex(entry.witness);
