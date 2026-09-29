@@ -72,8 +72,17 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::stack_underflow());
     }
 
+    // Every refusal below puts both operands back as they were written (the
+    // ERROR discipline of every Core Word, LANG.STACK.CONSUMPTION): a Word
+    // consumes its operands only once it has answered.
     let name_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
-    let name_str = extract_word_name_from_value(&name_val)?;
+    let name_str = match extract_word_name_from_value(&name_val) {
+        Ok(name) => name,
+        Err(e) => {
+            interp.stack.push(name_val);
+            return Err(e);
+        }
+    };
 
     let def_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
@@ -90,25 +99,27 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // is kept as its source and a value the Vector carries whole has to be
     // written as what builds it.
     let tokens = match interp.pending_def_body_tokens.take() {
-        Some(tokens) => tokens,
+        Some(tokens) => Ok(tokens),
         None => match def_val.as_vector_view() {
             // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
             Some(elements) => {
-                crate::interpreter::value_as_code::value_elements_to_source_tokens(&elements)?
+                crate::interpreter::value_as_code::value_elements_to_source_tokens(&elements)
             }
-            None => {
-                return Err(AjisaiError::declared(
-                    "invalidDefinitionBody",
-                    format!(
-                        "expected a Vector [ ... ] definition body, got {}",
-                        def_val.domain_name()
-                    ),
-                ));
-            }
+            None => Err(AjisaiError::declared(
+                "invalidDefinitionBody",
+                format!(
+                    "expected a Vector [ ... ] definition body, got {}",
+                    def_val.domain_name()
+                ),
+            )),
         },
     };
-
-    op_def_inner(interp, &name_str, &tokens)?;
+    let outcome = tokens.and_then(|tokens| op_def_inner(interp, &name_str, &tokens));
+    if let Err(e) = outcome {
+        interp.stack.push(def_val);
+        interp.stack.push(name_val);
+        return Err(e);
+    }
     if let Some(description) = interp
         .pending_word_descriptions
         .remove(&name_str.to_uppercase())

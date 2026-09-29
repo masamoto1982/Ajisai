@@ -16,7 +16,10 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let target_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let target_val: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(code_val.clone());
+        AjisaiError::stack_underflow()
+    })?;
 
     if target_val.is_nil() {
         interp

@@ -90,7 +90,10 @@ fn run_accumulator_walk(
         }
     };
 
-    let init_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let init_val: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(code_val.clone());
+        AjisaiError::stack_underflow()
+    })?;
     let target_val: Value = interp.stack.pop().ok_or_else(|| {
         interp.stack.push(init_val.clone());
         interp.stack.push(code_val.clone());
@@ -121,7 +124,10 @@ fn run_accumulator_walk(
         return Ok(());
     }
 
-    let mut accumulator: Value = init_val;
+    // The seed is kept apart from the running accumulator: a failure part way
+    // through the walk puts the operands back as they were written, and the
+    // seed is the operand, not whatever the walk had made of it by then.
+    let mut accumulator: Value = init_val.clone();
     let mut visited: Vec<Value> = Vec::new();
     if answer == Answer::Every {
         visited.reserve(n_elements);
@@ -166,7 +172,7 @@ fn run_accumulator_walk(
 
     if let Some(e) = error {
         interp.stack.push(target_val);
-        interp.stack.push(accumulator);
+        interp.stack.push(init_val);
         interp.stack.push(code_val);
         return Err(e);
     }
