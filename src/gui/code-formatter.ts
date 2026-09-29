@@ -17,7 +17,7 @@
 // unterminated string, or a newline inside a string literal) is returned
 // unchanged.
 
-import { scanAtoms } from './source-atoms';
+import { scanAtoms, trimSourceEnd } from './source-atoms';
 
 const INDENT_UNIT = '  ';
 
@@ -58,7 +58,7 @@ const scanLines = (source: string): string[][] | null => {
                 line.push(atom.text);
                 break;
             case 'comment':
-                line.push(atom.text.trimEnd());
+                line.push(trimSourceEnd(atom.text));
                 break;
             case 'word':
                 line.push(...splitBrackets(atom.text));

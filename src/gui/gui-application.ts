@@ -22,6 +22,7 @@ import {
     type DictionarySheetId
 } from './gui-layout-state';
 import { bindGuiEvents } from './gui-event-bindings';
+import { trimSource } from './source-atoms';
 
 /**
  * How the Reference's 「Playgroundで開く」 links hand a sample over:
@@ -218,7 +219,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         if (hash.startsWith(PLAYGROUND_CODE_HASH_MARKER)) {
             try {
                 const code = decodeURIComponent(hash.slice(PLAYGROUND_CODE_HASH_MARKER.length));
-                if (code.trim().length > 0) {
+                if (trimSource(code) !== '') {
                     editor.updateValue(code);
                     window.history.replaceState(null, '', window.location.pathname + window.location.search);
                 }

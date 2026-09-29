@@ -30,7 +30,56 @@ export interface Atom {
     readonly closed: boolean;
 }
 
-const isWhitespace = (character: string): boolean => /\s/.test(character);
+// The whitespace class of spec/grammar.json (characterClasses.whitespace):
+// Unicode White_Space, enumerated. ECMAScript's `\s` is not that class — it
+// counts U+FEFF as whitespace, which the grammar makes an ordinary name
+// character (a byte-order mark glues to the first word), and leaves out U+0085,
+// which the grammar makes whitespace — so the code points are spelled out here
+// rather than delegated to the host, as the grammar's own note asks. Every one
+// of them is a single UTF-16 code unit, so the scanner's per-unit walk below
+// sees each exactly once; a surrogate half is never whitespace.
+export const isSourceWhitespace = (character: string): boolean => {
+    const code = character.charCodeAt(0);
+    return (code >= 0x0009 && code <= 0x000d)
+        || code === 0x0020
+        || code === 0x0085
+        || code === 0x00a0
+        || code === 0x1680
+        || (code >= 0x2000 && code <= 0x200a)
+        || code === 0x2028
+        || code === 0x2029
+        || code === 0x202f
+        || code === 0x205f
+        || code === 0x3000;
+};
+
+const isWhitespace = isSourceWhitespace;
+
+/** How many characters of source whitespace `text` opens with. */
+export const countLeadingSourceWhitespace = (text: string): number => {
+    let count = 0;
+    while (count < text.length && isSourceWhitespace(text[count]!)) count += 1;
+    return count;
+};
+
+const countTrailingSourceWhitespace = (text: string): number => {
+    let count = 0;
+    while (count < text.length && isSourceWhitespace(text[text.length - 1 - count]!)) count += 1;
+    return count;
+};
+
+// `String.prototype.trim` strips by ECMAScript's class, so it takes a leading
+// byte-order mark off a program the tokenizer would have read as glued to its
+// first word; the GUI and the CLI must run the same program from the same
+// text, so source is trimmed by the grammar's class instead.
+export const trimSource = (text: string): string => {
+    const leading = countLeadingSourceWhitespace(text);
+    if (leading === text.length) return '';
+    return text.slice(leading, text.length - countTrailingSourceWhitespace(text));
+};
+
+export const trimSourceEnd = (text: string): string =>
+    text.slice(0, text.length - countTrailingSourceWhitespace(text));
 
 const endOfComment = (source: string, start: number): number => {
     let i = start;

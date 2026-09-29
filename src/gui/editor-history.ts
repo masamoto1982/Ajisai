@@ -11,6 +11,8 @@
 // suggestion panel: it stores source text only, never a value, never a
 // dictionary entry, and it cannot change what a program observes.
 
+import { trimSource } from './source-atoms';
+
 /** Programs kept for recall. Past this the oldest are dropped. */
 export const MAX_HISTORY_ENTRIES = 100;
 
@@ -43,7 +45,7 @@ export const createEditorHistory = (limit: number = MAX_HISTORY_ENTRIES): Editor
     let stashedDraft = '';
 
     const record = (source: string): void => {
-        const trimmed = source.trim();
+        const trimmed = trimSource(source);
         // An empty submission is not a program, and re-running the identical
         // program should not push a second copy: recall is for finding what you
         // wrote, and a run of duplicates buries it.

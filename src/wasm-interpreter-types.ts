@@ -59,10 +59,11 @@ export interface AjisaiInterpreter {
      * the result that no evaluation rule ever read. Asking here touches no
      * stack, no dictionary and no output.
      *
-     * `documentation` is a Core Word's reference text, which is read, so it
-     * belongs in the output area. `definition` is a User Word's reconstructed
-     * `DEF`, which is edited, so it belongs in the editor — that is the point of
-     * looking one up. `null` means the dictionary does not hold the name.
+     * `documentation` is a Core Word's reference text and `definition` a User
+     * Word's reconstructed `DEF` source. Both are prose to read and go to the
+     * Output surface (spec/gui-semantics.md, Lookup): the cursor can be
+     * anywhere in a program still being written, so a lookup never writes
+     * into the editor. `null` means the dictionary does not hold the name.
      */
     resolve_host_lookup(
         name: string

@@ -191,3 +191,17 @@ describe('formatAjisaiSource line structure', () => {
     });
 });
 
+
+// The formatter runs before every Run in the GUI, so where it disagrees with
+// the tokenizer about what whitespace is, the GUI runs a different program
+// from the CLI. spec/grammar.json enumerates the class: U+FEFF is a name
+// character, U+0085 is whitespace; ECMAScript's `\s` says the opposite.
+describe('formatAjisaiSource whitespace class', () => {
+    test('keeps a byte-order mark glued to the first word, as the tokenizer reads it', () => {
+        expect(formatAjisaiSource('﻿1 2 ADD')).toBe('﻿1 2 ADD');
+    });
+
+    test('separates words on U+0085 like any other whitespace', () => {
+        expect(formatAjisaiSource('1\u00852 ADD')).toBe('1 2 ADD');
+    });
+});
