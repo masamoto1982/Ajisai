@@ -1,7 +1,152 @@
-import type { PlatformAdapter } from './platform-adapter';
-import { detectRuntimeKind } from './runtime-kind';
-import { TAURI_PLATFORM_ADAPTER } from './tauri/tauri-platform-adapter';
-import { WEB_PLATFORM_ADAPTER } from './web/web-platform-adapter';
+// The platform seam: what the GUI asks of the host it runs in, and which of
+// the two hosts (web page, Tauri WebView) is answering.
+//
+// The interfaces below are the contract; `web.ts` and `tauri.ts` are the two
+// implementations of the parts that differ (persistence and file I/O), and
+// `getPlatform` assembles the adapter for the host `detectRuntimeKind`
+// classifies. Everything the two hosts share — the runtime seam, the empty
+// execution config — is built once here rather than copied per host.
+
+import type { UserWord, Value } from '../wasm-interpreter-types';
+import { TauriFileIO, TauriPersistence } from './tauri';
+import { WEB_PERSISTENCE, WebFileIO } from './web';
+
+export interface InterpreterStateSnapshot {
+    // Format identifier of the persisted document; see STATE_FORMAT_VERSION and
+    // InterpreterState in gui/interpreter-state-persistence.ts.
+    readonly stateVersion: number;
+    // The observation-format stack, persisted for display only.
+    readonly stack: Value[];
+    // The lossless stack snapshot (opaque string) restore reads (LANG.OBSERVATION.FIREWALL).
+    readonly stackSnapshot: string;
+    readonly userWords: UserWord[];
+    readonly activeDictionarySheet?: string;
+}
+
+export interface TablePayload {
+    readonly schema: unknown;
+    readonly records: unknown;
+}
+
+export interface ExportData {
+    tables: Array<{
+        readonly name: string;
+        readonly schema: unknown;
+        readonly records: unknown;
+        readonly updatedAt: string;
+    }>;
+    interpreterState: {
+        readonly key: string;
+        readonly stateVersion?: unknown;
+        readonly stack: unknown;
+        readonly stackSnapshot?: unknown;
+        readonly userWords: unknown;
+        readonly activeDictionarySheet?: string;
+        readonly updatedAt: string;
+    } | null;
+}
+
+export interface OpenResult {
+    readonly filename: string;
+    readonly text: string;
+}
+
+export interface SaveResult {
+    readonly filename: string;
+}
+
+export interface Persistence {
+    open(): Promise<void>;
+    saveInterpreterState(state: InterpreterStateSnapshot): Promise<void>;
+    loadInterpreterState(): Promise<InterpreterStateSnapshot | null>;
+    saveTable(name: string, schema: unknown, records: unknown): Promise<void>;
+    loadTable(name: string): Promise<TablePayload | null>;
+    collectTableNames(): Promise<string[]>;
+    deleteTable(name: string): Promise<void>;
+    clearAll(): Promise<void>;
+    exportAll(): Promise<ExportData>;
+    importAll(data: ExportData): Promise<void>;
+}
+
+export interface FileIO {
+    saveJson(defaultName: string, data: unknown): Promise<SaveResult>;
+    openJsonFile(): Promise<OpenResult | null>;
+}
+
+export type RuntimeKind = 'web' | 'tauri';
+
+export interface Runtime {
+    readonly kind: RuntimeKind;
+    readonly buildTimestamp: string;
+    onReady(callback: () => void): void;
+}
+
+/**
+ * Host-configurable execution water levels (LANG.MACHINE.LIMITS).
+ * These are runtime safety controls, not language semantics: a host may
+ * raise or lower them without changing what any program means, and
+ * conformance never depends on a particular value.
+ */
+export interface ExecutionConfig {
+    /**
+     * Execution step budget for one run. Positive integer; `undefined`
+     * keeps the interpreter's own default (`DEFAULT_MAX_EXECUTION_STEPS`,
+     * derived from the host time budget — see that constant's doc comment
+     * for the derivation; the value is not restated on this side).
+     */
+    readonly stepLimit?: number;
+}
+
+export interface PlatformAdapter {
+    readonly persistence: Persistence;
+    readonly fileIO: FileIO;
+    readonly runtime: Runtime;
+    /**
+     * Where a platform surfaces host execution settings (LANG.MACHINE.LIMITS water levels).
+     * Both current adapters return the empty config (all defaults); a Tauri
+     * settings store or a web host embedding the playground fills this in.
+     */
+    readonly executionConfig: ExecutionConfig;
+}
+
+declare const __AJISAI_TARGET__: RuntimeKind;
+declare const __AJISAI_BUILD_TIMESTAMP__: string;
+
+export function detectRuntimeKind(): RuntimeKind {
+    if (typeof __AJISAI_TARGET__ !== 'undefined' && __AJISAI_TARGET__ === 'tauri') {
+        return 'tauri';
+    }
+
+    if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+        return 'tauri';
+    }
+
+    return 'web';
+}
+
+const createPlatformAdapter = (
+    kind: RuntimeKind,
+    persistence: Persistence,
+    fileIO: FileIO
+): PlatformAdapter => ({
+    persistence,
+    fileIO,
+    // Host execution settings seam (LANG.MACHINE.LIMITS water levels). Empty = all
+    // interpreter defaults; an embedding host (or a future Tauri settings
+    // store) fills in e.g. stepLimit here.
+    executionConfig: {},
+    runtime: {
+        kind,
+        buildTimestamp: __AJISAI_BUILD_TIMESTAMP__,
+        onReady(callback: () => void): void {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', callback, { once: true });
+                return;
+            }
+            callback();
+        }
+    }
+});
 
 let cachedPlatform: PlatformAdapter | null = null;
 
@@ -11,8 +156,8 @@ export function getPlatform(): PlatformAdapter {
     }
 
     cachedPlatform = detectRuntimeKind() === 'tauri'
-        ? TAURI_PLATFORM_ADAPTER
-        : WEB_PLATFORM_ADAPTER;
+        ? createPlatformAdapter('tauri', new TauriPersistence(), new TauriFileIO())
+        : createPlatformAdapter('web', WEB_PERSISTENCE, new WebFileIO());
 
     return cachedPlatform;
 }

@@ -1,19 +1,47 @@
+// The web host: IndexedDB persistence and the browser's own file dialogs.
+
 import type {
     ExportData,
+    FileIO,
     InterpreterStateSnapshot,
+    OpenResult,
     Persistence,
+    SaveResult,
     TablePayload
-} from '../platform-adapter';
+} from './index';
 
 // The record shapes this store writes are the shapes `exportAll` hands back,
 // so they are read off `ExportData` rather than restated. They used to be two
 // local `interface`s spelling out the same fields — a copy that had already
 // dropped the `readonly` markers, and that a new field on `ExportData` would
 // have left behind silently: the writes below would keep compiling and keep
-// omitting it, and only an export would show the gap. The Tauri store next
-// door derives its own `StoredData` the same way.
+// omitting it, and only an export would show the gap. The Tauri store derives
+// its own `StoredData` the same way.
 type TableData = ExportData['tables'][number];
 type InterpreterState = NonNullable<ExportData['interpreterState']>;
+
+/** The one serialization every JSON document this host writes uses. */
+export const formatJsonDocument = (data: unknown): string => JSON.stringify(data, null, 2);
+
+/**
+ * The stored interpreter record read back as the snapshot the GUI restores
+ * from, or null when nothing is stored. Both hosts store the same record and
+ * answer the same snapshot, so the reading is written once.
+ */
+export const readInterpreterStateSnapshot = (
+    result: InterpreterState | null | undefined
+): InterpreterStateSnapshot | null => {
+    if (!result) {
+        return null;
+    }
+    return {
+        stateVersion: Number(result.stateVersion),
+        stack: result.stack as InterpreterStateSnapshot['stack'],
+        stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
+        userWords: result.userWords as InterpreterStateSnapshot['userWords'],
+        activeDictionarySheet: result.activeDictionarySheet
+    };
+};
 
 const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
     new Promise((resolve, reject) => {
@@ -139,19 +167,9 @@ class WebPersistence implements Persistence {
     async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
         if (!this.db) await this.open();
 
-        return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store => {
-            const result = await promisifyRequest(store.get('interpreter_state'));
-            if (!result) {
-                return null;
-            }
-            return {
-                stateVersion: Number(result.stateVersion),
-                stack: result.stack as InterpreterStateSnapshot['stack'],
-                stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
-                userWords: result.userWords as InterpreterStateSnapshot['userWords'],
-                activeDictionarySheet: result.activeDictionarySheet
-            };
-        });
+        return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store =>
+            readInterpreterStateSnapshot(await promisifyRequest(store.get('interpreter_state')))
+        );
     }
 
     async clearAll(): Promise<void> {
@@ -229,7 +247,60 @@ class WebPersistence implements Persistence {
     }
 }
 
-const DB = new WebPersistence();
+// One IndexedDB store per page: the web adapter's persistence, and the source
+// the Tauri adapter migrates from on its first launch.
+export const WEB_PERSISTENCE: Persistence = new WebPersistence();
 
-export { WebPersistence };
-export default DB;
+const readFileAsText = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const result = event.target?.result;
+            if (typeof result === 'string') {
+                resolve(result);
+            } else {
+                reject(new Error('Failed to read file'));
+            }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+
+export class WebFileIO implements FileIO {
+    async saveJson(defaultName: string, data: unknown): Promise<SaveResult> {
+        const jsonString = formatJsonDocument(data);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = defaultName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        return { filename: defaultName };
+    }
+
+    async openJsonFile(): Promise<OpenResult | null> {
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+
+            input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (!file) {
+                    resolve(null);
+                    return;
+                }
+
+                const text = await readFileAsText(file);
+                resolve({ filename: file.name, text });
+            };
+
+            input.click();
+        });
+    }
+}

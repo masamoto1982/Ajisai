@@ -1,6 +1,6 @@
 // AQ-VER-004-A: detectRuntimeKind MC/DC for QL-A boolean decisions.
 //
-// DUT: src/platform/runtime-kind.ts:5-15
+// DUT: src/platform/index.ts, detectRuntimeKind()
 //
 //     export function detectRuntimeKind(): RuntimeKind {
 //         if (typeof __AJISAI_TARGET__ !== 'undefined' && __AJISAI_TARGET__ === 'tauri') {
@@ -40,9 +40,9 @@
 // Trace: docs/quality/TRACEABILITY_MATRIX.md, requirement AQ-REQ-004.
 
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { detectRuntimeKind } from './runtime-kind';
+import { detectRuntimeKind } from './index';
 
-// `__AJISAI_TARGET__` is declared as a build-time const in runtime-kind.ts
+// `__AJISAI_TARGET__` is declared as a build-time const in index.ts
 // but the runtime check uses `typeof __AJISAI_TARGET__ !== 'undefined'`,
 // which falls back to a global lookup at runtime. Tests can therefore
 // drive A1 by setting / deleting properties on globalThis. We use Reflect
