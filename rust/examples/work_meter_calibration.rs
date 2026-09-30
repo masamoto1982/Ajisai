@@ -23,35 +23,7 @@
 
 use std::time::Instant;
 
-use ajisai_core::interpreter::{Interpreter, RuntimeLimits};
-
-fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    use std::task::{Context, Poll};
-    let mut fut = Box::pin(fut);
-    let waker = std::task::Waker::noop();
-    let mut cx = Context::from_waker(waker);
-    loop {
-        match fut.as_mut().poll(&mut cx) {
-            Poll::Ready(value) => return value,
-            Poll::Pending => std::thread::yield_now(),
-        }
-    }
-}
-
-/// Ceilings lifted out of the way: this measures the price, not the limit.
-fn unbounded() -> RuntimeLimits {
-    RuntimeLimits {
-        max_materialized_elements: 10_000_000,
-        max_source_bytes: 64 * 1024 * 1024,
-        max_numeric_literal_digits: 1_000_000,
-        max_numeric_work: u64::MAX,
-        max_collection_work: u64::MAX,
-        max_bigint_bits: u64::MAX,
-        max_algebraic_terms: usize::MAX,
-        // Not lifted: it bounds the native stack, not a price.
-        max_nesting_depth: RuntimeLimits::default().max_nesting_depth,
-    }
-}
+use ajisai_core::agent::time_after_setup;
 
 struct Measurement {
     name: String,
@@ -76,41 +48,21 @@ fn measure(name: String, source: &str) -> Measurement {
     measure_after_setup(name, "", source)
 }
 
-/// Build the operand with `setup`, then time `source` alone.
+/// Build the operand with `setup`, then time `source` alone
+/// (`agent::time_after_setup`).
 ///
 /// The distinction is not cosmetic, and getting it wrong is how this harness
-/// under-reported a rate the host profile was later derived from. A rate is
-/// `charged units / elapsed ms`, so any time inside the measured interval that
-/// charges *this* meter nothing drags the rate down. `0 99999 RANGE`
-/// materializes 100,000 elements — real milliseconds, and real
+/// under-reported a rate the host profile was later derived from. `0 99999
+/// RANGE` materializes 100,000 elements — real milliseconds, and real
 /// `collectionWork` — while charging `numericWork` almost nothing. Timing it
 /// together with the twenty additions that follow made the dense-lane path
 /// look ~20% cheaper per millisecond than it is (6,153 vs 7,374 units/ms
 /// measured back to back on one container), and a floor rate that reads low
-/// derives a budget that is too small.
-///
-/// `execute` keeps the stack across calls and resets the counters
-/// (`execution_loop.rs`), so the second call sees the first call's operand and
-/// counts only its own work. This is the same split
-/// `collection_word_calibration::measure` has always used; the two harnesses
-/// disagreeing was itself the defect.
+/// derives a budget that is too small. `collection_word_calibration` measures
+/// through the same function; the two harnesses once disagreeing was itself
+/// the defect.
 fn measure_after_setup(name: String, setup: &str, source: &str) -> Measurement {
-    let mut interp = Interpreter::new();
-    interp.set_runtime_limits(unbounded());
-    interp.set_max_execution_steps(usize::MAX);
-
-    if !setup.is_empty() {
-        if let Err(error) = block_on(interp.execute(setup)) {
-            panic!("setup `{setup}` for `{name}` must succeed, got: {error:?}");
-        }
-    }
-
-    let started = Instant::now();
-    let outcome = block_on(interp.execute(source));
-    let run_millis = started.elapsed().as_secs_f64() * 1000.0;
-    if let Err(error) = outcome {
-        panic!("`{name}` must complete to be measurable, got: {error:?}");
-    }
+    let (interp, run_millis) = time_after_setup(setup, source);
 
     let render_started = Instant::now();
     let rendered = ajisai_core::types::display::render_stack(interp.get_stack());
@@ -164,16 +116,7 @@ fn algebraic_product(factors: usize) -> String {
 /// charged (one step per word, including the leading literal push) instead of
 /// what the calibration author assumed it would.
 fn steps_per_ms(source: &str) -> (u64, f64, f64) {
-    let mut interp = Interpreter::new();
-    interp.set_runtime_limits(unbounded());
-    interp.set_max_execution_steps(usize::MAX);
-
-    let started = Instant::now();
-    let outcome = block_on(interp.execute(source));
-    let run_millis = started.elapsed().as_secs_f64() * 1000.0;
-    if let Err(error) = outcome {
-        panic!("steps_per_ms must complete, got: {error:?}");
-    }
+    let (interp, run_millis) = time_after_setup("", source);
     let steps = interp.resource_usage().execution_steps;
     let rate = if run_millis > 0.0 {
         steps as f64 / run_millis

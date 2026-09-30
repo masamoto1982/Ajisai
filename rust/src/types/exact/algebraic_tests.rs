@@ -3,14 +3,11 @@
 //! normal-form uniqueness across construction histories, decidable
 //! comparison, and the derived CF against known expansions.
 
+use crate::test_support::frac;
 use crate::types::exact::algebraic::{Algebraic, AlgebraicResult};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::cmp::Ordering;
-
-fn frac(n: i64, d: i64) -> Fraction {
-    Fraction::new(BigInt::from(n), BigInt::from(d))
-}
 
 fn sqrt_irr(n: i64, d: i64) -> Algebraic {
     match Algebraic::sqrt_of_fraction(&frac(n, d)) {

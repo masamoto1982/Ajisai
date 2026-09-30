@@ -1,9 +1,3 @@
-// Test files follow the convention `mod <file_name> { … }` inside
-// `<file_name>.rs` (e.g. `mod runtime_limits_tests` in
-// `runtime_limits_tests.rs`), which clippy flags as `module_inception`. The
-// nesting is a deliberate test-organization convention, not an accident, and
-// there are no production inception cases, so allow it crate-wide.
-#![allow(clippy::module_inception)]
 // The crate is `unsafe`-free, enforced by the compiler. `deny` rather than
 // `forbid` because the `wasm`-gated bindings module must re-permit it:
 // `wasm-bindgen` expands to generated glue that contains `unsafe`.
@@ -12,7 +6,11 @@
 mod builtins;
 pub mod coreword_registry;
 mod error;
-pub mod word_name;
+/// Word-name canonicalization, at the path every caller names it by; it lives
+/// beside the Core Word registry (`coreword_registry::canonical_word_name`).
+pub mod word_name {
+    pub use crate::coreword_registry::canonical_word_name;
+}
 pub use error::{AjisaiError, ErrorCategory, NilReason};
 pub mod interpreter;
 pub mod kernel;

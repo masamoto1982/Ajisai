@@ -37,35 +37,19 @@ fn exact(outcome: &str, interp: &Interpreter) -> OutcomeReport {
     }
 }
 
-/// The interpreter a prediction reasons about: the same ceilings a
-/// `compute` under `options` would run under, so `limitProfile` names what
-/// the prediction actually assumed.
-fn interpreter_under(options: &ComputeOptions) -> Interpreter {
-    let mut interp = Interpreter::new();
-    if let Some(limits) = options.runtime_limits {
-        interp.set_runtime_limits(limits);
-    }
-    if let Some(limit) = options.step_limit {
-        interp.set_max_execution_steps(limit);
-    }
-    interp
-}
-
 /// Predict `source`'s outcome set without executing it.
 pub(crate) fn predict_outcomes(source: &str, options: &ComputeOptions) -> OutcomeReport {
-    let probe = interpreter_under(options);
+    // The interpreter a prediction reasons about: the same ceilings a
+    // `compute` under `options` would run under, so `limitProfile` names what
+    // the prediction actually assumed.
+    let probe = options.interpreter();
     // `tokenize` already ran the structural phase, so an unbalanced bracket
     // is refused here with every other source error.
     let Ok(tokens) = crate::tokenizer::tokenize(source) else {
         return exact("error:malformedSource", &probe);
     };
     let (mut interp, _names) = build_definitions_interpreter(source);
-    if let Some(limits) = options.runtime_limits {
-        interp.set_runtime_limits(limits);
-    }
-    if let Some(limit) = options.step_limit {
-        interp.set_max_execution_steps(limit);
-    }
+    options.apply(&mut interp);
     let mut prediction = interp.predict_program_outcomes(&tokens);
     // A name nothing defines raises `unknownWord` when execution reaches it.
     // The walk already covers the reaching part (every Word that could fail
@@ -98,5 +82,92 @@ impl OutcomeReport {
             "exact": self.exact,
             "limitProfile": self.limit_profile,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::agent::api::{predict_outcomes, ComputeOptions};
+
+    #[test]
+    fn malformed_source_predicts_exactly_that() {
+        let response = predict_outcomes("[ 1 2", ComputeOptions::default()).to_json();
+        assert_eq!(response["status"], "ok");
+        assert_eq!(response["exact"], true);
+        assert_eq!(
+            response["outcomes"],
+            serde_json::json!(["error:malformedSource"])
+        );
+    }
+
+    /// An unknown word is reachable, not inevitable: word resolution happens
+    /// during execution, so anything that fails earlier decides the outcome
+    /// instead. `error:unknownWord` therefore joins the set rather than
+    /// replacing it, and the prediction is not exact.
+    #[test]
+    fn an_unknown_word_joins_the_set_without_claiming_to_be_the_whole_answer() {
+        let response = predict_outcomes("FROBNICATE", ComputeOptions::default()).to_json();
+        let outcomes = response["outcomes"].as_array().unwrap();
+        assert!(outcomes.iter().any(|v| v == "error:unknownWord"));
+
+        // These two really answer `stackUnderflow` and `nonNumeric` — measured,
+        // and the reason claiming `unknownWord` exactly was an under-approximation.
+        for (source, actual) in [
+            ("ADD FROBNICATE", "error:stackUnderflow"),
+            ("'a' 1 ADD FROBNICATE", "error:nonNumeric"),
+        ] {
+            let response = predict_outcomes(source, ComputeOptions::default()).to_json();
+            assert_eq!(response["exact"], false, "{source}");
+            let outcomes = response["outcomes"].as_array().unwrap();
+            assert!(
+                outcomes.iter().any(|v| v == actual),
+                "{source}: predicted {outcomes:?}, which omits the outcome it really produces ({actual})"
+            );
+            assert!(
+                outcomes.iter().any(|v| v == "error:unknownWord"),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_program_that_calls_nothing_still_carries_structural_ceilings() {
+        // Even pure literals with no Word call at all can in principle hit a
+        // structural ceiling (a numeric literal too long for the profile, for
+        // instance — see `word_outcome_vocabulary::structural_ceiling_ids`'s
+        // doc), so this is never exact; only the truly empty program is.
+        let response = predict_outcomes("1 2 3", ComputeOptions::default()).to_json();
+        assert_eq!(response["exact"], false);
+        let outcomes = response["outcomes"].as_array().unwrap();
+        assert!(outcomes.iter().any(|v| v == "value"));
+        assert!(outcomes.iter().any(|v| v == "error:resourceLimitExceeded"));
+    }
+
+    #[test]
+    fn the_empty_program_predicts_exactly_value() {
+        let response = predict_outcomes("", ComputeOptions::default()).to_json();
+        assert_eq!(response["exact"], true);
+        assert_eq!(response["outcomes"], serde_json::json!(["value"]));
+    }
+
+    #[test]
+    fn every_response_names_its_limit_profile() {
+        let response = predict_outcomes("1 2 ADD", ComputeOptions::default()).to_json();
+        assert!(response["limitProfile"]["executionSteps"].is_u64());
+        assert!(response["limitProfile"]["materializedElements"].is_u64());
+    }
+
+    #[test]
+    fn a_nontrivial_program_over_approximates_and_says_so() {
+        let response = predict_outcomes("1 2 ADD", ComputeOptions::default()).to_json();
+        let outcomes: Vec<String> = response["outcomes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect();
+        assert!(outcomes.contains(&"value".to_string()));
+        assert!(outcomes.contains(&"error:nonNumeric".to_string()));
+        assert_eq!(response["exact"], false);
     }
 }

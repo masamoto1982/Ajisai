@@ -81,6 +81,24 @@ best-effort static Word resolution, and never executes the program. With
 `--contract`, `contractDecls` contains the conservative result of comparing
 `#:contract` declarations with inferred contracts.
 
+`compute` also carries a top-level `outcome` string: which of LANG.FAILURE's
+three results the run produced, as a `spec/outcomes.json` id — the vocabulary
+`agent outcomes` predicts in, so a run is checked against its prediction with
+one membership test. `status` alone folds a reasoned absence into `ok`;
+`outcome` keeps the three apart (`Report::outcome_id` in
+`rust/src/agent/report.rs`):
+
+| run | `status` | `outcome` |
+|---|---|---|
+| top of stack is not NIL (an empty stack included) | `ok` | `value` |
+| top of stack is NIL | `ok` | `nil:<reason>`, the top node's `semantics.absence.reason` |
+| a language error | `error` | `error:<category>`, `aiDiagnostic.category`, else `diagnosis.why` |
+
+The field is absent when the run cannot be classified (a NIL with no reason,
+an error naming no category) rather than carrying a guessed id, and `check`
+never carries it: it does not run the program. Purely additive, so the schema
+version stays 3.
+
 Native `run` obtains this document from the typed, source-only Rust
 `agent::api::compute` boundary. Terminal formatting is a consumer of that
 report and is not part of computation semantics.
@@ -88,7 +106,7 @@ JSON `check` likewise consumes `agent::api::check`; human-readable check
 output remains a terminal-only projection.
 `agent::api` (`rust/src/agent/`) has no filesystem or terminal I/O and
 compiles for `wasm32` as well as native, so the WASM one-shot entry point
-(`rust/src/wasm_interpreter_bindings/wasm_agent.rs`, consumed by the MCP
+(`agent_compute` in `rust/src/wasm_interpreter_bindings/mod.rs`, consumed by the MCP
 adapter's `worker_threads` backend) renders the identical envelope; the
 native CLI (`rust/src/cli`) is a thin file/terminal adapter over the same
 module.

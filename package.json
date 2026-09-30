@@ -53,8 +53,6 @@
     "word-registry:check": "node scripts/generate-word-registry.mjs --check",
     "word:reference": "node scripts/generate-word-reference.mjs",
     "word:reference:check": "node scripts/generate-word-reference.mjs --check",
-    "core-word-docs:generate": "node scripts/generate-core-word-docs.mjs",
-    "core-word-docs:check": "node scripts/generate-core-word-docs.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
     "check:minimal-core": "node scripts/check-minimal-core.mjs",
     "check:unreachable-contract": "node scripts/check-unreachable-contract.mjs",

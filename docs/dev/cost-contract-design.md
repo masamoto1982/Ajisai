@@ -174,7 +174,7 @@ paid for once.
 - `#:contract ... cost steps=<class> numeric=<class> collection=<class>`
   parsing (any subset of the three axes; an unknown axis or class name is a
   parse error, matching the existing `unknown term` behavior) and checking,
-  split into `contract_cost.rs` alongside `contract_decl.rs` to keep the
+  split into `contract_gap.rs` alongside `contract_decl.rs` to keep the
   latter within the §14.1 file-size budget.
 
 ## Appendix A — SHA-256 → BLAKE3 in the MCP adapter: evaluated, not adopted

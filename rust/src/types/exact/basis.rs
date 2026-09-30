@@ -10,7 +10,7 @@
 //! (Same construction as the LANG.VALUES.EXACT comparison pre-pass this module's
 //! type grew out of.)
 
-use crate::types::bigint_gcd::balanced_bigint_gcd;
+use crate::types::fraction_arithmetic::balanced_bigint_gcd;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 

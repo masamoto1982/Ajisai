@@ -4,7 +4,7 @@
 //! values; all other vectors retain their ordinary nested representation.
 
 use super::fraction::Fraction;
-use super::value_densify::try_collect_dense;
+use super::value_absence::try_collect_dense;
 use super::{DenseTensor, Value, ValueData};
 use crate::semantic::AbsenceMetadata;
 use std::collections::BTreeMap;

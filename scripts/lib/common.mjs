@@ -263,25 +263,14 @@ export function runAgent(bin, source, { command, args, exitMessage = (r) => `exi
  * classifies, so one that does not is a broken CLI, not an outcome.
  */
 export function classifyOutcome(json) {
-  if (json.status === 'error') {
-    const category = json.aiDiagnostic?.category;
-    if (typeof category === 'string' && category !== '') return `error:${category}`;
-    const why = json.diagnosis?.why;
-    if (typeof why !== 'string' || why === '') {
-      throw new Error(`error report has neither aiDiagnostic.category nor diagnosis.why: ${JSON.stringify(json)}`);
-    }
-    return `error:${why}`;
+  // The engine names its own outcome (`ajisai agent compute` emits it as
+  // `outcome`, the same id the `outcomes` prediction uses), so the gates read
+  // that field instead of re-deriving it from the report's shape.
+  const outcome = json.outcome;
+  if (typeof outcome !== 'string' || outcome === '') {
+    throw new Error(`compute report carries no outcome id: ${JSON.stringify(json)}`);
   }
-  const stack = Array.isArray(json.stack) ? json.stack : [];
-  const top = stack.length > 0 ? stack[stack.length - 1] : null;
-  if (top && top.type === 'nil') {
-    const reason = top.semantics?.absence?.reason;
-    if (typeof reason !== 'string' || reason === '') {
-      throw new Error(`NIL top-of-stack has no semantics.absence.reason: ${JSON.stringify(top)}`);
-    }
-    return `nil:${reason}`;
-  }
-  return 'value';
+  return outcome;
 }
 
 // ---------------------------------------------------------------------------

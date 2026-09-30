@@ -17,6 +17,7 @@ use super::value_persist::{decode_stack, encode_stack};
 use super::{DenseTensor, Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::Recoverability;
+use crate::test_support::hash_of;
 
 fn div_by_zero() -> Value {
     Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
@@ -99,13 +100,6 @@ fn a_sub_tensor_rebases_the_absences_it_inherits() {
 /// NILs do as scalars.
 #[test]
 fn a_nil_lane_reconciles_across_the_two_representations() {
-    fn hash_of(value: &Value) -> u64 {
-        use std::hash::{Hash, Hasher};
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        value.hash(&mut hasher);
-        hasher.finish()
-    }
-
     let dense = Value::from_vector_promoted(vec![Value::from_int(1), div_by_zero()]);
     let nested = Value::new(
         ValueData::Vector(Arc::new(vec![Value::from_int(1), div_by_zero()])),

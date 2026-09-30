@@ -1,6 +1,9 @@
-//! JSON report assembly for the `ajisai` CLI (`--json`).
+//! Report assembly for a completed execution, and its JSON rendering for the
+//! `ajisai` CLI (`--json`).
 //!
-//! Serializes the *existing* diagnostic structures — `DebugDiagnosis`,
+//! Assembly is I/O-free, so the typed agent API and the terminal CLI observe
+//! the same stack, NIL flow, diagnostics, output and runtime metrics.
+//! Rendering serializes the *existing* diagnostic structures — `DebugDiagnosis`,
 //! `AiDiagnosticPayload`, `ErrorFlowEvent`, `RuntimeMetrics`, and the shared
 //! value protocol (`types::value_protocol`) — into the camelCase wire format
 //! documented in `docs/dev/agent-cli-output-contract.md`. Field names follow
@@ -8,8 +11,13 @@
 //! (`diagnosis_to_js` / `value_to_protocol`); no new diagnostic concepts are
 //! introduced here.
 
+use super::execution_receipt::build_receipt;
+use super::observation_digest::{observation_digest, ObservationDigestInput};
+use super::{error_report, stack_display, user_word_identities};
+use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
+use crate::interpreter::upstream_nil_link::link_upstream_nil;
 use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
 use crate::types::value_protocol::{exact_terms, value_to_protocol, ProtocolNode, ProtocolValue};
@@ -70,11 +78,52 @@ pub(crate) struct Report {
     /// `check`/`infer-contracts`, which never execute and so have nothing to
     /// receipt.
     pub receipt: Option<Json>,
+    /// The outcome id (`spec/outcomes.json`) a `compute` run produced —
+    /// `value`, `nil:<reason>` or `error:<category>`, from
+    /// [`Report::outcome_id`]. `None` for `check`, which never runs, and for
+    /// a run the id cannot name; the JSON then carries no `outcome` at all.
+    pub outcome: Option<String>,
 }
 
 impl Report {
+    /// The outcome id this report names, in the vocabulary `outcomes`
+    /// predicts in, so a prediction and a run compare by membership.
+    ///
+    /// `status` separates a value from an error but folds a reasoned absence
+    /// into `ok`, so LANG.FAILURE's three results were reconstructable only by
+    /// reading the top stack node's `semantics.absence.reason`. An error is its
+    /// category (`aiDiagnostic.category`, else `diagnosis.why`), a NIL on top
+    /// is its reason, anything else — an empty stack included — is a value. A
+    /// report this cannot classify (a NIL with no reason, an error naming no
+    /// category) has no id rather than a guessed one.
+    pub(crate) fn outcome_id(&self) -> Option<String> {
+        match self.status {
+            "error" => {
+                let category = match self
+                    .ai_diagnostic
+                    .as_ref()
+                    .and_then(|ai| ai.category.as_deref())
+                {
+                    Some(category) => Some(category),
+                    None => self.diagnosis.as_ref().map(|d| d.why.as_protocol_str()),
+                };
+                category
+                    .filter(|category| !category.is_empty())
+                    .map(|category| format!("error:{category}"))
+            }
+            "ok" => match self.stack.as_array().and_then(|stack| stack.last()) {
+                Some(top) if top["type"] == "nil" => top["semantics"]["absence"]["reason"]
+                    .as_str()
+                    .filter(|reason| !reason.is_empty())
+                    .map(|reason| format!("nil:{reason}")),
+                _ => Some("value".to_string()),
+            },
+            _ => None,
+        }
+    }
+
     pub(crate) fn to_json(&self) -> Json {
-        json!({
+        let mut doc = json!({
             "schemaVersion": SCHEMA_VERSION,
             "status": self.status,
             "stack": self.stack,
@@ -94,7 +143,11 @@ impl Report {
             "stackElided": self.stack_elided,
             "observationDigest": self.observation_digest,
             "receipt": self.receipt,
-        })
+        });
+        if let Some(outcome) = &self.outcome {
+            doc["outcome"] = json!(outcome);
+        }
+        doc
     }
 }
 
@@ -202,7 +255,7 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
     obj.insert("message".into(), json!(event.message));
     // A NIL has no diagnosis anywhere else, so its event carries one. An
     // ERROR's is the report's top-level `diagnosis` — built from this very
-    // event (`run_render::failed_run_diagnosis`) — and sending it here as well
+    // event (`failed_run_diagnosis`) — and sending it here as well
     // doubled every error report for no information.
     if let (ErrorFlowEventKind::NilProduced, Some(diagnosis)) = (&event.kind, &event.diagnosis) {
         obj.insert("diagnosis".into(), diagnosis_json(diagnosis));
@@ -301,6 +354,94 @@ pub(crate) fn semantics_json(value: &Value) -> Json {
         );
     }
     Json::Object(obj)
+}
+
+/// Assemble the report for a completed execution without performing host I/O.
+/// The typed agent API and the terminal renderer share this boundary.
+///
+/// `source` is the exact program text that was run — carried through only to
+/// name it in the execution receipt (`Report::receipt`); nothing here
+/// re-parses or re-executes it.
+pub(crate) fn completed_run_report(
+    interp: &Interpreter,
+    result: crate::error::Result<()>,
+    trace: Vec<ErrorFlowEvent>,
+    output: Vec<String>,
+    source: &str,
+) -> Report {
+    match result {
+        Ok(()) => {
+            let digest = observation_digest(ObservationDigestInput {
+                status: "ok",
+                stack: interp.get_stack(),
+                output: &output,
+                user_words: &user_word_identities(interp),
+                error_category: None,
+            });
+            let resource_usage = interp.resource_usage();
+            let receipt = build_receipt(
+                source,
+                interp.runtime_limits(),
+                interp.max_execution_steps(),
+                "ok",
+                &resource_usage,
+                &digest,
+            );
+            Report {
+                status: "ok",
+                stack: stack_json(interp),
+                stack_display: stack_display(interp),
+                output,
+                message: None,
+                diagnosis: None,
+                ai_diagnostic: None,
+                error_flow_trace: trace,
+                runtime_metrics: interp.runtime_metrics(),
+                resource_usage,
+                contract_decls: None,
+                stack_elided: None,
+                observation_digest: digest,
+                receipt: Some(receipt),
+                outcome: None,
+            }
+        }
+        Err(err) => {
+            let message = err.to_string();
+            let diagnosis = failed_run_diagnosis(interp, &err, &trace);
+            let category = ErrorCategory::from_error(&err);
+            error_report(
+                interp,
+                &diagnosis,
+                category.as_ref(),
+                message,
+                output,
+                trace,
+                Some(source),
+            )
+        }
+    }
+}
+
+/// The top-level diagnosis of a run that ended in `err`: the last one the
+/// trace carries, else one built from the error itself. Shared with the WASM
+/// boundary, so the GUI's `aiDiagnostic` names the failure the CLI's does.
+pub(crate) fn failed_run_diagnosis(
+    interp: &Interpreter,
+    err: &crate::error::AjisaiError,
+    trace: &[ErrorFlowEvent],
+) -> DebugDiagnosis {
+    let stack_len = interp.get_stack().len();
+    let mut diagnosis = trace
+        .iter()
+        .rev()
+        .find_map(|event| event.diagnosis.clone())
+        .unwrap_or_else(|| DebugDiagnosis::from_error(err, None, stack_len, stack_len));
+    // A NIL that flowed downstream fails at the Word that *received* it, so
+    // the top-level diagnosis names that Word and not the cause. Give the top
+    // level a link back to the producing node rather than leaving the cause
+    // reachable only by walking `errorFlowTrace`.
+    link_upstream_nil(&mut diagnosis, trace);
+    diagnosis
 }
 
 #[cfg(test)]

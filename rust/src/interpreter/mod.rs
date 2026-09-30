@@ -65,7 +65,7 @@ pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
 // The upstream-NIL link lives in `nil_diagnostics.rs`; the module path it
-// used to have is kept for `agent::run_render`, which imports it by that name.
+// used to have is kept for `agent::report`, which imports it by that name.
 pub(crate) use self::nil_diagnostics as upstream_nil_link;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;

@@ -73,7 +73,7 @@ provenance（いつ・なぜ変わったか）が要る場面では、手書き�
 
 この repo の生成物の大半は、生成スクリプト自身の `--check` モードで CI が
 ハードにゲートしている（`rust/src/kernel/generated/` は `word-registry:check`、
-ほかに `word:manifest:check`、`word:reference:check`、`core-word-docs:check`、
+ほかに `word:manifest:check`、`word:reference:check`、
 `semantics:table:check`、`semantic-kernel:check`）。危険なのは
 **鮮度チェックが advisory（best-effort）にとどまる、または存在しない生成物**
 である——通常のテスト行列の中でそれを再生成する工程が一つも無い以上、

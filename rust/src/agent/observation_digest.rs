@@ -43,6 +43,7 @@ use num_integer::Integer;
 use num_traits::Zero;
 
 use crate::interpreter::word_identity::content_digest;
+use crate::types::exact::algebraic::floor_scaled;
 use crate::types::exact::{Algebraic, ExactReal};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
@@ -221,7 +222,7 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
 /// `impl Hash for Fraction` (`types/fraction.rs`) is: divide out the gcd, then
 /// flip both signs if the denominator came out negative. Uses
 /// `num_integer::Integer::gcd` rather than `Fraction`'s own
-/// `balanced_bigint_gcd` fast path, which lives in `types/bigint_gcd` — Phase
+/// `balanced_bigint_gcd` fast path, which lives in `types/fraction_arithmetic` — Phase
 /// 1 reads `rust/src/types/` but does not edit it — but both compute the same
 /// canonical reduced pair, so an unreduced and a reduced fraction still land
 /// on identical bytes (Step 1.4's `unreduced_fraction_matches_reduced`).
@@ -281,10 +282,4 @@ fn encode_algebraic(bytes: &mut Vec<u8>, alg: &Algebraic) {
     };
     bytes.push(b'A');
     write_sint(bytes, &key);
-}
-
-/// `floor(f * 2^target_bits)`, exactly (`BigInt` division, never `f64`).
-fn floor_scaled(f: &Fraction, target_bits: u64) -> BigInt {
-    let (num, den) = f.to_bigint_pair();
-    (num << target_bits).div_floor(&den)
 }

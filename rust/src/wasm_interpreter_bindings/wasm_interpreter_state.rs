@@ -1,5 +1,5 @@
-use super::wasm_value_conversion::{value_to_js, UserWordData};
-use super::AjisaiInterpreter;
+use super::{set_js_prop, value_to_js, AjisaiInterpreter, UserWordData};
+use crate::agent::sorted_user_word_names;
 use crate::builtins;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
@@ -19,9 +19,7 @@ impl AjisaiInterpreter {
     pub fn collect_user_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
 
-        let mut names: Vec<&String> = self.interpreter.user_words.keys().collect();
-        names.sort();
-        for name in names {
+        for name in sorted_user_word_names(&self.interpreter) {
             // Another User Word calls this one, so DEL refuses it until that
             // caller is gone; the host colours it apart.
             let has_dependents = self
@@ -46,9 +44,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_word_identities(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        let mut names: Vec<&String> = self.interpreter.user_words.keys().collect();
-        names.sort();
-        for name in names {
+        for name in sorted_user_word_names(&self.interpreter) {
             if let Some(id) = self.interpreter.word_identity(name) {
                 let item = js_sys::Array::new();
                 item.push(&name.clone().into());
@@ -60,14 +56,12 @@ impl AjisaiInterpreter {
     }
 
     pub(crate) fn collect_user_words_for_state(&self) -> JsValue {
-        let mut names: Vec<String> = self.interpreter.user_words.keys().cloned().collect();
-        names.sort();
-        let words_info: Vec<UserWordData> = names
+        let words_info: Vec<UserWordData> = sorted_user_word_names(&self.interpreter)
             .into_iter()
             .map(|name| UserWordData {
-                definition: self.interpreter.lookup_word_definition_tokens(&name),
-                description: self.interpreter.lookup_word_description(&name),
-                name,
+                definition: self.interpreter.lookup_word_definition_tokens(name),
+                description: self.interpreter.lookup_word_description(name),
+                name: name.clone(),
             })
             .collect();
         to_value(&words_info).unwrap_or(JsValue::NULL)
@@ -121,8 +115,8 @@ impl AjisaiInterpreter {
         };
 
         let obj = js_sys::Object::new();
-        super::set_js_prop(&obj, "kind", &JsValue::from_str(kind));
-        super::set_js_prop(&obj, "text", &JsValue::from_str(&text));
+        set_js_prop(&obj, "kind", &JsValue::from_str(kind));
+        set_js_prop(&obj, "text", &JsValue::from_str(&text));
         obj.into()
     }
 
@@ -227,35 +221,4 @@ impl AjisaiInterpreter {
         }
         Ok(js_array.into())
     }
-}
-
-/// Not part of the exported surface: every run folds the trace into its own
-/// result envelope (`errorFlowTrace`), so no host calls this directly.
-impl AjisaiInterpreter {
-    pub(crate) fn collect_error_flow_trace(&mut self) -> JsValue {
-        let events = self.interpreter.drain_error_flow_trace();
-        error_flow_trace_to_js(&events)
-    }
-}
-
-// Rendered by the CLI's own serializer and converted, so the trace a GUI
-// reads is the one an agent reads. A hand-built copy here was the third
-// spelling of a diagnosis (beside the CLI's and the value node's), and it had
-// already dropped a resource limit's `progress`.
-pub(crate) fn error_flow_trace_to_js(
-    events: &[crate::interpreter::error_flow_trace::ErrorFlowEvent],
-) -> JsValue {
-    json_to_js(serde_json::Value::Array(
-        events
-            .iter()
-            .map(crate::agent::report::error_flow_event_json)
-            .collect(),
-    ))
-}
-
-pub(crate) fn json_to_js(value: serde_json::Value) -> JsValue {
-    use serde::Serialize as _;
-    value
-        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
-        .expect("a serde_json value always converts to a JS value")
 }

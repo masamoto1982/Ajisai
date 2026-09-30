@@ -17,10 +17,10 @@
 //! an `Algebraic` that merely wraps a rational — callers receive the
 //! `Fraction` itself and route it back to Tier 0.
 
-use crate::types::bigint_gcd::balanced_bigint_gcd;
 use crate::types::exact::basis::Basis;
 use crate::types::exact::squarefree::{squarefree_split, FactorBudgetExhausted};
 use crate::types::fraction::Fraction;
+use crate::types::fraction_arithmetic::balanced_bigint_gcd;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
@@ -366,8 +366,9 @@ impl Eq for Algebraic {}
 /// performance knob, not a correctness one.
 const HASH_KEY_BITS: u64 = 64;
 
-/// `floor(f * 2^target_bits)`, exactly (`BigInt` division, not `f64`).
-fn floor_scaled(f: &Fraction, target_bits: u64) -> BigInt {
+/// `floor(f * 2^target_bits)`, exactly (`BigInt` division, not `f64`). Also
+/// the observation digest's algebraic key (`agent::observation_digest`).
+pub(crate) fn floor_scaled(f: &Fraction, target_bits: u64) -> BigInt {
     let (num, den) = f.to_bigint_pair();
     (num << target_bits).div_floor(&den)
 }

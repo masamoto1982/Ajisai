@@ -2,7 +2,7 @@
 //!
 //! This is the single source of truth for the machine-facing value wire
 //! format. It is shared by two serializers that must stay byte-compatible:
-//! the WASM boundary (`wasm_interpreter_bindings::wasm_value_conversion`,
+//! the WASM boundary (`wasm_interpreter_bindings::protocol_to_js`,
 //! which renders a `ProtocolNode` into a `JsValue` for the GUI) and the
 //! native CLI (`cli::report`, which renders it into JSON for agents). It
 //! carries no platform glue, so the entire decision surface is unit / MC/DC

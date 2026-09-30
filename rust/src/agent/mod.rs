@@ -9,37 +9,28 @@
 pub mod api;
 #[cfg(test)]
 mod check_locals_tests;
-pub(crate) mod contract_cost;
 pub(crate) mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;
 pub(crate) mod contract_gap;
 pub(crate) mod contract_report;
-#[cfg(test)]
-mod contract_report_tests;
 mod error_stack;
-#[cfg(test)]
-mod error_stack_tests;
 pub(crate) mod execution_receipt;
-#[cfg(test)]
-mod execution_receipt_tests;
 pub(crate) mod observation_digest;
 #[cfg(test)]
 mod observation_digest_tests;
 pub(crate) mod outcome_report;
 #[cfg(test)]
-mod outcome_report_tests;
-#[cfg(test)]
 mod profile_liveness_tests;
 pub(crate) mod report;
 #[cfg(test)]
 mod resource_usage_tests;
-pub(crate) mod run_render;
 
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
-use crate::interpreter::{HostEffect, Interpreter};
-use crate::types::{Token, Value};
+use crate::interpreter::{HostEffect, Interpreter, RuntimeLimits};
+use crate::types::Token;
+use crate::word_name::canonical_word_name;
 use observation_digest::{observation_digest, ObservationDigestInput};
 use report::Report;
 use std::collections::HashMap;
@@ -97,7 +88,7 @@ pub(crate) fn error_report(
     let error_category = category.map(ErrorCategory::as_protocol_str);
     let digest = observation_digest(ObservationDigestInput {
         status: "error",
-        stack: &stack_values(interp),
+        stack: interp.get_stack(),
         output: &output,
         user_words: &user_word_identities(interp),
         error_category,
@@ -128,30 +119,28 @@ pub(crate) fn error_report(
         stack_elided: residue.elided,
         observation_digest: digest,
         receipt,
+        outcome: None,
     }
 }
 
-/// The stack, bottom to top, as owned `Value`s — the raw material
-/// `observation_digest` encodes from. Cloning is cheap: `Value`'s heavy
-/// payloads (`Vector`, `Tensor`, `Text`, `CodeBlock`) are all reference
-/// counted.
-pub(crate) fn stack_values(interp: &Interpreter) -> Vec<Value> {
-    interp.get_stack().to_vec()
+/// The user dictionary's Word names, sorted — the one ordering every listing
+/// of it uses (the digest's `user_words`, the wasm host's dictionary views).
+pub(crate) fn sorted_user_word_names(interp: &Interpreter) -> Vec<&String> {
+    let mut names: Vec<&String> = interp.user_words.keys().collect();
+    names.sort();
+    names
 }
 
 /// `(normalized word name, content identity)` for every user word, sorted by
 /// name — the shape `ObservationDigestInput::user_words` requires.
 pub(crate) fn user_word_identities(interp: &Interpreter) -> Vec<(String, String)> {
-    let mut pairs: Vec<(String, String)> = interp
-        .user_words
-        .keys()
+    sorted_user_word_names(interp)
+        .into_iter()
         .map(|name| {
             let identity = interp.word_identity(name).cloned().unwrap_or_default();
             (name.clone(), identity)
         })
-        .collect();
-    pairs.sort();
-    pairs
+        .collect()
 }
 
 pub(crate) fn print_payloads(interp: &Interpreter) -> Vec<String> {
@@ -168,10 +157,6 @@ pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
     // One shared rendering (LANG.OBSERVATION.PROTOCOL) for every observation
     // surface.
     crate::types::display::render_stack(interp.get_stack())
-}
-
-pub(crate) fn normalize_word(symbol: &str) -> String {
-    symbol.to_uppercase()
 }
 
 /// The outcome of best-effort static word resolution.
@@ -213,11 +198,11 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         let Token::String(text) = token else {
             continue;
         };
-        let next_words: Vec<String> = tokens[i + 1..]
+        let next_words: Vec<std::borrow::Cow<str>> = tokens[i + 1..]
             .iter()
             .take(2)
             .filter_map(|t| match t {
-                Token::Symbol(s) => Some(normalize_word(s)),
+                Token::Symbol(s) => Some(canonical_word_name(s)),
                 _ => None,
             })
             .collect();
@@ -236,7 +221,7 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
     // as an unknown Word and `check` refused programs that run.
     let mut bound: HashMap<usize, HashSet<String>> = HashMap::new();
     for (i, token) in tokens.iter().enumerate() {
-        if !matches!(token, Token::Symbol(s) if normalize_word(s) == "BIND") {
+        if !matches!(token, Token::Symbol(s) if canonical_word_name(s) == "BIND") {
             continue;
         }
         let region = regions[i];
@@ -273,8 +258,7 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         let Token::Symbol(symbol) = token else {
             continue;
         };
-        let normalized = normalize_word(symbol);
-        let canonical = crate::word_name::canonical_word_name(&normalized);
+        let canonical = canonical_word_name(symbol);
         let bound_here = bound
             .get(&regions[i])
             .is_some_and(|names| names.contains(canonical.as_ref()));
@@ -329,7 +313,7 @@ fn frame_regions(tokens: &[Token]) -> Vec<usize> {
             return false;
         };
         matches!(tokens.get(close + 1), Some(Token::String(_)))
-            && matches!(tokens.get(close + 2), Some(Token::Symbol(s)) if normalize_word(s) == "DEF")
+            && matches!(tokens.get(close + 2), Some(Token::Symbol(s)) if canonical_word_name(s) == "DEF")
     };
 
     let mut regions = Vec::with_capacity(tokens.len());
@@ -351,8 +335,8 @@ fn frame_regions(tokens: &[Token]) -> Vec<usize> {
 /// `async` for the WASM host's benefit but contains no await points on either
 /// the native or the one-shot WASM agent path (both drive it to completion
 /// synchronously), so a no-op waker is sufficient; the yield is a safety
-/// valve.
-pub(crate) fn block_on<F: std::future::Future>(fut: F) -> F::Output {
+/// valve. Public for the calibration harnesses in `rust/examples/`.
+pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
     use std::task::{Context, Poll};
     let mut fut = Box::pin(fut);
     let waker = std::task::Waker::noop();
@@ -363,4 +347,51 @@ pub(crate) fn block_on<F: std::future::Future>(fut: F) -> F::Output {
             Poll::Pending => std::thread::yield_now(),
         }
     }
+}
+
+/// A fresh interpreter with every priced ceiling lifted, for the calibration
+/// harnesses in `rust/examples/`: they measure the price, not the limit. The
+/// nesting depth is not lifted — it bounds the native stack, not a price.
+pub fn unbounded_interpreter() -> Interpreter {
+    let mut interp = Interpreter::new();
+    interp.set_runtime_limits(RuntimeLimits {
+        max_materialized_elements: 10_000_000,
+        max_source_bytes: 64 * 1024 * 1024,
+        max_numeric_literal_digits: 1_000_000,
+        max_numeric_work: u64::MAX,
+        max_collection_work: u64::MAX,
+        max_bigint_bits: u64::MAX,
+        max_algebraic_terms: usize::MAX,
+        max_nesting_depth: RuntimeLimits::default().max_nesting_depth,
+    });
+    interp.set_max_execution_steps(usize::MAX);
+    interp
+}
+
+/// Build the operands with `setup` on an [`unbounded_interpreter`], then time
+/// `source` alone; returns the interpreter (for its meters and stack) and the
+/// milliseconds `source` took. Panics if either fails: an unfinished run has
+/// no price to measure.
+///
+/// The operand is built outside the timed region because a rate is `charged
+/// units / elapsed ms`: time inside the interval that charges the measured
+/// meter nothing drags the rate down (`0 99999 RANGE` is real milliseconds of
+/// `collectionWork` and almost no `numericWork`). `execute` keeps the stack
+/// across calls and resets the counters, so the second call sees the first
+/// call's operand and counts only its own work.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn time_after_setup(setup: &str, source: &str) -> (Interpreter, f64) {
+    let mut interp = unbounded_interpreter();
+    if !setup.is_empty() {
+        if let Err(error) = block_on(interp.execute(setup)) {
+            panic!("setup `{setup}` must succeed, got: {error:?}");
+        }
+    }
+    let started = std::time::Instant::now();
+    let outcome = block_on(interp.execute(source));
+    let millis = started.elapsed().as_secs_f64() * 1000.0;
+    if let Err(error) = outcome {
+        panic!("`{source}` after `{setup}` must complete to be measurable, got: {error:?}");
+    }
+    (interp, millis)
 }

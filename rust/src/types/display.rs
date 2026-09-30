@@ -20,15 +20,65 @@ impl fmt::Display for Value {
     }
 }
 
-pub(crate) fn format_value_recursive(data: &ValueData, depth: usize) -> String {
-    super::display_source::render_value(data, depth).source
+/// Render a value as Ajisai source that evaluates to it.
+///
+/// Everything this writes must satisfy `tests/round_trip_laws.rs`, except
+/// what that file names out of scope: an irrational scalar, whose display is
+/// truncated at a budget (LANG.VALUES.EXACT), a Symbol, and a Record, whose
+/// `{ key value … }` display has no literal behind it.
+///
+/// Every fragment is one unit, so fragments nest without a phrase to compose.
+/// `tests/round_trip_laws.rs` holds the domains that have a literal to
+/// rebuilding themselves by executing what this writes.
+///
+/// A Symbol does not round-trip and is not claimed to: it renders as its bare
+/// name, which *calls* a Word rather than pushing the name. Nor does a
+/// Record: it renders key beside value in `{ }`, which is a display only.
+fn format_value_recursive(data: &ValueData, depth: usize) -> String {
+    match data {
+        ValueData::Nil => "NIL".to_string(),
+        // A String renders quoted at every depth, from its domain alone.
+        ValueData::Text(s) => format!("'{}'", s),
+        // UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it takes the `Nil` arm
+        // above. A Boolean renders as TRUE/FALSE however it was produced.
+        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
+        ValueData::Scalar(f) => format_fraction(f),
+        ValueData::ExactScalar(er) => format_exact_real(er),
+        // A Record renders each key beside the value under it, in the order
+        // the Record holds them. The empty Record falls out as `{ }`, with no
+        // case of its own.
+        ValueData::Record(record) => {
+            let mut elements: Vec<String> = Vec::with_capacity(record.len() * 2);
+            for (key, value) in record.entries() {
+                elements.push(format_value_recursive(&key.data, depth + 1));
+                elements.push(format_value_recursive(&value.data, depth + 1));
+            }
+            render_delimited("{", "}", &elements)
+        }
+        ValueData::Vector(v) => {
+            let elements: Vec<String> = v
+                .iter()
+                // A String child renders quoted (`'AB'`), so strings stay
+                // recognizable inside a collection.
+                .map(|child| format_value_recursive(&child.data, depth + 1))
+                .collect();
+            render_delimited("[", "]", &elements)
+        }
+        ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
+        // A Symbol renders as its own bare name — unquoted, unlike Text.
+        ValueData::Symbol(name) => name.to_string(),
+    }
 }
 
-pub(super) fn format_tensor_recursive(
-    data: &DenseTensor,
-    shape: &[usize],
-    _depth: usize,
-) -> String {
+/// A collection renders as its delimiters and its elements, spaced.
+fn render_delimited(open: &str, close: &str, elements: &[String]) -> String {
+    if elements.is_empty() {
+        return format!("{open} {close}");
+    }
+    format!("{open} {} {close}", elements.join(" "))
+}
+
+fn format_tensor_recursive(data: &DenseTensor, shape: &[usize], _depth: usize) -> String {
     if shape.is_empty() {
         return "[ ]".to_string();
     }
@@ -83,7 +133,7 @@ fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usi
 /// `numerator/denominator`, integers included (`3` -> `3/1`). There is no
 /// decimal surface form and no per-value style — the display is uniform
 /// and matches the exact-real internal model.
-pub(super) fn format_fraction(f: &Fraction) -> String {
+fn format_fraction(f: &Fraction) -> String {
     if f.is_nil() {
         return "NIL".to_string();
     }
@@ -98,7 +148,7 @@ pub(super) fn format_fraction(f: &Fraction) -> String {
 /// `2 SQRT` as a number and a Symbol. Written without spaces so that inside a
 /// Vector it still reads as one element. Nothing is truncated or
 /// approximated: the normal form *is* the value, and its rendering is finite.
-pub(super) fn format_exact_real(er: &ExactReal) -> String {
+fn format_exact_real(er: &ExactReal) -> String {
     match er {
         ExactReal::Rational(f) => format_fraction(f),
         ExactReal::Algebraic(a) => render_algebraic_terms(&a.normal_form_terms()),

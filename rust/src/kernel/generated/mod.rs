@@ -8,9 +8,9 @@
 //! Coreword registry takes stack arity, purity and determinism from here, so
 //! `spec/words.json` is the only place those facts are written down.
 //!
-//! What `BuiltinSpec` adds is prose and what follows from the contract —
-//! documentation text, `safety_level`, `safe_preview`. No canonical fact is
-//! written down twice.
+//! The documentation prose (summary, stack effect, hover text) is projected
+//! here too; `BuiltinSpec` is a view assembled from these rows for the GUI and
+//! reference consumers. No canonical fact is written down twice.
 
 mod word_registry;
 

@@ -30,9 +30,10 @@
 //! Inference is deliberately conservative (SPEC LANG.CONTRACT.REGISTRY), so an
 //! unprovable declaration is a `note`, never a false `error`.
 
-use super::contract_cost::{check_cost_decl, parse_cost_terms, CostDecl};
-use super::contract_gap::GapCode;
-use super::contract_gap::{declaration_json, fold_outcomes, gap_summary_json, CheckOutcome};
+use super::contract_gap::{
+    check_cost_decl, declaration_json, fold_outcomes, gap_summary_json, parse_cost_terms,
+    CheckOutcome, CostDecl, GapCode,
+};
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractDeterminism, ContractFlow, ContractPartiality, ContractPurity,
 };

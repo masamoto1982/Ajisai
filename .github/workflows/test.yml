@@ -138,7 +138,6 @@ jobs:
           npm run semantic-kernel:check
           npm run word-schema:check
           npm run word:reference:check
-          npm run core-word-docs:check
           npm run word-registry:check
           npm run specification:check
 

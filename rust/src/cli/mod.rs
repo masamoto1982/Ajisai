@@ -206,13 +206,17 @@ fn cmd_version(json: bool) -> i32 {
     0
 }
 
+/// The program at `path`, or `None` once the reason it cannot be read is on
+/// stderr — the caller exits 2, a usage error.
+fn read_source(path: &str) -> Option<String> {
+    std::fs::read_to_string(path)
+        .map_err(|e| eprintln!("ajisai: cannot read {}: {}", path, e))
+        .ok()
+}
+
 fn cmd_run(path: &str, opts: &Opts) -> i32 {
-    let source = match std::fs::read_to_string(path) {
-        Ok(source) => source,
-        Err(e) => {
-            eprintln!("ajisai: cannot read {}: {}", path, e);
-            return 2;
-        }
+    let Some(source) = read_source(path) else {
+        return 2;
     };
 
     let response = block_on(agent_api::compute(
@@ -234,12 +238,8 @@ fn evidence_value<'a>(evidence: &'a [String], key: &str) -> Option<&'a str> {
 }
 
 fn cmd_check(path: &str, opts: &Opts) -> i32 {
-    let source = match std::fs::read_to_string(path) {
-        Ok(source) => source,
-        Err(e) => {
-            eprintln!("ajisai: cannot read {}: {}", path, e);
-            return 2;
-        }
+    let Some(source) = read_source(path) else {
+        return 2;
     };
     // The same check `agent check` answers, read out for a person: one
     // implementation, two renderings.
@@ -270,12 +270,8 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
 /// (P2). Registers definitions and imports without executing any word body or
 /// top-level code. Observational — a well-formed file always exits 0.
 fn cmd_contract(path: &str) -> i32 {
-    let source = match std::fs::read_to_string(path) {
-        Ok(source) => source,
-        Err(e) => {
-            eprintln!("ajisai: cannot read {}: {}", path, e);
-            return 2;
-        }
+    let Some(source) = read_source(path) else {
+        return 2;
     };
     {
         let reports = contract_report::report_contracts(&source);
@@ -326,13 +322,10 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
             }
         }
     } else {
-        match std::fs::read_to_string(path) {
-            Ok(source) => source,
-            Err(e) => {
-                eprintln!("ajisai: cannot read {}: {}", path, e);
-                return 2;
-            }
-        }
+        let Some(source) = read_source(path) else {
+            return 2;
+        };
+        source
     };
     let (document, exit_code) = match operation {
         "compute" => {
@@ -363,11 +356,11 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
 /// The ceilings an `agent compute`/`agent outcomes` runs under, from the
 /// command line: the step budget and the chosen limit profile.
 fn compute_options(opts: &Opts) -> agent_api::ComputeOptions {
-    agent_api::ComputeOptions {
-        step_limit: opts.step_limit,
-        runtime_limits: match opts.limits {
-            LimitProfile::Agent => Some(agent_api::LOCAL_AGENT_RUNTIME_LIMITS),
-            LimitProfile::Trusted => None,
+    match opts.limits {
+        LimitProfile::Agent => agent_api::ComputeOptions::agent(opts.step_limit),
+        LimitProfile::Trusted => agent_api::ComputeOptions {
+            step_limit: opts.step_limit,
+            runtime_limits: None,
         },
     }
 }

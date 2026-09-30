@@ -7,14 +7,12 @@
 
 pub mod algebraic;
 mod algebraic_field;
-mod algebraic_floor;
 #[cfg(test)]
 mod algebraic_tests;
 pub(crate) mod basis;
 mod power;
 pub mod squarefree;
 pub mod value;
-mod value_approx;
 
 pub use algebraic::{Algebraic, AlgebraicResult};
 pub use power::PowOutcome;

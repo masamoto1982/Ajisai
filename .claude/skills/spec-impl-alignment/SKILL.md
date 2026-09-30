@@ -26,7 +26,7 @@ finding and the next: see "Scope discipline" under Phase 4.
 Read the 5 `spec/` sources against **each other**, without looking at
 `rust/` or `src/`. Existing gates (`npm run specification:check`,
 `semantic-kernel:check`, `word-schema:check`, `word:manifest:check`,
-`word-registry:check`, `word:reference:check`, `core-word-docs:check`,
+`word-registry:check`, `word:reference:check`,
 `check:formalization-coverage`, `check:minimal-core`,
 `check:unreachable-contract`) verify generation round-trips and structural
 cross-references, but not whether one source's *prose* claims something a
@@ -74,7 +74,7 @@ The rest of the matrix only proves each copy self-consistent.
 
 Most generated artifacts here are hard-gated by a `--check` mode on their
 own generator — `word-registry:check` covers `rust/src/kernel/generated/`,
-and `word:manifest:check`, `word:reference:check`, `core-word-docs:check`,
+and `word:manifest:check`, `word:reference:check`,
 `semantics:table:check`, `semantic-kernel:check` cover the rest — so
 running the `*:check` matrix is enough for those. The dangerous class is
 any checked-in artifact whose freshness gate is **advisory or missing**:
