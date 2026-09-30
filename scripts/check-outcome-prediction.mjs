@@ -37,83 +37,15 @@
 //   node scripts/check-outcome-prediction.mjs
 //   AJISAI_BIN=/path/to/ajisai ...   # override CLI binary
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { classifyOutcome, readJson, reporter, resolveAjisaiBin, runAgent } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
+const report = reporter('outcome-prediction');
+const fail = report.fail;
 
-const errors = [];
-const fail = (message) => errors.push(message);
-
-// Mirrors scripts/check-outcome-bijection.mjs's resolveAjisaiBin exactly.
-function resolveAjisaiBin() {
-  if (process.env.AJISAI_BIN) {
-    if (!existsSync(process.env.AJISAI_BIN)) {
-      console.error(`[outcome-prediction] AJISAI_BIN not found: ${process.env.AJISAI_BIN}`);
-      process.exit(1);
-    }
-    return process.env.AJISAI_BIN;
-  }
-  const debugBin = resolve(repoRoot, 'rust/target/debug/ajisai');
-  if (!existsSync(debugBin)) {
-    console.error('[outcome-prediction] building ajisai CLI (cargo build --bin ajisai)...');
-    execFileSync('cargo', ['build', '--bin', 'ajisai'], {
-      cwd: resolve(repoRoot, 'rust'),
-      stdio: ['ignore', 'inherit', 'inherit'],
-    });
-  }
-  if (!existsSync(debugBin)) {
-    console.error('[outcome-prediction] ajisai CLI binary not found after build');
-    process.exit(1);
-  }
-  return debugBin;
-}
-
-function predict(ajisaiBin, scratchDir, counter, source) {
-  const file = join(scratchDir, `prediction-${counter}.ajisai`);
-  writeFileSync(file, `${source}\n`);
-  // `agent outcomes` always exits 0 (predicting always succeeds, even for a
-  // program that cannot itself run) — execFileSync is safe here, unlike the
-  // bijection gate's `agent compute`.
-  // The trusted profile, the one the bijection gate runs the program under.
-  const stdout = execFileSync(ajisaiBin, ['agent', 'outcomes', file, '--limits', 'trusted'], { encoding: 'utf8' });
-  return JSON.parse(stdout);
-}
-
-// Classify a real run's JSON the way scripts/check-outcome-bijection.mjs
-// does — the same duplicated-on-purpose copy, for the same reason its own
-// comment gives (importing the table generator would rebuild the table).
-function classifyOutcome(json) {
-  if (json.status === 'error') {
-    const kind = json.aiDiagnostic?.category ?? json.diagnosis?.why;
-    if (typeof kind !== 'string' || kind === '') {
-      throw new Error(`error report names no category: ${JSON.stringify(json)}`);
-    }
-    return `error:${kind}`;
-  }
-  const stack = Array.isArray(json.stack) ? json.stack : [];
-  const top = stack.length > 0 ? stack[stack.length - 1] : null;
-  if (top && top.type === 'nil') {
-    return `nil:${top.semantics?.absence?.reason}`;
-  }
-  return 'value';
-}
-
-function run(ajisaiBin, scratchDir, counter, source) {
-  const file = join(scratchDir, `run-${counter}.ajisai`);
-  writeFileSync(file, `${source}\n`);
-  // A language ERROR exits 1 with the JSON diagnosis on stdout, so this
-  // cannot use execFileSync (which would throw on it).
-  const result = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
-  if (result.error) throw result.error;
-  if (result.status !== 0 && result.status !== 1) {
-    throw new Error(`exit ${result.status}: ${result.stderr}`);
-  }
-  return classifyOutcome(JSON.parse(result.stdout));
-}
+// `agent outcomes` predicts without running, under the trusted profile — the
+// one the bijection gate runs the program under.
+const predict = (ajisaiBin, source) => runAgent(ajisaiBin, source, { command: 'outcomes' });
+const run = (ajisaiBin, source) => classifyOutcome(runAgent(ajisaiBin, source));
 
 // Programs whose *shape*, not whose outcome id, is the point: each one broke
 // the predictor's soundness in a way the witness list could not see, because
@@ -201,7 +133,7 @@ function sweepPrograms() {
   return [...programs];
 }
 
-const witnessDoc = JSON.parse(read('spec/outcome-witnesses.json'));
+const witnessDoc = readJson('spec/outcome-witnesses.json');
 const witnesses = Array.isArray(witnessDoc.witnesses) ? witnessDoc.witnesses : [];
 if (witnesses.length === 0) {
   fail('spec/outcome-witnesses.json declares zero witnesses');
@@ -211,10 +143,9 @@ if (witnesses.length === 0) {
 // The source is rebuilt from the table's own embedded `domains` by the rule
 // scripts/generate-semantics-table.mjs used to build it — operands in tuple
 // order, then the Word name — read from the JSON rather than imported from
-// the generator, which would regenerate the table (the same reason
-// classifyOutcome above is a deliberate copy).
+// the generator, which would regenerate the table.
 function tableCases() {
-  const table = JSON.parse(read('docs/semantics-table.json'));
+  const table = readJson('docs/semantics-table.json');
   const domains = new Map((table.domains ?? []).map((d) => [d.id, d.source]));
   const cells = Array.isArray(table.cells) ? table.cells : [];
   if (cells.length === 0) {
@@ -240,97 +171,86 @@ try {
   tableCells = [];
 }
 
-const ajisaiBin = resolveAjisaiBin();
-const scratchDir = mkdtempSync(join(tmpdir(), 'ajisai-outcome-prediction-'));
+const ajisaiBin = resolveAjisaiBin('outcome-prediction');
 
 let checked = 0;
-let counter = 0;
-try {
-  tableCells.forEach((cell) => {
-    let prediction;
-    try {
-      prediction = predict(ajisaiBin, scratchDir, counter++, cell.source);
-    } catch (e) {
-      fail(`table cell ${JSON.stringify(cell.source)}: prediction failed to run: ${e.message}`);
-      return;
-    }
-    const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
-    if (!outcomes.includes(cell.expect)) {
-      fail(
-        `table cell ${JSON.stringify(cell.source)}: docs/semantics-table.json records the executed ` +
-          `outcome ${JSON.stringify(cell.expect)}, but the static predictor's set did not include it: ` +
-          `${JSON.stringify(outcomes)} — the predictor under-approximates, which pitfall A forbids`,
-      );
-      return;
-    }
-    checked += 1;
-  });
+tableCells.forEach((cell) => {
+  let prediction;
+  try {
+    prediction = predict(ajisaiBin, cell.source);
+  } catch (e) {
+    fail(`table cell ${JSON.stringify(cell.source)}: prediction failed to run: ${e.message}`);
+    return;
+  }
+  const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
+  if (!outcomes.includes(cell.expect)) {
+    fail(
+      `table cell ${JSON.stringify(cell.source)}: docs/semantics-table.json records the executed ` +
+        `outcome ${JSON.stringify(cell.expect)}, but the static predictor's set did not include it: ` +
+        `${JSON.stringify(outcomes)} — the predictor under-approximates, which pitfall A forbids`,
+    );
+    return;
+  }
+  checked += 1;
+});
 
-  witnesses.forEach((w) => {
-    let prediction;
-    try {
-      prediction = predict(ajisaiBin, scratchDir, counter++, w.source);
-    } catch (e) {
-      fail(`witness "${w.id}": prediction failed to run: ${e.message}`);
-      return;
-    }
-    const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
-    if (!outcomes.includes(w.expect)) {
-      fail(
-        `witness "${w.id}": actually observed ${JSON.stringify(w.expect)} (source: ${JSON.stringify(w.source)}), ` +
-          `but the static predictor's set did not include it: ${JSON.stringify(outcomes)} — the predictor ` +
-          `under-approximates, which pitfall A forbids`,
-      );
-      return;
-    }
-    checked += 1;
-  });
+witnesses.forEach((w) => {
+  let prediction;
+  try {
+    prediction = predict(ajisaiBin, w.source);
+  } catch (e) {
+    fail(`witness "${w.id}": prediction failed to run: ${e.message}`);
+    return;
+  }
+  const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
+  if (!outcomes.includes(w.expect)) {
+    fail(
+      `witness "${w.id}": actually observed ${JSON.stringify(w.expect)} (source: ${JSON.stringify(w.source)}), ` +
+        `but the static predictor's set did not include it: ${JSON.stringify(outcomes)} — the predictor ` +
+        `under-approximates, which pitfall A forbids`,
+    );
+    return;
+  }
+  checked += 1;
+});
 
-  [...ADVERSARIAL, ...sweepPrograms()].forEach((source) => {
-    let prediction;
-    let observed;
-    const index = counter++;
-    try {
-      prediction = predict(ajisaiBin, scratchDir, index, source);
-      observed = run(ajisaiBin, scratchDir, index, source);
-    } catch (e) {
-      fail(
-        `executed case ${JSON.stringify(source)}: failed to run: ${e.message} — an engine that does not ` +
-          `answer at all produces no outcome under LANG.FAILURE.TRICHOTOMY, so no prediction for it can be right`,
-      );
-      return;
-    }
-    const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
-    if (!outcomes.includes(observed)) {
-      fail(
-        `executed case ${JSON.stringify(source)}: running it observed ${JSON.stringify(observed)}, ` +
-          `but the static predictor's set did not include it: ${JSON.stringify(outcomes)} — the predictor ` +
-          `under-approximates, which pitfall A forbids`,
-      );
-      return;
-    }
-    // `exact` claims the set narrowed to the one outcome a deterministic,
-    // total program really produces. If it says so and is wrong, the tool is
-    // lying under its strongest label — check it separately from containment.
-    if (prediction.exact === true && (outcomes.length !== 1 || outcomes[0] !== observed)) {
-      fail(
-        `executed case ${JSON.stringify(source)}: claimed exact but ${JSON.stringify(outcomes)} ` +
-          `is not exactly the observed ${JSON.stringify(observed)}`,
-      );
-      return;
-    }
-    checked += 1;
-  });
-} finally {
-  rmSync(scratchDir, { recursive: true, force: true });
-}
+[...ADVERSARIAL, ...sweepPrograms()].forEach((source) => {
+  let prediction;
+  let observed;
+  try {
+    prediction = predict(ajisaiBin, source);
+    observed = run(ajisaiBin, source);
+  } catch (e) {
+    fail(
+      `executed case ${JSON.stringify(source)}: failed to run: ${e.message} — an engine that does not ` +
+        `answer at all produces no outcome under LANG.FAILURE.TRICHOTOMY, so no prediction for it can be right`,
+    );
+    return;
+  }
+  const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
+  if (!outcomes.includes(observed)) {
+    fail(
+      `executed case ${JSON.stringify(source)}: running it observed ${JSON.stringify(observed)}, ` +
+        `but the static predictor's set did not include it: ${JSON.stringify(outcomes)} — the predictor ` +
+        `under-approximates, which pitfall A forbids`,
+    );
+    return;
+  }
+  // `exact` claims the set narrowed to the one outcome a deterministic,
+  // total program really produces. If it says so and is wrong, the tool is
+  // lying under its strongest label — check it separately from containment.
+  if (prediction.exact === true && (outcomes.length !== 1 || outcomes[0] !== observed)) {
+    fail(
+      `executed case ${JSON.stringify(source)}: claimed exact but ${JSON.stringify(outcomes)} ` +
+        `is not exactly the observed ${JSON.stringify(observed)}`,
+    );
+    return;
+  }
+  checked += 1;
+});
 
-if (errors.length > 0) {
-  for (const e of errors) console.error(`[outcome-prediction] ${e}`);
-  process.exit(1);
-}
-console.log(
-  `[outcome-prediction] the static predictor's set contains the actually-observed outcome for all ${checked} cases ` +
+report.done(
+  `the static predictor's set contains the actually-observed outcome for all ${checked} cases ` +
     `(${tableCells.length} exhaustive-table cells + ${witnesses.length} registry witnesses + ` +
     `${ADVERSARIAL.length + sweepPrograms().length} compositions, the last group run for real).`,
 );

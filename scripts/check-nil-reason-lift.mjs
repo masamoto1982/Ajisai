@@ -32,39 +32,10 @@
 //   node scripts/check-nil-reason-lift.mjs
 //   AJISAI_BIN=/path/to/ajisai ...   # override CLI binary
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { reporter, resolveAjisaiBin, runAgent } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-
-const errors = [];
-const fail = (message) => errors.push(message);
-
-// Mirrors scripts/check-outcome-prediction.mjs's resolveAjisaiBin exactly.
-function resolveAjisaiBin() {
-  if (process.env.AJISAI_BIN) {
-    if (!existsSync(process.env.AJISAI_BIN)) {
-      console.error(`[nil-reason-lift] AJISAI_BIN not found: ${process.env.AJISAI_BIN}`);
-      process.exit(1);
-    }
-    return process.env.AJISAI_BIN;
-  }
-  const debugBin = resolve(repoRoot, 'rust/target/debug/ajisai');
-  if (!existsSync(debugBin)) {
-    console.error('[nil-reason-lift] building ajisai CLI (cargo build --bin ajisai)...');
-    execFileSync('cargo', ['build', '--bin', 'ajisai'], {
-      cwd: resolve(repoRoot, 'rust'),
-      stdio: ['ignore', 'inherit', 'inherit'],
-    });
-  }
-  if (!existsSync(debugBin)) {
-    console.error('[nil-reason-lift] ajisai CLI binary not found after build');
-    process.exit(1);
-  }
-  return debugBin;
-}
+const report = reporter('nil-reason-lift');
+const fail = report.fail;
 
 // A program that leaves a collection with at least one reasoned NIL lane, and
 // the reason every one of those lanes carries. Chosen to cover each way a lane
@@ -128,24 +99,16 @@ function collectAbsenceReasons(node, out) {
   if (node.value !== undefined) collectAbsenceReasons(node.value, out);
 }
 
-const ajisaiBin = resolveAjisaiBin();
-const scratchDir = mkdtempSync(join(tmpdir(), 'ajisai-nil-reason-lift-'));
-let counter = 0;
+const ajisaiBin = resolveAjisaiBin('nil-reason-lift');
 
 // Run `source` and return its absence reasons, or a string describing why it
 // has none to compare. A raise is one such reason; failing to answer is not.
 function absenceReasons(source) {
-  const file = join(scratchDir, `lift-${counter++}.ajisai`);
-  writeFileSync(file, `${source}\n`);
-  const result = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
-  if (result.error) throw result.error;
-  if (result.status !== 0 && result.status !== 1) {
-    throw new Error(
+  const json = runAgent(ajisaiBin, source, {
+    exitMessage: (result) =>
       `the engine did not answer (exit ${result.status}) — no value, no NIL and no ERROR is ` +
-        `no outcome under LANG.FAILURE.TRICHOTOMY: ${result.stderr.split('\n').slice(0, 3).join(' ')}`,
-    );
-  }
-  const json = JSON.parse(result.stdout);
+      `no outcome under LANG.FAILURE.TRICHOTOMY: ${result.stderr.split('\n').slice(0, 3).join(' ')}`,
+  });
   if (json.status === 'error') return { raised: true, reasons: [] };
   const reasons = [];
   collectAbsenceReasons(json.stack ?? [], reasons);
@@ -153,63 +116,55 @@ function absenceReasons(source) {
 }
 
 let checked = 0;
-try {
-  for (const [producer, expected] of PRODUCERS) {
-    let base;
+for (const [producer, expected] of PRODUCERS) {
+  let base;
+  try {
+    base = absenceReasons(producer);
+  } catch (e) {
+    fail(`producer ${JSON.stringify(producer)}: ${e.message}`);
+    continue;
+  }
+  if (base.raised || base.reasons.length === 0) {
+    fail(
+      `producer ${JSON.stringify(producer)} is supposed to leave at least one reasoned NIL lane ` +
+        `and left none — the case no longer tests what it was written for`,
+    );
+    continue;
+  }
+
+  for (const chain of CHAINS) {
+    const source = chain ? `${producer} ${chain}` : producer;
+    let observed;
     try {
-      base = absenceReasons(producer);
+      observed = absenceReasons(source);
     } catch (e) {
-      fail(`producer ${JSON.stringify(producer)}: ${e.message}`);
+      fail(`${JSON.stringify(source)}: ${e.message}`);
       continue;
     }
-    if (base.raised || base.reasons.length === 0) {
+    if (observed.raised) continue;
+
+    if (observed.reasons.length !== base.reasons.length) {
       fail(
-        `producer ${JSON.stringify(producer)} is supposed to leave at least one reasoned NIL lane ` +
-          `and left none — the case no longer tests what it was written for`,
+        `${JSON.stringify(source)}: ${JSON.stringify(producer)} leaves ` +
+          `${base.reasons.length} absent lane(s) and this leaves ${observed.reasons.length} — ` +
+          `an element-wise Word neither creates nor fills a lane, so an absence stopped being one`,
       );
       continue;
     }
-
-    for (const chain of CHAINS) {
-      const source = chain ? `${producer} ${chain}` : producer;
-      let observed;
-      try {
-        observed = absenceReasons(source);
-      } catch (e) {
-        fail(`${JSON.stringify(source)}: ${e.message}`);
-        continue;
-      }
-      if (observed.raised) continue;
-
-      if (observed.reasons.length !== base.reasons.length) {
-        fail(
-          `${JSON.stringify(source)}: ${JSON.stringify(producer)} leaves ` +
-            `${base.reasons.length} absent lane(s) and this leaves ${observed.reasons.length} — ` +
-            `an element-wise Word neither creates nor fills a lane, so an absence stopped being one`,
-        );
-        continue;
-      }
-      const wrong = observed.reasons.filter((reason) => reason !== expected);
-      if (wrong.length > 0) {
-        fail(
-          `${JSON.stringify(source)}: every absent lane was created with reason ` +
-            `${JSON.stringify(expected)}, but the result reports ${JSON.stringify(observed.reasons)} — ` +
-            `the lift dropped the reason the scalar law preserves`,
-        );
-        continue;
-      }
-      checked += 1;
+    const wrong = observed.reasons.filter((reason) => reason !== expected);
+    if (wrong.length > 0) {
+      fail(
+        `${JSON.stringify(source)}: every absent lane was created with reason ` +
+          `${JSON.stringify(expected)}, but the result reports ${JSON.stringify(observed.reasons)} — ` +
+          `the lift dropped the reason the scalar law preserves`,
+      );
+      continue;
     }
+    checked += 1;
   }
-} finally {
-  rmSync(scratchDir, { recursive: true, force: true });
 }
 
-if (errors.length > 0) {
-  for (const e of errors) console.error(`[nil-reason-lift] ${e}`);
-  process.exit(1);
-}
-console.log(
-  `[nil-reason-lift] every absent lane kept its reason and stayed absent across ${checked} executed ` +
+report.done(
+  `every absent lane kept its reason and stayed absent across ${checked} executed ` +
     `programs (${PRODUCERS.length} producers x ${CHAINS.length} element-wise chains).`,
 );

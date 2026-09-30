@@ -1,18 +1,11 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { coverageEntryMatches, readJson, readText, repoRoot, words, writeOrCheck } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const outputPath = resolve(repoRoot, 'docs/word-manifest.json');
-const coveragePath = resolve(repoRoot, 'docs/formalization-coverage.json');
-const contractsPath = resolve(repoRoot, 'spec/words.json');
 
 function fail(message) {
   throw new Error(`[word-manifest] ${message}`);
-}
-
-function readRepo(path) {
-  return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
 // The returned body *includes* the closing `\n];`. The entry patterns below
@@ -85,35 +78,9 @@ function symbolSlug(value) {
 }
 
 
-function normalizeSurface(value) {
-  return typeof value === 'string' ? value.trim().toUpperCase() : '';
-}
-
-function coverageSurfaces(entry) {
-  const surfaces = [];
-  if (typeof entry.surface === 'string') surfaces.push(entry.surface);
-  if (Array.isArray(entry.surfaces)) surfaces.push(...entry.surfaces.filter((value) => typeof value === 'string'));
-  return surfaces;
-}
-
-function manifestEntryMatchesCoverage(entry, coverageEntry) {
-  if (entry.id === coverageEntry.id) return true;
-  const manifestSurface = normalizeSurface(entry.surface);
-  const aliases = Array.isArray(entry.coverage_aliases)
-    ? entry.coverage_aliases.map(normalizeSurface).filter(Boolean)
-    : [];
-  for (const surface of coverageSurfaces(coverageEntry)) {
-    const coverageSurface = normalizeSurface(surface);
-    if (coverageSurface === manifestSurface || aliases.includes(coverageSurface)) return true;
-    const tokens = coverageSurface.match(/[A-Z0-9@?>=<!&+*/%.,;#$'\[\]{}()-]+/g) ?? [];
-    if (tokens.includes(manifestSurface) || aliases.some((alias) => tokens.includes(alias))) return true;
-  }
-  return false;
-}
-
 function loadCoverageEntries() {
-  if (!existsSync(coveragePath)) return [];
-  const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'));
+  if (!existsSync(resolve(repoRoot, 'docs/formalization-coverage.json'))) return [];
+  const coverage = readJson('docs/formalization-coverage.json');
   if (!Array.isArray(coverage.entries)) return [];
   return coverage.entries;
 }
@@ -128,7 +95,7 @@ function canonicalForEntry(entry, coverageEntry) {
 
 function semanticMetadataForEntry(entry, coverageEntries) {
   const exact = coverageEntries.find((candidate) => candidate.id === entry.id);
-  const coverageEntry = exact ?? coverageEntries.find((candidate) => manifestEntryMatchesCoverage(entry, candidate));
+  const coverageEntry = exact ?? coverageEntries.find((candidate) => coverageEntryMatches(candidate, entry));
   const metadata = {
     canonical: canonicalForEntry(entry, coverageEntry),
   };
@@ -160,7 +127,7 @@ function rustEnumVariantToSnake(value) {
 
 function extractCoreWords() {
   const sourcePath = 'spec/words.json';
-  const parsed = JSON.parse(readRepo(sourcePath)).entries.map((word) => ({
+  const parsed = words().entries.map((word) => ({
     name: word.name,
     family: word.family,
     vocabularyTier: word.vocabularyTier,
@@ -185,7 +152,7 @@ function extractCoreWords() {
 
 function extractSurfaceForms() {
   const sourcePath = 'rust/src/surface_forms.rs';
-  const body = constArrayBody(readRepo(sourcePath), 'SURFACE_FORMS');
+  const body = constArrayBody(readText(sourcePath), 'SURFACE_FORMS');
   const entries = [];
   const pattern = /SurfaceForm\s*{([\s\S]*?)(?=\n\s*SurfaceForm\s*{|\n\s*\];)/g;
   for (const match of body.matchAll(pattern)) {
@@ -214,7 +181,7 @@ const entries = [
   ...extractSurfaceForms(),
 ];
 
-const contracts = JSON.parse(readFileSync(contractsPath, 'utf8'));
+const contracts = words();
 const contractNames = new Set(contracts.entries.map((entry) => entry.name));
 if (contractNames.size !== contracts.entries.length) fail('duplicate canonical name in spec/words.json');
 const generatedCanonicalNames = new Set(entries
@@ -265,21 +232,22 @@ const manifest = {
 };
 
 const json = `${JSON.stringify(manifest, null, 2)}\n`;
-if (process.argv.includes('--check')) {
-  // CI drift guard: fail if the committed manifest is out of sync with what
-  // the generator now produces, so a new/last BuiltinSpec (e.g. SUPERVISE)
-  // can never silently go missing again.
-  const existing = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : '';
-  if (existing !== json) {
-    console.error(
-      '[word-manifest] docs/word-manifest.json is stale. Run `npm run word:manifest` and commit the result.',
-    );
-    process.exit(1);
-  }
-  console.log(`[word-manifest] docs/word-manifest.json is up to date (${entries.length} entries).`);
-} else if (process.argv.includes('--stdout')) {
+if (process.argv.includes('--stdout') && !process.argv.includes('--check')) {
   process.stdout.write(json);
 } else {
-  writeFileSync(outputPath, json);
-  console.log(`[word-manifest] wrote ${entries.length} entries to docs/word-manifest.json`);
+  // The check is the CI drift guard: fail if the committed manifest is out of
+  // sync with what the generator now produces, so a new/last BuiltinSpec (e.g.
+  // SUPERVISE) can never silently go missing again.
+  writeOrCheck(
+    'word-manifest',
+    [{
+      path: 'docs/word-manifest.json',
+      content: json,
+      stale: 'docs/word-manifest.json is stale. Run `npm run word:manifest` and commit the result.',
+    }],
+    {
+      current: `docs/word-manifest.json is up to date (${entries.length} entries).`,
+      wrote: `wrote ${entries.length} entries to docs/word-manifest.json`,
+    },
+  );
 }

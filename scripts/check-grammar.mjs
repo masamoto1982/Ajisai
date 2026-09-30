@@ -19,24 +19,15 @@
 // Unlike a shape check, the last item is a *truth* condition: the examples are
 // run through the grammar, not inspected.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readJson, repoRoot, reporter } from './lib/common.mjs';
 import { loadGrammar, makeLexer } from './lib/reference-lexer.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const failures = [];
-
-function fail(message) {
-  failures.push(message);
-}
+const report = reporter('grammar', { countSummary: true });
+const fail = report.fail;
 
 const grammar = loadGrammar(repoRoot);
-const outcomes = JSON.parse(
-  readFileSync(resolve(repoRoot, 'spec/outcomes.json'), 'utf8'),
-);
-const manifest = JSON.parse(
-  readFileSync(resolve(repoRoot, 'docs/word-manifest.json'), 'utf8'),
-);
+const outcomes = readJson('spec/outcomes.json');
+const manifest = readJson('docs/word-manifest.json');
 
 // Building the lexer validates the grammar's action and matcher vocabulary.
 const lex = makeLexer(grammar);
@@ -233,12 +224,6 @@ for (const surface of transparentSurfaces) {
 
 // ------------------------------------------------------------------- report
 
-if (failures.length > 0) {
-  for (const message of failures) console.error(`[grammar] ${message}`);
-  console.error(`[grammar] ${failures.length} failure(s)`);
-  process.exit(1);
-}
-
-console.log(
-  `[grammar] ${grammar.lexemeRules.length} lexeme rules, ${grammar.phases.length} phases, ${grammar.sourceErrors.length} source-error conditions, ${producedSurfaces.size} surfaces produced — all closed against outcomes and the word manifest`,
+report.done(
+  `${grammar.lexemeRules.length} lexeme rules, ${grammar.phases.length} phases, ${grammar.sourceErrors.length} source-error conditions, ${producedSurfaces.size} surfaces produced — all closed against outcomes and the word manifest`,
 );

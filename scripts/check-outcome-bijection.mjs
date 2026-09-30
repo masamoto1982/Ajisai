@@ -30,105 +30,16 @@
 //   node scripts/check-outcome-bijection.mjs
 //   AJISAI_BIN=/path/to/ajisai ...   # override CLI binary
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { classifyOutcome, readJson, reporter, resolveAjisaiBin, runAgent } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
-
-const errors = [];
-const fail = (message) => errors.push(message);
-
-// ---------------------------------------------------------------------------
-// CLI harness (mirrors scripts/generate-semantics-table.mjs's
-// resolveAjisaiBin exactly, minus the worker pool this script has no use
-// for — every witness runs once).
-// ---------------------------------------------------------------------------
-
-function resolveAjisaiBin() {
-  if (process.env.AJISAI_BIN) {
-    if (!existsSync(process.env.AJISAI_BIN)) {
-      console.error(`[outcome-bijection] AJISAI_BIN not found: ${process.env.AJISAI_BIN}`);
-      process.exit(1);
-    }
-    return process.env.AJISAI_BIN;
-  }
-  const debugBin = resolve(repoRoot, 'rust/target/debug/ajisai');
-  if (!existsSync(debugBin)) {
-    console.error('[outcome-bijection] building ajisai CLI (cargo build --bin ajisai)...');
-    execFileSync('cargo', ['build', '--bin', 'ajisai'], {
-      cwd: resolve(repoRoot, 'rust'),
-      stdio: ['ignore', 'inherit', 'inherit'],
-    });
-  }
-  if (!existsSync(debugBin)) {
-    console.error('[outcome-bijection] ajisai CLI binary not found after build');
-    process.exit(1);
-  }
-  return debugBin;
-}
-
-// ---------------------------------------------------------------------------
-// Outcome classification — the same rule
-// scripts/generate-semantics-table.mjs's classifyOutcome applies, kept as an
-// intentionally separate copy: that script runs its whole (expensive) table
-// build as top-level module code the moment it is imported, so importing it
-// here would rebuild the committed table as a side effect of a bijection
-// check. Twenty lines duplicated once is cheaper than that coupling. Any
-// change to one classifier belongs in the other too.
-// ---------------------------------------------------------------------------
-
-function classifyOutcome(json) {
-  if (json.status === 'error') {
-    const category = json.aiDiagnostic?.category;
-    if (typeof category === 'string' && category !== '') {
-      return `error:${category}`;
-    }
-    const why = json.diagnosis?.why;
-    if (typeof why !== 'string' || why === '') {
-      throw new Error(`error report has neither aiDiagnostic.category nor diagnosis.why: ${JSON.stringify(json)}`);
-    }
-    return `error:${why}`;
-  }
-  const stack = Array.isArray(json.stack) ? json.stack : [];
-  const top = stack.length > 0 ? stack[stack.length - 1] : null;
-  if (top && top.type === 'nil') {
-    const reason = top.semantics?.absence?.reason;
-    if (typeof reason !== 'string' || reason === '') {
-      throw new Error(`NIL top-of-stack has no semantics.absence.reason: ${JSON.stringify(top)}`);
-    }
-    return `nil:${reason}`;
-  }
-  return 'value';
-}
-
-function runProgram(ajisaiBin, scratchDir, counter, source, profile) {
-  const file = join(scratchDir, `witness-${counter}.ajisai`);
-  writeFileSync(file, `${source}\n`);
-  const args = ['agent', 'compute', file, '--limits', 'trusted'];
-  if (profile?.stepLimit !== undefined) {
-    args.push('--step-limit', String(profile.stepLimit));
-  }
-  // `spawnSync`, not `execFileSync`: a language ERROR exits 1 (the CLI's own
-  // documented exit code), which `execFileSync` treats as a thrown failure
-  // even though its stdout is exactly the JSON diagnosis this script needs.
-  const result = spawnSync(ajisaiBin, args, { encoding: 'utf8' });
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0 && result.status !== 1) {
-    throw new Error(`exit code ${result.status} (CLI usage error?): ${result.stderr}`);
-  }
-  return JSON.parse(result.stdout);
-}
+const report = reporter('outcome-bijection');
+const fail = report.fail;
 
 // ---------------------------------------------------------------------------
 // spec/outcomes.json — the registry both halves check against.
 // ---------------------------------------------------------------------------
 
-const outcomes = JSON.parse(read('spec/outcomes.json'));
+const outcomes = readJson('spec/outcomes.json');
 const registryNilIds = new Set(outcomes.nilReasons.map((r) => r.id));
 const registryErrorIds = new Set(outcomes.errorCategories.map((c) => c.id));
 
@@ -156,7 +67,7 @@ function isRegistered(outcome) {
 // outcome also fails to match its own declared `expect`.)
 // ---------------------------------------------------------------------------
 
-const table = JSON.parse(read('docs/semantics-table.json'));
+const table = readJson('docs/semantics-table.json');
 const tableOutcomes = new Set(table.cells.map((cell) => cell.outcome));
 
 const unsoundTableOutcomes = [...tableOutcomes].filter((outcome) => !isRegistered(outcome)).sort();
@@ -171,7 +82,7 @@ if (unsoundTableOutcomes.length > 0) {
 // spec/outcome-witnesses.json — structural validation, then execution.
 // ---------------------------------------------------------------------------
 
-const witnessDoc = JSON.parse(read('spec/outcome-witnesses.json'));
+const witnessDoc = readJson('spec/outcome-witnesses.json');
 if (witnessDoc.schemaVersion !== 1) {
   fail(`spec/outcome-witnesses.json: unsupported schemaVersion ${JSON.stringify(witnessDoc.schemaVersion)}`);
 }
@@ -206,50 +117,41 @@ for (const [i, w] of witnesses.entries()) {
   }
 }
 
-if (errors.length > 0) {
-  // A structurally broken witness file cannot be executed meaningfully —
-  // report what is wrong and stop before spawning any CLI processes.
-  for (const e of errors) console.error(`[outcome-bijection] ${e}`);
-  process.exit(1);
-}
+// A structurally broken witness file cannot be executed meaningfully —
+// stop at what is wrong before spawning any CLI processes.
+if (report.failed) process.exit(1);
 
 // Every id a witness *targets*, regardless of whether it turns out to
 // execute correctly — used below to detect a witness that duplicates
 // coverage the table already has (allowed) versus one that is simply wrong.
 const witnessedIds = new Set(); // "nil:<reason>" / "error:<category>" of what each witness actually observed and matched
-const ajisaiBin = resolveAjisaiBin();
-const scratchDir = mkdtempSync(join(tmpdir(), 'ajisai-outcome-witness-'));
+const ajisaiBin = resolveAjisaiBin('outcome-bijection');
 
-try {
-  witnesses.forEach((w, i) => {
-    let observed;
-    try {
-      const json = runProgram(ajisaiBin, scratchDir, i, w.source, w.profile);
-      observed = classifyOutcome(json);
-    } catch (e) {
-      fail(`witness "${w.id}" (${where(w)}): failed to run or classify: ${e.message}`);
-      return;
-    }
-    if (observed !== w.expect) {
-      fail(
-        `witness "${w.id}": expected ${JSON.stringify(w.expect)}, observed ${JSON.stringify(observed)} — ` +
-          `either the program no longer reaches this outcome, or "expect" is stale`,
-      );
-      return;
-    }
-    if (!isRegistered(observed)) {
-      fail(`witness "${w.id}": observed ${JSON.stringify(observed)}, which spec/outcomes.json does not declare`);
-      return;
-    }
-    witnessedIds.add(observed);
-  });
-} finally {
-  rmSync(scratchDir, { recursive: true, force: true });
-}
-
-function where(w) {
-  return `id=${w.id}`;
-}
+witnesses.forEach((w) => {
+  let observed;
+  try {
+    const json = runAgent(ajisaiBin, w.source, {
+      args: w.profile?.stepLimit === undefined ? [] : ['--step-limit', String(w.profile.stepLimit)],
+      exitMessage: (r) => `exit code ${r.status} (CLI usage error?): ${r.stderr}`,
+    });
+    observed = classifyOutcome(json);
+  } catch (e) {
+    fail(`witness "${w.id}" (id=${w.id}): failed to run or classify: ${e.message}`);
+    return;
+  }
+  if (observed !== w.expect) {
+    fail(
+      `witness "${w.id}": expected ${JSON.stringify(w.expect)}, observed ${JSON.stringify(observed)} — ` +
+        `either the program no longer reaches this outcome, or "expect" is stale`,
+    );
+    return;
+  }
+  if (!isRegistered(observed)) {
+    fail(`witness "${w.id}": observed ${JSON.stringify(observed)}, which spec/outcomes.json does not declare`);
+    return;
+  }
+  witnessedIds.add(observed);
+});
 
 // ---------------------------------------------------------------------------
 // Non-vacuity: every registry id has at least one occurrence, in the table
@@ -281,11 +183,7 @@ if (unwitnessedErrorIds.length > 0) {
 
 // ---------------------------------------------------------------------------
 
-if (errors.length > 0) {
-  for (const e of errors) console.error(`[outcome-bijection] ${e}`);
-  process.exit(1);
-}
-console.log(
-  `[outcome-bijection] soundness holds (${tableOutcomes.size} distinct table outcomes) and non-vacuity holds ` +
+report.done(
+  `soundness holds (${tableOutcomes.size} distinct table outcomes) and non-vacuity holds ` +
     `(${registryNilIds.size} NIL reasons + ${registryErrorIds.size} error categories, ${witnesses.length} executed witnesses).`,
 );

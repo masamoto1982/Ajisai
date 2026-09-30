@@ -16,10 +16,10 @@
 // `--update`. Its leading `_comment` records why the largest offenders are left
 // unsplit for now (see that file).
 
-import { readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, statSync } from 'node:fs';
 import { resolve, relative, sep } from 'node:path';
+import { repoRoot, walk } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
 const rustSrcDir = resolve(repoRoot, 'rust/src');
 const baselinePath = resolve(repoRoot, 'docs/quality/file-size-baseline.json');
 
@@ -62,25 +62,12 @@ function isGenerated(absPath) {
   return firstLine.includes('@generated');
 }
 
-function collectRustFiles(dir) {
-  const out = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = resolve(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...collectRustFiles(full));
-    } else if (entry.isFile() && entry.name.endsWith('.rs') && !isGenerated(full)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
 function toRepoPosix(absPath) {
   return relative(repoRoot, absPath).split(sep).join('/');
 }
 
 function measure() {
-  const files = collectRustFiles(rustSrcDir).sort();
+  const files = walk(rustSrcDir, ['.rs']).filter((file) => !isGenerated(file)).sort();
   const sizes = new Map();
   for (const file of files) {
     const lines = countLines(readFileSync(file, 'utf8'));

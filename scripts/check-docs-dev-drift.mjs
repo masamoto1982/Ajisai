@@ -38,22 +38,14 @@
 // checking it would fail the gate on the note that motivated this gate.
 // `[執筆規約]` (writing conventions) is excluded because it does not describe
 // implementation internals.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { repoRoot, reporter, skipBuildAndHidden, walk } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
 const docsDevDir = resolve(repoRoot, 'docs/dev');
-
-function walk(dir, exts, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name === 'target' || name === 'dist' || name === 'generated' || name.startsWith('.')) continue;
-    const full = join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, exts, out);
-    else if (exts.some((ext) => name.endsWith(ext))) out.push(full);
-  }
-  return out;
-}
+// Generated sources are projections of spec/, not implementation a memo can
+// make claims about.
+const skip = (name) => skipBuildAndHidden(name) || name === 'generated';
 
 // The corpus a docs/dev claim must be findable in to count as still true: the
 // Rust interpreter and its own test suite, and the TypeScript GUI/runtime.
@@ -61,9 +53,9 @@ function walk(dir, exts, out = []) {
 // memo may describe a symbol that only ever lived in the test support code
 // (e.g. tests/test_support/generators.rs), not just rust/src.
 const haystackFiles = [
-  ...walk(resolve(repoRoot, 'rust/src'), ['.rs']),
-  ...walk(resolve(repoRoot, 'rust/tests'), ['.rs']),
-  ...walk(resolve(repoRoot, 'src'), ['.ts', '.tsx']),
+  ...walk(resolve(repoRoot, 'rust/src'), ['.rs'], skip),
+  ...walk(resolve(repoRoot, 'rust/tests'), ['.rs'], skip),
+  ...walk(resolve(repoRoot, 'src'), ['.ts', '.tsx'], skip),
 ];
 const haystack = haystackFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
 
@@ -142,11 +134,8 @@ function parseIndexScope() {
   return scoped;
 }
 
-let failed = false;
-function fail(message) {
-  console.error(`[docs-dev-drift] ${message}`);
-  failed = true;
-}
+const report = reporter('docs-dev-drift');
+const fail = report.fail;
 
 const scopedFiles = parseIndexScope();
 if (scopedFiles.length === 0) {
@@ -185,9 +174,6 @@ for (const file of scopedFiles) {
   }
 }
 
-if (!failed) {
-  console.log(
-    `[docs-dev-drift] ${scopedFiles.length} load-bearing memo(s), ${checkedIdentifiers} referenced identifier(s), all reachable.`,
-  );
-}
-process.exit(failed ? 1 : 0);
+report.done(
+  `${scopedFiles.length} load-bearing memo(s), ${checkedIdentifiers} referenced identifier(s), all reachable.`,
+);

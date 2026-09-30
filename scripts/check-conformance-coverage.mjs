@@ -16,8 +16,8 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { decodeEntities, readJson, repoRoot } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
 const args = process.argv.slice(2);
 const asJson = args.includes('--json');
 const suiteFlag = args.indexOf('--suite');
@@ -25,25 +25,13 @@ const suitePath = suiteFlag !== -1 && args[suiteFlag + 1]
   ? resolve(args[suiteFlag + 1])
   : resolve(repoRoot, 'tests/conformance/index.html');
 
-const manifest = JSON.parse(
-  readFileSync(resolve(repoRoot, 'docs/word-manifest.json'), 'utf8'),
-);
+const manifest = readJson('docs/word-manifest.json');
 
 const coreWords = new Set(
   manifest.entries
     .filter((e) => e.classification === 'Core')
     .map((e) => e.surface),
 );
-
-function decodeEntities(value) {
-  return value
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replaceAll('&apos;', "'")
-    .replaceAll('&amp;', '&');
-}
 
 const html = readFileSync(suitePath, 'utf8');
 const sources = [];

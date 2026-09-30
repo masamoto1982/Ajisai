@@ -22,40 +22,16 @@
 // the `From<String>`/`From<&str>` conversions that fed it no longer exist, so
 // every raise site names a declared condition or a fixed structural variant.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { matchBrace, readJson, readText, reporter, words } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
-
-const errors = [];
-const fail = (message) => errors.push(message);
+const report = reporter('outcome-registry');
+const fail = report.fail;
 
 // ---------------------------------------------------------------------------
 // Rust extraction: the `as_protocol_str` match body for one enum, scanned by
-// brace depth so a nested arm (`Declared(condition) => condition`) or a
-// string literal containing `}` cannot cut the scan short.
+// brace depth (matchBrace) so a nested arm (`Declared(condition) => condition`)
+// or a string literal containing `}` cannot cut the scan short.
 // ---------------------------------------------------------------------------
-
-function matchBrace(source, openIndex) {
-  let depth = 0;
-  let inString = false;
-  for (let i = openIndex; i < source.length; i += 1) {
-    const char = source[i];
-    if (inString) {
-      if (char === '\\') i += 1;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === '{') depth += 1;
-    else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-}
 
 function extractProtocolStrings(source, enumName) {
   const fnMarker = `impl ${enumName} {`;
@@ -77,7 +53,7 @@ function extractProtocolStrings(source, enumName) {
   return found;
 }
 
-const errorRs = read('rust/src/error.rs');
+const errorRs = readText('rust/src/error.rs');
 
 const nilReasonArms = extractProtocolStrings(errorRs, 'NilReason');
 if (nilReasonArms.size === 0) {
@@ -120,7 +96,7 @@ rustStructuralErrorCategories.delete('divisionByZero');
 // spec/outcomes.json
 // ---------------------------------------------------------------------------
 
-const outcomes = JSON.parse(read('spec/outcomes.json'));
+const outcomes = readJson('spec/outcomes.json');
 const registryNilReasons = new Set(outcomes.nilReasons.map((r) => r.id));
 const registryErrorCategories = new Set(outcomes.errorCategories.map((c) => c.id));
 const registryStructuralErrorCategories = new Set(
@@ -155,11 +131,9 @@ diffSets(
 // words.json entry naming an outcome nothing else knows about.
 // ---------------------------------------------------------------------------
 
-const words = JSON.parse(read('spec/words.json'));
-
 const projectionReasons = new Set();
 const errorWhenConditions = new Set();
-for (const entry of words.entries) {
+for (const entry of words().entries) {
   const proj = entry.projection;
   if (proj && typeof proj === 'object' && typeof proj.reason === 'string') {
     projectionReasons.add(proj.reason);
@@ -202,11 +176,7 @@ if (missingErrorWhenConditions.length > 0) {
 
 // ---------------------------------------------------------------------------
 
-if (errors.length > 0) {
-  for (const e of errors) console.error(`[outcome-registry] ${e}`);
-  process.exit(1);
-}
-console.log(
-  `[outcome-registry] ${registryNilReasons.size} NIL reasons, ${registryErrorCategories.size} error categories ` +
+report.done(
+  `${registryNilReasons.size} NIL reasons, ${registryErrorCategories.size} error categories ` +
     `(${registryStructuralErrorCategories.size} structural), all cross-checked against Rust and spec/words.json.`,
 );

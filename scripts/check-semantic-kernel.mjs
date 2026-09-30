@@ -1,13 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { readJson, readText, reporter, words as wordsDocument } from './lib/common.mjs';
 
-const language = readFileSync('spec/language-semantics.md', 'utf8');
-const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
-const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
+const language = readText('spec/language-semantics.md');
+const families = readJson('spec/semantic-families.json');
+const words = wordsDocument();
 
-const fail = (message) => {
-  console.error(`[semantic-kernel] ${message}`);
-  process.exitCode = 1;
-};
+const report = reporter('semantic-kernel');
+const fail = report.fail;
 
 // The kernel is a ceiling, not a floor: a shorter specification is always an
 // improvement, a longer one is the regression this gate exists to catch.
@@ -91,10 +89,6 @@ for (const family of familyIds) {
 // so this is the deliberate raise the comment above asks for.
 if (words.entries.length > 100) fail(`${words.entries.length} canonical Words (maximum 100)`);
 
-if (!process.exitCode) {
-  const headroom = LINE_BUDGET - lines;
-  const budget = headroom === 0 ? 'at the line budget' : `${headroom} lines under budget`;
-  console.log(
-    `[semantic-kernel] ${lines} lines (${budget}), ${clauseIds.size} clauses, ${familyIds.size} families, ${words.entries.length} Words.`,
-  );
-}
+const headroom = LINE_BUDGET - lines;
+const budget = headroom === 0 ? 'at the line budget' : `${headroom} lines under budget`;
+report.done(`${lines} lines (${budget}), ${clauseIds.size} clauses, ${familyIds.size} families, ${words.entries.length} Words.`);

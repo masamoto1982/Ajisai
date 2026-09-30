@@ -19,49 +19,19 @@
 //   node scripts/generate-skill-md.mjs --check    # fail if SKILL.md is stale
 //   AJISAI_BIN=/path/to/ajisai ...                # override CLI binary
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
+import { fatal, readJson, repoRoot, resolveAjisaiBin, spawnAgent, words, writeOrCheck } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const outputPath = resolve(repoRoot, 'SKILL.md');
-
-function fail(message) {
-  console.error(`[skill-md] ${message}`);
-  process.exit(1);
-}
+const fail = (message) => fatal('skill-md', message);
 
 // ---------------------------------------------------------------------------
 // CLI harness
 // ---------------------------------------------------------------------------
 
-function resolveAjisaiBin() {
-  if (process.env.AJISAI_BIN) {
-    if (!existsSync(process.env.AJISAI_BIN)) fail(`AJISAI_BIN not found: ${process.env.AJISAI_BIN}`);
-    return process.env.AJISAI_BIN;
-  }
-  const debugBin = resolve(repoRoot, 'rust/target/debug/ajisai');
-  if (!existsSync(debugBin)) {
-    console.error('[skill-md] building ajisai CLI (cargo build --bin ajisai)...');
-    execFileSync('cargo', ['build', '--bin', 'ajisai'], {
-      cwd: resolve(repoRoot, 'rust'),
-      stdio: ['ignore', 'inherit', 'inherit'],
-    });
-  }
-  if (!existsSync(debugBin)) fail('ajisai CLI binary not found after build');
-  return debugBin;
-}
+const ajisaiBin = resolveAjisaiBin('skill-md');
 
-const ajisaiBin = resolveAjisaiBin();
-const scratchDir = mkdtempSync(join(tmpdir(), 'ajisai-skill-'));
-process.on('exit', () => rmSync(scratchDir, { recursive: true, force: true }));
-
-let snippetCounter = 0;
 function runSnippet(code) {
-  const file = join(scratchDir, `snippet-${snippetCounter++}.ajisai`);
-  writeFileSync(file, `${code}\n`);
-  const proc = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
+  const proc = spawnAgent(ajisaiBin, code);
   if (proc.error) fail(`failed to spawn ajisai CLI: ${proc.error.message}`);
   let json = null;
   try {
@@ -91,14 +61,10 @@ function expectError(code) {
 // Word inventory (§9) — surfaces from the manifest, contracts from words.json
 // ---------------------------------------------------------------------------
 
-function readRepo(path) {
-  return readFileSync(resolve(repoRoot, path), 'utf8');
-}
-
 // Vocabulary counts read from the manifest, so the sentence introducing the
 // table cannot drift from the table itself.
 function readVocabularyCounts() {
-  const manifest = JSON.parse(readRepo('docs/word-manifest.json'));
+  const manifest = readJson('docs/word-manifest.json');
   const { canonicalWords, semanticKernelWords, standardWords } = manifest.counts;
   for (const [name, value] of Object.entries({ canonicalWords, semanticKernelWords, standardWords })) {
     if (typeof value !== 'number') fail(`docs/word-manifest.json counts.${name} is missing`);
@@ -110,10 +76,10 @@ function readVocabularyCounts() {
 }
 
 function buildWordTable() {
-  const manifest = JSON.parse(readRepo('docs/word-manifest.json'));
-  const words = JSON.parse(readRepo('spec/words.json'));
-  const contracts = new Map(words.entries.map((entry) => [entry.name, entry]));
-  if (contracts.size !== words.entries.length) fail('spec/words.json contains duplicate canonical names');
+  const manifest = readJson('docs/word-manifest.json');
+  const { entries } = words();
+  const contracts = new Map(entries.map((entry) => [entry.name, entry]));
+  if (contracts.size !== entries.length) fail('spec/words.json contains duplicate canonical names');
   const rows = [];
   for (const entry of manifest.entries) {
     if (entry.kind === 'coreword') {
@@ -509,16 +475,17 @@ ${wordRows.join('\n')}
 
 const content = buildSkillMd();
 
-if (process.argv.includes('--check')) {
-  const committed = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : null;
-  if (committed === null) fail('SKILL.md is missing; run `npm run generate:skill`');
-  if (committed !== content) {
-    fail('SKILL.md is stale relative to the sources/CLI; run `npm run generate:skill` and commit the result');
-  }
-  console.log('[skill-md] SKILL.md is up to date.');
-} else if (process.argv.includes('--stdout')) {
+if (process.argv.includes('--stdout') && !process.argv.includes('--check')) {
   process.stdout.write(content);
 } else {
-  writeFileSync(outputPath, content);
-  console.log(`[skill-md] wrote ${outputPath}`);
+  writeOrCheck(
+    'skill-md',
+    [{
+      path: 'SKILL.md',
+      content,
+      missing: 'SKILL.md is missing; run `npm run generate:skill`',
+      stale: 'SKILL.md is stale relative to the sources/CLI; run `npm run generate:skill` and commit the result',
+    }],
+    { current: 'SKILL.md is up to date.', wrote: `wrote ${resolve(repoRoot, 'SKILL.md')}` },
+  );
 }
