@@ -8,8 +8,9 @@ Ajisai promises **exactness in its supported numeric domain**, rather than
 unqualified “no rounding errors”. Operations such as explicit rounding and
 functions outside that domain retain their documented semantics.
 
-Development status and next-agent instructions are tracked in
-`docs/dev/mcp-readiness.md` and `docs/dev/mcp-claude-code-handoff.md`.
+This README is the server's own record of what it does and how it is
+verified; the readiness tracker and the hand-off memo that once accompanied
+it in `docs/dev/` were retired when their exit criteria were met.
 Host-by-host resource ceilings are compared in `docs/dev/mcp-host-profiles.md`.
 
 ## Install and connect

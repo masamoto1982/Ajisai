@@ -683,7 +683,7 @@
       "core_tier": "identity",
       "kind": "domain",
       "description": "The Record domain (LANG.RECORDS.STRUCTURE): an insertion-ordered correspondence from distinct keys to values, identified by its two aligned sequences, lifting under arithmetic and comparison in the value direction only.",
-      "admission_reason": "Accepted as the seventh value domain by the vocabulary-100 work order (docs/dev/vocabulary-100-work-order-2026-09.md §2.3): keyed lookup is asymptotically inexpressible with the Vector vocabulary (INDEX-OF then GET scans), and structured host data arrives keyed.",
+      "admission_reason": "Accepted as the seventh value domain by the vocabulary-100 work order (2026-09, §2.3; the work order has since been retired, its standing rules living on in docs/dev/ajisai-minimal-core-identity.md Appendix B): keyed lookup is asymptotically inexpressible with the Vector vocabulary (INDEX-OF then GET scans), and structured host data arrives keyed.",
       "introduced_by": [
         "RECORD",
         "KEYS",

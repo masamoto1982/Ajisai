@@ -4,9 +4,12 @@ Status: 非正典・`[観察ノート]`。本書は Ajisai の意味論も互換
 正典は `spec/` 配下の各ソースと、そこから生成される `SPECIFICATION.html` のみ。
 本書の観察は正典の変更を正当化しない（作業指示書 §0.4）。
 
-前提文書: `docs/dev/lexicon-emergence-experiment-work-order-2026-09.md`（以下「指示書」）。
-道具: `tools/lexicon-emergence/`。生データと集計: `tools/lexicon-emergence/runs/pilot-2026-09-23/`
-（`report.md` / `report.json`、各世代の `submissions/`・`graded/`・`lexicon.json`）。
+前提文書: 作業指示書 `lexicon-emergence-experiment-work-order-2026-09.md`（以下「指示書」。
+Phase 1〜2 の実装が終わった 2026-09-30 に `docs/dev/` から削除した。本文は git 履歴にある）。
+道具: `tools/lexicon-emergence/`。生データと集計（`report.md` / `report.json`、各世代の
+`submissions/`・`graded/`・`lexicon.json`）は `tools/lexicon-emergence/runs/pilot-2026-09-23/`
+に置いていたが、読むコードがないため同日に削除した。`report.md` の数値は本書の付録 A に写した。
+生データは git 履歴にある。
 
 ---
 
@@ -82,7 +85,7 @@ TITLE・ACRONYM・LONGEST）あったが、MIN と RANGE が辞書に入った g
 
 正答解答から（ユーザー語を展開したうえで）到達された Core 語は 33、未使用は 67 だった。
 未使用の大半は、課題に対応する題材がない語（Record 操作、三角関数、NIL 系など）である。
-§7.4 の退役候補の列の上位（`LTE` `GTE` `SUB` `CEIL`）では、`SUB` だけが使われた
+退役候補の列（`ajisai-minimal-core-identity.md` 付録 B.2）の上位（`LTE` `GTE` `SUB` `CEIL`）では、`SUB` だけが使われた
 （60 解答）。この数字は課題族 2 つの選び方で決まるので、退役の根拠には使えない。
 
 ### 3.4 H5（監査可能性）— 反例あり
@@ -159,3 +162,130 @@ TITLE・ACRONYM・LONGEST）あったが、MIN と RANGE が辞書に入った g
 - 課題族を作ったのは本書の作者で、参照解も作者が書いた。被験体と作者は別の文脈だが、同じモデルである。
 - 「`SKILL.md` 以外を読むな」は指示であり、検査していない。被験体の報告では 1 体が
   遵守を明言し、他は `DONE` のみだった。
+
+## 付録 A — `report.md` の数値（生データ削除に伴う保存）
+
+`tools/lexicon-emergence/runs/pilot-2026-09-23/report.md`（`cli.mjs analyze` の出力）から、
+本文に載せていなかった数値を写す。世代ごとの表は §2 と同一なので省く。
+
+### A.1 H1 — 2 体以上が独立に到達した同値類（34 類中 24 類、132 語）
+
+| 到達体数 | 類（代表的な本体） | 結合段 |
+| --- | --- | --- |
+| 10 | ACRONYM: `WORDS [ CHARS 0 GET ] MAP JOIN UPPER` | d0/d1 |
+| 10 | NORMALIZE: `'N' BIND N N MIN - N RANGE /` | d0α |
+| 9 | STDDEV: `VAR SQRT` | d1/d0/d0α |
+| 9 | TITLECASE: `WORDS [ CAP ] MAP UNWORDS` | d1 |
+| 8 | CAP（先頭文字の大文字化）: `CHARS 'C' BIND C [ 1 ] TAKE JOIN UPPER C [ 1 ] DROP JOIN 2 COLLECT JOIN` ほか | d1/d0α |
+| 7 | MIN: `'R' BIND R R 0 GET [ MIN ] FOLD` | d0α |
+| 7 | RANGE: `'R' BIND R MAX R MIN -` | d0α |
+| 7 | LONGEST: `WORDS [ LEN ] MAP MAX` | d1/d0 |
+| 6 | WORDS: `' ' TOKENIZE` | d0 |
+| 5 | SUM: `0 [ + ] FOLD` | d0/d1 |
+| 5 | MEAN: `'XS' BIND XS SUM XS LENGTH /` | d0α/d1 |
+| 5 | DEV: `KEEP MEAN -` / `'D' BIND D D MEAN -` | d1/d0α |
+| 5 | VAR: `DEV 2 POW MEAN` / `DEVS 'V' BIND V V * MEAN` | d1/d0α |
+| 4 | MAX: `'R' BIND R R 0 GET [ MAX ] FOLD` | d0α |
+| 4 | LEN: `CHARS LENGTH` | d0 |
+| 4 | LONGWORDS: `WORDS [ LEN 3 > ] FILTER` | d1/d0 |
+| 3 | UNWORDS: `[ ' ' 2 COLLECT ] MAP FLATTEN [ -1 ] DROP JOIN` | d1/d0 |
+| 2 | MIN（`SORT 0 GET`） | d0 |
+| 2 | MAX（`SORT -1 GET` / `SORT REVERSE 0 GET`） | d1 |
+| 2 | RANGE（G0A / S0B 系） | d1 |
+| 2 | NORM（G0A / S0B 系） | d1 |
+| 2 | UNWORDS（G0A / G0C 系） | d1 |
+| 2 | WORD-LENGTHS: `WORDS [ CHARS LENGTH ] MAP` | d0 |
+| 2 | TITLE（文字走査型）: `CHARS 'C' BIND C [ UPPER ] MAP C ' ' 1 COLLECT C -1 DROP CONCAT [ ' ' EQ ] MAP SELECT JOIN` | d1 |
+
+被験体の接頭辞（`G0A.` など）は省いた。結合段は D0（字面一致）/ D0α（束縛名の改名後に一致）/
+D1（探針一致）。
+
+### A.2 H2 — 辞書のうち他の辞書語を本体で呼ぶ語
+
+- bottleneck gen1: 3/8
+- bottleneck gen2: 4/8
+
+### A.3 H4 — 正答解答が（ユーザー語を展開したうえで）到達した Core 語と解答数
+
+`BIND` 93 · `FOLD` 91 · `LENGTH` 84 · `TOKENIZE` 82 · `ADD` 60 · `SUB` 60 · `DIV` 60 ·
+`GET` 52 · `CHARS` 48 · `MAP` 36 · `MAX` 31 · `JOIN` 24 · `UPPER` 24 · `KEEP` 21 ·
+`MIN` 20 · `POW` 14 · `GT` 12 · `SQRT` 12 · `DROP` 12 · `UNIQUE` 12 · `TALLY` 12 ·
+`FILTER` 12 · `MUL` 10 · `COLLECT` 9 · `TAKE` 8 · `CONCAT` 5 · `FLATTEN` 5 · `SORT` 5 ·
+`TRIM` 5 · `REVERSE` 4 · `SELECT` 2 · `EQ` 2 · `PUT` 1
+
+未使用（67）: `TRUE` `FALSE` `AND` `OR` `NOT` `LT` `LTE` `GTE` `MOD` `FLOOR` `CEIL` `ROUND`
+`QUANTIZE` `ABS` `NEG` `GCD` `RATIO` `EXP` `LN` `SIN` `COS` `ATAN` `PI` `RANDOM` `RANGE`
+`FILL` `SHAPE` `RESHAPE` `DEPTH` `ORDER` `ZIP` `GROUP` `INDEX-OF` `MEMBER` `BSEARCH`
+`RECORD` `KEYS` `VALUES` `AT` `WITH` `WITHOUT` `HAS?` `MERGE` `SCAN` `ANY` `ALL` `RANK`
+`LOWER` `SEARCH` `REPLACE` `NUM` `STR` `FORMAT` `JSON-DECODE` `JSON-ENCODE` `EXEC`
+`CONTRACT` `FAIL` `NIL` `NIL?` `NIL-REASON` `ABSENT` `DEF` `DEL` `DEFINED?` `DIGEST` `PRINT`
+
+退役候補の列（`ajisai-minimal-core-identity.md` 付録 B.2、`scripts/check-minimal-core.mjs`）に
+照らすと、列の 10 語のうち到達されたのは `SUB` 60・`MAX` 31・`MIN` 20 の 3 語で、
+`LTE` `GTE` `CEIL` `OR` `QUANTIZE` `ABS` `MOD` は 0。列に入れていない導出可能語は
+`DROP` 12・`TAKE` 8・`TRIM` 5・`REVERSE` 4・`INDEX-OF` 0（`TOKENIZE` は 82）。
+§3.3 のとおり、この数字は課題族 2 つの選び方で決まるので退役の根拠には使えない。
+
+### A.4 H5 — Core のみの展開が不一致だった正答解答（21 件）
+
+G0B・G1A・G1B・G1C・G2A・G2B・G2C の 7 体それぞれについて `stats.deviations`・
+`stats.variance`・`stats.stddev` の 3 問。原因は §3.4 の一つ。
+
+## 付録 B — 指示書のうち本書が参照する設計（指示書削除に伴う保存）
+
+指示書（`lexicon-emergence-experiment-work-order-2026-09.md`、2026-09-30 に削除）の
+うち、本書と `tools/lexicon-emergence/` のコメントが節番号で参照する部分を要約する。
+節番号は指示書のもの。
+
+**§0.4 禁止事項。** 実験結果を根拠に `spec/` を直接書き換えない（結果は語彙の採用規則
+——`ajisai-minimal-core-identity.md` 付録 B.1——に照らして所有者判断へ提出する候補）。
+DIGEST の不一致を「別の語」の証拠に使わない（DIGEST は一致の向きにしか決定しない。
+不一致は D1 で補う）。正解判定を LLM に委ねない——判定は常に `compute` の実行結果と
+期待値の照合。実験用に Core を変更しない。
+
+**§0.5 停止条件。** (1) 同一モデルの複数体がほぼ同一の定義を初手から出す（創発ではなく
+事前分布の反映に見える）——§5.3 の統制を先に強化するか所有者に差し戻す。(2) Phase 1 の
+正答率が 30% を下回る。(3) `hostError` を返す課題が 5% を超える。
+
+**§1.2 実行経路。** A: Claude Code サブエージェント（Phase 1、独立文脈、MCP の
+`compute` / `check` / `infer_contracts` / `word_contract`）。B: `tools/lexicon-emergence/lib/harness.mjs`
+（Phase 2 以降、Claude API、モデルを変えられる。ハーネスが MCP クライアントとして仲介）。
+同一 Phase 内では経路を混ぜない。
+
+**§2.2 同一性の三段階。** D0 構文同一（`DIGEST` 一致。健全、不一致は何も言わない）、
+D1 観察同値（探針セットの全入力で `compute` の結果が一致。探針はスカラー・1 要素
+Vector・多要素 Vector・入れ子・NIL レーン・Record を含める）、D2 契約同形（`CONTRACT`
+の inputs / outputs / purity / nil が一致。粗く、絞り込みにだけ使う）。パイロットが
+D0α（束縛名を改名してからのハッシュ）を追加した（§4 M-1）。
+
+**§3 仮説。** H1 独立したエージェントは同じ下位問題に同じ語を再発明する（指標: 2 系統以上
+から独立到達された同値類の数と割合）。H2 ボトルネック条件では辞書が構成的になる（他の
+辞書語を本体に含む語の割合・依存深さ）。H3 収束語の一部は「言語内で書けない、または
+漸近的に高くつく」候補を指す（`CONTRACT` の cost が自然な Core 実装より悪いクラス）。
+H4 退役候補の列の上位語は実際にも使われない（Core 語ごとの使用頻度、辞書語経由の推移的
+出現を含む）。H5 方言化しても発話は Core まで機械的に展開でき監査できる（展開後のプログラム
+が元と D1 同値になる割合、目標 100%。下回れば最優先で報告）。補助指標: 圧縮率・正答率・
+修復回数。
+
+**§5.1 一世代の流れ（要点）。** 各被験体は新しい文脈で、生成されたプロンプト 1 通だけを
+受け取り、前世代の辞書（容量 K）を継承して課題を解く。世代の終わりに D0/D0α/D1 で
+同値類を作り、使用頻度上位 K 語を次世代の辞書にする（`lib/evolve.mjs`）。
+
+**§5.2 条件。** C-bottleneck（K 小、世代交代あり、本条件）、C-open（K 無制限、H2 の対照）、
+C-solo（辞書を共有しない。H1 の基準線、独立到達の偶然率）、C-shuffled（辞書の代表名を
+無意味な名前に置換。名前の意味に頼った再利用かを切り分ける）。
+
+**§5.3 統制。** 同じモデルの複数体が同じ定義を出すのは事前分布の反映でありうる——最大の
+交絡。C-solo の独立到達率を基準線とし H1 はその超過分で評価する。経路 B では世代内に
+大・中・小 3 系統のモデルを混ぜ、系統をまたぐ収束を強い証拠とする。生成パラメータを記録し
+条件間で揃える。ハーネスがサーバー側の refusal fallback を有効にしないのはこのためである
+（fallback はどのモデルが答えたかを変える）。
+
+**§5.4 H5 の検査。** 全解答について辞書語を定義本体で再帰的に置き換えて Core 語だけの
+プログラムを作り、元と D1 同値であることを `compute` で確かめる。展開には名前ではなく
+ハッシュの対応を使う。一件でも失敗したら解答と辞書の状態を保存して報告する。
+
+**§6 Phase。** 0 骨組みと課題 2 族。1 パイロット（経路 A、3 体 × 3 世代 × 2 族、
+C-bottleneck と C-solo）——本書。2 ハーネス（経路 B）——実装済み、API での再現は未実施。
+3 本実験（全 4 条件 × 6〜10 族 × 10 世代 × 3 系統混在。API 費用は着手前に所有者の承認）。
+4 分析と提出。

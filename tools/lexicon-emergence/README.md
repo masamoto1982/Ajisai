@@ -1,13 +1,19 @@
 # Lexicon-emergence experiment
 
-Tooling for `docs/dev/lexicon-emergence-experiment-work-order-2026-09.md`: Core
-is held fixed, subject agents solve shared task families through the Ajisai MCP
-server, and the shared User dictionary passes from generation to generation
-through a capacity bottleneck. This directory grades, classifies and reports;
-the subject agents run either as Claude Code subagents (route A, the pilot)
-or through the Claude API harness in `lib/harness.mjs` (route B, Phase 2 on).
+Tooling for the lexicon-emergence experiment: Core is held fixed, subject
+agents solve shared task families through the Ajisai MCP server, and the
+shared User dictionary passes from generation to generation through a
+capacity bottleneck. This directory grades, classifies and reports; the
+subject agents run either as Claude Code subagents (route A, the pilot) or
+through the Claude API harness in `lib/harness.mjs` (route B, Phase 2 on).
 
-Nothing here defines Ajisai. Results are observation notes.
+Nothing here defines Ajisai. Results are observation notes: the pilot's are
+`docs/dev/lexicon-emergence-pilot-results-2026-09-23.md`, which also holds
+the numbers from that run's `report.md`. No run is committed under `runs/`
+(the pilot's raw data was removed on 2026-09-30 and lives in git history);
+the experiment's original work order was removed from `docs/dev/` at the
+same time, and the hypotheses H1–H5 it named are restated in the pilot
+results.
 
 ## Layout
 

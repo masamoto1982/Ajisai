@@ -45,7 +45,7 @@ Status: 非正典・`[設計根拠]`。本書は Ajisai の意味論も互換性
   違反は `invalidDefinitionBody` の ERROR になる。
 - **`|` は名前として使えなくなる**（`DEF` と `BIND` が拒否する）。字句文法は変えない。
   `|` は引き続き一つの Symbol トークンであり、区切りとして読むのは `DEF` だけである。
-  空いていた文字を取るので、`character-allocation-and-prose-2026-09.md` の規準では
+  空いていた文字を取るので、字句に文字を取るときの規準（`ajisai-authoring-style.md` §11）では
   「空き枠の消費」にあたる。
 
 ### 2.2 展開の忠実性（H5）

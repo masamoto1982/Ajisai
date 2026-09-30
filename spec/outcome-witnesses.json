@@ -77,7 +77,7 @@
       "id": "structureError",
       "source": "[ | 1 ] 'A' DEF\n[ | A ] 'B' DEF\n'A' DEL",
       "expect": "error:structureError",
-      "rationale": "structureError now means exactly one thing (docs/dev/auditable-kernel-work-order-2026-09.md Phase 1): a failure no Word has declared a condition for yet. DEL's dependents-conflict raise site (execute_del.rs) is exactly that — deliberately left generic in Phase 1 because DEL's contract has no definitionConflict counterpart to DEF's identical check, a words.json gap rather than a wiring bug. It needs two prior statements (define A, define B referencing A) to construct the conflict, so the one-Word table cannot reach it."
+      "rationale": "structureError now means exactly one thing (auditable-kernel work order, 2026-09, Phase 1): a failure no Word has declared a condition for yet. DEL's dependents-conflict raise site (execute_del.rs) is exactly that — deliberately left generic in Phase 1 because DEL's contract has no definitionConflict counterpart to DEF's identical check, a words.json gap rather than a wiring bug. It needs two prior statements (define A, define B referencing A) to construct the conflict, so the one-Word table cannot reach it."
     },
     {
       "id": "executionLimitExceeded",

@@ -1,14 +1,16 @@
 # Ajisai host resource profiles
 
 Status date: 2026-08-13. Updated 2026-08-14: the playground / native-default
-profile's ceilings are now derived, not chosen — see
-[`host-profile-derivation-handoff.md`](./host-profile-derivation-handoff.md)
-for the work and the reasoning behind each number below, and
-[`host-profile-derivation-2026-08-14.md`](./host-profile-derivation-2026-08-14.md)
-§10 for a correction to that work: the first derivation calibrated on native
-release and applied the result to the WASM playground, which is not the same
-engine and — for one meter — not even a good proxy for it. The numbers below
-are the corrected, WASM-calibrated ones.
+profile's ceilings are now derived, not chosen. The hand-off memo that set the
+work up and the dated record of carrying it out were retired from `docs/dev/`
+on 2026-09-30 (the version history holds both); what this page still relies
+on from them is folded in below — the reasoning behind each number, the
+rejected alternatives, and the correction the record's §10 made to the first
+derivation: it had calibrated on native release and applied the result to the
+WASM playground, which is not the same engine and — for one meter — not even
+a good proxy for it. The numbers below are the corrected, WASM-calibrated
+ones, and the doc comments in `rust/src/interpreter/host_profile_defaults.rs`
+carry each constant's own derivation.
 
 Ajisai's resource ceilings are **host safety controls, not language semantics**
 (`SPECIFICATION.html` §2.5). A conforming host chooses its own, and all
@@ -60,11 +62,13 @@ one container, native ran `numericWork`'s floor path 2.1x *faster* than WASM,
 slower" depending on the meter means a single native calibration cannot make
 three ceilings bound equal time on the engine they actually run on, which is
 the entire point of deriving them from a shared time budget. The first
-attempt at this derivation (see the git history of this document, or
-`docs/dev/host-profile-derivation-2026-08-14.md` §§1-9) calibrated on native
-and got playground numbers 2-4x smaller than the ones above for `numericWork`/
-`collectionWork` and roughly half for `executionSteps`; §10 of that document
-is the correction. `rust/examples/work_meter_calibration.rs` and
+attempt at this derivation (see the git history of this document) calibrated
+on native and got playground numbers 2-4x smaller than the ones above for
+`numericWork`/`collectionWork` and roughly half for `executionSteps`; the
+same review also found that `Fraction::hash` ran a gcd that was superlinear
+in element width, which had made the wrong collection path the floor. Both
+were corrected before the numbers above were taken.
+`rust/examples/work_meter_calibration.rs` and
 `rust/examples/collection_word_calibration.rs` remain the right tools for
 native's own floor — `ajisai run` and native `ajisai agent` really do run on
 that engine — just not for this table's playground column.
@@ -78,11 +82,12 @@ multiple of one another (47,162 / 10,373 ≈ 4.5) the way the MCP profile's used
 to look (30,800 / 14,465 ≈ 2.1, once hard-coded as
 `collectionWork = 2 × numericWork`). That 2× relationship was itself a
 derived-but-coincidental ratio of two measured rates, not a rule, and moved
-twice on 2026-08-14 — once when the scan family was de-quadraticized, exactly
-as
-[`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md)
-§5 predicted it might, and again when the `Fraction::hash` fix changed which
-collection path was the floor. Each derived ceiling now comes independently
+twice on 2026-08-14 — once when the scan family was de-quadraticized (the
+de-quadraticization record had predicted that the witness programs and
+boundary sources built to reach `collectionWork` cheaply through a large
+distinct count would stop reaching it, and they did: every one was replaced
+by a repeated cheap small-integer scan), and again when the `Fraction::hash`
+fix changed which collection path was the floor. Each derived ceiling now comes independently
 from its own host's time budget and its own measured floor rate; the ceilings
 only need to agree on the *time* they bound, and they do that by construction.
 
@@ -145,11 +150,27 @@ at their prior values (mostly) or a differently-reasoned one:**
 
 None of the above changes anything about *why* the two profiles are allowed to
 differ — `SPECIFICATION.html` §2.5 still says a conforming host chooses its
-own ceilings, and the rejected alternatives (align the profiles to each other,
-or collapse them into one) are unchanged from
-`host-profile-derivation-handoff.md` §2. What changed is that "the playground
-is generous because 67 seconds felt right" is no longer the explanation for
-any number in this table.
+own ceilings, and the rejected alternatives are unchanged. They were settled
+in the 2026-08 hand-off and are recorded here so they are not re-argued:
+
+- **Align upward (the playground's values for MCP too).** A hundredfold
+  `numericWork` puts the 5-second wall clock back in front, and the adapter
+  can no longer say *what* was expensive by ceiling name — the 2026-08-13
+  work is lost as it stands.
+- **Align downward (MCP's values for the playground too).** The playground
+  protects only "me, on my own CPU"; there is no gain from tightening it, and
+  `[ 0 100001 ] RANGE` refused in one's own tab makes the teaching surface
+  narrower than the language.
+- **One profile.** `SPECIFICATION.html` §2.5 lets each host choose. The two
+  hosts have different threat models (someone else's machine, concurrency,
+  a caller waiting on a wall clock — versus one's own tab, single, closable at
+  any time).
+
+What was decided instead is to unify the *derivation*, not the values: the
+two profiles keep different numbers, and what is fixed, written down and
+checked is which function of what each difference is. What changed is that
+"the playground is generous because 67 seconds felt right" is no longer the
+explanation for any number in this table.
 
 The MCP server declares four further ceilings that exist only at the adapter,
 because they bound the *call* rather than the computation: `wallTimeMs`
@@ -227,15 +248,28 @@ different defect:
   `wallTimeMs` moved to `hostGate`, exercised against a backend built with a
   1 ms deadline.
 
-What the work meters charge is documented where it was measured:
-[`collection-word-billing-2026-08-13.md`](./collection-word-billing-2026-08-13.md)
-for the collection prices, and `rust/examples/work_meter_calibration.rs` /
-`rust/examples/collection_word_calibration.rs` for the measurements themselves.
-Both are runnable: re-measure rather than trust the constants when a
-representation changes.
+What the work meters charge is documented where it is charged: the doc
+comments in `rust/src/interpreter/collection_meter.rs` carry the collection
+prices, and `rust/examples/work_meter_calibration.rs` /
+`rust/examples/collection_word_calibration.rs` hold the measurements
+themselves. Both examples are runnable: re-measure rather than trust the
+constants when a representation changes. `collectionWork` is a separate
+ceiling rather than a surcharge on `numericWork` for three reasons that were
+settled when it was introduced (2026-08-13): the units do not convert
+honestly (an element operation is 1/4 of a limb-multiply for a copy, 1/2.6
+for a scan and 85 for an algebraic comparison — a 300-fold spread, so one
+number would stop saying whether it was wide arithmetic or a large sort); the
+instruction to an agent runs the other way (`numericWork` says "compute
+less", the collection ceiling says "make the set smaller", and a quadratic
+`UNIQUE` refused under `numericWork`'s name sends a model off to trim
+arithmetic); and `wallTimeMs` already backstops the sum, so each meter's job
+is to name what the time went on.
 
 `UNIQUE` / `TALLY` / `GROUP` themselves stopped being a linear scan on
-2026-08-14: [`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md)
-replaced it with a `Value: Hash`-backed `HashMap` lookup and re-derived the
-per-element charge accordingly. The ceiling values in the table above did not
-move; the golden boundary source that reaches `collectionWork` did.
+2026-08-14: a `Value: Hash`-backed `HashMap` lookup replaced it, and the
+per-element charge was re-derived accordingly (the hash itself turned out to
+cost enough to need its own unit, `COLLECTION_HASH_UNITS`). The ceiling values
+in the table above did not move; the golden boundary source that reaches
+`collectionWork` did. The two dated memos that recorded the billing design
+and the de-quadraticization were retired on 2026-09-30; the version history
+holds them.
