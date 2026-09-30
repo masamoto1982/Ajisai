@@ -142,9 +142,6 @@ jobs:
           npm run word-registry:check
           npm run specification:check
 
-      - name: Generate conformance manifest
-        run: npm run conformance:manifest
-
       - name: Verify committed word manifest is in sync
         # Drift guard: the committed docs/word-manifest.json must match what the
         # generator produces from the Rust sources. Checking (instead of silently
@@ -223,9 +220,6 @@ jobs:
         # itself going missing (the exact-real lift computed with a NIL lane
         # and answered an observable 0/0 scalar).
         run: npm run nil-reason-lift:check
-
-      - name: Generate primitive test map
-        run: npm run primitive:test-map
 
       - name: Check formalization coverage
         run: npm run check:formalization-coverage

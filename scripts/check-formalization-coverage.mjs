@@ -404,9 +404,8 @@ if (primitiveIds) {
 
   // Non-fatal traceability note: every declared primitive should be reachable
   // from at least one test. We invert derived_from -> {law_tests, conformance}
-  // (see scripts/generate-primitive-test-map.mjs) and flag primitives that no
-  // resting word exercises, so a newly admitted primitive cannot stay untested
-  // unnoticed.
+  // and flag primitives that no resting word exercises, so a newly admitted
+  // primitive cannot stay untested unnoticed.
   const primitiveTested = new Map([...primitiveIds].map((id) => [id, false]));
   for (const entry of coverage.entries) {
     const hasTest =
