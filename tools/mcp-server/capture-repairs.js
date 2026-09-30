@@ -20,26 +20,15 @@
 // Credentials resolve the way the Anthropic SDK resolves them; this file reads
 // none of them itself.
 
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer, engineVersion, registryDigest, serverVersion } from "./index.js";
+import { argValue, captureFailure, connectInMemory, digest, readEval } from "./eval-common.js";
+import { engineVersion, registryDigest, serverVersion } from "./index.js";
 import { DEFAULT_MODEL, SYSTEM_PROMPT, toolDefinitions } from "./capture-traces.js";
 import { LANGUAGES, validateCorpus } from "./evaluation-contract.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-
-function digest(text) {
-  return createHash("sha256").update(text).digest("hex").slice(0, 16);
-}
-
-function argValue(argv, flag, fallback) {
-  const index = argv.indexOf(flag);
-  return index === -1 ? fallback : argv[index + 1];
-}
 
 /** Every `tool_use` block of a turn, in order. */
 function toolUses(response) {
@@ -196,31 +185,14 @@ export async function captureAllRepairs({
 
 /** An in-process MCP client over the real server, for the middle of the loop. */
 export async function connectMcp() {
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = createServer();
-  const mcp = new Client({ name: "ajisai-repair-capture", version: "1" });
-  await Promise.all([server.connect(serverTransport), mcp.connect(clientTransport)]);
-  return { mcp, close: async () => { await mcp.close(); await server.close(); } };
-}
-
-const MISSING_CREDENTIALS = /Could not resolve authentication|authentication_error|invalid x-api-key/i;
-
-function captureFailure(error) {
-  if (MISSING_CREDENTIALS.test(error?.message ?? "")) {
-    return (
-      "no Anthropic credentials could be resolved. Set ANTHROPIC_API_KEY, or run `ant auth login`.\n" +
-      "Nothing was written — a trace file that was not produced by a model is worse than no file."
-    );
-  }
-  return `capture failed: ${error?.message ?? error}\nNothing was written.`;
+  const { client, close } = await connectInMemory("ajisai-repair-capture");
+  return { mcp: client, close };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const model = argValue(process.argv, "--model", DEFAULT_MODEL);
   const limit = Number(argValue(process.argv, "--limit", "0")) || Infinity;
-  const corpus = JSON.parse(
-    readFileSync(new URL("./eval/repair-cases.json", import.meta.url), "utf8"),
-  );
+  const corpus = readEval("./eval/repair-cases.json");
   validateCorpus(corpus, { repair: true });
   const cases = corpus.cases.slice(0, limit);
   const out = argValue(

@@ -1,11 +1,9 @@
 #!/usr/bin/env node
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import Ajv2020 from "ajv/dist/2020.js";
+import { atPointer, connectInMemory } from "./eval-common.js";
 import {
   CAPACITY_WAIT_MS,
   createBackend,
-  createServer,
   ExecutionGate,
   LIMITS,
   serverVersion,
@@ -34,14 +32,6 @@ function canonicalJson(value) {
   return value;
 }
 
-function atPointer(document, pointer) {
-  return pointer
-    .split("/")
-    .slice(1)
-    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
-    .reduce((value, part) => value?.[part], document);
-}
-
 const gate = new ExecutionGate(2);
 check("execution gate admits up to its capacity", gate.tryAcquire() && gate.tryAcquire());
 check("execution gate rejects excess concurrent work", gate.tryAcquire() === false);
@@ -64,10 +54,7 @@ timedOut.tryAcquire();
 check("execution gate gives up after its wait window", (await timedOut.acquire(20)) === false);
 timedOut.release();
 
-const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-const server = createServer();
-const client = new Client({ name: "selftest", version: "0.0.0" });
-await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+const { client, close } = await connectInMemory("selftest", "0.0.0");
 
 const { tools } = await client.listTools();
 check(
@@ -775,7 +762,6 @@ check(
   unknownFlag.code === 2 && unknownFlag.text.includes("--frobnicate"),
 );
 
-await client.close();
-await server.close();
+await close();
 if (failures) process.exit(1);
 console.log("all checks passed");

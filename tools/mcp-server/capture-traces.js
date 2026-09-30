@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Capture what a real model does with the Ajisai tools.
 //
-// Everything else in `eval/` grades a trace. Nothing produced one: the two
-// committed traces are hand-written fixtures that prove the scorers run, and
-// the readiness tracker has said for three rounds that the harness is not the
-// bottleneck — real traces are. This is the missing half.
+// Everything else in `eval/` grades a trace. Nothing produced one: the
+// reference fixtures only prove the scorers run, and the readiness tracker has
+// said for three rounds that the harness is not the bottleneck — real traces
+// are. This is the missing half.
 //
 // It drives the actual model over the actual MCP tool definitions, one turn per
 // corpus case per language, and writes a trace the scorers accept. A turn may
@@ -25,10 +25,10 @@
 // ANTHROPIC_AUTH_TOKEN, or an `ant auth login` profile) — this file reads none
 // of them itself.
 
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { argValue, captureFailure, connectInMemory, digest, readEval } from "./eval-common.js";
 import { engineVersion, registryDigest, serverVersion } from "./index.js";
 import { LANGUAGES, validateCorpus } from "./evaluation-contract.js";
 
@@ -50,15 +50,6 @@ export const SYSTEM_PROMPT =
 
 export const DEFAULT_MODEL = "claude-opus-5";
 
-function digest(text) {
-  return createHash("sha256").update(text).digest("hex").slice(0, 16);
-}
-
-function argValue(argv, flag, fallback) {
-  const index = argv.indexOf(flag);
-  return index === -1 ? fallback : argv[index + 1];
-}
-
 /**
  * The tools, exactly as a connected client would see them.
  *
@@ -68,13 +59,7 @@ function argValue(argv, flag, fallback) {
  * across the PRs it exists to compare.
  */
 export async function toolDefinitions() {
-  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
-  const { InMemoryTransport } = await import("@modelcontextprotocol/sdk/inMemory.js");
-  const { createServer } = await import("./index.js");
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = createServer();
-  const client = new Client({ name: "ajisai-trace-capture", version: "1" });
-  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  const { client, close } = await connectInMemory("ajisai-trace-capture");
   try {
     const { tools } = await client.listTools();
     return tools.map(({ name, description, inputSchema }) => ({
@@ -83,8 +68,7 @@ export async function toolDefinitions() {
       input_schema: inputSchema,
     }));
   } finally {
-    await client.close();
-    await server.close();
+    await close();
   }
 }
 
@@ -156,19 +140,6 @@ async function connect() {
   return new Anthropic();
 }
 
-const MISSING_CREDENTIALS = /Could not resolve authentication|authentication_error|invalid x-api-key/i;
-
-/** The message for a failed run. Nothing is ever written on this path. */
-function captureFailure(error) {
-  if (MISSING_CREDENTIALS.test(error?.message ?? "")) {
-    return (
-      "no Anthropic credentials could be resolved. Set ANTHROPIC_API_KEY, or run `ant auth login`.\n" +
-      "Nothing was written — a trace file that was not produced by a model is worse than no file."
-    );
-  }
-  return `capture failed: ${error?.message ?? error}\nNothing was written.`;
-}
-
 export async function captureAll({
   client,
   model,
@@ -207,7 +178,7 @@ export async function captureAll({
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const model = argValue(process.argv, "--model", DEFAULT_MODEL);
   const limit = Number(argValue(process.argv, "--limit", "0")) || Infinity;
-  const corpus = JSON.parse(readFileSync(new URL("./eval/cases.json", import.meta.url), "utf8"));
+  const corpus = readEval("./eval/cases.json");
   validateCorpus(corpus);
   const cases = corpus.cases.slice(0, limit);
   // Real traces live apart from the committed fixtures, so no directory listing

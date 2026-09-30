@@ -1,13 +1,9 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readEval, referenceTraces } from "./eval-common.js";
 import { LANGUAGES, indexTraces, validateCorpus } from "./evaluation-contract.js";
 
-function read(relative) {
-  return JSON.parse(readFileSync(new URL(relative, import.meta.url), "utf8"));
-}
-
-const corpus = read("./eval/cases.json");
-const repairCorpus = read("./eval/repair-cases.json");
+const corpus = readEval("./eval/cases.json");
+const repairCorpus = readEval("./eval/repair-cases.json");
 
 /**
  * No prompt may show the retired block syntax.
@@ -81,9 +77,9 @@ function assertPromptsAreLexicallyValid(cases, label) {
 
 assertPromptsAreLexicallyValid(corpus.cases, "cases");
 assertPromptsAreLexicallyValid(repairCorpus.cases, "repair-cases");
-const traces = indexTraces(read("./eval/reference-traces.json"), validateCorpus(corpus));
+const traces = indexTraces(referenceTraces(corpus), validateCorpus(corpus));
 const repairTraces = indexTraces(
-  read("./eval/reference-repair-traces.json"),
+  readEval("./eval/reference-repair-traces.json"),
   validateCorpus(repairCorpus, { repair: true }),
   { repair: true },
 );

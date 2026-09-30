@@ -1,28 +1,15 @@
 #!/usr/bin/env node
 import { performance } from "node:perf_hooks";
-import { readFileSync } from "node:fs";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer } from "./index.js";
+import { atPointer, connectInMemory, readEval } from "./eval-common.js";
 import { validateCorpus } from "./evaluation-contract.js";
-
-function read(relative) {
-  return JSON.parse(readFileSync(new URL(relative, import.meta.url), "utf8"));
-}
 
 function percentile(sorted, fraction) {
   return sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)];
 }
 
-function atPointer(document, pointer) {
-  return pointer.split("/").slice(1)
-    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
-    .reduce((value, part) => value?.[part], document);
-}
-
-const corpus = read("./eval/cases.json");
+const corpus = readEval("./eval/cases.json");
 validateCorpus(corpus);
-const config = read("./eval/performance.json");
+const config = readEval("./eval/performance.json");
 if (config.schemaVersion !== 1 || !Number.isInteger(config.measuredRuns) || config.measuredRuns < 1 ||
     !Number.isInteger(config.warmupRuns) || config.warmupRuns < 0 || !(config.p95BudgetMs > 0) ||
     !(config.medianResponseBytesBudget > 0) ||
@@ -36,10 +23,7 @@ const selected = config.caseIds.map((id) => {
   return testCase;
 });
 
-const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-const server = createServer();
-const client = new Client({ name: "ajisai-performance-eval", version: "1" });
-await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+const { client, close } = await connectInMemory("ajisai-performance-eval");
 const measurements = [];
 try {
   for (let round = -config.warmupRuns; round < config.measuredRuns; round += 1) {
@@ -79,8 +63,7 @@ try {
     }
   }
 } finally {
-  await client.close();
-  await server.close();
+  await close();
 }
 
 const elapsed = measurements.map(({ elapsedMs }) => elapsedMs).sort((a, b) => a - b);
