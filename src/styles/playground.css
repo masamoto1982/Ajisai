@@ -83,17 +83,19 @@
     /* Brackets are text, and the top of the stack sits on its fill, so each
        depth reads at 4.5:1 on white and on --color-stack-top.
        Darkening the light members of Tol's palette brought them to one
-       lightness, so neighbouring depths are told apart by hue: 6 moved from
-       Tol's sand to ochre, away from 5's olive. */
+       lightness, so neighbouring depths are told apart by hue. They are
+       ordered so that adjacent depths are far apart on the hue wheel (the
+       old blue -> teal -> green run at 2-4 looked alike): 2 is ochre against
+       1's indigo, 3 teal, 4 rose, 5 green, 6 steel blue, 7 magenta, 8 olive. */
     --bracket-depth-1: oklch(34.7% 0.159 281.8);
-    --bracket-depth-2: oklch(51% 0.084 230.8);
+    --bracket-depth-2: oklch(52% 0.12 65);
     --bracket-depth-3: oklch(50% 0.098 180.4);
-    --bracket-depth-4: oklch(49.9% 0.135 148.6);
-    --bracket-depth-5: oklch(51% 0.123 109.3);
-    --bracket-depth-6: oklch(52% 0.12 65);
-    --bracket-depth-7: oklch(53% 0.130 11.0);
-    --bracket-depth-8: oklch(43.2% 0.145 354.5);
-    --bracket-depth-9: oklch(53.5% 0.167 334.6);
+    --bracket-depth-4: oklch(53% 0.130 11.0);
+    --bracket-depth-5: oklch(49.9% 0.135 148.6);
+    --bracket-depth-6: oklch(51% 0.084 230.8);
+    --bracket-depth-7: oklch(53.5% 0.167 334.6);
+    --bracket-depth-8: oklch(51% 0.123 109.3);
+    --bracket-depth-9: oklch(43.2% 0.145 354.5);
 
     /* --- Output text ------------------------------------------------------ */
     --color-output-debug:   oklch(32.1% 0 0);
