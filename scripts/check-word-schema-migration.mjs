@@ -2,7 +2,6 @@ import { readJson, readText, reporter, words as wordsDocument } from './lib/comm
 
 const words = wordsDocument();
 const schema = readJson('spec/words.schema.json');
-const families = readJson('spec/semantic-families.json');
 const manifest = readJson('docs/word-manifest.json');
 const dispatchSource = readText('rust/src/interpreter/execute_builtin.rs');
 const language = readText('spec/language-semantics.md');
@@ -11,7 +10,11 @@ const outcomes = readJson('spec/outcomes.json');
 const report = reporter('word-schema');
 const fail = report.fail;
 const required = schema.$defs.word.required;
-const familyIds = new Set(families.families.map((family) => family.id));
+// The closed list of families is the schema's enum (the registry generator
+// projects it into the Rust `Family`); what a family *means* — the laws its
+// Words share — is derived from the Words themselves (scripts/lib/common.mjs
+// `families()`), so it cannot disagree with them.
+const familyIds = new Set(schema.$defs.word.properties.family.enum);
 const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
@@ -133,20 +136,6 @@ for (const word of words.entries) {
   // match cannot, a Word folded into a neighbour's arm by mistake.
   if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
     fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);
-  }
-}
-
-// A family is the laws its Words share (spec/semantic-families.json), so its
-// clauses are exactly the clauses every member cites — no more, which would
-// claim a law some member is not subject to, and no fewer.
-for (const family of families.families) {
-  const members = words.entries.filter((word) => word.family === family.id);
-  const shared = members.length
-    ? members[0].clauses.filter((clause) => members.every((word) => word.clauses.includes(clause)))
-    : [];
-  const declared = [...family.clauses].sort();
-  if (JSON.stringify(declared) !== JSON.stringify([...shared].sort())) {
-    fail(`family ${family.id} declares clauses [${declared.join(', ')}] but its Words share [${[...shared].sort().join(', ')}]`);
   }
 }
 

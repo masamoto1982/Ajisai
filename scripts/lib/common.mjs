@@ -27,6 +27,22 @@ export function words() {
   return wordsDocument;
 }
 
+/**
+ * The semantic families, derived from spec/words.json: one per distinct
+ * `family` a Word names, in order of first appearance, whose `clauses` are the
+ * clauses every member cites. A family is the laws its Words share, so its
+ * clause list is the intersection of theirs — no more, which would claim a law
+ * some member is not subject to, and no fewer.
+ */
+export function families() {
+  const entries = words().entries;
+  return [...new Set(entries.map((word) => word.family))].map((id) => {
+    const members = entries.filter((word) => word.family === id);
+    const clauses = members[0].clauses.filter((clause) => members.every((word) => word.clauses.includes(clause)));
+    return { id, clauses };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Reporting
 // ---------------------------------------------------------------------------

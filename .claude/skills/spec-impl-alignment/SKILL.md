@@ -9,9 +9,9 @@ Full method: `docs/dev/spec-impl-alignment-methodology.md` (non-canonical,
 but the citable rationale for every step below — read it before a first
 run). This file is the operational checklist; that one is the reasoning.
 
-Canonical spec lives in `spec/` (5 sources: `language-semantics.md`,
-`words.json`+`words.schema.json`, `semantic-families.json`,
-`gui-semantics.md`, `host-protocol.schema.json`) and is regenerated into
+Canonical spec lives in `spec/` (the sources `spec/README.md` lists, among
+them `language-semantics.md`, `words.json`+`words.schema.json`,
+`gui-semantics.md` and `host-protocol.schema.json`) and is regenerated into
 `SPECIFICATION.html` via `npm run specification:generate`. Nothing else
 defines Ajisai semantics — not `docs/dev/`.
 

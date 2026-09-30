@@ -9,10 +9,9 @@ it defines Ajisai semantics.
 | `grammar.json` | The lexical grammar — what text is Ajisai source |
 | `termination.json` | Why every evaluation is finite — the recursion sites and the measure |
 | `identity.json` | When two things are the same — the law and each level's reach |
-| `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
+| `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract — including its family, whose shared laws are the clauses every Word of the family cites |
 | `outcomes.json` | The complete outcome space — every NIL reason and every error category a Word's contract can name |
 | `outcome-witnesses.json` | Programs that reach an outcome the one-Word semantics table cannot — the by-hand half of the outcome bijection gate |
-| `semantic-families.json` | The shared laws Words select |
 | `retired-words.json` | The names that were once Words and must stay unknown — read by both the registry gate and the runtime test |
 | `gui-semantics.md` | Presentation |
 | `host-protocol.schema.json` | The host protocol boundary between them |

@@ -1,7 +1,6 @@
-import { readJson, readText, reporter, words as wordsDocument } from './lib/common.mjs';
+import { families, readText, reporter, words as wordsDocument } from './lib/common.mjs';
 
 const language = readText('spec/language-semantics.md');
-const families = readJson('spec/semantic-families.json');
 const words = wordsDocument();
 
 const report = reporter('semantic-kernel');
@@ -54,27 +53,22 @@ if (lines > LINE_BUDGET) {
 const clauseIds = new Set([...language.matchAll(/id="[^"]+">(LANG\.[A-Z.]+)/g)].map((match) => match[1]));
 if (clauseIds.size === 0) fail('no language clause IDs found');
 
-const familyIds = new Set();
-for (const family of families.families) {
-  if (familyIds.has(family.id)) fail(`duplicate semantic family: ${family.id}`);
-  familyIds.add(family.id);
-  for (const clause of family.clauses) {
-    if (!clauseIds.has(clause)) fail(`family ${family.id} references missing clause ${clause}`);
-  }
-}
+// Families are derived from the Words (scripts/lib/common.mjs `families()`):
+// one per `family` a Word names, sharing the clauses all its members cite. So
+// a duplicate family, a Word naming a missing family and a family with no
+// Words cannot occur, and a family's clauses are its Words', checked below —
+// each was a check of its own here while the families were a hand-kept file.
+// What stays is the ceiling on how many there are.
+const familyIds = new Set(families().map((family) => family.id));
 if (familyIds.size > 12) fail(`${familyIds.size} semantic families (maximum 12)`);
 
 const names = new Set();
 for (const word of words.entries) {
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
   names.add(word.name);
-  if (!familyIds.has(word.family)) fail(`Word ${word.name} references missing family ${word.family}`);
   for (const clause of word.clauses) {
     if (!clauseIds.has(clause)) fail(`Word ${word.name} references missing clause ${clause}`);
   }
-}
-for (const family of familyIds) {
-  if (![...words.entries].some((word) => word.family === family)) fail(`semantic family ${family} has no Words`);
 }
 
 // Vocabulary growth is the failure mode this project is guarding against, so the

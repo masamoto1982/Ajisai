@@ -7,7 +7,7 @@
 >
 > `spec-impl-drift-tactic.md` の後継。前身は当時の `SPECIFICATION.html` 単一
 > ファイル構成（§2.4/§2.5/§16.1 という節番号）を前提にしていたが、現行の
-> `spec/` は5ソース構成（`spec/README.md`、`LANG.AUTHORITY.SOURCES`）に移行して
+> `spec/` は複数ソース構成（`spec/README.md`、`LANG.AUTHORITY.SOURCES`）に移行して
 > おり、前身の節参照はすべて失効していた。本書はその失効した参照を、現行の
 > 安定アンカー（`LANG.*` クラウズ ID）に置き換えて引き継ぐ。方法論そのもの
 > （スイート裁定規則）に変更はない。2026-09、3フェーズ手順の実地適用
@@ -26,7 +26,7 @@
 「どちらが新しい意図か」を手書きの日時で裁定する方式は採らない。理由は二つ:
 
 1. `LANG.AUTHORITY.SOURCES` が権威順位をすでに恒久的に決着させている——本文
-   （`spec/` の5ソース）が常に勝つ。タイムスタンプが追加する情報はない。
+   （`spec/` の正典ソース）が常に勝つ。タイムスタンプが追加する情報はない。
 2. 実際に観測される乖離の大半は「本文が書いていない」(仕様の穴) であり、
    存在しない項目に決定日時は付けられない。タイムスタンプは起きていない
    問題（本文 vs 実装の真正面衝突）のために台帳を増やし、支配的な問題
@@ -40,8 +40,8 @@ provenance（いつ・なぜ変わったか）が要る場面では、手書き�
 
 ### Phase 1 — 仕様内部の整合性
 
-`spec/` の5ソース（`language-semantics.md`、`words.json`＋`words.schema.json`、
-`semantic-families.json`、`gui-semantics.md`、`host-protocol.schema.json`）を
+`spec/` のソース（`language-semantics.md`、`words.json`＋`words.schema.json`、
+`gui-semantics.md`、`host-protocol.schema.json` ほか。一覧は `spec/README.md`）を
 実装を一切見ずに読み合わせる。既存の自動チェック（`specification:check`、
 `semantic-kernel:check`、`word-schema:check` 等）は生成の往復一致は保証するが、
 **プローズとスキーマの意味的な食い違い**までは見ない——これは人間（または
@@ -163,7 +163,7 @@ Phase 1・Phase 2 をそれぞれ個別に終えた後、初めて両者を比�
 
 本フェーズは本来「`spec/` 対 実機」の2項比較だが、`SKILL.md`／
 `assets/quickstart.md`（MCP が `ajisai://guide/quickstart` として配信する
-ガイド）は `spec/` の5ソースに含まれない非正典ドキュメントであり、この
+ガイド）は `spec/` の正典ソースに含まれない非正典ドキュメントであり、この
 比較の外側にいる。しかし実際に行動するのは `spec/` を読む人間ではなく
 このガイドを読む AI であり、上の「検証の盲点 その2」が示す通り、ここに
 `spec/` とは独立した第3の食い違いが生じうる。`spec/` との不一致は
