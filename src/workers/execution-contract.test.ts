@@ -3,7 +3,7 @@
 // tolerated rather than throw and abort the whole restore.
 
 import { describe, expect, test, vi } from 'vitest';
-import { applyInterpreterSnapshot } from './interpreter-snapshot';
+import { applyInterpreterSnapshot } from './execution-contract';
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 
 const makeMock = () => {

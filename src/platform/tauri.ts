@@ -1,8 +1,15 @@
+// The Tauri host: one JSON document in the app-data directory for
+// persistence, and the native dialogs and filesystem for file I/O.
+
 import type {
+    FileIO,
     InterpreterStateSnapshot,
+    OpenResult,
     Persistence,
+    SaveResult,
     StoredInterpreterState
-} from '../platform-adapter';
+} from './index';
+import { WEB_PERSISTENCE, formatJsonDocument, readInterpreterStateSnapshot } from './web';
 
 // Resolved only at runtime inside the Tauri WebView; `@vite-ignore` keeps the
 // web build from trying to bundle the Tauri SDK.
@@ -45,7 +52,7 @@ async function writeStoredData(data: StoredData): Promise<void> {
         dynamicImport('@tauri-apps/plugin-fs')
     ]);
 
-    await writeTextFile(STATE_FILE, JSON.stringify(data, null, 2), { baseDir: BaseDirectory.AppData });
+    await writeTextFile(STATE_FILE, formatJsonDocument(data), { baseDir: BaseDirectory.AppData });
 }
 
 export class TauriPersistence implements Persistence {
@@ -56,15 +63,16 @@ export class TauriPersistence implements Persistence {
             return;
         }
 
-        const [{ exists, BaseDirectory }, webPersistenceModule] = await Promise.all([
-            dynamicImport('@tauri-apps/plugin-fs'),
-            import('../web/web-persistence')
+        const [{ exists, BaseDirectory }] = await Promise.all([
+            dynamicImport('@tauri-apps/plugin-fs')
         ]);
 
         const alreadyExists = await exists(STATE_FILE, { baseDir: BaseDirectory.AppData });
         if (!alreadyExists) {
             await writeStoredData(cloneEmptyData());
-            await this.migrateFromIndexedDb(() => webPersistenceModule.default.exportInterpreterState()).catch((error) => {
+            // A first launch inherits whatever the web playground had stored in
+            // this WebView's IndexedDB.
+            await this.migrateFromIndexedDb(() => WEB_PERSISTENCE.exportInterpreterState()).catch((error) => {
                 console.warn('Failed to migrate IndexedDB data into Tauri storage:', error);
             });
         }
@@ -95,17 +103,7 @@ export class TauriPersistence implements Persistence {
     }
 
     async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
-        const state = await this.exportInterpreterState();
-        if (!state) {
-            return null;
-        }
-
-        return {
-            stateVersion: Number(state.stateVersion),
-            stackSnapshot: state.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
-            userWords: state.userWords as InterpreterStateSnapshot['userWords'],
-            activeDictionarySheet: state.activeDictionarySheet
-        };
+        return readInterpreterStateSnapshot(await this.exportInterpreterState());
     }
 
     async clearAll(): Promise<void> {
@@ -117,5 +115,46 @@ export class TauriPersistence implements Persistence {
         await this.open();
         const current = await readStoredData();
         return current.interpreterState;
+    }
+}
+
+export class TauriFileIO implements FileIO {
+    async saveJson(defaultName: string, data: unknown): Promise<SaveResult> {
+        const [{ save }, { writeTextFile }] = await Promise.all([
+            dynamicImport('@tauri-apps/plugin-dialog'),
+            dynamicImport('@tauri-apps/plugin-fs')
+        ]);
+
+        const path = await save({
+            defaultPath: defaultName,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+
+        if (!path) {
+            throw new Error('Save cancelled');
+        }
+
+        await writeTextFile(path, formatJsonDocument(data));
+        return { filename: defaultName };
+    }
+
+    async openJsonFile(): Promise<OpenResult | null> {
+        const [{ open }, { readTextFile }] = await Promise.all([
+            dynamicImport('@tauri-apps/plugin-dialog'),
+            dynamicImport('@tauri-apps/plugin-fs')
+        ]);
+
+        const selected = await open({
+            multiple: false,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+
+        if (!selected || Array.isArray(selected)) {
+            return null;
+        }
+
+        const text = await readTextFile(selected);
+        const filename = selected.split(/[\\/]/).pop() ?? 'import.json';
+        return { filename, text };
     }
 }

@@ -4,7 +4,7 @@ import type {
     AjisaiInterpreter,
     ExecuteResult,
 } from '../wasm-interpreter-types';
-import { applyInterpreterSnapshot } from './interpreter-snapshot';
+import { applyInterpreterSnapshot } from './execution-contract';
 
 let interpreter: AjisaiInterpreter | null = null;
 

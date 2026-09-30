@@ -1,3 +1,601 @@
+:root {
+    /* --- Families --------------------------------------------------------- */
+    --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
+
+    /* --- Type scale (rem) ------------------------------------------------- */
+    --text-2xs: 0.75rem;
+    --text-xs: 0.8rem;
+    --text-sm: 0.875rem;
+    --text-base: 0.95rem;
+    --text-xl: 1.5rem;
+
+    /* --- Weights ---------------------------------------------------------- */
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-bold: 700;
+
+    /* --- Line heights ----------------------------------------------------- */
+    --leading-tight: 1.2;
+    --leading-snug: 1.5;
+    --leading-body: 1.6;
+
+    /* --- Spacing scale (rem) --------------------------------------------- */
+    --space-3xs: 0.125rem;
+    --space-2xs: 0.25rem;
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+
+    /* --- Radii ------------------------------------------------------------ */
+    --radius-main: 2px;
+    --radius-button: 6px;
+    --radius-word-button: 4px;
+    --radius-panel: 8px;
+
+    /* --- Layout ----------------------------------------------------------- */
+    --col-left-flex: 1;
+    --col-right-flex: 1;
+    --golden: 1.618;
+
+    /* --- Brand / accent --------------------------------------------------- */
+    /* Muted hydrangea purple: the single brand accent (links, focus rings). */
+    --color-primary:   oklch(51.1% 0.091 295.7);
+
+    /* --- Ink / text ------------------------------------------------------- */
+    --color-text:       oklch(24.7% 0.002 247.9);   /* near-black warm ink    */
+    --color-text-light: oklch(46.1% 0.009 241.8);   /* secondary / captions   */
+
+    /* --- Surfaces --------------------------------------------------------- */
+    --color-white:  oklch(100% 0     0);
+    --color-light:  oklch(98.2% 0.002 247.8);   /* hover fills, nav rail  */
+    --color-medium: oklch(94.3% 0.006 264.5);   /* inline-code bg, scrollbar */
+
+    /* --- Border ----------------------------------------------------------- */
+    --color-border: oklch(73.2% 0.014 251.6);
+    --border-main: solid 1px var(--color-border);
+
+    /* Code-entry surface: a recessed "well" — faint cool gray, slightly
+       darker than the page white so the input reads as a depression. */
+    --color-symbol: oklch(97.5% 0.03 100);
+
+    /* Ink for inputs on the light symbol surface. */
+    --input-text:        var(--color-text);
+    /* Placeholder text in the editor and the Dictionary search box: faint on
+       purpose — present enough to read when looked at, never competing with
+       what is typed. A deliberate exception to 4.5:1, recorded with its floor
+       in scripts/check-contrast.mjs. */
+    --input-placeholder: oklch(80% 0.07 55);
+
+    /* --- Word-category semantics (CVD-safe) ------------------------------ */
+    /* Chip text on white (scripts/check-contrast.mjs). Dependency is a light
+       amber, well above Core's orange-red in lightness, which is what tells
+       the two warm colours apart at a glance; it is a recorded exception to
+       4.5:1 rather than darkened toward Core. */
+    --color-core:           oklch(57% 0.197 40.3);      /* orange  */
+    --color-dependency:     oklch(73.4% 0.158 71.0);    /* amber   */
+    --color-non-dependency: oklch(52.5% 0.135 161.2);   /* green   */
+    --color-stack:          oklch(47.9% 0.220 328.4);   /* magenta */
+
+    /* --- Vector bracket depth colours (after Tol's muted palette) ------- */
+    /* Brackets are text, and the top of the stack sits on its fill, so each
+       depth reads at 4.5:1 on white and on --color-stack-top.
+       Darkening the light members of Tol's palette brought them to one
+       lightness, so neighbouring depths are told apart by hue: 6 moved from
+       Tol's sand to ochre, away from 5's olive. */
+    --bracket-depth-1: oklch(34.7% 0.159 281.8);
+    --bracket-depth-2: oklch(51% 0.084 230.8);
+    --bracket-depth-3: oklch(50% 0.098 180.4);
+    --bracket-depth-4: oklch(49.9% 0.135 148.6);
+    --bracket-depth-5: oklch(51% 0.123 109.3);
+    --bracket-depth-6: oklch(52% 0.12 65);
+    --bracket-depth-7: oklch(53% 0.130 11.0);
+    --bracket-depth-8: oklch(43.2% 0.145 354.5);
+    --bracket-depth-9: oklch(53.5% 0.167 334.6);
+
+    /* --- Output text ------------------------------------------------------ */
+    --color-output-debug:   oklch(32.1% 0 0);
+    /* What the program printed, in blue — dark enough to read (4.5:1). */
+    --color-output-program: oklch(53.5% 0.134 234.0); /* blue */
+    --color-output-error:   oklch(57.5% 0.202 21.2);   /* red */
+    --color-output-info:    oklch(51% 0 0);
+
+    /* --- Stack top background -------------------------------------------- */
+    /* A Word consumes its operands (LANG.STACK.CONSUMPTION): the top item is
+       filled with a very pale warm red. A fill rather than a text colour leaves
+       the bracket depth-colours that show Vector nesting intact. The top is
+       also the last item in reading order and set in bold, so the fill is not
+       the only thing that marks it. (Once named `--color-consume-eat`, after a
+       consume/keep mode pair the language no longer has.) */
+    --color-stack-top: oklch(94% 0.035 25);
+
+    /* --- Effects ---------------------------------------------------------- */
+    --shadow-popover: 0 2px 6px oklch(0% 0 0 / 0.15);
+    --transition-fast: 0.15s ease;
+}
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: var(--font-stack-primary);
+    background: var(--color-white);
+    color: var(--color-text);
+    line-height: var(--leading-body);
+}
+
+[hidden] {
+    display: none !important;
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+
+    /* Hover marks the link with a line rather than a lighter colour, which
+       fell to 2.3:1. */
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* Visually hidden until focused. */
+.skip-link {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    background: var(--color-text);
+    color: var(--color-white);
+    padding: var(--space-xs) var(--space-md);
+    z-index: 1000;
+
+    &:focus {
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip-path: none;
+        white-space: normal;
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+}
+
+.container {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    @media (width <= 768px) {
+        height: 100dvh;
+        min-height: 0;
+    }
+}
+
+@media (width <= 768px) {
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
+}
+
+
+/* ── 移ろい — header / footer ───────────────────────────────────────────────
+ * A slow OKLCH gradient cycling through the four hydrangea hues:
+ *   青紫 (blue-purple ~265) · 赤紫 (red-purple ~325)
+ *   淡水色 (pale aqua ~205) · 淡緑 (pale green ~155)
+ * Both endpoints animate as a matched pair; nearby hues at every keyframe
+ * prevent the interpolation from cutting through warm orange. The 100%
+ * keyframe repeats 0% to keep the infinite loop seamless. */
+@property --mv-h-a {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 265;
+}
+
+@property --mv-h-b {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 300;
+}
+
+@property --mv-l {
+    syntax: "<percentage>";
+    inherits: false;
+    initial-value: 90%;
+}
+
+@property --mv-c-a {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0.085;
+}
+
+@property --mv-c-b {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0.085;
+}
+
+@keyframes mv-hydrangea-hues {
+    0%,
+    100% {
+        --mv-h-a: 265;
+        --mv-h-b: 300;
+    }
+
+    25% {
+        --mv-h-a: 305;
+        --mv-h-b: 325;
+    }
+
+    50% {
+        --mv-h-a: 195;
+        --mv-h-b: 225;
+    }
+
+    75% {
+        --mv-h-a: 150;
+        --mv-h-b: 178;
+    }
+}
+
+@keyframes mv-chroma {
+    0%,
+    100% {
+        --mv-c-a: 0.085;
+        --mv-c-b: 0.085;
+    }
+
+    40% {
+        --mv-c-a: 0.095;
+        --mv-c-b: 0.095;
+    }
+
+    65% {
+        --mv-c-a: 0.065;
+        --mv-c-b: 0.065;
+    }
+}
+
+@keyframes mv-light {
+    0%,
+    100% { --mv-l: 90%; }
+    50%  { --mv-l: 93%; }
+}
+
+header,
+footer,
+.utsuroi {
+    background: linear-gradient(
+        to right in oklch,
+        oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
+        oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
+    );
+    animation:
+        mv-hydrangea-hues 260s ease-in-out infinite,
+        mv-chroma 210s ease-in-out infinite,
+        mv-light 170s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+}
+
+
+header {
+    border-bottom: var(--border-main);
+    padding: var(--space-md) var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+    color: var(--color-text);
+
+    & h1 {
+        font-size: var(--text-xl);
+        font-weight: var(--weight-medium);
+        color: var(--color-text);
+    }
+
+    /* The header's badge carries the build and resource-limit detail in its
+       tooltip (setPlaygroundBadgeTooltip() in src/entry/entry-common.ts); the
+       splash copy has that detail written out beside it. */
+    & .version {
+        cursor: help;
+    }
+}
+
+.app-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    width: 100%;
+}
+
+.app-brand-block {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: inherit;
+}
+
+.app-brand-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.version {
+    display: inline-block;
+    font-size: var(--text-2xs);
+    line-height: var(--leading-snug);
+    color: var(--color-white);
+    background: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-button);
+    padding: var(--space-3xs) var(--space-xs);
+}
+
+.header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+}
+
+
+/* First-visit walkthrough — see initSplashScreen() in src/entry/entry-common.ts.
+   Reuses the header's moving hydrangea gradient (.utsuroi) so the splash reads
+   as the same surface. Sits above the skip-link's z-index; once dismissed it
+   fades out and stops intercepting pointer events before it is removed. */
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 1;
+    transition: opacity 0.35s ease;
+
+    &.splash-dismissing {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* The technical detail is revealed by a timer (splash-detail-visible); the
+       hint below it never waits on that timer. */
+    &.splash-detail-visible :is(.splash-version-line, .splash-note, .splash-limits-heading, .splash-limits) {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+.splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xl);
+    text-align: center;
+}
+
+.splash-logo {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(0.9);
+    animation: splash-logo-in 0.5s ease forwards;
+}
+
+/* The title and its "Playground" badge read as one identity, side by side,
+   the way the header pairs <h1>Ajisai</h1> with the same badge. */
+.splash-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    opacity: 0;
+    animation: splash-fade-in 0.5s ease 0.15s forwards;
+}
+
+.splash-title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-medium);
+}
+
+/* Written out as plain text rather than a hover title: a touch device has no
+   hover to read it from. */
+.splash-version-line,
+.splash-note,
+.splash-limits-heading,
+.splash-limits {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.splash-version-line {
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text);
+}
+
+.splash-note {
+    font-size: var(--text-2xs);
+    color: var(--color-text-light);
+    max-width: 32rem;
+}
+
+.splash-limits-heading {
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+}
+
+/* The ceiling table: monospace so the name/value pairs line up, left-aligned
+   within the centred splash. */
+.splash-limits {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3xs);
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-2xs);
+    color: var(--color-text-light);
+    text-align: left;
+}
+
+.splash-hint {
+    font-size: var(--text-2xs);
+    color: var(--color-text-light);
+}
+
+@keyframes splash-logo-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splash-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* With the motion gone the splash says everything at once. */
+@media (prefers-reduced-motion: reduce) {
+    .splash-logo,
+    .splash-heading {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .splash-version-line,
+    .splash-note,
+    .splash-limits-heading,
+    .splash-limits {
+        transition: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+
+footer {
+    border-top: var(--border-main);
+    padding: var(--space-sm) var(--space-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xl);
+    flex-shrink: 0;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    text-align: center;
+
+    & a {
+        color: var(--color-text-light);
+
+        &:hover {
+            color: var(--color-text);
+        }
+    }
+}
+
+
+/* Every non-word button: header, output, dictionary actions, and the
+   generated JSON download link. */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-end;
+    justify-content: center;
+    gap: var(--space-xs);
+    min-height: 2.125rem;
+    padding: var(--space-xs) var(--space-md);
+    font-family: var(--font-stack-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
+    border: var(--border-main);
+    border-radius: var(--radius-button);
+    cursor: pointer;
+    color: var(--color-text);
+    background: var(--color-white);
+
+    &:hover {
+        background: var(--color-light);
+        color: var(--color-text);
+    }
+}
+
+
+/* The three content boxes: Output, Stack, and the word lists. */
+.display-area,
+.state-display,
+.words-display {
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-sm);
+    border: var(--border-main);
+    background: var(--color-white);
+    font-family: var(--font-stack-mono);
+    font-size: 0.9rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-medium) var(--color-light);
+
+    @media (width <= 768px) {
+        min-height: 80px;
+    }
+}
 /* ── Layout: two columns on desktop, one surface at a time on mobile ─────── */
 
 .main-layout {
@@ -525,7 +1123,7 @@
     font-weight: var(--weight-regular);
 }
 
-/* The undrawn tail of a large collection (src/gui/stack-render-budget.ts),
+/* The undrawn tail of a large collection (the render budget in src/gui/output-display-renderer.ts),
    styled as commentary so it cannot be read as part of the value. */
 .stack-elision {
     font-style: italic;

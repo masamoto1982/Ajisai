@@ -1,10 +1,12 @@
+// The playground's entry module: index.html imports this file, and it boots
+// the application once the document is ready.
+
 import { getPlatform } from '../platform';
 import { createGUI, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
-import { toError } from '../gui/to-error';
-import { initWasm } from '../wasm-module-loader';
-import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
-import type { AjisaiInterpreter } from '../wasm-interpreter-types';
-import { parseHostProfile } from './host-profile-parse';
+import { toError } from '../gui/interpreter-execution-utils';
+import { EXECUTION_TIMEOUT_MS } from '../workers/execution-contract';
+import { initWasm } from '../workers/execution-worker-manager';
+import { parseHostProfile, type AjisaiInterpreter } from '../wasm-interpreter-types';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
 declare const __AJISAI_RELEASE_VERSION__: string;
@@ -50,7 +52,7 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  * the splash is how the detail reaches one — and once it has, the header does
  * not need to keep spending its brand row on a stamp nobody reads twice.
  */
-export function setBuildVersionLabel(): void {
+function setBuildVersionLabel(): void {
     // Capitalized to match the other names the site gives its own surfaces:
     // the header's `Reference` button, and the Reference's own
     // 「Playgroundで開く」 links back here.
@@ -103,7 +105,7 @@ function setPlaygroundBadgeTooltip(lines: string[]): void {
  * does not disclose what it applies, so this one does.
  * See docs/dev/mcp-host-profiles.md for the comparison.
  */
-export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
+function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
     // Best effort throughout: this is a label, and nothing below it may throw
     // into initializeApplication() and take the GUI down with it. The call
     // itself sits inside the guard for the same reason as the parse.
@@ -165,7 +167,7 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
  * otherwise repeat without end: the Reference opens in its own tab, and
  * `sessionStorage` is per-tab, so the dismissal never reaches it.
  */
-export function initSplashScreen(): void {
+function initSplashScreen(): void {
     const splash = document.querySelector<HTMLElement>('#splash-screen');
     if (!splash) return;
 
@@ -228,7 +230,7 @@ export function initSplashScreen(): void {
     splash.addEventListener('keydown', dismiss);
 }
 
-export async function initializeApplication(): Promise<void> {
+async function initializeApplication(): Promise<void> {
     console.log('[Main] Starting Ajisai application...');
 
     try {
@@ -258,10 +260,13 @@ export async function initializeApplication(): Promise<void> {
     }
 }
 
-export function bootstrapApplication(): void {
-    getPlatform().runtime.onReady(() => {
-        initSplashScreen();
-        setBuildVersionLabel();
-        void initializeApplication();
-    });
-}
+// One wait for the document, through the platform's runtime seam. The former
+// entry-bootstrap module waited for DOMContentLoaded itself and then called
+// this, which waited again (and found the document already interactive), so
+// the second wait always resolved synchronously; dropping it changes nothing
+// about when the three calls below run.
+getPlatform().runtime.onReady(() => {
+    initSplashScreen();
+    setBuildVersionLabel();
+    void initializeApplication();
+});

@@ -64,7 +64,7 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       // Resolved at runtime inside the Tauri WebView; never bundled. The
-      // platform/tauri/*.ts adapters use `import(/* @vite-ignore */ ...)`
+      // platform/tauri.ts adapter uses `import(/* @vite-ignore */ ...)`
       // so these specifiers must remain external for both web and Tauri
       // builds.
       external: [

@@ -17,7 +17,7 @@
 // This exists because contrast was never measured: printed output shipped at
 // 1.97:1 and five bracket-depth colours between 1.6:1 and 3.7:1.
 //
-// Tokens are read from src/styles/tokens.css and converted OKLCH → sRGB
+// Tokens are read from src/styles/playground.css and converted OKLCH → sRGB
 // (gamut-clipped, as a browser renders them) → relative luminance.
 //
 //   node scripts/check-contrast.mjs
@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stylesDir = join(repoRoot, 'src', 'styles');
-const tokensCss = readFileSync(join(stylesDir, 'tokens.css'), 'utf8');
+const tokensCss = readFileSync(join(stylesDir, 'playground.css'), 'utf8');
 
 const TEXT_MINIMUM = 4.5;
 const NON_TEXT_MINIMUM = 3;
@@ -83,7 +83,7 @@ function readTokens(css) {
   const resolveToken = (name, seen = new Set()) => {
     if (seen.has(name)) throw new Error(`token cycle at ${name}`);
     const value = raw.get(name);
-    if (value === undefined) throw new Error(`tokens.css declares no ${name}`);
+    if (value === undefined) throw new Error(`playground.css declares no ${name}`);
     const alias = value.match(/^var\((--[\w-]+)\)$/);
     if (alias) return resolveToken(alias[1], new Set([...seen, name]));
     const oklch = value.match(/^oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*\)$/);

@@ -1,8 +1,35 @@
+// The web host: IndexedDB persistence and the browser's own file dialogs.
+
 import type {
+    FileIO,
     InterpreterStateSnapshot,
+    OpenResult,
     Persistence,
+    SaveResult,
     StoredInterpreterState
-} from '../platform-adapter';
+} from './index';
+
+/** The one serialization every JSON document this host writes uses. */
+export const formatJsonDocument = (data: unknown): string => JSON.stringify(data, null, 2);
+
+/**
+ * The stored record read back as the snapshot the GUI restores from, or null
+ * when nothing is stored. Both hosts store the same record and answer the
+ * same snapshot, so the reading is written once.
+ */
+export const readInterpreterStateSnapshot = (
+    result: StoredInterpreterState | null
+): InterpreterStateSnapshot | null => {
+    if (!result) {
+        return null;
+    }
+    return {
+        stateVersion: Number(result.stateVersion),
+        stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
+        userWords: result.userWords as InterpreterStateSnapshot['userWords'],
+        activeDictionarySheet: result.activeDictionarySheet
+    };
+};
 
 const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
     new Promise((resolve, reject) => {
@@ -92,16 +119,7 @@ class WebPersistence implements Persistence {
     }
 
     async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
-        const result = await this.exportInterpreterState();
-        if (!result) {
-            return null;
-        }
-        return {
-            stateVersion: Number(result.stateVersion),
-            stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
-            userWords: result.userWords as InterpreterStateSnapshot['userWords'],
-            activeDictionarySheet: result.activeDictionarySheet
-        };
+        return readInterpreterStateSnapshot(await this.exportInterpreterState());
     }
 
     async clearAll(): Promise<void> {
@@ -121,6 +139,60 @@ class WebPersistence implements Persistence {
     }
 }
 
-const DB = new WebPersistence();
+// One IndexedDB store per page: the web adapter's persistence, and the source
+// the Tauri adapter migrates from on its first launch.
+export const WEB_PERSISTENCE: Persistence = new WebPersistence();
 
-export default DB;
+const readFileAsText = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const result = event.target?.result;
+            if (typeof result === 'string') {
+                resolve(result);
+            } else {
+                reject(new Error('Failed to read file'));
+            }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+
+export class WebFileIO implements FileIO {
+    async saveJson(defaultName: string, data: unknown): Promise<SaveResult> {
+        const jsonString = formatJsonDocument(data);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = defaultName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        return { filename: defaultName };
+    }
+
+    async openJsonFile(): Promise<OpenResult | null> {
+        return new Promise((resolve, reject) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+
+            input.onchange = () => {
+                const file = input.files?.[0];
+                if (!file) {
+                    resolve(null);
+                    return;
+                }
+                readFileAsText(file)
+                    .then((text) => resolve({ filename: file.name, text }))
+                    .catch(reject);
+            };
+
+            input.click();
+        });
+    }
+}

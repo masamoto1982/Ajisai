@@ -12,16 +12,22 @@
 // panel.
 
 import { describe, expect, test } from 'vitest';
-import { describeNilNode, formatValue } from './output-display-renderer';
+import {
+    describeNilNode,
+    formatValue,
+    MAX_RENDERED_ELEMENTS_PER_COLLECTION,
+    MAX_RENDERED_ELEMENTS_PER_STACK,
+    createRenderBudget,
+    formatElision,
+    planCollectionRender,
+    fractionToLatex,
+    valueToLatex
+} from './output-display-renderer';
+import type { Value } from '../wasm-interpreter-types';
+import { frac, num, rec, str, vec } from '../test-support';
 
 type Node = Parameters<typeof formatValue>[0];
 
-const num = (n: number): Node =>
-    ({ type: 'number', value: { numerator: String(n), denominator: '1' } }) as Node;
-const str = (s: string): Node => ({ type: 'string', value: s }) as Node;
-const vec = (...items: Node[]): Node => ({ type: 'vector', value: items }) as Node;
-const rec = (keys: Node[], values: Node[]): Node =>
-    ({ type: 'record', value: { keys, values } }) as Node;
 
 const render = (node: Node): string => formatValue(node, 0);
 
@@ -127,5 +133,273 @@ describe('a NIL in the Stack carries its reason', () => {
 
     test('a NIL the host sent no reason for is a bare NIL', () => {
         expect(describeNilNode(nil())).toBe('NIL');
+    });
+});
+
+// ── merged from stack-render-budget.test.ts ──
+
+// The Stack area's drawing bound. A legal program can put a half-million
+// element Vector on the stack; drawing it unbounded would freeze the browser
+// tab for tens of seconds, so the render is capped and the undrawn tail is
+// counted.
+
+
+describe('planCollectionRender', () => {
+    test('a small collection is drawn whole and elides nothing', () => {
+        const budget = createRenderBudget();
+        expect(planCollectionRender(3, budget)).toEqual({ shown: 3, elided: 0 });
+        expect(budget.remaining).toBe(MAX_RENDERED_ELEMENTS_PER_STACK - 3);
+    });
+
+    test('an empty collection costs nothing', () => {
+        const budget = createRenderBudget();
+        expect(planCollectionRender(0, budget)).toEqual({ shown: 0, elided: 0 });
+        expect(budget.remaining).toBe(MAX_RENDERED_ELEMENTS_PER_STACK);
+    });
+
+    test('a collection past the per-collection cap is cut there and the rest counted', () => {
+        const budget = createRenderBudget();
+        const plan = planCollectionRender(500_000, budget);
+        expect(plan.shown).toBe(MAX_RENDERED_ELEMENTS_PER_COLLECTION);
+        expect(plan.elided).toBe(500_000 - MAX_RENDERED_ELEMENTS_PER_COLLECTION);
+    });
+
+    test('many collections cannot together exceed the per-render budget', () => {
+        const budget = createRenderBudget();
+        let drawn = 0;
+        for (let i = 0; i < 10_000; i++) {
+            drawn += planCollectionRender(MAX_RENDERED_ELEMENTS_PER_COLLECTION, budget).shown;
+        }
+        expect(drawn).toBe(MAX_RENDERED_ELEMENTS_PER_STACK);
+        expect(budget.remaining).toBe(0);
+    });
+
+    test('an exhausted budget draws nothing and elides everything', () => {
+        const budget = createRenderBudget(0);
+        expect(planCollectionRender(7, budget)).toEqual({ shown: 0, elided: 7 });
+    });
+
+    test('shown plus elided always accounts for the whole collection', () => {
+        for (const length of [1, 99, 100, 101, 2_500, 1_000_000]) {
+            const budget = createRenderBudget();
+            const plan = planCollectionRender(length, budget);
+            expect(plan.shown + plan.elided).toBe(length);
+        }
+    });
+
+    test('a nonsense length is treated as empty rather than drawn', () => {
+        const budget = createRenderBudget();
+        expect(planCollectionRender(Number.NaN, budget)).toEqual({ shown: 0, elided: 0 });
+        expect(planCollectionRender(-5, budget)).toEqual({ shown: 0, elided: 0 });
+        expect(budget.remaining).toBe(MAX_RENDERED_ELEMENTS_PER_STACK);
+    });
+});
+
+describe('formatElision', () => {
+    test('states the exact undrawn count', () => {
+        expect(formatElision(499_900)).toBe('… 499900 more');
+    });
+
+    test('is not Ajisai-shaped, so it cannot be misread as part of the value', () => {
+        expect(formatElision(3)).not.toMatch(/^[[\]A-Z0-9'/-]+$/);
+    });
+});
+
+// ── merged from value-latex.test.ts ──
+
+// Math-view LaTeX derivation: the alternate KaTeX stack rendering must be
+// generated from the structured protocol form and refuse (return null) any
+// value without a faithful flat math reading, so the canonical text
+// rendering remains the fallback.
+
+
+
+describe('fractionToLatex', () => {
+    test('integer collapses the denominator', () => {
+        expect(fractionToLatex(frac(3))).toBe('3');
+    });
+
+    test('proper fraction renders as \\frac', () => {
+        expect(fractionToLatex(frac(3, 4))).toBe('\\frac{3}{4}');
+    });
+
+    test('negative sign stays outside the bar', () => {
+        expect(fractionToLatex(frac(-3, 4))).toBe('-\\frac{3}{4}');
+    });
+
+    test('nine-digit components stay exact', () => {
+        expect(fractionToLatex(frac('999999999', '7'))).toBe('\\frac{999999999}{7}');
+    });
+});
+
+describe('fractionToLatex: huge components switch to scientific notation', () => {
+    test('huge integer rounds to a six-digit mantissa with \\approx', () => {
+        expect(fractionToLatex(frac('12345678901'))).toBe('\\approx 1.23457 \\times 10^{10}');
+    });
+
+    test('exact power of ten needs no mantissa and no \\approx', () => {
+        expect(fractionToLatex(frac('1' + '0'.repeat(40)))).toBe('10^{40}');
+    });
+
+    test('exact short mantissa keeps no \\approx', () => {
+        expect(fractionToLatex(frac('5' + '0'.repeat(12)))).toBe('5 \\times 10^{12}');
+    });
+
+    test('huge ratio collapses to one scientific number', () => {
+        const digits = '9'.repeat(40);
+        expect(fractionToLatex(frac(digits, '7'))).toBe('\\approx 1.42857 \\times 10^{39}');
+    });
+
+    test('rounding can carry into the exponent', () => {
+        expect(fractionToLatex(frac('999999999999'))).toBe('\\approx 10^{12}');
+    });
+
+    test('negative huge value keeps its sign', () => {
+        expect(fractionToLatex(frac('-12345678901'))).toBe('\\approx -1.23457 \\times 10^{10}');
+    });
+
+    test('tiny ratio gets a negative exponent', () => {
+        expect(fractionToLatex(frac('1', '1' + '0'.repeat(12)))).toBe('10^{-12}');
+    });
+
+    test('human-scale value with huge components renders as a decimal', () => {
+        expect(fractionToLatex(frac('1414213562', '1000000000'))).toBe('\\approx 1.41421');
+    });
+
+    test('mid-scale value places the decimal point, not a power of ten', () => {
+        expect(fractionToLatex(frac('31415926535', '100000000'))).toBe('\\approx 314.159');
+    });
+
+    test('near-zero value uses leading zeros down to 10^-4', () => {
+        expect(fractionToLatex(frac('1234567891', '10000000000000'))).toBe('\\approx 0.000123457');
+    });
+
+    test('exact human-scale value carries no \\approx', () => {
+        expect(fractionToLatex(frac('1500000000', '1000000000'))).toBe('1.5');
+    });
+});
+
+describe('valueToLatex: scalars', () => {
+    test('number renders as fraction', () => {
+        expect(valueToLatex(num(1, 2))).toBe('\\frac{1}{2}');
+    });
+
+    test('approximate sqrt(2) renders as a decimal with a single \\approx', () => {
+        const item = { ...num(1414213562, 1000000000), semantics: { approximate: true } } as Value;
+        expect(valueToLatex(item)).toBe('\\approx 1.41421');
+    });
+
+    test('malformed numerator is refused (no TeX injection)', () => {
+        const item: Value = { type: 'number', value: { numerator: '\\dangerous', denominator: '1' } };
+        expect(valueToLatex(item)).toBeNull();
+    });
+
+    test('non-math types are refused', () => {
+        expect(valueToLatex({ type: 'string', value: 'hello' })).toBeNull();
+        expect(valueToLatex({ type: 'nil', value: null })).toBeNull();
+        expect(valueToLatex({ type: 'boolean', value: true })).toBeNull();
+    });
+});
+
+describe('valueToLatex: vectors', () => {
+    test('numeric vector renders as a one-row matrix', () => {
+        expect(valueToLatex(vec(num(1), num(2), num(3)))).toBe(
+            '\\begin{bmatrix} 1 & 2 & 3 \\end{bmatrix}'
+        );
+    });
+
+    test('rectangular nested vector renders as a rank-2 matrix', () => {
+        expect(valueToLatex(vec(vec(num(1), num(2)), vec(num(3), num(4))))).toBe(
+            '\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}'
+        );
+    });
+
+    test('ragged nested vector is refused', () => {
+        expect(valueToLatex(vec(vec(num(1), num(2)), vec(num(3))))).toBeNull();
+    });
+
+    test('mixed-type vector is refused', () => {
+        expect(valueToLatex(vec(num(1), { type: 'string', value: 'x' }))).toBeNull();
+    });
+
+    test('empty vector is refused (bracket text is the surface)', () => {
+        expect(valueToLatex(vec())).toBeNull();
+    });
+
+    test('oversized vector falls back to text', () => {
+        const elements = Array.from({ length: 65 }, (_, i) => num(i));
+        expect(valueToLatex(vec(...elements))).toBeNull();
+    });
+});
+
+// Adversarial robustness: the math view must never throw. A number value whose
+// denominator is zero is malformed / NIL occupancy (it never arises from a
+// canonical number, but can reach the renderer via restored or injected
+// state), and `scientificLatex` must not divide by zero on a >=10-digit zero
+// denominator, which would throw a RangeError out of the live Stack render.
+describe('valueToLatex zero-denominator robustness', () => {
+    for (const denom of ['0', '-0', '00', '0000000000', '-0000000000']) {
+        for (const numer of ['1', '1234567890', '12345678901', '99999999999999999999']) {
+            test(`returns null (text fallback) for ${numer}/${denom}`, () => {
+                expect(valueToLatex(num(numer, denom))).toBeNull();
+            });
+        }
+    }
+
+    test('fractionToLatex does not throw on a huge zero denominator', () => {
+        expect(() => fractionToLatex(frac('12345678901', '0000000000'))).not.toThrow();
+        expect(() => fractionToLatex(frac('12345678901', '0'))).not.toThrow();
+    });
+});
+
+// An algebraic irrational carries the multiquadratic normal form it is stored
+// in. That form *is* the value, so the math view draws it rather than the best
+// rational approximation the same node also carries: `\sqrt{3}` says the whole
+// number where `\approx \frac{708158977}{408855776}` only gestures at it.
+describe('valueToLatex exact normal form', () => {
+    function irrational(
+        approximation: Value,
+        ...terms: Array<[string, string, string]>
+    ): Value {
+        return {
+            ...approximation,
+            semantics: {
+                approximate: true,
+                exactTerms: terms.map(([numerator, denominator, radicand]) => ({
+                    numerator,
+                    denominator,
+                    radicand,
+                })),
+            },
+        } as Value;
+    }
+
+    test('a bare square root drops the unit coefficient', () => {
+        expect(valueToLatex(irrational(num(708158977, 408855776), ['1', '1', '3'])))
+            .toBe('\\sqrt{3}');
+    });
+
+    test('an integer coefficient is written in front of the root', () => {
+        expect(valueToLatex(irrational(num(2828427124, 1000000000), ['2', '1', '2'])))
+            .toBe('2\\sqrt{2}');
+    });
+
+    test('a rational term and a scaled root sum', () => {
+        expect(
+            valueToLatex(
+                irrational(num(1245355339, 1000000000), ['1', '2', '1'], ['1', '3', '5'])
+            )
+        ).toBe('\\frac{1}{2} + \\frac{1}{3}\\sqrt{5}');
+    });
+
+    test('a negative term joins with a minus, not a plus', () => {
+        expect(
+            valueToLatex(irrational(num(-732050807, 1000000000), ['1', '1', '1'], ['-1', '1', '3']))
+        ).toBe('1 - \\sqrt{3}');
+    });
+
+    test('without a normal form the approximation is still marked', () => {
+        const approximated = { ...num(1414213562, 1000000000), semantics: { approximate: true } } as Value;
+        expect(valueToLatex(approximated)).toBe('\\approx 1.41421');
     });
 });
