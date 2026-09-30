@@ -54,6 +54,6 @@ Result:
 | 表示面 | 保管場所 |
 |---|---|
 | `?` (LOOKUP) のビルトイン説明 | `rust/src/builtins/detail-lookup-*.rs` の raw string literal |
-| Reference ボタンから開くページ | `public/docs/` 配下 |
+| Reference ボタンから開くページ | `public/docs/en/index.html`・`public/docs/ja/index.html`（英日で内容を対応させる。共通の見た目と振る舞いは `public/docs/reference.css`・`reference.js`、ワード一覧は `scripts/generate-word-reference.mjs` が生成し、日本語の説明は `docs/i18n/word-summaries.ja.json`） |
 
 ビルトイン説明テキストは段階的に本規約へ移行する。基準実装は `ADD`（`rust/src/builtins/detail-lookup-arithmetic-logic.rs`）。
