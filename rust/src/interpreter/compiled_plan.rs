@@ -317,8 +317,6 @@ pub fn arc_plan(plan: CompiledPlan) -> Arc<CompiledPlan> {
 // dispatch work (name canonicalization, linear registry scan) is never
 // repeated at runtime. Everything precomputed here depends only on static
 // tables, never on dictionary state, so no epoch guard is needed.
-//
-// See `docs/dev/hidden-class-shape-optimizations.md` for the design note.
 #[derive(Debug)]
 pub struct CompiledCall {
     /// Canonical builtin name. Kept for the unresolved fallback

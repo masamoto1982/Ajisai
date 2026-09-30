@@ -20,10 +20,10 @@
 // check-docs-dev-drift.mjs — it cannot tell whether a row *describes* its suite
 // correctly, only whether both ends still exist.
 
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { readText, repoRoot, reporter, walk } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
 const matrixPath = 'docs/quality/TRACEABILITY_MATRIX.md';
 const RETIRED_HEADING = '## Retired verification IDs';
 const UNASSIGNED_HEADING = '## Unassigned requirement IDs';
@@ -38,21 +38,9 @@ const ID_RE = /\bAQ-(?:REQ|VER)-\d{3}(?:-[A-Z]\d?)?\b/g;
 const PATH_RE = /`([A-Za-z0-9_.\-]+(?:\/[A-Za-z0-9_.\-]+)+\/?)`/g;
 const PATH_EXT = /\.(rs|ts|tsx|mjs|js|json|md|html|toml|yml)$/;
 
-function walk(dir, exts, out = []) {
-  if (!existsSync(dir)) return out;
-  for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name === 'target' || name === 'dist' || name.startsWith('.')) continue;
-    const full = join(dir, name);
-    if (statSync(full).isDirectory()) walk(full, exts, out);
-    else if (exts.some((ext) => name.endsWith(ext))) out.push(full);
-  }
-  return out;
-}
-
-let failed = false;
+const report = reporter('traceability');
 function fail(message, detail) {
-  failed = true;
-  console.error(`[traceability] ${message}`);
+  report.fail(message);
   for (const line of detail ?? []) console.error(`    ${line}`);
 }
 
@@ -61,7 +49,7 @@ if (!existsSync(resolve(repoRoot, matrixPath))) {
   process.exit(1);
 }
 
-const matrixText = readFileSync(resolve(repoRoot, matrixPath), 'utf8');
+const matrixText = readText(matrixPath);
 // Everything before the first of the two closing sections is a live claim;
 // everything from there on names an ID that must NOT be in the source, whether
 // because it was retired or because it was never assigned.
@@ -137,8 +125,7 @@ if (badCitation.length) {
     badCitation.map((f) => f.slice(repoRoot.length + 1)));
 }
 
-if (failed) process.exit(1);
-console.log(
-  `[traceability] ${liveIds.size} live ID(s) across ${citing.length} citing file(s), ` +
+report.done(
+  `${liveIds.size} live ID(s) across ${citing.length} citing file(s), ` +
   `${retiredIds.size} retired or unassigned, all reachable.`
 );

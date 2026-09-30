@@ -65,7 +65,7 @@ pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
 // The upstream-NIL link lives in `nil_diagnostics.rs`; the module path it
-// used to have is kept for `agent::run_render`, which imports it by that name.
+// used to have is kept for `agent::report`, which imports it by that name.
 pub(crate) use self::nil_diagnostics as upstream_nil_link;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
@@ -79,8 +79,7 @@ pub(crate) mod word_cost;
 #[cfg(test)]
 mod word_cost_tests;
 pub(crate) mod word_outcome_vocabulary;
-// `pub(crate)`, not private: `agent::observation_digest` (Phase 1,
-// competitive-advantage-work-order-2026-08.md) calls
+// `pub(crate)`, not private: `agent::observation_digest` calls
 // `word_identity::content_digest` and `word_identity::encode_token` directly,
 // so the crate-wide agent boundary needs to name this module.
 pub(crate) mod word_identity;

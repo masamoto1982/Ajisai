@@ -1,9 +1,8 @@
-//! Per-word outcome vocabulary for static outcome prediction (Phase 5,
-//! `docs/dev/auditable-kernel-work-order-2026-09.md`). Deliberately
+//! Per-word outcome vocabulary for static outcome prediction. Deliberately
 //! independent of `word_contract.rs`'s `WordContract`/`AccumulatedContract`
-//! (which do not carry outcome information and are already at the file's
-//! own 500-line budget): a fresh, self-contained recursive walk over a
-//! word's body, parallel to (not sharing state with) contract inference.
+//! (which do not carry outcome information and are already at the file's own
+//! 500-line budget): a fresh, self-contained recursive walk over a word's body,
+//! parallel to (not sharing state with) contract inference.
 //!
 //! A word's own declared vocabulary (`spec/words.json`'s `errorWhen` +
 //! `projection.reason`, read through the generated registry's `error_when`

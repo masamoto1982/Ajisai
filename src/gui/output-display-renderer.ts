@@ -131,7 +131,7 @@ const formatElementAt = (item: Value, depth: number): string => {
 
 // A Vector renders as source that rebuilds it — a bracket literal, whatever
 // it holds — matching the engine's own renderer
-// (`rust/src/types/display_source.rs`). A nested Record is one element,
+// (`rust/src/types/display.rs`). A nested Record is one element,
 // because it has a literal of its own (`formatRecord`).
 //
 // The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
@@ -301,7 +301,7 @@ export const formatValue = (item: Value, depth: number): string => {
 // A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
 // arrays of nodes, and renders as its own literal — `{ key value … }`, each
 // key beside the value under it — which is the same display the engine's own
-// stack rendering produces (`rust/src/types/display_source.rs`).
+// stack rendering produces (`rust/src/types/display.rs`).
 //
 // The empty Record is `{ }`, which needs no case of its own.
 //

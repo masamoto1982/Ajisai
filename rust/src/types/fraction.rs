@@ -1,4 +1,4 @@
-use super::bigint_gcd::balanced_bigint_gcd;
+use super::fraction_arithmetic::balanced_bigint_gcd;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;

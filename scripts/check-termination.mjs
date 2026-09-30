@@ -23,19 +23,15 @@
 // Usage:
 //   node scripts/check-termination.mjs
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readJson, readText, reporter, words as wordsDocument } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const read = (path) => JSON.parse(readFileSync(resolve(repoRoot, path), 'utf8'));
+const report = reporter('termination', { countSummary: true });
+const fail = report.fail;
 
-const failures = [];
-const fail = (message) => failures.push(message);
-
-const termination = read('spec/termination.json');
-const words = read('spec/words.json').entries;
-const outcomes = read('spec/outcomes.json');
-const semantics = readFileSync(resolve(repoRoot, 'spec/language-semantics.md'), 'utf8');
+const termination = readJson('spec/termination.json');
+const words = wordsDocument().entries;
+const outcomes = readJson('spec/outcomes.json');
+const semantics = readText('spec/language-semantics.md');
 
 const byName = new Map(words.map((w) => [w.name, w]));
 
@@ -160,14 +156,8 @@ for (const w of termination.invariant.witnesses.refused) {
 
 // ------------------------------------------------------------- report
 
-if (failures.length > 0) {
-  for (const message of failures) console.error(`[termination] ${message}`);
-  console.error(`[termination] ${failures.length} failure(s)`);
-  process.exit(1);
-}
-
-console.log(
-  `[termination] ${termination.recursionSites.length} recursion sites (${declaredWordSites.size} Words, ` +
+report.done(
+  `${termination.recursionSites.length} recursion sites (${declaredWordSites.size} Words, ` +
     `closed both ways against unbounded step cost), ${componentIds.size} measure components, ` +
     `${witnessGroups.reduce((n, [, g]) => n + g.length, 0)} witnesses declared.`,
 );

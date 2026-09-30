@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { readJson, reporter, words as wordsDocument } from './lib/common.mjs';
 
 const KERNEL = new Set(`TRUE FALSE AND NOT EQ LT GT
 ADD MUL DIV FLOOR SQRT POW
@@ -14,7 +15,7 @@ TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/
 // this gate and rust/tests/beta_removed_words.rs both read: this side asserts
 // none of them is canonical, the Rust side asserts the runtime does not
 // resolve them. The reasons travel with the names there.
-const retired = JSON.parse(readFileSync('spec/retired-words.json', 'utf8'));
+const retired = readJson('spec/retired-words.json');
 const REMOVED_LIST = retired.groups.flatMap((group) => group.names);
 const REMOVED = new Set(REMOVED_LIST);
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
@@ -50,77 +51,77 @@ const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP GROUP 
 // likely to write wrongly by hand.
 const RETIREMENT_QUEUE = 'MEMBER? INDEX-OF REVERSE TRIM TOKENIZE MAX MIN TAKE DROP SUB'.split(/\s+/);
 
-const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
-const words = contracts.entries;
-const coverage = JSON.parse(readFileSync('docs/formalization-coverage.json', 'utf8'));
+const words = wordsDocument().entries;
+const coverage = readJson('docs/formalization-coverage.json');
 const wordNames = new Set(words.map((word) => word.name));
 const entries = coverage.entries.filter((entry) => wordNames.has(entry.surface));
 const primitives = new Set(coverage.algebra_primitives.map((entry) => entry.id));
 const bySurface = new Map();
-const errors = [];
+const report = reporter('minimal-core');
+const fail = report.fail;
 const setDifference = (left, right) => [...left].filter((item) => !right.has(item));
 
-if (words.length !== wordNames.size) errors.push('canonical inventory contains duplicate names');
+if (words.length !== wordNames.size) fail('canonical inventory contains duplicate names');
 for (const entry of entries) {
-  if (bySurface.has(entry.surface)) errors.push(`duplicate Core Word witness: ${entry.surface}`);
+  if (bySurface.has(entry.surface)) fail(`duplicate Core Word witness: ${entry.surface}`);
   bySurface.set(entry.surface, entry);
 }
 
 const kernelWords = new Set(words.filter((word) => word.vocabularyTier === 'kernel').map((word) => word.name));
 const standardWords = new Set(words.filter((word) => word.vocabularyTier === 'standard').map((word) => word.name));
-for (const name of setDifference(KERNEL, kernelWords)) errors.push(`${name}: missing Semantic Kernel classification`);
-for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: unexpected Semantic Kernel classification`);
-for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
-for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 48) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 48`);
-if (standardWords.size !== 30) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 30`);
+for (const name of setDifference(KERNEL, kernelWords)) fail(`${name}: missing Semantic Kernel classification`);
+for (const name of setDifference(kernelWords, KERNEL)) fail(`${name}: unexpected Semantic Kernel classification`);
+for (const name of setDifference(STANDARD, standardWords)) fail(`${name}: missing Standard classification`);
+for (const name of setDifference(standardWords, STANDARD)) fail(`${name}: unexpected Standard classification`);
+if (kernelWords.size !== 48) fail(`Semantic Kernel has ${kernelWords.size} Words; expected 48`);
+if (standardWords.size !== 30) fail(`Standard vocabulary has ${standardWords.size} Words; expected 30`);
 
-if (words.length !== 78) errors.push(`canonical inventory has ${words.length} Words; expected 78`);
-for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
-if (REMOVED.size !== REMOVED_LIST.length) errors.push('spec/retired-words.json names the same Word twice');
+if (words.length !== 78) fail(`canonical inventory has ${words.length} Words; expected 78`);
+for (const name of REMOVED) if (wordNames.has(name)) fail(`${name}: removed Word remains canonical`);
+if (REMOVED.size !== REMOVED_LIST.length) fail('spec/retired-words.json names the same Word twice');
 
 for (const word of words) {
   const witness = bySurface.get(word.name);
   if (!witness) {
-    errors.push(`${word.name}: missing Minimal Core witness`);
+    fail(`${word.name}: missing Minimal Core witness`);
     continue;
   }
-  if (!['Formalized', 'HostedEffect'].includes(witness.status)) errors.push(`${word.name}: status is ${witness.status}`);
-  if (!witness.law_tests?.length) errors.push(`${word.name}: no executable law test`);
+  if (!['Formalized', 'HostedEffect'].includes(witness.status)) fail(`${word.name}: status is ${witness.status}`);
+  if (!witness.law_tests?.length) fail(`${word.name}: no executable law test`);
   for (const testPath of witness.law_tests ?? []) {
-    if (!existsSync(testPath)) errors.push(`${word.name}: missing law test file ${testPath}`);
+    if (!existsSync(testPath)) fail(`${word.name}: missing law test file ${testPath}`);
   }
-  if (!['identity', 'flow', 'material'].includes(witness.core_tier)) errors.push(`${word.name}: invalid core_tier ${witness.core_tier}`);
-  if (witness.core_tier === word.vocabularyTier) errors.push(`${word.name}: core_tier is confused with vocabularyTier`);
+  if (!['identity', 'flow', 'material'].includes(witness.core_tier)) fail(`${word.name}: invalid core_tier ${witness.core_tier}`);
+  if (witness.core_tier === word.vocabularyTier) fail(`${word.name}: core_tier is confused with vocabularyTier`);
   if (witness.semantic_role === 'Primitive') {
-    if (!witness.primitive) errors.push(`${word.name}: Primitive role is not marked primitive`);
+    if (!witness.primitive) fail(`${word.name}: Primitive role is not marked primitive`);
   } else if (witness.semantic_role === 'Derived') {
-    if (witness.primitive) errors.push(`${word.name}: Derived role is marked primitive`);
-    if (!witness.derived_from?.length) errors.push(`${word.name}: derived Word has no algebra basis`);
+    if (witness.primitive) fail(`${word.name}: Derived role is marked primitive`);
+    if (!witness.derived_from?.length) fail(`${word.name}: derived Word has no algebra basis`);
   } else if (witness.semantic_role !== 'HostedEffect') {
-    errors.push(`${word.name}: unsupported semantic role ${witness.semantic_role}`);
+    fail(`${word.name}: unsupported semantic role ${witness.semantic_role}`);
   }
   for (const dependency of witness.derived_from ?? []) {
-    if (!primitives.has(dependency)) errors.push(`${word.name}: unknown algebra primitive ${dependency}`);
+    if (!primitives.has(dependency)) fail(`${word.name}: unknown algebra primitive ${dependency}`);
   }
   if (word.vocabularyTier === 'standard') {
-    if (!STANDARD_KINDS.has(word.standardKind)) errors.push(`${word.name}: invalid or missing standardKind`);
-    if (!STANDARD_RELATIONS.has(witness.standard_relation)) errors.push(`${word.name}: invalid or missing Standard relation`);
-    if (!witness.conformance_cases?.length) errors.push(`${word.name}: Standard Word has no conformance case`);
+    if (!STANDARD_KINDS.has(word.standardKind)) fail(`${word.name}: invalid or missing standardKind`);
+    if (!STANDARD_RELATIONS.has(witness.standard_relation)) fail(`${word.name}: invalid or missing Standard relation`);
+    if (!witness.conformance_cases?.length) fail(`${word.name}: Standard Word has no conformance case`);
     if (witness.standard_relation === 'operational' && !witness.native_retention_reason) {
-      errors.push(`${word.name}: operational Standard has no native retention reason`);
+      fail(`${word.name}: operational Standard has no native retention reason`);
     }
     if (witness.standard_relation === 'operational' && !witness.law_tests.includes(OPERATIONAL_LAW_TEST)) {
-      errors.push(`${word.name}: operational Standard is not covered by ${OPERATIONAL_LAW_TEST}`);
+      fail(`${word.name}: operational Standard is not covered by ${OPERATIONAL_LAW_TEST}`);
     }
     if (witness.standard_relation === 'derivable' && !witness.law_tests.includes(DERIVATION_LAW_TEST)) {
-      errors.push(`${word.name}: derivable Standard has no Kernel witness in ${DERIVATION_LAW_TEST}`);
+      fail(`${word.name}: derivable Standard has no Kernel witness in ${DERIVATION_LAW_TEST}`);
     }
     if (DERIVABLE.has(word.name) && witness.standard_relation !== 'derivable') {
-      errors.push(`${word.name}: expected the derivable relation, found ${witness.standard_relation}`);
+      fail(`${word.name}: expected the derivable relation, found ${witness.standard_relation}`);
     }
     if (OPERATIONAL.has(word.name) && witness.standard_relation !== 'operational') {
-      errors.push(`${word.name}: expected the operational relation, found ${witness.standard_relation}`);
+      fail(`${word.name}: expected the operational relation, found ${witness.standard_relation}`);
     }
   }
 }
@@ -132,10 +133,10 @@ const operationalWords = new Set(
   words.filter((word) => bySurface.get(word.name)?.standard_relation === 'operational').map((word) => word.name),
 );
 if (derivableWords.size !== DERIVABLE.size) {
-  errors.push(`${derivableWords.size} derivable Standards declared; expected ${DERIVABLE.size}`);
+  fail(`${derivableWords.size} derivable Standards declared; expected ${DERIVABLE.size}`);
 }
 if (operationalWords.size !== OPERATIONAL.size) {
-  errors.push(`${operationalWords.size} operational Standards declared; expected ${OPERATIONAL.size}`);
+  fail(`${operationalWords.size} operational Standards declared; expected ${OPERATIONAL.size}`);
 }
 
 // The retirement queue has to stay the thing it claims to be: every derivable
@@ -143,32 +144,28 @@ if (operationalWords.size !== OPERATIONAL.size) {
 // capability. A queue naming a Word that has already gone, or one whose
 // relation drifted to operational, would promise room it cannot give.
 for (const name of setDifference(DERIVABLE, new Set([...RETIREMENT_QUEUE, 'ROUND']))) {
-  errors.push(`${name}: derivable Standard missing from the retirement queue`);
+  fail(`${name}: derivable Standard missing from the retirement queue`);
 }
 if (new Set(RETIREMENT_QUEUE).size !== RETIREMENT_QUEUE.length) {
-  errors.push('retirement queue names the same Word twice');
+  fail('retirement queue names the same Word twice');
 }
 for (const name of RETIREMENT_QUEUE) {
   if (!wordNames.has(name)) {
-    errors.push(`${name}: queued for retirement but not in the canonical inventory`);
+    fail(`${name}: queued for retirement but not in the canonical inventory`);
     continue;
   }
   if (!DERIVABLE.has(name)) {
-    errors.push(`${name}: queued for retirement but not a derivable Standard`);
+    fail(`${name}: queued for retirement but not a derivable Standard`);
   }
 }
 
 for (const entry of coverage.entries.filter((entry) => entry.kind === 'coreword')) {
-  if (!wordNames.has(entry.surface)) errors.push(`${entry.surface}: witness has no canonical Word`);
+  if (!wordNames.has(entry.surface)) fail(`${entry.surface}: witness has no canonical Word`);
 }
-if (bySurface.size !== words.length) errors.push(`witness inventory has ${bySurface.size} entries; expected ${words.length}`);
+if (bySurface.size !== words.length) fail(`witness inventory has ${bySurface.size} entries; expected ${words.length}`);
 
-if (errors.length) {
-  errors.forEach((error) => console.error(`[minimal-core] ${error}`));
-  process.exit(1);
-}
-console.log(
-  `[minimal-core] ${kernelWords.size}/${kernelWords.size} Semantic Kernel Words have executable witnesses.`,
+report.done(
+  `${kernelWords.size}/${kernelWords.size} Semantic Kernel Words have executable witnesses.`,
 );
 console.log(
   `[minimal-core] ${standardWords.size}/${standardWords.size} Standard Words have complete contracts and law witnesses.`,

@@ -291,10 +291,8 @@ pub enum AjisaiError {
     ///
     /// Naming the condition at the raise site is what lets the classification
     /// be derived rather than guessed. Every raise site names one — there is
-    /// no catch-all variant left to fall back on
-    /// (docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 2): an
-    /// undeclared outcome is a compile error, not a `custom`/`unknown` at
-    /// runtime.
+    /// no catch-all variant left to fall back on: an undeclared outcome is a
+    /// compile error, not a `custom`/`unknown` at runtime.
     DeclaredCondition {
         condition: &'static str,
         message: String,

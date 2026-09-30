@@ -23,10 +23,9 @@
 //   node scripts/check-contrast.mjs
 
 import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { repoRoot } from './lib/common.mjs';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stylesDir = join(repoRoot, 'src', 'styles');
 const tokensCss = readFileSync(join(stylesDir, 'playground.css'), 'utf8');
 

@@ -21,18 +21,14 @@
 // Usage:
 //   node scripts/check-identity.mjs
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readJson, readText, reporter } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const read = (path) => JSON.parse(readFileSync(resolve(repoRoot, path), 'utf8'));
+const report = reporter('identity', { countSummary: true });
+const fail = report.fail;
 
-const failures = [];
-const fail = (message) => failures.push(message);
-
-const identity = read('spec/identity.json');
-const outcomes = read('spec/outcomes.json');
-const semantics = readFileSync(resolve(repoRoot, 'spec/language-semantics.md'), 'utf8');
+const identity = readJson('spec/identity.json');
+const outcomes = readJson('spec/outcomes.json');
+const semantics = readText('spec/language-semantics.md');
 
 const lawOutcomes = new Set(identity.law.outcomes.map((o) => o.id));
 for (const required of ['same', 'different', 'unknown']) {
@@ -184,14 +180,8 @@ if (!levels.some((l) => 'soundness' in l && 'incompleteness' in l)) {
   );
 }
 
-if (failures.length > 0) {
-  for (const message of failures) console.error(`[identity] ${message}`);
-  console.error(`[identity] ${failures.length} failure(s)`);
-  process.exit(1);
-}
-
 const totals = levels.filter((l) => l.total === true).length;
-console.log(
-  `[identity] ${levels.length} levels (${totals} total, ${levels.length - totals} partial), ` +
+report.done(
+  `${levels.length} levels (${totals} total, ${levels.length - totals} partial), ` +
     `${lawOutcomes.size} outcomes, every partial level says how it falls short.`,
 );

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Projects the Rust NilReason and ErrorCategory enums from spec/outcomes.json
-// (docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 1) and fails if
-// either side names something the other does not, or if spec/words.json's
-// projection.reason / errorWhen values point outside the registry.
+// and fails if either side names something the other does not, or if
+// spec/words.json's projection.reason / errorWhen values point outside the
+// registry.
 //
 // This is the same shape as check-runtime-metadata-source.mjs: the canonical
 // source is the JSON, the Rust enum is the projection, and drift between them
@@ -13,49 +13,24 @@
 // makes for BuiltinSpec.
 //
 // `ErrorCategory::Declared(condition) => condition` is deliberately excluded
-// from the extracted "structural" set: it carries no literal string of its
-// own (its whole point is to forward a words.json errorWhen string verbatim),
-// so `extractProtocolStrings`'s regex never matches its arm in the first
-// place. `ErrorCategory::Custom` — the escape hatch a registry describing the
-// *closed* outcome space had no room for — is gone as of Phase 2
-// (outcome-space-bijection-work-order-2026-09.md): `AjisaiError::Custom` and
+// from the extracted "structural" set: it carries no literal string of its own
+// (its whole point is to forward a words.json errorWhen string verbatim), so
+// `extractProtocolStrings`'s regex never matches its arm in the first place.
+// `ErrorCategory::Custom` — the escape hatch a registry describing the
+// *closed* outcome space had no room for — is gone: `AjisaiError::Custom` and
 // the `From<String>`/`From<&str>` conversions that fed it no longer exist, so
 // every raise site names a declared condition or a fixed structural variant.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { matchBrace, readJson, readText, reporter, words } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
-
-const errors = [];
-const fail = (message) => errors.push(message);
+const report = reporter('outcome-registry');
+const fail = report.fail;
 
 // ---------------------------------------------------------------------------
 // Rust extraction: the `as_protocol_str` match body for one enum, scanned by
-// brace depth so a nested arm (`Declared(condition) => condition`) or a
-// string literal containing `}` cannot cut the scan short.
+// brace depth (matchBrace) so a nested arm (`Declared(condition) => condition`)
+// or a string literal containing `}` cannot cut the scan short.
 // ---------------------------------------------------------------------------
-
-function matchBrace(source, openIndex) {
-  let depth = 0;
-  let inString = false;
-  for (let i = openIndex; i < source.length; i += 1) {
-    const char = source[i];
-    if (inString) {
-      if (char === '\\') i += 1;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === '{') depth += 1;
-    else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-}
 
 function extractProtocolStrings(source, enumName) {
   const fnMarker = `impl ${enumName} {`;
@@ -77,7 +52,7 @@ function extractProtocolStrings(source, enumName) {
   return found;
 }
 
-const errorRs = read('rust/src/error.rs');
+const errorRs = readText('rust/src/error.rs');
 
 const nilReasonArms = extractProtocolStrings(errorRs, 'NilReason');
 if (nilReasonArms.size === 0) {
@@ -91,36 +66,35 @@ if (errorCategoryArms.size === 0) {
 }
 // `Declared`'s arm never matches the extractor's regex (it forwards a string
 // rather than spelling one literally), so every arm this extraction finds is
-// already a fixed structural variant — no filtering needed post-Phase 2.
+// already a fixed structural variant — no filtering needed.
 const rustStructuralErrorCategories = new Set(errorCategoryArms.values());
 
-// `ErrorCategory::DivisionByZero` is a named exclusion, not an exemption
-// list entry (outcome-space-bijection-work-order-2026-09.md Phase 2 pitfall
-// C rules out the latter): investigation found this one Rust variant never
-// classifies a program *outcome* at all. `AjisaiError::DivisionByZero` is an
-// internal fast-path control-flow signal inside DIV's scalar arithmetic
-// that is always caught and re-projected to the reasoned NIL
-// `nil:divisionByZero` (a real, witnessed NilReason — untouched by this
-// exclusion) before a Report is built, so `status:error` with this category
-// is unreachable by construction. The variant survives in Rust for a
-// different, legitimate job: `execution_loop.rs`'s
-// `error_category_for_nil_reason` reuses it to tag the diagnostic trace
-// (`errorFlowTrace[].diagnosis`) of that *successful* zero-divisor NIL with
-// evidence, a `CauseClass::Domain` classification and tailored next-checks.
-// That is a diagnosis-layer concern, not an outcome-space one — the same
-// distinction `Declared`'s structural exclusion above already draws, just
-// for a variant whose name happens to collide with a real outcome category
-// instead of forwarding an arbitrary string. `spec/outcomes.json`'s
-// `errorCategories` therefore rightly has no `divisionByZero` entry, and
-// this is the one arm the registry-vs-Rust structural comparison must not
-// require one for.
+// `ErrorCategory::DivisionByZero` is a named exclusion, not an exemption list
+// entry (the registry admits none — an unwitnessed id is deleted, not
+// excused): investigation found this one Rust variant never classifies a
+// program *outcome* at all. `AjisaiError::DivisionByZero` is an internal
+// fast-path control-flow signal inside DIV's scalar arithmetic that is always
+// caught and re-projected to the reasoned NIL `nil:divisionByZero` (a real,
+// witnessed NilReason — untouched by this exclusion) before a Report is built,
+// so `status:error` with this category is unreachable by construction. The
+// variant survives in Rust for a different, legitimate job:
+// `execution_loop.rs`'s `error_category_for_nil_reason` reuses it to tag the
+// diagnostic trace (`errorFlowTrace[].diagnosis`) of that *successful*
+// zero-divisor NIL with evidence, a `CauseClass::Domain` classification and
+// tailored next-checks. That is a diagnosis-layer concern, not an
+// outcome-space one — the same distinction `Declared`'s structural exclusion
+// above already draws, just for a variant whose name happens to collide with a
+// real outcome category instead of forwarding an arbitrary string.
+// `spec/outcomes.json`'s `errorCategories` therefore rightly has no
+// `divisionByZero` entry, and this is the one arm the registry-vs-Rust
+// structural comparison must not require one for.
 rustStructuralErrorCategories.delete('divisionByZero');
 
 // ---------------------------------------------------------------------------
 // spec/outcomes.json
 // ---------------------------------------------------------------------------
 
-const outcomes = JSON.parse(read('spec/outcomes.json'));
+const outcomes = readJson('spec/outcomes.json');
 const registryNilReasons = new Set(outcomes.nilReasons.map((r) => r.id));
 const registryErrorCategories = new Set(outcomes.errorCategories.map((c) => c.id));
 const registryStructuralErrorCategories = new Set(
@@ -155,11 +129,9 @@ diffSets(
 // words.json entry naming an outcome nothing else knows about.
 // ---------------------------------------------------------------------------
 
-const words = JSON.parse(read('spec/words.json'));
-
 const projectionReasons = new Set();
 const errorWhenConditions = new Set();
-for (const entry of words.entries) {
+for (const entry of words().entries) {
   const proj = entry.projection;
   if (proj && typeof proj === 'object' && typeof proj.reason === 'string') {
     projectionReasons.add(proj.reason);
@@ -202,11 +174,7 @@ if (missingErrorWhenConditions.length > 0) {
 
 // ---------------------------------------------------------------------------
 
-if (errors.length > 0) {
-  for (const e of errors) console.error(`[outcome-registry] ${e}`);
-  process.exit(1);
-}
-console.log(
-  `[outcome-registry] ${registryNilReasons.size} NIL reasons, ${registryErrorCategories.size} error categories ` +
+report.done(
+  `${registryNilReasons.size} NIL reasons, ${registryErrorCategories.size} error categories ` +
     `(${registryStructuralErrorCategories.size} structural), all cross-checked against Rust and spec/words.json.`,
 );

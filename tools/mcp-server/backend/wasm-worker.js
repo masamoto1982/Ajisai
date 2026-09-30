@@ -1,5 +1,5 @@
 // Packaged WASM backend: runs the one-shot WASM agent entry point
-// (`rust/src/wasm_interpreter_bindings/wasm_agent.rs`) inside a
+// (`agent_compute` in `rust/src/wasm_interpreter_bindings/mod.rs`) inside a
 // worker_threads Worker, one Worker per call — the same one-shot-per-call
 // isolation the native backend gets from spawning a subprocess per call.
 // Never runs WASM synchronously on the stdio server's main thread, and the

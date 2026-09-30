@@ -37,9 +37,9 @@ try {
   const devOnly = [...paths].filter((path) =>
     /^(eval|golden)\//.test(path) ||
     /(^|\/)[^/]*(test|smoke)[^/]*\.js$/.test(path) ||
-    ["eval.js", "benchmark.js", "number-baseline.js", "evaluation-contract.js", "validate-evaluation.js",
+    ["eval-common.js", "benchmark.js", "number-baseline.js", "evaluation-contract.js", "validate-evaluation.js",
       "score-traces.js", "score-repairs.js", "capture-traces.js", "capture-repairs.js", "sync-assets.js",
-      "selftest.js", "generate-reference-traces.mjs"].includes(path));
+      "selftest.js"].includes(path));
   if (devOnly.length) throw new Error(`tarball ships development-only files: ${devOnly.join(", ")}`);
 
   try {

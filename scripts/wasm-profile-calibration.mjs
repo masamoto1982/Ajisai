@@ -31,7 +31,7 @@
 // `to_bigint_pair()` and running a full, unbalanced `BigInt::gcd` once per
 // element per scan (612 us at `gcd(4096-digit, 1)`, the common case for any
 // wide integer-valued Fraction, against 1.2 us once balanced). Fixed by
-// `balanced_bigint_gcd` (`rust/src/types/bigint_gcd.rs`): the same case now
+// `balanced_bigint_gcd` (`rust/src/types/fraction_arithmetic.rs`): the same case now
 // measures 47,162-73,457 units/ms across runs, in range with the other
 // collection paths and still the floor by a normal margin, not a hole.
 // De-quadraticization (same day) had already fixed this shape of defect for

@@ -4,9 +4,8 @@ use crate::types::Value;
 
 /// `EXEC` — evaluate a Vector's elements as instructions.
 ///
-/// Every Vector is executable now (CodeBlock/Vector unification,
-/// docs/dev/type-unification-work-order-2026-08.md): `[ 1 2 ADD ]` and
-/// `{ 1 2 ADD }` are the same value, and `EXEC` runs either. The elements are
+/// Every Vector is executable: code and data share one Vector domain, written
+/// in `[ ]`, so `EXEC` runs any Vector (`[ 1 2 ADD ]`). The elements are
 /// bridged back to tokens (`value_as_code.rs`) and run through the existing
 /// token-based execution loop unchanged.
 ///

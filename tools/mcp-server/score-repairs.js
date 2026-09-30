@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer } from "./index.js";
+import { atPointer, connectInMemory, readEval } from "./eval-common.js";
 import {
   LANGUAGES,
   callsOf,
@@ -12,12 +10,6 @@ import {
   traceProvenance,
   validateCorpus,
 } from "./evaluation-contract.js";
-
-function atPointer(document, pointer) {
-  return pointer.split("/").slice(1)
-    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
-    .reduce((value, part) => value?.[part], document);
-}
 
 function matches(result, expected) {
   return result?.isError !== true && result?.structuredContent &&
@@ -72,14 +64,11 @@ if (!tracePath) {
   console.error("usage: node score-repairs.js <repair-trace-file.json> [--require-perfect]");
   process.exit(2);
 }
-const corpus = JSON.parse(readFileSync(new URL("./eval/repair-cases.json", import.meta.url), "utf8"));
+const corpus = readEval("./eval/repair-cases.json");
 const traceDoc = JSON.parse(readFileSync(tracePath, "utf8"));
 const traces = indexTraces(traceDoc, validateCorpus(corpus, { repair: true }), { repair: true });
 const provenance = traceProvenance(traceDoc);
-const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-const server = createServer();
-const client = new Client({ name: "ajisai-repair-eval", version: "1" });
-await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+const { client, close } = await connectInMemory("ajisai-repair-eval");
 
 const tallies = new Map(
   LANGUAGES.map((language) => [language, { asked: 0, missing: 0, observed: 0, repaired: 0 }]),
@@ -109,8 +98,7 @@ try {
     }
   }
 } finally {
-  await client.close();
-  await server.close();
+  await close();
 }
 
 const combined = { asked: 0, missing: 0, observed: 0, repaired: 0 };

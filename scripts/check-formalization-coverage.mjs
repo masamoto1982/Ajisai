@@ -1,11 +1,8 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { coverageEntryMatches, coverageSurfaces, normalizeSurface, readJson, readText, repoRoot } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const coveragePath = resolve(repoRoot, 'docs/formalization-coverage.json');
-const conformancePath = resolve(repoRoot, 'tests/conformance/index.html');
-const wordManifestPath = resolve(repoRoot, 'docs/word-manifest.json');
 const allowedStatuses = new Set([
   'Formalized',
   'Sketched',
@@ -73,36 +70,6 @@ function hasSchemaValue(value) {
   return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
 }
 
-function normalizeSurface(value) {
-  return typeof value === 'string' ? value.trim().toUpperCase() : '';
-}
-
-function coverageSurfaces(entry) {
-  const surfaces = [];
-  if (typeof entry.surface === 'string') surfaces.push(entry.surface);
-  if (Array.isArray(entry.surfaces)) surfaces.push(...entry.surfaces.filter((v) => typeof v === 'string'));
-  return surfaces;
-}
-
-function entryClassifiesSurface(entry, manifestEntry) {
-  if (entry.id === manifestEntry.id) return true;
-  const manifestSurface = normalizeSurface(manifestEntry.surface);
-  const aliases = Array.isArray(manifestEntry.coverage_aliases)
-    ? manifestEntry.coverage_aliases.map(normalizeSurface).filter(Boolean)
-    : [];
-  for (const surface of coverageSurfaces(entry)) {
-    const coverageSurface = normalizeSurface(surface);
-    if (coverageSurface === manifestSurface || aliases.includes(coverageSurface)) {
-      return true;
-    }
-    const tokens = coverageSurface.match(/[A-Z0-9@?>=<!&+*/%.,;#$'\[\]{}()-]+/g) ?? [];
-    if (tokens.includes(manifestSurface) || aliases.some((alias) => tokens.includes(alias))) {
-      return true;
-    }
-  }
-  return false;
-}
-
 
 function validateUniqueEntryIds(entries) {
   const seenIds = new Map();
@@ -124,7 +91,7 @@ function validateUniqueEntryIds(entries) {
 }
 
 function validateWordManifest(coverage) {
-  const manifest = JSON.parse(readFileSync(wordManifestPath, 'utf8'));
+  const manifest = readJson('docs/word-manifest.json');
   if (manifest.schemaVersion !== 2) fail('word manifest schemaVersion must be 2');
   if (!Array.isArray(manifest.entries)) fail('word manifest entries must be an array');
 
@@ -164,7 +131,7 @@ function validateWordManifest(coverage) {
   const coveredManifestIds = new Set();
   for (const entry of coverage.entries) {
     for (const manifestEntry of manifest.entries) {
-      if (entryClassifiesSurface(entry, manifestEntry)) coveredManifestIds.add(manifestEntry.id);
+      if (coverageEntryMatches(entry, manifestEntry)) coveredManifestIds.add(manifestEntry.id);
     }
 
     const isSurfaceEntry = ['coreword', 'moduleword', 'delimiter_sugar', 'literal_sugar', 'modifier_sugar', 'source_directive', 'control_directive', 'reserved_marker', 'retired_form', 'conversion_word'].includes(entry.kind);
@@ -226,7 +193,7 @@ function validateWordManifest(coverage) {
   }
 }
 
-const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'));
+const coverage = readJson('docs/formalization-coverage.json');
 if (coverage.version !== 1) fail('version must be 1');
 if (!Array.isArray(coverage.entries)) fail('entries must be an array');
 validateUniqueEntryIds(coverage.entries);
@@ -266,7 +233,7 @@ if ('algebra_primitives' in coverage) {
   }
 }
 
-const conformanceHtml = readFileSync(conformancePath, 'utf8');
+const conformanceHtml = readText('tests/conformance/index.html');
 const caseIds = new Set(
   [...conformanceHtml.matchAll(/<section\b[^>]*\bclass=["'][^"']*\bajisai-case\b[^"']*["'][^>]*\bid=["']([^"']+)["']/g)]
     .map((match) => match[1]),
@@ -404,9 +371,8 @@ if (primitiveIds) {
 
   // Non-fatal traceability note: every declared primitive should be reachable
   // from at least one test. We invert derived_from -> {law_tests, conformance}
-  // (see scripts/generate-primitive-test-map.mjs) and flag primitives that no
-  // resting word exercises, so a newly admitted primitive cannot stay untested
-  // unnoticed.
+  // and flag primitives that no resting word exercises, so a newly admitted
+  // primitive cannot stay untested unnoticed.
   const primitiveTested = new Map([...primitiveIds].map((id) => [id, false]));
   for (const entry of coverage.entries) {
     const hasTest =

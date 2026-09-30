@@ -6,13 +6,13 @@ use crate::types::Value;
 /// The truth value of a `booleanLogic` operand.
 ///
 /// The Boolean domain is the *whole* definite input domain of `AND`,
-/// `NOT`, and `SELECT`'s truth operand: `spec/semantic-families.json` gives
-/// the family `truth: threeValued` and each contract registers
-/// `nonTruthValue` as its error condition. NIL is handled separately by
+/// `NOT`, and `SELECT`'s truth operand: every Word of the family cites
+/// LANG.VALUES.TRUTH in `spec/words.json` and each of these contracts
+/// registers `nonTruthValue` as its error condition. NIL is handled separately by
 /// [`truth_or_unknown`], not by this accessor, because NIL is not itself a
 /// definite truth value — it is UNKNOWN (LANG.VALUES.TRUTH).
 ///
-/// The family lifts (`lifting: elementwise`), so this accessor sees one lane
+/// A truth operand lifts (LANG.COLLECTIONS.LIFT), so this accessor sees one lane
 /// at a time: [`lift_lanes`] has already aligned the operands, and a Vector
 /// reaching here is a Vector standing where a truth value belongs, which is
 /// the `nonTruthValue` it reports. Masks are built by the comparison Words,

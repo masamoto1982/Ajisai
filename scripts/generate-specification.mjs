@@ -1,12 +1,10 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readText, writeOrCheck } from './lib/common.mjs';
 
-const check = process.argv.includes('--check');
-const read = (path) => readFileSync(path, 'utf8');
 const fragments = new Map([
-  ['presentation-profile', read('spec/gui-semantics.md')],
+  ['presentation-profile', readText('spec/gui-semantics.md')],
 ]);
 
-let content = read('spec/language-semantics.md');
+let content = readText('spec/language-semantics.md');
 for (const [id, fragment] of fragments) {
   const marker = `<!-- INCLUDE:${id} -->`;
   if (!content.includes(marker)) throw new Error(`Missing specification marker: ${marker}`);
@@ -14,16 +12,13 @@ for (const [id, fragment] of fragments) {
 }
 if (/<!-- INCLUDE:/.test(content)) throw new Error('Unresolved specification include marker');
 
-const generated = read('spec/specification.template.html').replace('{{SPECIFICATION_CONTENT}}', content);
-const destination = 'SPECIFICATION.html';
-if (check) {
-  if (read(destination) !== generated) {
-    console.error(`[specification] ${destination} is stale. Run npm run specification:generate and commit the result.`);
-    process.exitCode = 1;
-  } else {
-    console.log(`[specification] ${destination} is up to date.`);
-  }
-} else {
-  writeFileSync(destination, generated);
-  console.log(`[specification] wrote ${destination}.`);
-}
+const generated = readText('spec/specification.template.html').replace('{{SPECIFICATION_CONTENT}}', content);
+writeOrCheck(
+  'specification',
+  [{
+    path: 'SPECIFICATION.html',
+    content: generated,
+    stale: 'SPECIFICATION.html is stale. Run npm run specification:generate and commit the result.',
+  }],
+  { current: 'SPECIFICATION.html is up to date.', wrote: 'wrote SPECIFICATION.html.' },
+);

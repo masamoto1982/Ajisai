@@ -10,9 +10,9 @@
 // It found `<code>ALGO</code>` ("SORT is owned by the ALGO module") surviving
 // three manual review passes of the Reference, which is the case it exists for.
 
-import { readFileSync } from 'node:fs';
+import { readJson, readText, reporter } from './lib/common.mjs';
 
-const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
+const manifest = readJson('docs/word-manifest.json');
 
 const known = new Set();
 for (const entry of manifest.entries) {
@@ -133,10 +133,10 @@ const UNALLOCATED_MENTIONS = new Set([
   '(', ')', '{', '}',
 ]);
 
-const errors = [];
+const report = reporter('reading-surfaces');
 
 for (const path of SURFACES) {
-  const source = readFileSync(path, 'utf8');
+  const source = readText(path);
   const seen = new Map();
 
   // A backticked markdown link label is a repository path, not a program
@@ -184,18 +184,15 @@ for (const path of SURFACES) {
   }
 
   for (const [token, count] of [...seen].sort()) {
-    errors.push(`${path} names ${token} (${count}x), which is not in the vocabulary registry`);
+    report.fail(`${path} names ${token} (${count}x), which is not in the vocabulary registry`);
   }
 }
 
-if (errors.length) {
-  for (const error of errors) console.error(`[reading-surfaces] ${error}`);
+if (report.failed) {
   console.error('[reading-surfaces] LANG.AUTHORITY.PRESENT: a reading surface may name only Words the language has.');
   console.error('[reading-surfaces] If the name is a new worked example, add it to EXAMPLE_NAMES in this script.');
   console.error('[reading-surfaces] If a name is written only to say the language does not allocate it, add it to UNALLOCATED_MENTIONS.');
-  process.exitCode = 1;
-} else {
-  console.log(
-    `[reading-surfaces] ${SURFACES.length} surfaces name only the ${manifest.entries.length} registered surfaces, ${EXAMPLE_NAMES.size} declared example names, ${HOST_COMMANDS.size} host commands and ${UNALLOCATED_MENTIONS.size} declared unallocated mentions.`,
-  );
 }
+report.done(
+  `${SURFACES.length} surfaces name only the ${manifest.entries.length} registered surfaces, ${EXAMPLE_NAMES.size} declared example names, ${HOST_COMMANDS.size} host commands and ${UNALLOCATED_MENTIONS.size} declared unallocated mentions.`,
+);

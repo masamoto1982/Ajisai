@@ -11,23 +11,21 @@
 //
 // So the check is a positive whitelist over the construction of `BuiltinSpec`
 // rather than a blocklist over names: every field must be traceable, at the
-// syntax level, to one of the two canonical sources.
+// syntax level, to the one canonical source — prose and contract alike:
 //
-//   prose      -> `doc.<field>`, a field of the generated `GeneratedCoreWordDoc`
-//   contract   -> `word.<field>`, a field of the generated `GeneratedWord`
-//                 (rust/src/kernel/generated/word_registry.rs)
+//   `word.<field>`, a field of the generated `GeneratedWord`
+//   (rust/src/kernel/generated/word_registry.rs)
 //
 // Anything else — a string literal, a `const`, a lookup into a second table, a
 // `..Default::default()` spread — fails, whatever it is named. Together with
-// `core-word-docs:check` (generated docs match spec/words.json) this closes the
-// path from the canonical source to the runtime view.
+// `word-registry:check` (the generated registry matches spec/words.json) this
+// closes the path from the canonical source to the runtime view.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
-const DEFINITIONS = 'rust/src/builtins/builtin_word_definitions.rs';
-const GENERATED_DOCS = 'rust/src/builtins/generated_core_word_docs.rs';
+const DEFINITIONS = 'rust/src/builtins.rs';
 const CONTRACT = 'rust/src/kernel/generated/word_registry.rs';
 
 const errors = [];
@@ -105,28 +103,26 @@ function structFields(source, declaration, label) {
 }
 
 const definitions = read(DEFINITIONS);
-const generatedDocs = read(GENERATED_DOCS);
 const contract = read(CONTRACT);
 
-// The generated docs file must actually be generator output. If it were
-// hand-editable, "sourced from `doc.x`" would guarantee nothing.
-if (!generatedDocs.startsWith('// @generated')) {
-  errors.push(`${GENERATED_DOCS}: missing \`// @generated\` banner; it must be generator output`);
+// The registry must actually be generator output. If it were hand-editable,
+// "sourced from `word.x`" would guarantee nothing.
+if (!contract.startsWith('// @generated')) {
+  errors.push(`${CONTRACT}: missing \`// @generated\` banner; it must be generator output`);
 }
 
 const specFields = structFields(definitions, 'pub struct BuiltinSpec', DEFINITIONS);
-const docFields = new Set(structFields(generatedDocs, 'struct GeneratedCoreWordDoc', GENERATED_DOCS));
 const contractFields = new Set(structFields(contract, 'pub struct GeneratedWord', CONTRACT));
 
 if (specFields.length === 0) errors.push(`${DEFINITIONS}: BuiltinSpec declares no fields`);
-if (docFields.size === 0) errors.push(`${GENERATED_DOCS}: GeneratedCoreWordDoc declares no fields`);
 if (contractFields.size === 0) errors.push(`${CONTRACT}: GeneratedWord declares no fields`);
 
-// `builtin_specs()` must iterate the generated docs. Iterating anything else
-// would mean the inventory has a second source, even if every field checked out.
+// `builtin_specs()` must iterate the generated registry. Iterating anything
+// else would mean the inventory has a second source, even if every field
+// checked out.
 const assembler = definitions.slice(definitions.indexOf('fn builtin_specs('));
-if (!/GENERATED_CORE_WORD_DOCS\s*\n?\s*\.iter\(\)/.test(assembler)) {
-  errors.push(`${DEFINITIONS}: builtin_specs() must iterate GENERATED_CORE_WORD_DOCS`);
+if (!/GENERATED_WORDS\s*\n?\s*\.iter\(\)/.test(assembler)) {
+  errors.push(`${DEFINITIONS}: builtin_specs() must iterate GENERATED_WORDS`);
 }
 
 // Every construction of BuiltinSpec, anywhere in the crate. More than one means
@@ -166,17 +162,6 @@ for (const site of sites) {
     seen.add(field);
     const value = entry.slice(entry.indexOf(':') + 1).trim();
 
-    const fromDocs = value.match(/^doc\.([a-z_][a-z0-9_]*)$/);
-    if (fromDocs) {
-      if (!docFields.has(fromDocs[1])) {
-        errors.push(
-          `${DEFINITIONS}:${line}: ${field} reads \`doc.${fromDocs[1]}\`, ` +
-            `which is not a field of GeneratedCoreWordDoc in ${GENERATED_DOCS}`,
-        );
-      }
-      continue;
-    }
-
     const fromContract = value.match(/^word\.([a-z_][a-z0-9_]*)$/);
     if (fromContract) {
       if (!contractFields.has(fromContract[1])) {
@@ -189,8 +174,8 @@ for (const site of sites) {
     }
 
     errors.push(
-      `${DEFINITIONS}:${line}: ${field} is set from \`${value}\`, which is neither ` +
-        'generated documentation (`doc.<field>`) nor the generated contract (`word.<field>`). BuiltinSpec is a projection of spec/words.json, ' +
+      `${DEFINITIONS}:${line}: ${field} is set from \`${value}\`, which is not ` +
+        'the generated registry (`word.<field>`). BuiltinSpec is a projection of spec/words.json, ' +
         'not a place to author Core Word metadata.',
     );
   }
@@ -209,6 +194,6 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `[runtime-metadata] BuiltinSpec projects ${specFields.length} fields from generated docs ` +
-    `and the generated contract; no authored metadata table.`,
+  `[runtime-metadata] BuiltinSpec projects ${specFields.length} fields from the generated ` +
+    `registry; no authored metadata table.`,
 );

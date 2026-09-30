@@ -1,16 +1,8 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { fatal, words as wordsDocument, writeOrCheck } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const sourcePath = resolve(repoRoot, 'spec/words.json');
-const outputPath = resolve(repoRoot, 'docs/word-reference.md');
-const words = JSON.parse(readFileSync(sourcePath, 'utf8'));
-
-function fail(message) {
-  console.error(`[word-reference] ${message}`);
-  process.exit(1);
-}
+const words = wordsDocument();
+const fail = (message) => fatal('word-reference', message);
 
 const names = new Set();
 for (const entry of words.entries) {
@@ -82,7 +74,6 @@ const output = `${lines.join('\n').trimEnd()}\n`;
 // button (public/docs/en/words.html). It carries the fields the Markdown does
 // plus the stack effect and partiality, and loads nothing from outside the
 // file, so it reads the same wherever the page is served from.
-const htmlOutputPath = resolve(repoRoot, 'public/docs/en/words.html');
 
 const escapeHtml = (text) => String(text)
   .replace(/&/g, '&amp;')
@@ -208,15 +199,14 @@ ${words.entries.map(htmlEntry).join('\n')}
 </html>
 `;
 
-if (process.argv.includes('--check')) {
-  const existing = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : '';
-  if (existing !== output) fail('docs/word-reference.md is stale; run npm run word:reference');
-  const existingHtml = existsSync(htmlOutputPath) ? readFileSync(htmlOutputPath, 'utf8') : '';
-  if (existingHtml !== htmlOutput) fail('public/docs/en/words.html is stale; run npm run word:reference');
-  console.log(`[word-reference] ${words.entries.length} canonical Word entries are up to date.`);
-} else {
-  writeFileSync(outputPath, output);
-  mkdirSync(dirname(htmlOutputPath), { recursive: true });
-  writeFileSync(htmlOutputPath, htmlOutput);
-  console.log(`[word-reference] wrote ${words.entries.length} entries to docs/word-reference.md and public/docs/en/words.html`);
-}
+writeOrCheck(
+  'word-reference',
+  [
+    { path: 'docs/word-reference.md', content: output, stale: 'docs/word-reference.md is stale; run npm run word:reference' },
+    { path: 'public/docs/en/words.html', content: htmlOutput, stale: 'public/docs/en/words.html is stale; run npm run word:reference' },
+  ],
+  {
+    current: `${words.entries.length} canonical Word entries are up to date.`,
+    wrote: `wrote ${words.entries.length} entries to docs/word-reference.md and public/docs/en/words.html`,
+  },
+);

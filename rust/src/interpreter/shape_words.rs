@@ -6,7 +6,7 @@
 //! `Tensor`. Until these Words a program could observe none of it: `LENGTH`
 //! answers the outermost axis and nothing below it. Two of the four are also
 //! the clearest instances of the vocabulary-100 admission test
-//! (docs/dev/vocabulary-100-work-order-2026-09.md §1): how deeply a value nests
+//! (docs/dev/ajisai-minimal-core-identity.md 付録 B): how deeply a value nests
 //! is not known in advance, and a language with no recursion and no unbounded
 //! loop cannot walk a structure of unknown depth, so `FLATTEN` and `DEPTH`
 //! cannot be written as user definitions at any cost.

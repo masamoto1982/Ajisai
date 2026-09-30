@@ -6,8 +6,7 @@
 > 関連正典: `spec/language-semantics.md`（正典順位は LANG.AUTHORITY.SOURCES）。
 > Core Words の契約定義・辞書語彙階層（core/module/alias/surface）は
 > `SPECIFICATION.html` と `docs/word-manifest.json` に委ねる。
-> 関連データ: `docs/formalization-coverage.json`・
-> `docs/primitive-test-map.json`・`docs/word-manifest.json`。
+> 関連データ: `docs/formalization-coverage.json`・`docs/word-manifest.json`。
 > 本書はセルフホスティングを「実装言語の選択が一つ増えるだけ」と位置づけ、
 > capability-gated kernel profile（公式ビルドだけが実行できる語という特権階層）を
 > 採らない立場に立つ（§7）。
@@ -198,7 +197,7 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
    （比較を含まず U を生じない）、`ABS` は対 `0` の予算付き比較で符号を決め負なら否定する
    比較依存語として全数域対応（未決時 U）。仕様は `ABS` を §7.4.3 の comparison-dependent
    words と §7.14 の Projecting/Passthrough に追加、`NEG` は Total/Passthrough と明記した。
-4. **移行の計測.** `primitive-test-map` / `word-manifest` から「Core だけで書ける素材語」を
+4. **移行の計測.** `formalization-coverage` / `word-manifest` から「Core だけで書ける素材語」を
    静的判定し、trusted Rust core 行数をファイルサイズ予算と同じ発想で予算化する。
 
 ## 付録 B — alpha 期の語彙の採用規則と退役候補の列

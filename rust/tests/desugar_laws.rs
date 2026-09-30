@@ -1,7 +1,6 @@
-//! Phase 2 — syntax / desugar soundness as executable laws.
+//! Syntax / desugar soundness as executable laws.
 //!
-//! Companion to `algebraic_laws.rs`, encoding
-//! `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 2: the surface
+//! Companion to `algebraic_laws.rs`: the surface
 //! desugaring of LANG.SOURCE.DESUGAR / LANG.SOURCE.NORMALIZE is *observationally transparent*:
 //! word names are case-normalized (LANG.SOURCE.NORMALIZE), and a symbol the
 //! language has not allocated reaches the dictionary as an ordinary name. Each law is the compressed form

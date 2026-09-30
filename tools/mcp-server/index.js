@@ -530,35 +530,6 @@ function fail(error, context = "tool call") {
   };
 }
 
-/**
- * The outcome id (`spec/outcomes.json`) a finished run produced: `value`,
- * `nil:<reason>` or `error:<category>`.
- *
- * `status` separates a value from an error but folds a reasoned absence into
- * `ok`, so the one distinction the language is built around — LANG.FAILURE's
- * three results — used to be reconstructable only by reading the top stack
- * node's `semantics.absence.reason`. This names it in the vocabulary
- * `outcomes` predicts in, so a prediction and a run compare with `includes`.
- * The classification is the one `scripts/check-outcome-prediction.mjs` and
- * `scripts/check-outcome-bijection.mjs` apply to the CLI's report: an error
- * is its category, a NIL on top is its reason, anything else is a value.
- * A result it cannot classify (a NIL an implementation could not label, an
- * error naming no category) carries no `outcome` rather than a guessed one.
- */
-export function outcomeOf(result) {
-  if (result.status === "error") {
-    const category = result.aiDiagnostic?.category ?? result.diagnosis?.why;
-    return typeof category === "string" && category !== "" ? `error:${category}` : undefined;
-  }
-  if (result.status !== "ok") return undefined;
-  const top = Array.isArray(result.stack) ? result.stack.at(-1) : undefined;
-  if (top?.type === "nil") {
-    const reason = top.semantics?.absence?.reason;
-    return typeof reason === "string" && reason !== "" ? `nil:${reason}` : undefined;
-  }
-  return "value";
-}
-
 async function runAgent(source, command) {
   // An empty program is a program — whitespace alone always ran, and the
   // engine answers "" the same way — so only a missing or non-text `source` is
@@ -603,11 +574,11 @@ async function runAgent(source, command) {
       contract: "inferContracts",
       outcomes: "outcomes",
     }[command];
+    // A `compute` result already names its outcome id (`value`,
+    // `nil:<reason>`, `error:<category>`): the engine classifies the run it
+    // produced (`rust/src/agent/report.rs::outcome_id`), so this adapter
+    // passes the field through rather than re-deriving it from the stack.
     const result = await selected[operation](source);
-    if (command === "run") {
-      const id = outcomeOf(result);
-      if (id) result.outcome = id;
-    }
     result.mcp = provenance();
     return envelope(result, command);
   } catch (error) {

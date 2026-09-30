@@ -38,22 +38,14 @@
 // checking it would fail the gate on the note that motivated this gate.
 // `[執筆規約]` (writing conventions) is excluded because it does not describe
 // implementation internals.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { repoRoot, reporter, skipBuildAndHidden, walk } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
 const docsDevDir = resolve(repoRoot, 'docs/dev');
-
-function walk(dir, exts, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name === 'target' || name === 'dist' || name === 'generated' || name.startsWith('.')) continue;
-    const full = join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, exts, out);
-    else if (exts.some((ext) => name.endsWith(ext))) out.push(full);
-  }
-  return out;
-}
+// Generated sources are projections of spec/, not implementation a memo can
+// make claims about.
+const skip = (name) => skipBuildAndHidden(name) || name === 'generated';
 
 // The corpus a docs/dev claim must be findable in to count as still true: the
 // Rust interpreter and its own test suite, and the TypeScript GUI/runtime.
@@ -61,9 +53,9 @@ function walk(dir, exts, out = []) {
 // memo may describe a symbol that only ever lived in the test support code
 // (e.g. tests/test_support/generators.rs), not just rust/src.
 const haystackFiles = [
-  ...walk(resolve(repoRoot, 'rust/src'), ['.rs']),
-  ...walk(resolve(repoRoot, 'rust/tests'), ['.rs']),
-  ...walk(resolve(repoRoot, 'src'), ['.ts', '.tsx']),
+  ...walk(resolve(repoRoot, 'rust/src'), ['.rs'], skip),
+  ...walk(resolve(repoRoot, 'rust/tests'), ['.rs'], skip),
+  ...walk(resolve(repoRoot, 'src'), ['.ts', '.tsx'], skip),
 ];
 const haystack = haystackFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
 
@@ -82,54 +74,12 @@ const TYPE_VARIANT_RE = /\b([A-Z][A-Za-z0-9]*::[A-Z][A-Za-z0-9]*)\b/g;
 // words, common in the formalization memo's inline formulas — do not match.
 const FUNC_RE = /\b([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\s*\(/g;
 
-// Confirmed by hand when this gate was added — see the comment on each group
-// for why the finding is not drift. Keyed by `file.md::identifier` so a
-// different file naming the same identifier is still checked.
-const KNOWN_FALSE_POSITIVES = new Set([
-  // cost-discoverability-work-order-2026-08.md §1.5 Step 1.1 is a literal
-  // implementation instruction ("add `cost_label(...)` to
-  // contract_report.rs"), not a claim that the function already exists.
-  // Work-order steps are inherently future-tense; this gate cannot tell that
-  // from a present-tense claim by literal match alone.
-  'cost-discoverability-work-order-2026-08.md::cost_label',
-
-  // outcome-space-bijection-work-order-2026-09.md Phase 1 §1.4 pitfall B
-  // instructs deleting `AbsenceOrigin::EmptySequence` alongside
-  // `NilReason::EmptySequence`, and Phase 1 has since done exactly that
-  // (rust/src/semantic/absence.rs). `NilReason::EmptySequence` itself is not
-  // listed here because its literal text still survives in two rust/src
-  // comments explaining why `''`/`[ ]` are ordinary values now, which keeps
-  // it findable in the haystack even though the variant is gone — a
-  // heuristic accident, not evidence this one needs the same treatment.
-  'outcome-space-bijection-work-order-2026-09.md::AbsenceOrigin::EmptySequence',
-
-  // Phase 2 §2.1 instructs deleting `AjisaiError::Custom` and the two
-  // `From<String>`/`From<&str>` conversions that fed it, and Phase 2 has
-  // since done exactly that (rust/src/error.rs). Same shape as the
-  // EmptySequence entry above: a work-order instruction, now fulfilled.
-  'outcome-space-bijection-work-order-2026-09.md::AjisaiError::Custom',
-
-  // `Token::NilCoalesce` was `OR-NIL`'s token. Both are retired; the last
-  // rust/src comment naming them went with the stale note that described
-  // `OR-NIL` as a live exception to outcome prediction.
-  'outcome-space-bijection-work-order-2026-09.md::Token::NilCoalesce',
-
-  // The interpretation-role plane (`Interpretation`, the word-hint override
-  // table) this memo describes as then-present has since been deleted: every
-  // observation of a value is derived from the value itself. The memo records
-  // the state it was written against; it asked for exactly this removal.
-  'vocabulary-100-work-order-2026-09.md::Interpretation::Timestamp',
-  'vocabulary-100-work-order-2026-09.md::apply_word_hint_override',
-
-  // The computable-real tier (`ExactReal::Computable`, built by `PI` and the
-  // transcendental Words) and the `undecidable` reason its comparisons
-  // projected have since been deleted: the numeric domain is the exact field
-  // `SQRT` builds, where every comparison decides. These memos record the
-  // pitfalls the digest and receipt had to respect while that tier existed.
-  'competitive-advantage-work-order-2026-08.md::ExactReal::Computable',
-  'auditable-kernel-work-order-2026-09.md::ExactReal::Computable',
-  'auditable-kernel-work-order-2026-09.md::NilReason::Undecidable',
-]);
+// Confirmed heuristic false positives, each keyed `file.md::identifier` (so a
+// different memo naming the same identifier is still checked) and commented
+// with why the finding is not drift. Every entry the gate was calibrated with
+// named a memo since retired, so the list is empty; the next confirmed false
+// positive goes here, with its reason.
+const KNOWN_FALSE_POSITIVES = new Set([]);
 
 function parseIndexScope() {
   const indexText = readFileSync(resolve(docsDevDir, 'INDEX.md'), 'utf8');
@@ -142,11 +92,8 @@ function parseIndexScope() {
   return scoped;
 }
 
-let failed = false;
-function fail(message) {
-  console.error(`[docs-dev-drift] ${message}`);
-  failed = true;
-}
+const report = reporter('docs-dev-drift');
+const fail = report.fail;
 
 const scopedFiles = parseIndexScope();
 if (scopedFiles.length === 0) {
@@ -185,9 +132,6 @@ for (const file of scopedFiles) {
   }
 }
 
-if (!failed) {
-  console.log(
-    `[docs-dev-drift] ${scopedFiles.length} load-bearing memo(s), ${checkedIdentifiers} referenced identifier(s), all reachable.`,
-  );
-}
-process.exit(failed ? 1 : 0);
+report.done(
+  `${scopedFiles.length} load-bearing memo(s), ${checkedIdentifiers} referenced identifier(s), all reachable.`,
+);

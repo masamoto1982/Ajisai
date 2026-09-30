@@ -24,7 +24,7 @@
 //! never a value that is wrong, since equality and order do not depend on the
 //! basis being square-free (`basis.rs`).
 
-use crate::types::bigint_gcd::balanced_bigint_gcd;
+use crate::types::fraction_arithmetic::balanced_bigint_gcd;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, ToPrimitive, Zero};

@@ -2,8 +2,8 @@
 
 Status: **non-canonical, design rationale** (`[設計根拠]`). Canonical source
 remains `SPECIFICATION.html` / `spec/`; this document records why the `cost`
-axis of `#:contract` is shaped the way it is, mirroring
-`docs/dev/space-contract-design.md`'s role for the space axis.
+axis of `#:contract` is shaped the way it is. The space axis has no memo of its
+own; its inference is documented in `rust/src/interpreter/word_space.rs`.
 
 ## 1. The three declarable axes
 
@@ -174,7 +174,7 @@ paid for once.
 - `#:contract ... cost steps=<class> numeric=<class> collection=<class>`
   parsing (any subset of the three axes; an unknown axis or class name is a
   parse error, matching the existing `unknown term` behavior) and checking,
-  split into `contract_cost.rs` alongside `contract_decl.rs` to keep the
+  split into `contract_gap.rs` alongside `contract_decl.rs` to keep the
   latter within the §14.1 file-size budget.
 
 ## Appendix A — SHA-256 → BLAKE3 in the MCP adapter: evaluated, not adopted

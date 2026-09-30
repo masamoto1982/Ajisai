@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// Every classification field spec/words.schema.json declares must be
-// reachable from outside spec/ itself — read by a generator, or by the Rust
-// interpreter, or by the TypeScript GUI/runtime. Declaring one that nothing
-// reads by name is a contract the registry still promises for a concept the
-// language no longer has: `interpretationRole` was exactly this (see
-// docs/dev/ajisai-single-axis-proposal-2026-08.md §1.1) — a field required by
+// Every classification field spec/words.schema.json declares must be reachable
+// from outside spec/ itself — read by a generator, or by the Rust interpreter,
+// or by the TypeScript GUI/runtime. Declaring one that nothing reads by name
+// is a contract the registry still promises for a concept the language no
+// longer has: `interpretationRole` was exactly this — a field required by
 // spec/words.schema.json, populated on all 65 entries, read by nothing.
 //
 // This check is a name-reachability heuristic, not a semantic proof: a field
@@ -30,24 +29,12 @@
 // different method: it executes a witness for every declared NIL reason and
 // error category (from the exhaustive table or spec/outcome-witnesses.json)
 // and fails if any has none, which tells a live condition from a dead one by
-// running it rather than by matching its name
-// (docs/dev/auditable-kernel-work-order-2026-09.md Phase 2).
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+// running it rather than by matching its name.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { readJson, repoRoot, reporter, walk } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
-const schema = JSON.parse(readFileSync(resolve(repoRoot, 'spec/words.schema.json'), 'utf8'));
-
-function walk(dir, exts, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name === 'target' || name === 'dist' || name.startsWith('.')) continue;
-    const full = join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, exts, out);
-    else if (exts.some((ext) => name.endsWith(ext))) out.push(full);
-  }
-  return out;
-}
+const schema = readJson('spec/words.schema.json');
 
 // Excluded from its own haystack: this file's docstring names past dead
 // fields as worked examples, which would otherwise make the gate satisfy
@@ -66,11 +53,8 @@ const haystackFiles = [
 ].filter((f) => f !== SELF_PATH);
 const haystack = haystackFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
 
-let failed = false;
-function fail(message) {
-  console.error(`[unreachable-contract] ${message}`);
-  failed = true;
-}
+const report = reporter('unreachable-contract');
+const fail = report.fail;
 
 // Structural fields carry per-word mechanics (shape, prose, identity) rather
 // than naming a concept, and scripts/rust/src reference them constantly by
@@ -88,7 +72,4 @@ for (const field of checkedFields) {
   }
 }
 
-if (!failed) {
-  console.log(`[unreachable-contract] ${checkedFields.length} classification field(s) are all reachable.`);
-}
-process.exit(failed ? 1 : 0);
+report.done(`${checkedFields.length} classification field(s) are all reachable.`);

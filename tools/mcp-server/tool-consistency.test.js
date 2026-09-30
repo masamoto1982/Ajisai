@@ -18,7 +18,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createBackend, outcomeOf } from "./index.js";
+import { createBackend } from "./index.js";
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 
@@ -78,7 +78,7 @@ for (const source of sources) {
     backend.outcomes(source),
   ]);
   compared += 1;
-  const outcome = outcomeOf(run);
+  const outcome = run.outcome;
   const predictedSet = predicted.outcomes ?? [];
 
   expect(outcome && predictedSet.includes(outcome), source,

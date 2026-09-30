@@ -18,8 +18,9 @@
 // so the far larger population in `rust/src`, `rust/tests` and `src/` stayed
 // invisible for another six weeks.
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import { walk } from './lib/common.mjs';
 
 const ROOT = process.cwd();
 const SKIP_DIRS = new Set(['node_modules', 'target', '.git', 'dist', 'build']);
@@ -68,17 +69,8 @@ const DISCUSSES_RATHER_THAN_CITES = new Map([
   ['scripts/check-spec-citations.mjs', /never existed/],
 ]);
 
-function* walk(dir) {
-  for (const name of readdirSync(dir)) {
-    if (SKIP_DIRS.has(name)) continue;
-    const full = join(dir, name);
-    if (statSync(full).isDirectory()) yield* walk(full);
-    else if (EXTENSIONS.test(name)) yield full;
-  }
-}
-
 const findings = [];
-for (const file of walk(ROOT)) {
+for (const file of walk(ROOT, EXTENSIONS, (name) => SKIP_DIRS.has(name))) {
   const rel = relative(ROOT, file);
   const exempt = DISCUSSES_RATHER_THAN_CITES.get(rel);
   let text;

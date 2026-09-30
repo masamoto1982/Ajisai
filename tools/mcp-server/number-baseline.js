@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer } from "./index.js";
+import { connectInMemory, readEval } from "./eval-common.js";
 
 function numberResult(operation, operands) {
   const [left, right] = operands.map(Number);
@@ -18,7 +15,7 @@ function canonicalAjisaiScalar(value) {
   return denominator === "1" ? numerator : `${numerator}/${denominator}`;
 }
 
-const corpus = JSON.parse(readFileSync(new URL("./eval/number-baseline.json", import.meta.url), "utf8"));
+const corpus = readEval("./eval/number-baseline.json");
 if (corpus.schemaVersion !== 1 || !Array.isArray(corpus.cases) || corpus.cases.length === 0) {
   throw new Error("Number baseline corpus is invalid");
 }
@@ -32,10 +29,7 @@ for (const testCase of corpus.cases) {
   ids.add(testCase.id);
 }
 
-const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-const server = createServer();
-const client = new Client({ name: "ajisai-number-baseline", version: "1" });
-await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+const { client, close } = await connectInMemory("ajisai-number-baseline");
 let ajisaiExact = 0;
 let numberExact = 0;
 const cases = [];
@@ -58,8 +52,7 @@ try {
     });
   }
 } finally {
-  await client.close();
-  await server.close();
+  await close();
 }
 
 const report = {

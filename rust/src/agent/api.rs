@@ -3,9 +3,9 @@
 //! Host adapters should consume this API instead of reproducing interpreter
 //! execution and report assembly. It performs no filesystem or terminal I/O.
 
+use super::report::{completed_run_report, Report};
 use super::{
-    contract_decl, contract_report, error_report, outcome_report, print_payloads, report::Report,
-    resolve_words, run_render,
+    contract_decl, contract_report, error_report, outcome_report, print_payloads, resolve_words,
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -45,6 +45,35 @@ pub struct ComputeOptions {
     pub runtime_limits: Option<RuntimeLimits>,
 }
 
+impl ComputeOptions {
+    /// The agent profile: [`LOCAL_AGENT_RUNTIME_LIMITS`], with `step_limit`
+    /// overriding the execution step budget when given.
+    pub const fn agent(step_limit: Option<usize>) -> Self {
+        ComputeOptions {
+            step_limit,
+            runtime_limits: Some(LOCAL_AGENT_RUNTIME_LIMITS),
+        }
+    }
+
+    /// Put `interp` under these ceilings; an absent one keeps the
+    /// interpreter's own default.
+    pub(crate) fn apply(&self, interp: &mut Interpreter) {
+        if let Some(limits) = self.runtime_limits {
+            interp.set_runtime_limits(limits);
+        }
+        if let Some(limit) = self.step_limit {
+            interp.set_max_execution_steps(limit);
+        }
+    }
+
+    /// A fresh interpreter under these ceilings.
+    pub(crate) fn interpreter(&self) -> Interpreter {
+        let mut interp = Interpreter::new();
+        self.apply(&mut interp);
+        interp
+    }
+}
+
 pub struct AgentResponse {
     report: Report,
 }
@@ -77,6 +106,12 @@ impl ContractResponse {
 }
 
 impl AgentResponse {
+    /// A `compute` report, carrying the outcome id it names.
+    fn computed(mut report: Report) -> Self {
+        report.outcome = report.outcome_id();
+        AgentResponse { report }
+    }
+
     pub fn exit_code(&self) -> i32 {
         if self.report.status == "ok" {
             0
@@ -110,39 +145,23 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
         // Applied even though tokenization never gets far enough to spend any
         // of it: the receipt names the profile the caller asked for, not the
         // interpreter's built-in default, and the two can differ.
-        let mut interp = Interpreter::new();
-        if let Some(limits) = options.runtime_limits {
-            interp.set_runtime_limits(limits);
-        }
-        if let Some(limit) = options.step_limit {
-            interp.set_max_execution_steps(limit);
-        }
-        return AgentResponse {
-            report: error_report(
-                &interp,
-                &diagnosis,
-                Some(&ErrorCategory::MalformedSource),
-                message,
-                Vec::new(),
-                Vec::new(),
-                Some(source),
-            ),
-        };
+        let interp = options.interpreter();
+        return AgentResponse::computed(error_report(
+            &interp,
+            &diagnosis,
+            Some(&ErrorCategory::MalformedSource),
+            message,
+            Vec::new(),
+            Vec::new(),
+            Some(source),
+        ));
     }
 
-    let mut interp = Interpreter::new();
-    if let Some(limits) = options.runtime_limits {
-        interp.set_runtime_limits(limits);
-    }
-    if let Some(limit) = options.step_limit {
-        interp.set_max_execution_steps(limit);
-    }
+    let mut interp = options.interpreter();
     let result = interp.execute(source).await;
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
-    AgentResponse {
-        report: run_render::completed_run_report(&interp, result, trace, output, source),
-    }
+    AgentResponse::computed(completed_run_report(&interp, result, trace, output, source))
 }
 
 /// The source-form gate every execution-free operation shares: a source that
@@ -271,6 +290,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
             // `check` never executes, so there is nothing to receipt —
             // see `Report::receipt`'s doc comment.
             receipt: None,
+            outcome: None,
         },
     }
 }
@@ -355,6 +375,24 @@ mod tests {
             json["stack"][0]["semantics"]["absence"]["reason"],
             "spaceExhausted"
         );
+    }
+
+    /// `outcome` names a run in `outcomes`' own vocabulary — a value, a NIL
+    /// by its reason, an error by its category — so a prediction and a run
+    /// compare by membership. `check` never runs, so it names none.
+    #[tokio::test]
+    async fn compute_names_the_outcome_id_it_produced() {
+        for (source, expected) in [
+            ("1 2 ADD", "value"),
+            ("", "value"),
+            ("1 0 DIV", "nil:divisionByZero"),
+            ("FROBNICATE", "error:unknownWord"),
+            ("[ 1 2", "error:malformedSource"),
+        ] {
+            let json = compute(source, ComputeOptions::default()).await.to_json();
+            assert_eq!(json["outcome"], expected, "{source}");
+        }
+        assert!(check("1 2 ADD", true).to_json().get("outcome").is_none());
     }
 
     #[test]

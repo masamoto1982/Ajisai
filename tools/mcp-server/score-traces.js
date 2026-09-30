@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer } from "./index.js";
+import { atPointer, connectInMemory, readEval, referenceTraces } from "./eval-common.js";
 import {
   LANGUAGES,
   callsOf,
@@ -13,25 +11,21 @@ import {
   validateCorpus,
 } from "./evaluation-contract.js";
 
-function atPointer(document, pointer) {
-  return pointer.split("/").slice(1)
-    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
-    .reduce((value, part) => value?.[part], document);
-}
-
+// `--reference` scores the corpus answering itself (eval-common.js
+// `referenceTraces`), built from `cases.json` rather than read from a file, so
+// the fixture cannot fall behind the corpus it grades.
 const tracePath = process.argv[2];
 if (!tracePath) {
-  console.error("usage: node score-traces.js <trace-file.json> [--require-perfect]");
+  console.error("usage: node score-traces.js <trace-file.json>|--reference [--require-perfect]");
   process.exit(2);
 }
-const corpus = JSON.parse(readFileSync(new URL("./eval/cases.json", import.meta.url), "utf8"));
-const traceDoc = JSON.parse(readFileSync(tracePath, "utf8"));
+const corpus = readEval("./eval/cases.json");
+const traceDoc = tracePath === "--reference"
+  ? referenceTraces(corpus)
+  : JSON.parse(readFileSync(tracePath, "utf8"));
 const traces = indexTraces(traceDoc, validateCorpus(corpus));
 const provenance = traceProvenance(traceDoc);
-const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-const server = createServer();
-const client = new Client({ name: "ajisai-trace-eval", version: "1" });
-await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+const { client, close } = await connectInMemory("ajisai-trace-eval");
 
 /** One language's tally. Kept per language so the pair can be compared. */
 function emptyTally() {
@@ -117,8 +111,7 @@ for (const testCase of corpus.cases) {
   }
 }
 
-await client.close();
-await server.close();
+await close();
 
 const positives = corpus.cases.filter((testCase) => testCase.expectedTool !== null).length;
 const negatives = corpus.cases.length - positives;

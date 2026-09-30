@@ -11,7 +11,7 @@
 //! worth having.
 //!
 //! Three kinds of value are deliberately out of scope, because the display
-//! does not claim to round-trip them and `display_source.rs` says so:
+//! does not claim to round-trip them and `types/display.rs` says so:
 //!
 //! - A Record renders as `{ key value … }`, which is a display, not source:
 //!   only `[ ]` delimits, and `RECORD` is how a program builds one. A Vector

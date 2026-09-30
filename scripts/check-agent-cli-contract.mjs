@@ -1,11 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readText } from "./lib/common.mjs";
 
-const cliSource = readFileSync(new URL("../rust/src/cli/mod.rs", import.meta.url), "utf8");
-const contract = readFileSync(
-  new URL("../docs/dev/agent-cli-output-contract.md", import.meta.url),
-  "utf8",
-);
+const cliSource = readText("rust/src/cli/mod.rs");
+const contract = readText("docs/dev/agent-cli-output-contract.md");
 
 const usage = cliSource.match(/const USAGE: &str = "([\s\S]*?)";/)?.[1];
 if (!usage) throw new Error("could not locate the native CLI USAGE string");

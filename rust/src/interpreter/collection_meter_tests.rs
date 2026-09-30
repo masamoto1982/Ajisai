@@ -2,8 +2,8 @@
 //! of them there are.
 //!
 //! Element count was the obvious answer and the measurements ruled it out
-//! (`examples/collection_word_calibration`, tabulated in
-//! `docs/dev/collection-word-billing-2026-08-13.md`): the same `UNIQUE` over the
+//! (`examples/collection_word_calibration`, summarized in
+//! `docs/dev/mcp-host-profiles.md`): the same `UNIQUE` over the
 //! same 16,000 elements costs 0.52 ms or 682 ms depending only on how many
 //! distinct values the data holds, an element that is itself a vector is not one
 //! unit of work, and an algebraic element costs five hundred times what a
@@ -70,14 +70,13 @@ async fn refused_under(source: &str, budget: u64) -> Option<ResourceLimit> {
 
 #[tokio::test]
 async fn a_scan_is_priced_by_the_element_count_not_the_distinct_count() {
-    // 4,000 elements either way — one distinct value on one side, 4,000 on
-    // the other. Before the de-quadraticization follow-up this was the
-    // opposite assertion: `UNIQUE` scanned every distinct value found so
-    // far, so the same element count charged 100x more when nothing
-    // repeated (`docs/dev/collection-word-billing-2026-08-13.md`). `Value:
-    // Hash` turned that scan into one hash-and-lookup per element, so the
-    // charge now tracks element count; distinctness only adds the small,
-    // linear cost of copying every new value into the result.
+    // 4,000 elements either way — one distinct value on one side, 4,000 on the
+    // other. Before the de-quadraticization follow-up this was the opposite
+    // assertion: `UNIQUE` scanned every distinct value found so far, so the
+    // same element count charged 100x more when nothing repeated. `Value: Hash`
+    // turned that scan into one hash-and-lookup per element, so the charge now
+    // tracks element count; distinctness only adds the small, linear cost of
+    // copying every new value into the result.
     let uniform = charged_by("0 3999 RANGE [ 0 MUL ] MAP UNIQUE").await;
     let distinct = charged_by("0 3999 RANGE UNIQUE").await;
     assert!(

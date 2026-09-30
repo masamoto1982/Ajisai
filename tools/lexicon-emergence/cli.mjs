@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Lexicon-emergence experiment driver (docs/dev/lexicon-emergence-experiment-work-order-2026-09.md).
+// Lexicon-emergence experiment driver (design: docs/dev/lexicon-emergence-pilot-results-2026-09-23.md 付録 B).
 //
 //   node cli.mjs prompt  <run> <condition> <gen> <agent>   subject prompt for one agent
 //   node cli.mjs grade   <run> <condition> <gen>           grade every submission of a generation

@@ -27,83 +27,17 @@
 //! numbers belong to one machine and one build. What it produces is the cost
 //! structure a pricing rule has to match.
 
-use std::time::Instant;
+use ajisai_core::agent::time_after_setup;
 
-use ajisai_core::interpreter::{Interpreter, RuntimeLimits};
-
-fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    use std::task::{Context, Poll};
-    let mut fut = Box::pin(fut);
-    let waker = std::task::Waker::noop();
-    let mut cx = Context::from_waker(waker);
-    loop {
-        match fut.as_mut().poll(&mut cx) {
-            Poll::Ready(value) => return value,
-            Poll::Pending => std::thread::yield_now(),
-        }
-    }
-}
-
-/// Ceilings lifted out of the way: this measures the price, not the limit.
-fn unbounded() -> RuntimeLimits {
-    RuntimeLimits {
-        max_materialized_elements: 10_000_000,
-        max_source_bytes: 64 * 1024 * 1024,
-        max_numeric_literal_digits: 1_000_000,
-        max_numeric_work: u64::MAX,
-        max_collection_work: u64::MAX,
-        max_bigint_bits: u64::MAX,
-        max_algebraic_terms: usize::MAX,
-        // Not lifted: it bounds the native stack, not a price.
-        max_nesting_depth: RuntimeLimits::default().max_nesting_depth,
-    }
-}
-
-/// Run `setup` to leave the operands on the stack, then time `word` alone.
+/// Run `setup` to leave the operands on the stack, then time `word` alone
+/// (`agent::time_after_setup`).
 ///
 /// The operand has to be built outside the timed region: `0 99999 RANGE
 /// UNIQUE` measures `RANGE` and `UNIQUE` together, and `RANGE` is the cheaper
 /// of the two by three orders of magnitude at that size — which is exactly the
-/// asymmetry being measured. `execute` keeps the stack between calls and resets
-/// only the counters, so the second call sees the first call's result.
+/// asymmetry being measured.
 fn measure(setup: &str, word: &str) -> f64 {
-    let mut interp = Interpreter::new();
-    interp.set_runtime_limits(unbounded());
-    interp.set_max_execution_steps(usize::MAX);
-
-    if let Err(error) = block_on(interp.execute(setup)) {
-        panic!("setup `{setup}` must succeed, got: {error:?}");
-    }
-
-    let started = Instant::now();
-    let outcome = block_on(interp.execute(word));
-    let millis = started.elapsed().as_secs_f64() * 1000.0;
-    if let Err(error) = outcome {
-        panic!("`{word}` on `{setup}` must succeed, got: {error:?}");
-    }
-    millis
-}
-
-/// Like `measure`, but also reads back what the collection meter actually
-/// charged for `word`, so a units/ms rate can be computed against the
-/// post-dequadraticization pricing model instead of hand-derived from the
-/// wall clock and an assumed formula.
-fn measure_charged(setup: &str, word: &str) -> (f64, u64) {
-    let mut interp = Interpreter::new();
-    interp.set_runtime_limits(unbounded());
-    interp.set_max_execution_steps(usize::MAX);
-
-    if let Err(error) = block_on(interp.execute(setup)) {
-        panic!("setup `{setup}` must succeed, got: {error:?}");
-    }
-
-    let started = Instant::now();
-    let outcome = block_on(interp.execute(word));
-    let millis = started.elapsed().as_secs_f64() * 1000.0;
-    if let Err(error) = outcome {
-        panic!("`{word}` on `{setup}` must succeed, got: {error:?}");
-    }
-    (millis, interp.collection_work_used())
+    time_after_setup(setup, word).1
 }
 
 /// A vector of `n` distinct small integers.
@@ -522,7 +456,11 @@ fn section_floor_rate() {
     ];
     let mut floor = f64::INFINITY;
     for (label, setup, word) in &cases {
-        let (millis, units) = measure_charged(setup, word);
+        // What the collection meter actually charged for `word`, so a
+        // units/ms rate is computed against the pricing model instead of
+        // hand-derived from the wall clock and an assumed formula.
+        let (interp, millis) = time_after_setup(setup, word);
+        let units = interp.collection_work_used();
         let rate = if millis > 0.0 {
             units as f64 / millis
         } else {

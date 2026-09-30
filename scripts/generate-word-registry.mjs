@@ -3,8 +3,9 @@ import { dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 // Project spec/words.json into a checked-in Rust Word registry — the single
-// source of truth for the Word inventory, executor keys, and static
-// contract fields (migration plan Phase 3). Run with `--check` in CI to fail on
+// source of truth for the Word inventory, executor keys, static contract
+// fields, and the documentation prose hover and LOOKUP read (migration plan
+// Phase 3). Run with `--check` in CI to fail on
 // drift; run without it to regenerate.
 
 const check = process.argv.includes('--check');
@@ -223,6 +224,10 @@ const rows = entries
         effects: ${rustStrSlice(word.effects)},
         error_when: ${rustStrSlice(word.errorWhen)},
         syntax: ${word.documentation.syntax ? `Some(${rustStr(word.documentation.syntax)})` : 'None'},
+        summary: ${rustStr(word.documentation.summary)},
+        stack_effect: ${rustStr(word.documentation.stackEffect)},
+        hover_summary: ${rustStr(word.documentation.hover)},
+        hover_syntax: ${rustStr(word.documentation.syntax)},
     },`,
   )
   .join('\n');
@@ -372,6 +377,18 @@ pub struct GeneratedWord {
     /// what shape" is exactly the question and \`Stack underflow\` alone
     /// answers none of it.
     pub syntax: Option<&'static str>,
+    /// What the Word does, with its tested examples — the LOOKUP \`Summary\`
+    /// section (\`documentation.summary\`).
+    pub summary: &'static str,
+    /// The stack effect in prose — the LOOKUP \`Stack Effect\` section
+    /// (\`documentation.stackEffect\`).
+    pub stack_effect: &'static str,
+    /// The one-line hover title a host shows for the Word
+    /// (\`documentation.hover\`), and its registered description.
+    pub hover_summary: &'static str,
+    /// The inline word-info preview (\`documentation.syntax\`): the same line
+    /// as \`syntax\`, as the plain text a host renders.
+    pub hover_syntax: &'static str,
 }
 
 pub const GENERATED_WORDS: &[GeneratedWord] = &[

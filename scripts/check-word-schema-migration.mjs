@@ -1,17 +1,20 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readJson, readText, reporter, words as wordsDocument } from './lib/common.mjs';
 
-const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
-const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
-const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
-const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
-const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
-const language = readFileSync('spec/language-semantics.md', 'utf8');
-const outcomes = JSON.parse(readFileSync('spec/outcomes.json', 'utf8'));
+const words = wordsDocument();
+const schema = readJson('spec/words.schema.json');
+const manifest = readJson('docs/word-manifest.json');
+const dispatchSource = readText('rust/src/interpreter/execute_builtin.rs');
+const language = readText('spec/language-semantics.md');
+const outcomes = readJson('spec/outcomes.json');
 
-const errors = [];
-const fail = (message) => errors.push(message);
+const report = reporter('word-schema');
+const fail = report.fail;
 const required = schema.$defs.word.required;
-const familyIds = new Set(families.families.map((family) => family.id));
+// The closed list of families is the schema's enum (the registry generator
+// projects it into the Rust `Family`); what a family *means* — the laws its
+// Words share — is derived from the Words themselves (scripts/lib/common.mjs
+// `families()`), so it cannot disagree with them.
+const familyIds = new Set(schema.$defs.word.properties.family.enum);
 const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
@@ -136,29 +139,10 @@ for (const word of words.entries) {
   }
 }
 
-// A family is the laws its Words share (spec/semantic-families.json), so its
-// clauses are exactly the clauses every member cites — no more, which would
-// claim a law some member is not subject to, and no fewer.
-for (const family of families.families) {
-  const members = words.entries.filter((word) => word.family === family.id);
-  const shared = members.length
-    ? members[0].clauses.filter((clause) => members.every((word) => word.clauses.includes(clause)))
-    : [];
-  const declared = [...family.clauses].sort();
-  if (JSON.stringify(declared) !== JSON.stringify([...shared].sort())) {
-    fail(`family ${family.id} declares clauses [${declared.join(', ')}] but its Words share [${[...shared].sort().join(', ')}]`);
-  }
-}
-
 const canonicalManifestEntries = manifest.entries.filter((entry) => entry.kind === 'coreword');
 const expected = new Set(canonicalManifestEntries.map((entry) => entry.canonical));
 for (const name of expected) if (!names.has(name)) fail(`contract scope omits ${name}`);
 for (const name of names) if (!expected.has(name)) fail(`contract scope contains unexpected Word ${name}`);
 if (names.size !== expected.size) fail(`contract scope has ${names.size} entries; expected ${expected.size}`);
 
-if (errors.length) {
-  for (const error of errors) console.error(`[word-schema] ${error}`);
-  process.exitCode = 1;
-} else {
-  console.log(`[word-schema] all ${canonicalManifestEntries.length} Core contracts cover the ${manifest.entries.length}-surface manifest and current executors.`);
-}
+report.done(`all ${canonicalManifestEntries.length} Core contracts cover the ${manifest.entries.length}-surface manifest and current executors.`);

@@ -10,6 +10,8 @@
 use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::{Interpreter, RuntimeLimits};
+use crate::types::exact::ExactReal;
+use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
 /// A fresh interpreter with `limits` in force.
@@ -154,4 +156,53 @@ pub(crate) async fn diagnose(source: &str) -> DebugDiagnosis {
         .rev()
         .find_map(|event| event.diagnosis.clone())
         .expect("a failed run records a diagnosis")
+}
+
+/// `n/d` as a `Fraction`.
+pub(crate) fn frac(n: i64, d: i64) -> Fraction {
+    Fraction::new(n.into(), d.into())
+}
+
+/// The value's `Hash`, through the standard library's default hasher — the
+/// hasher `UNIQUE` / `GROUP` / `TALLY` bucket by.
+pub(crate) fn hash_of(value: &Value) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    value.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// `√n` as a value, built without a parser.
+pub(crate) fn sqrt_of(n: i64) -> Value {
+    Value::from_exact_real(
+        ExactReal::from_sqrt_rational(frac(n, 1)).expect("a non-negative radicand"),
+    )
+}
+
+/// A numeric scalar as an exact real, whichever tier holds it.
+pub(crate) fn as_exact(value: &Value) -> ExactReal {
+    match &value.data {
+        ValueData::ExactScalar(e) => e.clone(),
+        ValueData::Scalar(f) => ExactReal::from_fraction(f.clone()),
+        other => panic!("not an exact scalar: {other:?}"),
+    }
+}
+
+/// `x MUL y` over the exact tier, for building `2·√3` without a parser.
+pub(crate) fn exact_mul(left: &Value, right: &Value) -> Value {
+    Value::from_exact_real(as_exact(left).mul(&as_exact(right)))
+}
+
+/// `x ADD y` over the exact tier.
+pub(crate) fn exact_add(left: &Value, right: &Value) -> Value {
+    Value::from_exact_real(as_exact(left).add(&as_exact(right)))
+}
+
+/// One `agent compute` run's JSON envelope under `options`.
+#[cfg(feature = "std")]
+pub(crate) async fn agent_json(
+    source: &str,
+    options: crate::agent::api::ComputeOptions,
+) -> serde_json::Value {
+    crate::agent::api::compute(source, options).await.to_json()
 }

@@ -164,7 +164,7 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
 //
 // `INDEX-OF` and a substitution, for Text. Spelled over `CHARS` each is a
 // window compared at every position; the Word is the one pass
-// (docs/dev/vocabulary-100-work-order-2026-09.md §1).
+// (docs/dev/ajisai-minimal-core-identity.md 付録 B).
 /// The texts the operands denote, or the `nonText` every text Word declares.
 fn texts(interp: &mut Interpreter, count: usize) -> Result<Vec<String>> {
     let operands = extract_operands(interp, count)?;

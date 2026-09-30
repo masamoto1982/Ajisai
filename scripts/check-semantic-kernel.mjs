@@ -1,13 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { families, readText, reporter, words as wordsDocument } from './lib/common.mjs';
 
-const language = readFileSync('spec/language-semantics.md', 'utf8');
-const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
-const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
+const language = readText('spec/language-semantics.md');
+const words = wordsDocument();
 
-const fail = (message) => {
-  console.error(`[semantic-kernel] ${message}`);
-  process.exitCode = 1;
-};
+const report = reporter('semantic-kernel');
+const fail = report.fail;
 
 // The kernel is a ceiling, not a floor: a shorter specification is always an
 // improvement, a longer one is the regression this gate exists to catch.
@@ -39,11 +36,12 @@ const fail = (message) => {
 // for, not a reflex.
 //
 // Raised to 408 for LANG.RECORDS.STRUCTURE: the vocabulary-100 work order
-// (docs/dev/vocabulary-100-work-order-2026-09.md §2.3) admitted a seventh
-// value domain, the keyed correspondence, and a domain needs its own clause —
-// its structure, its identity, its containment rule — where the earlier
-// phases of that work order fit into existing clauses. Four lines: the
-// heading, the paragraph, and their separators. Net new content again.
+// (retired; its adoption rules are docs/dev/ajisai-minimal-core-identity.md 付録
+// B) admitted a seventh value domain, the keyed correspondence, and a domain
+// needs its own clause — its structure, its identity, its containment rule —
+// where the earlier phases of that work order fit into existing clauses. Four
+// lines: the heading, the paragraph, and their separators. Net new content
+// again.
 const LINE_BUDGET = 408;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
@@ -56,45 +54,36 @@ if (lines > LINE_BUDGET) {
 const clauseIds = new Set([...language.matchAll(/id="[^"]+">(LANG\.[A-Z.]+)/g)].map((match) => match[1]));
 if (clauseIds.size === 0) fail('no language clause IDs found');
 
-const familyIds = new Set();
-for (const family of families.families) {
-  if (familyIds.has(family.id)) fail(`duplicate semantic family: ${family.id}`);
-  familyIds.add(family.id);
-  for (const clause of family.clauses) {
-    if (!clauseIds.has(clause)) fail(`family ${family.id} references missing clause ${clause}`);
-  }
-}
+// Families are derived from the Words (scripts/lib/common.mjs `families()`):
+// one per `family` a Word names, sharing the clauses all its members cite. So
+// a duplicate family, a Word naming a missing family and a family with no
+// Words cannot occur, and a family's clauses are its Words', checked below —
+// each was a check of its own here while the families were a hand-kept file.
+// What stays is the ceiling on how many there are.
+const familyIds = new Set(families().map((family) => family.id));
 if (familyIds.size > 12) fail(`${familyIds.size} semantic families (maximum 12)`);
 
 const names = new Set();
 for (const word of words.entries) {
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
   names.add(word.name);
-  if (!familyIds.has(word.family)) fail(`Word ${word.name} references missing family ${word.family}`);
   for (const clause of word.clauses) {
     if (!clauseIds.has(clause)) fail(`Word ${word.name} references missing clause ${clause}`);
   }
-}
-for (const family of familyIds) {
-  if (![...words.entries].some((word) => word.family === family)) fail(`semantic family ${family} has no Words`);
 }
 
 // Vocabulary growth is the failure mode this project is guarding against, so the
 // count is a budget rather than a fixed inventory: shrinking is free, growing is
 // a deliberate specification change.
 // Raised from 70 to 100 for the vocabulary-100 work order
-// (docs/dev/vocabulary-100-work-order-2026-09.md): the owner's decision to
+// (docs/dev/ajisai-minimal-core-identity.md 付録 B): the owner's decision to
 // remake the vocabulary as ten concepts and 100 Words, each admitted on one of
 // two grounds the work order states (inexpressible in a total, non-recursive
 // language, or the closure of a small symmetric family). The number is the
-// work order's ceiling, not a target — its §1 forbids padding to reach it —
-// so this is the deliberate raise the comment above asks for.
+// work order's ceiling, not a target — its §1 forbids padding to reach it — so
+// this is the deliberate raise the comment above asks for.
 if (words.entries.length > 100) fail(`${words.entries.length} canonical Words (maximum 100)`);
 
-if (!process.exitCode) {
-  const headroom = LINE_BUDGET - lines;
-  const budget = headroom === 0 ? 'at the line budget' : `${headroom} lines under budget`;
-  console.log(
-    `[semantic-kernel] ${lines} lines (${budget}), ${clauseIds.size} clauses, ${familyIds.size} families, ${words.entries.length} Words.`,
-  );
-}
+const headroom = LINE_BUDGET - lines;
+const budget = headroom === 0 ? 'at the line budget' : `${headroom} lines under budget`;
+report.done(`${lines} lines (${budget}), ${clauseIds.size} clauses, ${familyIds.size} families, ${words.entries.length} Words.`);
