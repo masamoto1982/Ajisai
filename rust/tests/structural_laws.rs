@@ -1,7 +1,6 @@
-//! Phase 5 — structural data (vector / tensor) algebraic laws (executable).
+//! Structural data (vector / tensor) algebraic laws (executable).
 //!
-//! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 5: the
-//! vector vocabulary of LANG.COLLECTIONS.LIFT is a free monoid under `CONCAT` with an
+//! The vector vocabulary of LANG.COLLECTIONS.LIFT is a free monoid under `CONCAT` with an
 //! involutive `REVERSE`, and the shape vocabulary of LANG.COLLECTIONS.LIFT reads and
 //! rewrites the index structure — `SHAPE` reads it, `RESHAPE` round-trips
 //! through it, `FLATTEN` collapses it and `DEPTH` measures it. `SORT` (canonical home `ALGO`, LANG.DICTIONARY.RESOLUTION) is idempotent and

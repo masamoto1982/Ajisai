@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 // Generate docs/semantics-table.json: the exhaustive (Word x input-domain
-// tuple) -> outcome-category table (docs/dev/
-// outcome-space-bijection-work-order-2026-09.md, Phase 3; domains were
-// originally chosen by type in docs/dev/competitive-advantage-work-order-2026-08.md
-// Phase 2).
+// tuple) -> outcome-category table. Domains were first chosen by type, then
+// re-chosen by the outcome each one reaches (below).
 //
 // 86 Words in one flat dictionary with no imports means the language's whole
 // input/outcome surface is finite. Excluding the variable/control-arity Words

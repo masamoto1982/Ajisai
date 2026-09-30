@@ -1,8 +1,8 @@
 //! Bridges a `Value::Vector`'s elements back into `Vec<Token>` so the
 //! existing token-based execution engine (`execute_nested_block`, the
 //! contract inference walker, a user Word's stored body) keeps running
-//! unmodified after the CodeBlock/Vector unification
-//! (docs/dev/type-unification-work-order-2026-08.md).
+//! unmodified now that code and data share one Vector domain: any Vector is
+//! executable.
 //!
 //! `EXEC`, `CONTRACT`, `DEF`, and the higher-order words (`MAP`/`FILTER`/
 //! `FOLD`/`SCAN`) all reach a Vector value that needs to run as

@@ -74,54 +74,12 @@ const TYPE_VARIANT_RE = /\b([A-Z][A-Za-z0-9]*::[A-Z][A-Za-z0-9]*)\b/g;
 // words, common in the formalization memo's inline formulas — do not match.
 const FUNC_RE = /\b([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\s*\(/g;
 
-// Confirmed by hand when this gate was added — see the comment on each group
-// for why the finding is not drift. Keyed by `file.md::identifier` so a
-// different file naming the same identifier is still checked.
-const KNOWN_FALSE_POSITIVES = new Set([
-  // cost-discoverability-work-order-2026-08.md §1.5 Step 1.1 is a literal
-  // implementation instruction ("add `cost_label(...)` to
-  // contract_report.rs"), not a claim that the function already exists.
-  // Work-order steps are inherently future-tense; this gate cannot tell that
-  // from a present-tense claim by literal match alone.
-  'cost-discoverability-work-order-2026-08.md::cost_label',
-
-  // outcome-space-bijection-work-order-2026-09.md Phase 1 §1.4 pitfall B
-  // instructs deleting `AbsenceOrigin::EmptySequence` alongside
-  // `NilReason::EmptySequence`, and Phase 1 has since done exactly that
-  // (rust/src/semantic/absence.rs). `NilReason::EmptySequence` itself is not
-  // listed here because its literal text still survives in two rust/src
-  // comments explaining why `''`/`[ ]` are ordinary values now, which keeps
-  // it findable in the haystack even though the variant is gone — a
-  // heuristic accident, not evidence this one needs the same treatment.
-  'outcome-space-bijection-work-order-2026-09.md::AbsenceOrigin::EmptySequence',
-
-  // Phase 2 §2.1 instructs deleting `AjisaiError::Custom` and the two
-  // `From<String>`/`From<&str>` conversions that fed it, and Phase 2 has
-  // since done exactly that (rust/src/error.rs). Same shape as the
-  // EmptySequence entry above: a work-order instruction, now fulfilled.
-  'outcome-space-bijection-work-order-2026-09.md::AjisaiError::Custom',
-
-  // `Token::NilCoalesce` was `OR-NIL`'s token. Both are retired; the last
-  // rust/src comment naming them went with the stale note that described
-  // `OR-NIL` as a live exception to outcome prediction.
-  'outcome-space-bijection-work-order-2026-09.md::Token::NilCoalesce',
-
-  // The interpretation-role plane (`Interpretation`, the word-hint override
-  // table) this memo describes as then-present has since been deleted: every
-  // observation of a value is derived from the value itself. The memo records
-  // the state it was written against; it asked for exactly this removal.
-  'vocabulary-100-work-order-2026-09.md::Interpretation::Timestamp',
-  'vocabulary-100-work-order-2026-09.md::apply_word_hint_override',
-
-  // The computable-real tier (`ExactReal::Computable`, built by `PI` and the
-  // transcendental Words) and the `undecidable` reason its comparisons
-  // projected have since been deleted: the numeric domain is the exact field
-  // `SQRT` builds, where every comparison decides. These memos record the
-  // pitfalls the digest and receipt had to respect while that tier existed.
-  'competitive-advantage-work-order-2026-08.md::ExactReal::Computable',
-  'auditable-kernel-work-order-2026-09.md::ExactReal::Computable',
-  'auditable-kernel-work-order-2026-09.md::NilReason::Undecidable',
-]);
+// Confirmed heuristic false positives, each keyed `file.md::identifier` (so a
+// different memo naming the same identifier is still checked) and commented
+// with why the finding is not drift. Every entry the gate was calibrated with
+// named a memo since retired, so the list is empty; the next confirmed false
+// positive goes here, with its reason.
+const KNOWN_FALSE_POSITIVES = new Set([]);
 
 function parseIndexScope() {
   const indexText = readFileSync(resolve(docsDevDir, 'INDEX.md'), 'utf8');

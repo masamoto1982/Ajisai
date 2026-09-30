@@ -36,11 +36,12 @@ const fail = report.fail;
 // for, not a reflex.
 //
 // Raised to 408 for LANG.RECORDS.STRUCTURE: the vocabulary-100 work order
-// (docs/dev/vocabulary-100-work-order-2026-09.md §2.3) admitted a seventh
-// value domain, the keyed correspondence, and a domain needs its own clause —
-// its structure, its identity, its containment rule — where the earlier
-// phases of that work order fit into existing clauses. Four lines: the
-// heading, the paragraph, and their separators. Net new content again.
+// (retired; its adoption rules are docs/dev/ajisai-minimal-core-identity.md 付録
+// B) admitted a seventh value domain, the keyed correspondence, and a domain
+// needs its own clause — its structure, its identity, its containment rule —
+// where the earlier phases of that work order fit into existing clauses. Four
+// lines: the heading, the paragraph, and their separators. Net new content
+// again.
 const LINE_BUDGET = 408;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
@@ -75,12 +76,12 @@ for (const word of words.entries) {
 // count is a budget rather than a fixed inventory: shrinking is free, growing is
 // a deliberate specification change.
 // Raised from 70 to 100 for the vocabulary-100 work order
-// (docs/dev/vocabulary-100-work-order-2026-09.md): the owner's decision to
+// (docs/dev/ajisai-minimal-core-identity.md 付録 B): the owner's decision to
 // remake the vocabulary as ten concepts and 100 Words, each admitted on one of
 // two grounds the work order states (inexpressible in a total, non-recursive
 // language, or the closure of a small symmetric family). The number is the
-// work order's ceiling, not a target — its §1 forbids padding to reach it —
-// so this is the deliberate raise the comment above asks for.
+// work order's ceiling, not a target — its §1 forbids padding to reach it — so
+// this is the deliberate raise the comment above asks for.
 if (words.entries.length > 100) fail(`${words.entries.length} canonical Words (maximum 100)`);
 
 const headroom = LINE_BUDGET - lines;

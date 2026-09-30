@@ -9,9 +9,8 @@
 //! stayed silent.
 //!
 //! What is charged is not the element count. Three measurements
-//! (`examples/collection_word_calibration`, and
-//! `docs/dev/collection-word-billing-2026-08-13.md` for the tables) rule that
-//! out:
+//! (`examples/collection_word_calibration`, summarized in
+//! `docs/dev/mcp-host-profiles.md`) rule that out:
 //!
 //!  * the same 16,000-element `UNIQUE` costs 0.52 ms or 682 ms depending only
 //!    on how many *distinct* values the data holds — a factor of 1,300 the
@@ -51,7 +50,7 @@ use crate::types::Value;
 
 /// What one `HashMap` lookup costs beyond the leaf-width probe it hashes, in
 /// collection units — the de-quadraticization follow-up's constant
-/// (`docs/dev/collection-word-dequadraticization-2026-08-14.md`).
+/// (`docs/dev/mcp-host-profiles.md`).
 ///
 /// `probe_units` alone undercharged at scale: at 1,000,000 all-distinct
 /// elements (the playground's `materializedElements` ceiling), it charged
@@ -60,8 +59,8 @@ use crate::types::Value;
 /// path — table growth and cache pressure a flat per-leaf charge cannot see.
 /// This adds a second fixed charge to every element hashed (not only the
 /// ones retained), which restores the margin. Reuses `COLLECTION_COPY_UNITS`'s
-/// value for the reason `collection-word-billing-2026-08-13.md` §4 gives it:
-/// a `HashMap` insert is itself a copy of the key into the table.
+/// value for the reason the original billing gave it: a `HashMap` insert is
+/// itself a copy of the key into the table.
 const COLLECTION_HASH_UNITS: u64 = COLLECTION_COPY_UNITS;
 
 /// Charge `units` of collection work and fail — diagnosably, before the loop
@@ -200,8 +199,9 @@ pub(crate) fn charge_comparison_sort_of(interp: &mut Interpreter, value: &Value)
 /// amortized on top of the hash itself, so nothing here scales with how many
 /// distinct values have been found — unlike the linear-scan design this
 /// replaced, where a probe was charged against every distinct value seen so
-/// far and a vocabulary of size `d` cost `n × d` (`docs/dev/collection-word-billing-2026-08-13.md`
-/// priced that; the de-quadraticization follow-up re-priced it here).
+/// far and a vocabulary of size `d` cost `n × d` (the original billing priced
+/// that; the de-quadraticization follow-up re-priced it here —
+/// `docs/dev/mcp-host-profiles.md`).
 ///
 /// An algebraic element's hash is not free either: [`crate::types::exact::algebraic::Algebraic::hash`]
 /// runs a bounded interval refinement to find its representation-independent

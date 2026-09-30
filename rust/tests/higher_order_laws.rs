@@ -1,7 +1,6 @@
-//! Phase 4 — higher-order / control words as recursion schemes (executable laws).
+//! Higher-order / control words as recursion schemes (executable laws).
 //!
-//! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 4: the
-//! control vocabulary of LANG.COLLECTIONS.HIGHER obeys the algebraic laws of its categorical
+//! The control vocabulary of LANG.COLLECTIONS.HIGHER obeys the algebraic laws of its categorical
 //! models — `MAP` is a functor lift, `FOLD` a catamorphism, `FILTER` a
 //! predicate restriction, `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
 //! which a `unknown` (U) guard does not fire (LANG.VALUES.TRUTH).

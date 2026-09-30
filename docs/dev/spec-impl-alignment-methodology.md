@@ -272,7 +272,7 @@ PR を切ること自体が、小さく検証可能な単一目的の diff を�
     `npm run build:wasm` / `build:mcp-wasm` で再生成してコミットし解消
     （Phase 2「検証の盲点」の由来）。
   - `contract_linearity.rs` の調査中に、同じ `SPAWN`/`AWAIT` 面が
-    `docs/dev/ajisai-mathematical-formalization.md` §9-septies では実在しない
+    当時の `ajisai-mathematical-formalization.md`（後に削除）§9-septies では実在しない
     `rust/tests/child_runtime_laws.rs` を根拠に `HOLDS` と記載される一方、
     CI がゲートする `docs/formalization-coverage.json` では正しく
     `"Exploratory"` に分類されている、という Phase 1 型の矛盾が判明した。
@@ -284,7 +284,7 @@ PR を切ること自体が、小さく検証可能な単一目的の diff を�
     退役済みの値域（Record/CodeBlock/子ランタイムハンドル）を前提にした
     §1.1 の値空間定義、文書内でも食い違う conformance 件数（53 / 45、
     実数 293）など、広範囲に陳腐化していることが判明した。CI 非ゲートで
-    検証の当てがなかったため、`docs/dev/ajisai-mathematical-formalization.md`
+    検証の当てがなかったため、`ajisai-mathematical-formalization.md`
     を全文削除し、これを引用していた `rust/tests/*.rs` のコメント・
     `docs/formalization-coverage.json` の `formalization_sections` フィールド
     （CIの必須要件ごと）・関連 `docs/dev/` メモの参照を除去した。

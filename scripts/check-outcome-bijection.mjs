@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// Gate the outcome registry (spec/outcomes.json) from both directions
-// (docs/dev/auditable-kernel-work-order-2026-09.md Phase 2, picking up
-// docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 4):
+// Gate the outcome registry (spec/outcomes.json) from both directions:
 //
 //   soundness    — every outcome docs/semantics-table.json (or a witness in
 //                  this file) actually observes resolves to a registered id.
@@ -9,16 +7,15 @@
 //                  observed occurrence, in the table or in a witness.
 //
 // Neither half alone is satisfiable by a registry that lies in the other
-// direction, so both are checked and neither has an exemption list: an id
-// with no witness is a candidate for deletion, not for an exception (Phase 2
-// pitfall C / Phase 4 pitfall C of the bijection work order).
+// direction, so both are checked and neither has an exemption list: an id with
+// no witness is a candidate for deletion, not for an exception.
 //
-// A witness in spec/outcome-witnesses.json is *executed*, not string-matched
-// (Phase 2 pitfall B / Phase 4 pitfall B): this script spawns the real
-// `ajisai` CLI for every entry and classifies its actual JSON output the same
-// way scripts/generate-semantics-table.mjs classifies a table cell. A
-// witness file that only asserted "this id exists" without running anything
-// would go silently stale the day a raise site's condition changed.
+// A witness in spec/outcome-witnesses.json is *executed*, not string-matched:
+// this script spawns the real `ajisai` CLI for every entry and classifies its
+// actual JSON output the same way scripts/generate-semantics-table.mjs
+// classifies a table cell. A witness file that only asserted "this id exists"
+// without running anything would go silently stale the day a raise site's
+// condition changed.
 //
 // This also settles the question scripts/check-unreachable-contract.mjs's
 // own doc comment declined to answer: it cannot tell a live `errorWhen`

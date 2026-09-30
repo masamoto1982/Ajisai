@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// Runs every golden case against both the native-CLI and WASM-worker
-// backends directly (bypassing the server's own backend auto-selection) and
-// asserts they agree on every stable semantic field
-// (docs/dev/mcp-claude-code-handoff.md §5.4). `runtimeMetrics` and the `mcp`
-// provenance block are excluded: they carry host/engine metadata and
-// execution counters, not language semantics.
+// Runs every golden case against both the native-CLI and WASM-worker backends
+// directly (bypassing the server's own backend auto-selection) and asserts they
+// agree on every stable semantic field. `runtimeMetrics` and the `mcp`
+// provenance block are excluded: they carry host/engine metadata and execution
+// counters, not language semantics.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

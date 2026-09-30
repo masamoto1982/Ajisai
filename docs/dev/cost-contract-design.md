@@ -2,8 +2,8 @@
 
 Status: **non-canonical, design rationale** (`[設計根拠]`). Canonical source
 remains `SPECIFICATION.html` / `spec/`; this document records why the `cost`
-axis of `#:contract` is shaped the way it is, mirroring
-`docs/dev/space-contract-design.md`'s role for the space axis.
+axis of `#:contract` is shaped the way it is. The space axis has no memo of its
+own; its inference is documented in `rust/src/interpreter/word_space.rs`.
 
 ## 1. The three declarable axes
 

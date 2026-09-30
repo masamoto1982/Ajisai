@@ -234,7 +234,7 @@ PR #1611 hit this: while confirming `rust/src/agent/contract_linearity.rs`
 was vestigial (keyed on `SPAWN`/`AWAIT`/`STATUS`/`KILL`/`MONITOR`/
 `SUPERVISE`, none of which are in the current 66-word vocabulary), it
 became clear the same surface is also the subject of an entire section
-(§9-septies) of `docs/dev/ajisai-mathematical-formalization.md`, marked
+(§9-septies) of the since-deleted `ajisai-mathematical-formalization.md` memo, marked
 `HOLDS` and citing `rust/tests/child_runtime_laws.rs` — a file that does
 not exist — while the CI-gated `docs/formalization-coverage.json`
 correctly classifies that surface as `"Exploratory"`. A real Phase 1

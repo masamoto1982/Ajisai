@@ -1,10 +1,11 @@
 //! Search Words: `INDEX-OF`, `MEMBER` and `BSEARCH` (LANG.VALUES.VECTOR).
 //!
 //! `MEMBER` and `BSEARCH` answer a question `INDEX-OF` already answers one
-//! probe at a time, and both earn their slot on cost (docs/dev/vocabulary-100-work-order-2026-09.md
-//! §1): `MEMBER` indexes the vector once instead of scanning it once per probe,
-//! and `BSEARCH` halves a range until it is empty — a loop whose length depends
-//! on the data, which a language with no unbounded loop cannot write at all.
+//! probe at a time, and both earn their slot on cost
+//! (docs/dev/ajisai-minimal-core-identity.md 付録 B): `MEMBER` indexes the vector
+//! once instead of scanning it once per probe, and `BSEARCH` halves a range
+//! until it is empty — a loop whose length depends on the data, which a
+//! language with no unbounded loop cannot write at all.
 
 use super::sort::compare_for_sort;
 use crate::error::{AjisaiError, NilReason, Result};

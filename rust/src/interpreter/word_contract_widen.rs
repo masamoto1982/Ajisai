@@ -12,21 +12,19 @@
 //!
 //! # A Symbol inside `[ ... ]` may or may not be a call
 //!
-//! Before the CodeBlock/Vector unification (`docs/dev/type-unification-
-//! work-order-2026-08.md`), bracket spelling told data from code directly:
-//! `[ ... ]` never ran, `{ ... }` always could. `[ ]` is now the only bracket
-//! code is written in, used for data as well (and `{ ... }` spells a Record,
-//! which is never code), so the question this module
+//! Before code and data were unified into one Vector domain, bracket spelling
+//! told data from code directly: `[ ... ]` never ran, `{ ... }` always could.
+//! `[ ]` is now the only bracket code is written in, used for data as well (and
+//! `{ ... }` spells a Record, which is never code), so the question this module
 //! answers — "does the Symbol at this position ever actually run?" — can no
-//! longer be read off which character opened the group. It is still
-//! answerable, from the fixed-position-operand convention the higher-order
-//! Words share: a `[ ... ]` immediately followed by one of
-//! `MAP`/`FILTER`/`FOLD`/`SCAN` (or `EXEC`/`CONTRACT`) *is* that Word's
-//! code operand, and that Word will run it. Any other `[ ... ]` is
-//! inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]`, PRINT never
-//! resolves or runs, so widening the accumulator with it would be a false
-//! `error` — a body that never prints inferred `effectful` against a correct
-//! `pure` declaration.
+//! longer be read off which character opened the group. It is still answerable,
+//! from the fixed-position-operand convention the higher-order Words share: a
+//! `[ ... ]` immediately followed by one of `MAP`/`FILTER`/`FOLD`/`SCAN` (or
+//! `EXEC`/`CONTRACT`) *is* that Word's code operand, and that Word will run it.
+//! Any other `[ ... ]` is inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT'
+//! 'b' ]`, PRINT never resolves or runs, so widening the accumulator with it
+//! would be a false `error` — a body that never prints inferred `effectful`
+//! against a correct `pure` declaration.
 //!
 //! # Classification is top-down, not per-bracket
 //!

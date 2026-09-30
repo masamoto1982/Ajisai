@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Projects the Rust NilReason and ErrorCategory enums from spec/outcomes.json
-// (docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 1) and fails if
-// either side names something the other does not, or if spec/words.json's
-// projection.reason / errorWhen values point outside the registry.
+// and fails if either side names something the other does not, or if
+// spec/words.json's projection.reason / errorWhen values point outside the
+// registry.
 //
 // This is the same shape as check-runtime-metadata-source.mjs: the canonical
 // source is the JSON, the Rust enum is the projection, and drift between them
@@ -13,12 +13,11 @@
 // makes for BuiltinSpec.
 //
 // `ErrorCategory::Declared(condition) => condition` is deliberately excluded
-// from the extracted "structural" set: it carries no literal string of its
-// own (its whole point is to forward a words.json errorWhen string verbatim),
-// so `extractProtocolStrings`'s regex never matches its arm in the first
-// place. `ErrorCategory::Custom` — the escape hatch a registry describing the
-// *closed* outcome space had no room for — is gone as of Phase 2
-// (outcome-space-bijection-work-order-2026-09.md): `AjisaiError::Custom` and
+// from the extracted "structural" set: it carries no literal string of its own
+// (its whole point is to forward a words.json errorWhen string verbatim), so
+// `extractProtocolStrings`'s regex never matches its arm in the first place.
+// `ErrorCategory::Custom` — the escape hatch a registry describing the
+// *closed* outcome space had no room for — is gone: `AjisaiError::Custom` and
 // the `From<String>`/`From<&str>` conversions that fed it no longer exist, so
 // every raise site names a declared condition or a fixed structural variant.
 
@@ -67,29 +66,28 @@ if (errorCategoryArms.size === 0) {
 }
 // `Declared`'s arm never matches the extractor's regex (it forwards a string
 // rather than spelling one literally), so every arm this extraction finds is
-// already a fixed structural variant — no filtering needed post-Phase 2.
+// already a fixed structural variant — no filtering needed.
 const rustStructuralErrorCategories = new Set(errorCategoryArms.values());
 
-// `ErrorCategory::DivisionByZero` is a named exclusion, not an exemption
-// list entry (outcome-space-bijection-work-order-2026-09.md Phase 2 pitfall
-// C rules out the latter): investigation found this one Rust variant never
-// classifies a program *outcome* at all. `AjisaiError::DivisionByZero` is an
-// internal fast-path control-flow signal inside DIV's scalar arithmetic
-// that is always caught and re-projected to the reasoned NIL
-// `nil:divisionByZero` (a real, witnessed NilReason — untouched by this
-// exclusion) before a Report is built, so `status:error` with this category
-// is unreachable by construction. The variant survives in Rust for a
-// different, legitimate job: `execution_loop.rs`'s
-// `error_category_for_nil_reason` reuses it to tag the diagnostic trace
-// (`errorFlowTrace[].diagnosis`) of that *successful* zero-divisor NIL with
-// evidence, a `CauseClass::Domain` classification and tailored next-checks.
-// That is a diagnosis-layer concern, not an outcome-space one — the same
-// distinction `Declared`'s structural exclusion above already draws, just
-// for a variant whose name happens to collide with a real outcome category
-// instead of forwarding an arbitrary string. `spec/outcomes.json`'s
-// `errorCategories` therefore rightly has no `divisionByZero` entry, and
-// this is the one arm the registry-vs-Rust structural comparison must not
-// require one for.
+// `ErrorCategory::DivisionByZero` is a named exclusion, not an exemption list
+// entry (the registry admits none — an unwitnessed id is deleted, not
+// excused): investigation found this one Rust variant never classifies a
+// program *outcome* at all. `AjisaiError::DivisionByZero` is an internal
+// fast-path control-flow signal inside DIV's scalar arithmetic that is always
+// caught and re-projected to the reasoned NIL `nil:divisionByZero` (a real,
+// witnessed NilReason — untouched by this exclusion) before a Report is built,
+// so `status:error` with this category is unreachable by construction. The
+// variant survives in Rust for a different, legitimate job:
+// `execution_loop.rs`'s `error_category_for_nil_reason` reuses it to tag the
+// diagnostic trace (`errorFlowTrace[].diagnosis`) of that *successful*
+// zero-divisor NIL with evidence, a `CauseClass::Domain` classification and
+// tailored next-checks. That is a diagnosis-layer concern, not an
+// outcome-space one — the same distinction `Declared`'s structural exclusion
+// above already draws, just for a variant whose name happens to collide with a
+// real outcome category instead of forwarding an arbitrary string.
+// `spec/outcomes.json`'s `errorCategories` therefore rightly has no
+// `divisionByZero` entry, and this is the one arm the registry-vs-Rust
+// structural comparison must not require one for.
 rustStructuralErrorCategories.delete('divisionByZero');
 
 // ---------------------------------------------------------------------------

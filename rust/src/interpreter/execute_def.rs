@@ -60,13 +60,12 @@ pub(crate) fn set_word_description(
 /// DEF is strictly two positional arguments: `[ body ] 'NAME' DEF`.
 ///
 /// The top of the stack is the name (a string), and directly below it is the
-/// body — any Vector, since the CodeBlock/Vector unification
-/// (docs/dev/type-unification-work-order-2026-08.md) — usually written as a
-/// literal `[ ]` right there, but not required to be: a Vector built,
-/// stored, or passed through any other means defines just as well. No value
-/// types are inspected to *guess* roles — position alone determines them —
-/// which is why a leftover string-like value on the stack can no longer
-/// shift argument interpretation.
+/// body — any Vector, since code and data share one Vector domain — usually
+/// written as a literal `[ ]` right there, but not required to be: a Vector
+/// built, stored, or passed through any other means defines just as well. No
+/// value types are inspected to *guess* roles — position alone determines them
+/// — which is why a leftover string-like value on the stack can no longer shift
+/// argument interpretation.
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::stack_underflow());

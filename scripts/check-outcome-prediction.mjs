@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-// Predicted-vs-actual gate for `ajisai agent outcomes` (Phase 5,
-// docs/dev/auditable-kernel-work-order-2026-09.md §5), pitfall D: "the
-// predictor doesn't run the program, but verification does." Given a source
-// and its actual, executed outcome, this predicts the source's outcome set
-// *without* running it and checks that the prediction contains the real
-// outcome. A prediction that ever fails to is a predictor that lies — the
-// one failure this gate exists to catch (pitfall A: over-approximation is
+// Predicted-vs-actual gate for `ajisai agent outcomes`: the predictor doesn't
+// run the program, but verification does. Given a source and its actual,
+// executed outcome, this predicts the source's outcome set *without* running
+// it and checks that the prediction contains the real outcome. A prediction
+// that ever fails to is a predictor that lies — the one failure this gate
+// exists to catch (its messages call it pitfall A: over-approximation is
 // allowed, omission is not).
 //
 // It draws those (source, observed outcome) pairs from three places:

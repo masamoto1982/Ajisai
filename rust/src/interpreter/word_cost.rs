@@ -1,5 +1,4 @@
-//! Static time-cost inference (Phase 5 of `docs/dev/
-//! competitive-advantage-work-order-2026-08.md`; design rationale in
+//! Static time-cost inference (design rationale in
 //! `docs/dev/cost-contract-design.md`).
 //!
 //! Mirrors `word_space.rs`'s shape for a different resource: instead of

@@ -6,10 +6,10 @@
 //!
 //! `docs/dev/mcp-host-profiles.md` is the live comparison against the MCP
 //! profile (`LOCAL_AGENT_RUNTIME_LIMITS`, `rust/src/agent/api.rs`); the two
-//! disagree on purpose (LANG.MACHINE.LIMITS: limits are a host safety control, not
-//! language semantics). `docs/dev/host-profile-derivation-2026-08-14.md` is
-//! the record of how the values below were derived (or, for three of them,
-//! deliberately *not* derived — see each constant's own doc comment).
+//! disagree on purpose (LANG.MACHINE.LIMITS: limits are a host safety control,
+//! not language semantics). It also records how the values below were derived
+//! (or, for three of them, deliberately *not* derived — see each constant's own
+//! doc comment).
 
 use super::RuntimeLimits;
 /// Default cap on elements a single generative built-in (`RANGE`, `FILL`,
@@ -23,10 +23,9 @@ use super::RuntimeLimits;
 /// derived from [`DEFAULT_HOST_TIME_BUDGET_MS`]: it bounds the size of one
 /// value, not accumulated time, so a time budget has nothing to say about it.
 /// The right basis would be something like "elements a browser can hold and a
-/// human can still make sense of on screen" — nobody has measured that yet
-/// (`docs/dev/host-profile-derivation-handoff.md` §6), so this stays at its
-/// prior value. It was re-checked against the 2026-08-14 re-derivation of
-/// [`DEFAULT_MAX_COLLECTION_WORK`]: one linear pass over a
+/// human can still make sense of on screen" — nobody has measured that yet, so
+/// this stays at its prior value. It was re-checked against the 2026-08-14
+/// re-derivation of [`DEFAULT_MAX_COLLECTION_WORK`]: one linear pass over a
 /// `DEFAULT_MAX_MATERIALIZED_ELEMENTS`-sized vector still costs well under 2%
 /// of the new budget, so lowering the work budget did not strand this ceiling
 /// out of reach (`profile_liveness_tests`).
@@ -36,16 +35,14 @@ pub const DEFAULT_MAX_MATERIALIZED_ELEMENTS: usize = 1_000_000;
 /// `execute`, checked before tokenization allocates per-character buffers.
 ///
 /// Was 64 MiB — deliberately generous, but by nobody's measurement: not a
-/// program-size observation, just a round number that happened to be far
-/// above the perf-benchmark's largest chain (~1.77 MB) without saying why
-/// *that* margin was the right one
-/// (`docs/dev/host-profile-derivation-handoff.md` §4, item 3). 16 MiB keeps
-/// the same generosity in kind — about 9x the largest known legitimate
-/// machine-generated program, so nothing that has ever actually been written
-/// against Ajisai gets close to it — while being an amount someone could
-/// state a reason for instead of a bare "large enough". Still a judgment
-/// call, not a measurement of what a human pastes into a textarea; nobody has
-/// done that study either.
+/// program-size observation, just a round number that happened to be far above
+/// the perf-benchmark's largest chain (~1.77 MB) without saying why *that*
+/// margin was the right one. 16 MiB keeps the same generosity in kind — about
+/// 9x the largest known legitimate machine-generated program, so nothing that
+/// has ever actually been written against Ajisai gets close to it — while being
+/// an amount someone could state a reason for instead of a bare "large enough".
+/// Still a judgment call, not a measurement of what a human pastes into a
+/// textarea; nobody has done that study either.
 ///
 /// Memory-constrained hosts — **the WASM playground in particular**, which is
 /// the host carrying this value and the one with the least headroom — should
@@ -65,11 +62,11 @@ pub const DEFAULT_MAX_NUMERIC_LITERAL_DIGITS: usize = 4_096;
 
 /// How long a host with nobody waiting on the other end of a call — a user in
 /// their own tab or terminal, free to close it or hit abort at any point —
-/// should let a computation run before answering with a named reason instead
-/// of continuing silently. The single dial every ceiling below is derived
-/// from, per `docs/dev/host-profile-derivation-handoff.md` §4 item 1: not a
-/// value to tune per-ceiling, a budget of *time* that gets turned into a
-/// budget of *units* once per meter, at that meter's measured rate.
+/// should let a computation run before answering with a named reason instead of
+/// continuing silently. The single dial every ceiling below is derived from,
+/// per `docs/dev/mcp-host-profiles.md`: not a value to tune per-ceiling, a
+/// budget of *time* that gets turned into a budget of *units* once per meter,
+/// at that meter's measured rate.
 ///
 /// This is a **judgment call, not a measurement** — say so plainly, per that
 /// document's §6 requirement, because nobody has usage data on how long an
@@ -96,7 +93,7 @@ pub const DEFAULT_HOST_TIME_BUDGET_MS: u64 = 30_000;
 /// is the same compiled module the browser playground ships — see
 /// `scripts/wasm-profile-calibration.mjs`) — the slowest measured rate among
 /// the paths only `numericWork` bounds, the same role `dense tensor lanes`
-/// plays in `docs/dev/collection-word-billing-2026-08-13.md` §6.
+/// plays in `rust/examples/collection_word_calibration.rs`.
 ///
 /// **Not measured on native.** The first attempt at this derivation
 /// (2026-08-14) calibrated all three floor rates on `cargo run --release`
@@ -106,8 +103,8 @@ pub const DEFAULT_HOST_TIME_BUDGET_MS: u64 = 30_000;
 /// 0.66x for `executionSteps` — a ratio that swings from "twice as fast" to
 /// "a third slower" depending on the meter, so a native calibration cannot
 /// make three ceilings bound equal time on the host they are actually
-/// applied to
-/// (`docs/dev/host-profile-derivation-2026-08-14.md` §10 has the numbers).
+/// applied to (`scripts/wasm-profile-calibration.mjs` and
+/// `rust/examples/work_meter_calibration.rs` re-measure both sides).
 /// `rust/examples/work_meter_calibration.rs` remains useful for its own
 /// purpose — the native floor `ajisai run`/native `ajisai agent` actually
 /// runs under, and the ratio work between `numericWork` and `collectionWork`
@@ -149,18 +146,16 @@ const COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 47_162;
 /// never more — the same safety direction
 /// `LOCAL_AGENT_RUNTIME_LIMITS.max_numeric_work` uses for the MCP profile.
 ///
-/// This number moved twice on 2026-08-14, for two different reasons, and
-/// both are worth keeping straight. First, from the pre-derivation
-/// 1,000,000,000 (never itself derived — `docs/dev/
-/// host-profile-derivation-handoff.md` §3.2 called it "a post-hoc
-/// interpretation, not a derived value") down to 139,800,000, calibrated on
-/// **native** release. Then, once review found native was not a valid proxy
-/// for the WASM engine every ceiling here actually governs, up to the value
-/// computed here — WASM's `numericWork` floor measured faster than native's
-/// on this container. Neither number was wrong to compute; the second
-/// calibration was wrong to apply to the playground. Re-measure with
-/// `scripts/wasm-profile-calibration.mjs` on a different deployment target
-/// or browser engine rather than adjusting this by hand.
+/// This number moved twice on 2026-08-14, for two different reasons, and both
+/// are worth keeping straight. First, from the pre-derivation 1,000,000,000
+/// (never itself derived — "a post-hoc interpretation, not a derived value")
+/// down to 139,800,000, calibrated on **native** release. Then, once review
+/// found native was not a valid proxy for the WASM engine every ceiling here
+/// actually governs, up to the value computed here — WASM's `numericWork` floor
+/// measured faster than native's on this container. Neither number was wrong to
+/// compute; the second calibration was wrong to apply to the playground.
+/// Re-measure with `scripts/wasm-profile-calibration.mjs` on a different
+/// deployment target or browser engine rather than adjusting this by hand.
 pub const DEFAULT_MAX_NUMERIC_WORK: u64 =
     DEFAULT_HOST_TIME_BUDGET_MS * NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS;
 
@@ -191,17 +186,17 @@ const EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS: u64 = 406;
 /// value, mirroring the existing
 /// [`super::interpreter_core::MAX_MATERIALIZED_ELEMENTS`] pattern.
 ///
-/// Derived the same way as the two work budgets: [`DEFAULT_HOST_TIME_BUDGET_MS`]
-/// × [`EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS`]. Previously 100,000, shared
+/// Derived the same way as the two work budgets:
+/// [`DEFAULT_HOST_TIME_BUDGET_MS`] ×
+/// [`EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS`]. Previously 100,000, shared
 /// verbatim with the MCP profile's own `executionSteps` — not because the two
 /// hosts were declared to agree, but because nobody had threaded a
-/// playground-specific value through
-/// (`docs/dev/host-profile-derivation-handoff.md` §4 item 3: "a long loop of
-/// cheap Words hits the same wall on its own tab as it does through MCP").
-/// The MCP profile still passes its own `executionSteps EQ 100_000` explicitly
-/// at every call site (`tools/mcp-server/index.js` `LIMITS.executionSteps`,
-/// threaded through `--step-limit` / `stepLimit`), so raising this default
-/// only widens the playground and native-CLI budget; MCP's is untouched.
+/// playground-specific value through ("a long loop of cheap Words hits the same
+/// wall on its own tab as it does through MCP"). The MCP profile still passes
+/// its own `executionSteps EQ 100_000` explicitly at every call site
+/// (`tools/mcp-server/index.js` `LIMITS.executionSteps`, threaded through
+/// `--step-limit` / `stepLimit`), so raising this default only widens the
+/// playground and native-CLI budget; MCP's is untouched.
 ///
 /// Like the two work budgets, this was first calibrated on native and moved
 /// again once that was found not to be a valid proxy for WASM (see
@@ -227,8 +222,8 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize =
 /// budget**, and not a fixed ratio to it at all. It used to be defined as
 /// `2 MUL DEFAULT_MAX_NUMERIC_WORK`, a relationship that was itself derived
 /// once — the two floor rates measured 14,465 and 30,800 units/ms on the
-/// reference container in `docs/dev/collection-word-billing-2026-08-13.md`
-/// §6, a ratio of ~2.1 that the `2×` constant captured — but a ratio between
+/// reference container (`rust/examples/collection_word_calibration.rs`), a
+/// ratio of ~2.1 that the `2×` constant captured — but a ratio between
 /// two independently-measured rates is not a rule, and it moved: the
 /// 2026-08-14 de-quadraticization follow-up predicted it might once the scan
 /// family stopped being a linear scan, and the same day's `Fraction::hash`
@@ -254,43 +249,41 @@ pub const DEFAULT_MAX_COLLECTION_WORK: u64 =
 /// constant) charges 122,321,640 units — a fixed cost, deterministic from the
 /// pricing formula and independent of which host measured the floor rate —
 /// which is ~39% of the current 311,190,000 budget (was ~87% under the
-/// native-calibrated 139,800,000 this replaced; still comparable to the
-/// margin `bigintBits` runs at under the MCP profile, 86%, because an N-limb
-/// integer costs about N²/4 limb-operations by construction and the two
-/// ceilings are the closest pair for exactly that reason). Left unchanged
-/// because it still fires by name with the numeric-work ceiling as backstop,
-/// not because a size-based criterion for it has been written down
-/// (`host-profile-derivation-handoff.md` §6 lists this honestly as
-/// unmeasured).
+/// native-calibrated 139,800,000 this replaced; still comparable to the margin
+/// `bigintBits` runs at under the MCP profile, 86%, because an N-limb integer
+/// costs about N²/4 limb-operations by construction and the two ceilings are
+/// the closest pair for exactly that reason). Left unchanged because it still
+/// fires by name with the numeric-work ceiling as backstop, not because a
+/// size-based criterion for it has been written down: it is honestly
+/// unmeasured.
 pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
 
 /// Default cap on the number of algebraic terms a single continued-fraction /
 /// polynomial value may carry.
 ///
 /// Lowered from 100,000 on 2026-08-14. That value predates
-/// [`DEFAULT_MAX_NUMERIC_WORK`]'s re-derivation and stopped being live once
-/// the numeric-work budget shrank to match this container's measured floor
-/// rate (`docs/dev/host-profile-derivation-handoff.md` §4): the doubling
-/// cascade that first exceeds 100,000 terms (131,072 terms, at factor 17)
-/// charges 520,124,416 units — over the 311,190,000 budget this constant is
-/// checked against now, and further still over the 139,800,000 the
-/// native-calibrated first attempt would have shipped — so `numericWork`
-/// would always answer first and the term ceiling would never fire in its
-/// life, exactly the failure `profile_liveness_tests` exists to catch (see
-/// the module-level docs on that file, and the identical MCP-side history:
+/// [`DEFAULT_MAX_NUMERIC_WORK`]'s re-derivation and stopped being live once the
+/// numeric-work budget shrank to match this container's measured floor rate:
+/// the doubling cascade that first exceeds 100,000 terms (131,072 terms, at
+/// factor 17) charges 520,124,416 units — over the 311,190,000 budget this
+/// constant is checked against now, and further still over the 139,800,000 the
+/// native-calibrated first attempt would have shipped — so `numericWork` would
+/// always answer first and the term ceiling would never fire in its life,
+/// exactly the failure `profile_liveness_tests` exists to catch (see the
+/// module-level docs on that file, and the identical MCP-side history:
 /// `max_algebraic_terms` was 4,096 there for the same reason before being
-/// lowered to 512). 10,000 is chosen the same way 512 was for the MCP
-/// profile: the cascade that first crosses it (16,384 terms, at factor 14)
-/// charges 50,356,224 units — a fixed, host-independent cost — ~16% of the
-/// current work budget (was ~36% under the smaller native-calibrated one;
-/// either way comfortably reachable with room to spare, not cut close the
-/// way `bigintBits` is). Left at 10,000 rather than raised back toward
-/// 100,000 now that the budget has more room: the value was never meant to
-/// track the budget's exact size, only to stay live under it, and chasing a
-/// bigger number each time the budget moves is churn without a principle
-/// behind it. Like `DEFAULT_MAX_BIGINT_BITS`, this is not itself derived
-/// from a stated size-legibility criterion; it is chosen to be *live*, which
-/// is a weaker and more urgent property than being *right*.
+/// lowered to 512). 10,000 is chosen the same way 512 was for the MCP profile:
+/// the cascade that first crosses it (16,384 terms, at factor 14) charges
+/// 50,356,224 units — a fixed, host-independent cost — ~16% of the current work
+/// budget (was ~36% under the smaller native-calibrated one; either way
+/// comfortably reachable with room to spare, not cut close the way `bigintBits`
+/// is). Left at 10,000 rather than raised back toward 100,000 now that the
+/// budget has more room: the value was never meant to track the budget's exact
+/// size, only to stay live under it, and chasing a bigger number each time the
+/// budget moves is churn without a principle behind it. Like
+/// `DEFAULT_MAX_BIGINT_BITS`, this is not itself derived from a stated
+/// size-legibility criterion; it is chosen to be *live*, which is a weaker and
+/// more urgent property than being *right*.
 pub const DEFAULT_MAX_ALGEBRAIC_TERMS: usize = 10_000;
 
 /// Default cap on how many containers deep one value may nest

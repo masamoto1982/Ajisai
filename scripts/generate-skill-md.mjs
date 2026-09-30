@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// Generate SKILL.md — the thin "read this, then write Ajisai" protocol for
-// AI agents — from machine sources, never by hand (docs/dev/
-// ai-first-competitive-upgrade-instructions.md, Phase 2).
+// Generate SKILL.md — the thin "read this, then write Ajisai" protocol for AI
+// agents — from machine sources, never by hand.
 //
 // Inputs:
 //   - docs/word-manifest.json            (the surface inventory gate: §9)

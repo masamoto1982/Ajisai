@@ -20,13 +20,12 @@ const repairCorpus = readEval("./eval/repair-cases.json");
  * entries, so that retiring another form extended the gate for free. There are
  * no such entries any more: `{`, `}` and a bare `|` were freed into ordinary
  * name characters along with `(` and `)`, and the manifest carries only live
- * forms (`docs/dev/source-character-liberation-2026-09.md`). The gate's reason
- * is untouched by that — `{ [ 1 ] ADD } 'INC' DEF` still does not define
- * anything, because `{` resolves to no Word — so what changed is only which
- * layer refuses it, the dictionary rather than the lexer. The pair is named
- * here because it is now a closed historical fact rather than a registry that
- * can grow: code blocks and vectors were unified onto `[` and `]`, and nothing
- * is queued to be retired behind them.
+ * forms. The gate's reason is untouched by that — `{ [ 1 ] ADD } 'INC' DEF`
+ * still does not define anything, because `{` resolves to no Word — so what
+ * changed is only which layer refuses it, the dictionary rather than the lexer.
+ * The pair is named here because it is now a closed historical fact rather than
+ * a registry that can grow: code blocks and vectors were unified onto `[` and
+ * `]`, and nothing is queued to be retired behind them.
  *
  * Two deliberate narrowings, each of which a first draft of this gate got
  * wrong:

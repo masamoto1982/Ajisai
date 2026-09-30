@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// Every classification field spec/words.schema.json declares must be
-// reachable from outside spec/ itself — read by a generator, or by the Rust
-// interpreter, or by the TypeScript GUI/runtime. Declaring one that nothing
-// reads by name is a contract the registry still promises for a concept the
-// language no longer has: `interpretationRole` was exactly this (see
-// docs/dev/ajisai-single-axis-proposal-2026-08.md §1.1) — a field required by
+// Every classification field spec/words.schema.json declares must be reachable
+// from outside spec/ itself — read by a generator, or by the Rust interpreter,
+// or by the TypeScript GUI/runtime. Declaring one that nothing reads by name
+// is a contract the registry still promises for a concept the language no
+// longer has: `interpretationRole` was exactly this — a field required by
 // spec/words.schema.json, populated on all 65 entries, read by nothing.
 //
 // This check is a name-reachability heuristic, not a semantic proof: a field
@@ -30,8 +29,7 @@
 // different method: it executes a witness for every declared NIL reason and
 // error category (from the exhaustive table or spec/outcome-witnesses.json)
 // and fails if any has none, which tells a live condition from a dead one by
-// running it rather than by matching its name
-// (docs/dev/auditable-kernel-work-order-2026-09.md Phase 2).
+// running it rather than by matching its name.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readJson, repoRoot, reporter, walk } from './lib/common.mjs';

@@ -150,10 +150,9 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
 /// definition as the program that would define it once more.
 ///
 /// The body is wrapped in `[ ]`, the only bracket a program's code is written
-/// in (`docs/dev/type-unification-work-order-2026-08.md`): `DEF` takes any
-/// Vector as its body, and a bare name inside one is a Symbol — data until
-/// something executes it — so a `[ ]`-wrapped body round-trips exactly like
-/// the one that defined the word, whatever it called.
+/// in: `DEF` takes any Vector as its body, and a bare name inside one is a
+/// Symbol — data until something executes it — so a `[ ]`-wrapped body
+/// round-trips exactly like the one that defined the word, whatever it called.
 ///
 /// A multi-line body keeps its line structure. Where the break falls below the
 /// body's own level it is presentation rather than meaning — but it is the

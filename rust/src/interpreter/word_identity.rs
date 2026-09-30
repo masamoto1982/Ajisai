@@ -39,10 +39,9 @@ pub(crate) fn content_digest(bytes: &[u8]) -> String {
 /// `body_content_key` uses (`N`/`n` for a number, parsed or raw; `S` for a
 /// string; `Y` for a canonicalized symbol; `[`/`]`/`{`/`}`/`^`/`|`/`\n` for
 /// structural tokens). Extracted so `agent::observation_digest`'s `CodeBlock`
-/// encoding (Phase 1, competitive-advantage-work-order-2026-08.md) can reuse
-/// the exact same byte assignment instead of a second copy silently drifting
-/// from this one. Pulling the `match` out of its loop changes no output: the
-/// caller still writes precisely the bytes it wrote inline.
+/// encoding can reuse the exact same byte assignment instead of a second copy
+/// silently drifting from this one. Pulling the `match` out of its loop changes
+/// no output: the caller still writes precisely the bytes it wrote inline.
 pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
     match tok {
         Token::Number(literal) => match literal.value() {

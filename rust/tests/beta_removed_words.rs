@@ -57,8 +57,8 @@ async fn removed_beta_words_are_unknown_at_runtime() {
 /// VALUES.VECTOR), so the deleted entry cannot reappear by being constructed
 /// as data rather than written directly as source (`REFLECT`, which used to
 /// be the dedicated crossing for this, is gone along with the CodeBlock/
-/// Vector split it crossed — docs/dev/type-unification-work-order-2026-08.md;
-/// any Vector is executable now, so there is no separate boundary to test).
+/// Vector split it crossed: code and data share one Vector domain and any
+/// Vector is executable, so there is no separate boundary to test).
 #[tokio::test]
 async fn removed_beta_words_are_unknown_through_a_constructed_vector() {
     for word in &removed_words() {

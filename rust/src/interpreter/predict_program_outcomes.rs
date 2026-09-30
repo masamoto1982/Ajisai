@@ -1,6 +1,5 @@
-//! Static outcome prediction for a whole program (Phase 5,
-//! `docs/dev/auditable-kernel-work-order-2026-09.md` §5): the finite set of
-//! outcome ids a program could produce, computed without executing it.
+//! Static outcome prediction for a whole program: the finite set of outcome
+//! ids a program could produce, computed without executing it.
 //!
 //! Built entirely on `word_outcome_vocabulary`'s per-word walk (a program's
 //! top-level body is treated exactly like one more word body to walk) plus a

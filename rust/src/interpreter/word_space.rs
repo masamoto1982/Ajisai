@@ -1,5 +1,5 @@
-//! Static space-growth inference (Phase 2.2 of the structural-memory-safety
-//! roadmap; see `docs/dev/space-contract-design.md`).
+//! Static space-growth inference: the space axis of `#:contract`
+//! (`docs/dev/cost-contract-design.md` sets out the declarable axes).
 //!
 //! Assigns every built-in a coarse growth class and infers a user word's class
 //! by joining its body's *applied* dependency contributions during the same
