@@ -247,7 +247,7 @@ export const createEditor = (
         // run something hid how to run something. Pinned to the bottom edge
         // the sheet reads from the top down into the palette instead, and the
         // corner buttons it would otherwise cover are themselves hidden while
-        // the placeholder shows (`:placeholder-shown` in components.css).
+        // the placeholder shows (`:placeholder-shown` in playground.css).
         //
         // Once something *is* written those corner buttons are live, and the
         // bottom edge is where Format sits — so from the first character on,
