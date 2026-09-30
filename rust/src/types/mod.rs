@@ -48,32 +48,6 @@ use crate::types::exact::ExactReal;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-/// Semantic interpretation role assigned to a stack value. This is the
-/// meaning the runtime attaches to a value, not a formatting switch:
-/// rendering for humans and AI is derived from (data, role).
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub enum Interpretation {
-    /// Role not yet assigned. Rendered structurally with no heuristic
-    /// re-guessing — the runtime never infers meaning at render time.
-    #[default]
-    Unassigned,
-    /// A plain exact-real number.
-    RawNumber,
-    /// A 2-element vector interpreted as a closed interval.
-    Interval,
-    /// A scalar interpreted as a truth value.
-    TruthValue,
-    /// An integer interpreted as a timestamp.
-    Timestamp,
-    /// A diagnostic absence value.
-    Nil,
-    /// Canonical AI-readable continued-fraction serialization
-    /// (LANG.VALUES.EXACT, LANG.OBSERVATION.PROTOCOL): the flat classical-notation form
-    /// `( a0; a1, a2 )`, with a trailing `…` truncation marker for
-    /// lazy irrationals. Round-trip-safe machine serialization role.
-    ContinuedFraction,
-}
-
 #[derive(Debug, Clone)]
 pub enum ValueData {
     /// A definite logical truth value, `true` or `false`
@@ -82,8 +56,8 @@ pub enum ValueData {
     /// so `TRUE 1 EQ` is false.
     Boolean(bool),
     Scalar(Fraction),
-    /// An exact real value backed by a continued-fraction representation
-    /// (e.g. AlgebraicSqrt or a Gosper transform). Constructed only by
+    /// An exact real value outside the rationals: an algebraic normal form
+    /// over `SQRT` (`Σ cᵢ√mᵢ`). Constructed only by
     /// `Value::from_exact_real`; use `as_scalar()` for the rational fast path.
     ExactScalar(ExactReal),
     Vector(Arc<Vec<Value>>),
@@ -101,17 +75,8 @@ pub enum ValueData {
     /// A String: a sequence of Unicode scalar values, and one of the six
     /// disjoint domains of LANG.VALUES.DISJOINT.
     ///
-    /// String used to be encoded as a `Vector` of codepoint `Scalar`s carrying
-    /// `Interpretation::Text`, which made the domain a property of a
-    /// presentation field rather than of the value. Two consequences were
-    /// observable from the language: `'A' [ 65 ] EQ` answered TRUE, because
-    /// the encodings were identical and only the hint differed; and
-    /// `is_string_value` had to *guess* stringhood by testing whether every
-    /// element happened to be a printable codepoint, which is exactly the
-    /// render-time re-guessing `Interpretation` promises never to do.
-    ///
-    /// Holding the content directly settles both: the domain is the tag, and
-    /// nothing has to be inferred from the elements.
+    /// Holding the content directly makes the domain the tag: nothing has to
+    /// be inferred from the elements, and `'A' [ 65 ] EQ` is false.
     Text(Arc<str>),
     /// A Record: an insertion-ordered keyed correspondence, the seventh
     /// disjoint domain (LANG.RECORDS.STRUCTURE). It is not a Vector — no
@@ -230,8 +195,73 @@ impl std::hash::Hash for ValueData {
 #[derive(Debug, Clone)]
 pub struct Value {
     pub data: ValueData,
-    pub hint: Interpretation,
     pub absence: Option<AbsenceMetadata>,
+    /// How many containers deep this value nests, computed once when the
+    /// value is built (`Value::new`). Private so that no value can be built
+    /// around it: every construction goes through `Value::new`, and every
+    /// in-place change of `data` recomputes it (`value_children.rs`).
+    nesting: u32,
+}
+
+impl Value {
+    /// A value from its parts. The one constructor: every other one goes
+    /// through here, so a value's nesting is always the one its data has.
+    #[inline]
+    pub fn new(data: ValueData, absence: Option<AbsenceMetadata>) -> Self {
+        let nesting = data.nesting();
+        Self {
+            data,
+            absence,
+            nesting,
+        }
+    }
+
+    /// How many containers deep this value nests: 0 for anything that is not
+    /// a container, and one more than its deepest element for a Vector or a
+    /// Record (a dense tensor nests as deep as its rank). This is what
+    /// LANG.MACHINE.LIMITS' nesting ceiling bounds; it counts Records, which
+    /// `DEPTH` does not, because every walk over a value descends into both.
+    ///
+    /// Constant time: the figure is kept on the value, so checking a value
+    /// against the ceiling never walks it.
+    #[inline]
+    pub fn nesting(&self) -> u32 {
+        self.nesting
+    }
+
+    /// Raise the kept nesting to at least `nesting`, after a child was added
+    /// in place.
+    pub(crate) fn raise_nesting_to(&mut self, nesting: u32) {
+        self.nesting = self.nesting.max(nesting);
+    }
+
+    /// Recompute the nesting after `data` was changed in place.
+    pub(crate) fn refresh_nesting(&mut self) {
+        self.nesting = self.data.nesting();
+    }
+}
+
+impl ValueData {
+    /// The nesting of a value holding this data, from its children's kept
+    /// figures — one level of work, never a walk.
+    fn nesting(&self) -> u32 {
+        let deepest = |children: &mut dyn Iterator<Item = &Value>| {
+            children.map(Value::nesting).max().unwrap_or(0)
+        };
+        match self {
+            ValueData::Vector(children) => deepest(&mut children.iter()).saturating_add(1),
+            ValueData::Record(record) => {
+                deepest(&mut record.keys().iter().chain(record.values().iter())).saturating_add(1)
+            }
+            ValueData::Tensor { shape, .. } => u32::try_from(shape.len()).unwrap_or(u32::MAX),
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
+            | ValueData::Nil
+            | ValueData::Symbol(_)
+            | ValueData::Text(_) => 0,
+        }
+    }
 }
 
 impl PartialEq for Value {
@@ -246,13 +276,9 @@ impl PartialEq for Value {
     /// NILs equal, and `[ NIL ] [ 0 ] { 0 DIV } MAP EQ` answered TRUE for a
     /// `literal` absence against a `divisionByZero` one.
     ///
-    /// `hint` is *not* part of it. It is a presentation role, and letting it
-    /// decide a semantic question would violate LANG.STACK.ORDER. It used to
-    /// be compared here for one reason only — String was encoded as a Vector
-    /// of codepoints and `Interpretation::Text` was the sole discriminator —
-    /// and `ValueData::Text` removed that reason by making the domain the tag.
-    /// Two values with the same data and the same NIL reason are now the same
-    /// value however they came to be displayed.
+    /// Nothing else is: a value carries no record of how it was made
+    /// (LANG.VALUES.DENOTATION), so two values with the same data and the same
+    /// NIL reason are the same value.
     fn eq(&self, other: &Self) -> bool {
         self.data == other.data
             && self.nil_reason() == other.nil_reason()
@@ -266,7 +292,7 @@ impl Eq for Value {}
 
 /// Hashes exactly what `PartialEq` compares — `data`, then the NIL reason and
 /// the detail a `userDeclared` reason carries —
-/// and nothing `PartialEq` does not (`hint` stays out of both). Required
+/// and nothing `PartialEq` does not. Required
 /// for `UNIQUE` / `TALLY` / `GROUP` to key a `HashMap<Value, _>` rather than
 /// re-scan the accumulated result for every element (CS5 collection-word
 /// de-quadraticization).
@@ -304,11 +330,13 @@ impl std::hash::Hash for Value {
 /// written, `format_token_to_string` echoes source back, and the tokenizer's own
 /// round-trip check compares a lexeme against itself.
 ///
-/// **A malformed lexeme is not an error here.** `1/0` tokenizes as a Number and is
-/// refused when it is *reached* — and `1 PRINT 1/0` really does print `1/1` before
-/// failing, so refusing it at tokenize time would erase a host effect a program
-/// was entitled to. Such a lexeme has no `integer` either, and [`Self::parsed`]
-/// raises the identical message at the point it was always raised.
+/// **A malformed lexeme is not an error here.** This type validates nothing: it
+/// keeps whatever spelling it is handed. A lexeme that denotes no rational never
+/// arrives from source — `1/0` is the `zeroDenominator` source error of
+/// `spec/grammar.json`, refused by the tokenizer before anything runs
+/// (LANG.SOURCE.TEXT) — but a `NumberLiteral` built directly from such a lexeme
+/// simply has no `integer`, and [`Self::parsed`] reports the parse's own message
+/// when the value is read.
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct NumberLiteral {
     lexeme: Arc<str>,
@@ -367,9 +395,12 @@ pub enum Token {
     Symbol(Arc<str>),
     VectorStart,
     VectorEnd,
-    RecordStart,
-    RecordEnd,
-    LineBreak,
+    /// A value carried into a token sequence whole. Source never produces
+    /// one: it is how the bridge that runs a Vector as code
+    /// (`interpreter::value_as_code`) hands over an element no source text
+    /// denotes — a Record, a NIL together with its reason, an exact
+    /// irrational — so running the Vector pushes that element unchanged.
+    Value(Box<Value>),
 }
 
 impl Token {
@@ -386,26 +417,22 @@ impl Token {
 }
 
 #[derive(Debug, Clone)]
-pub struct ExecutionLine {
-    pub body_tokens: Arc<[Token]>,
-}
-
-#[derive(Debug, Clone)]
 pub struct WordDefinition {
-    pub lines: Arc<[ExecutionLine]>,
+    /// The body's tokens, in order. Whitespace, line breaks included, is not
+    /// part of it (LANG.SOURCE.TEXT).
+    pub body: Arc<[Token]>,
     pub is_builtin: bool,
     pub description: Option<String>,
     pub dependencies: HashSet<String>,
     /// Every uppercased Symbol name written anywhere in the body — including
     /// one that does not currently resolve to anything, unlike
     /// `dependencies`. A forward reference to a not-yet-defined word is
-    /// invisible to `dependencies` (it cannot resolve yet) but must still be
-    /// visible here, or a two-step mutual recursion (define A naming B, then
-    /// define B naming A) would slip past the DEF-time acyclicity check that
-    /// `dependencies` alone cannot support.
+    /// absent from `dependencies` until that word is defined (`DEF` adds the
+    /// edge then) but must be visible here from the start, or a two-step
+    /// mutual recursion (define A naming B, then define B naming A) would slip
+    /// past the DEF-time acyclicity check that `dependencies` alone cannot
+    /// support.
     pub text_references: HashSet<String>,
-    pub original_source: Option<String>,
-    pub namespace: Option<String>,
     pub registration_order: u64,
     /// The compiled plan for this Word's body, once one has been built and
     /// while it is still valid for the current dictionary epoch.
@@ -421,11 +448,4 @@ pub struct WordDefinition {
     /// a question resolution had already answered. `builtins::register` has the
     /// entry in hand when it builds each definition, so it puts it here.
     pub generated: Option<&'static crate::kernel::generated::GeneratedWord>,
-    /// The parameter names a body declares in its header (`[ A B | … ]`),
-    /// deepest operand first, upper-cased; `None` for a Core Word. `DEF`
-    /// refuses a body without a header, so every User Word has one
-    /// (LANG.SOURCE.FRAME). A header fixes the Word's arity: the call takes
-    /// exactly that many operands, binds them, and runs the body on an empty
-    /// stack.
-    pub params: Option<Arc<[String]>>,
 }

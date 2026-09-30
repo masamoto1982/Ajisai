@@ -3,8 +3,7 @@
 //! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 4: the
 //! control vocabulary of LANG.COLLECTIONS.HIGHER obeys the algebraic laws of its categorical
 //! models — `MAP` is a functor lift, `FOLD` a catamorphism, `FILTER` a
-//! predicate restriction, `ANY`/`ALL` existential/universal quantifiers,
-//! `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
+//! predicate restriction, `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
 //! which a `unknown` (U) guard does not fire (LANG.VALUES.TRUTH).
 //!
 //! Observation matches the conformance runner: whole-stack `Value::to_string`.
@@ -68,7 +67,7 @@ proptest! {
 
     // ── MAP is a functor: identity and composition (fusion) ──
 
-    /// `MAP id = id`: an identity block leaves the vector unchanged.
+    /// `MAP id EQ id`: an identity block leaves the vector unchanged.
     #[test]
     fn map_identity(xs in vec_ne()) {
         let v = vlit(&xs);
@@ -82,8 +81,8 @@ proptest! {
         let v = vlit(&xs);
         assert_law(
             "map-fusion",
-            &format!("{v} [ 2 * ] MAP [ 1 + ] MAP"),
-            &format!("{v} [ 2 * 1 + ] MAP"),
+            &format!("{v} [ 2 MUL ] MAP [ 1 ADD ] MAP"),
+            &format!("{v} [ 2 MUL 1 ADD ] MAP"),
         );
     }
 
@@ -125,8 +124,8 @@ fn filter_is_idempotent() {
     for v in ["[ 1 2 3 4 5 ]", "[ 5 4 3 2 1 ]", "[ 3 1 4 1 5 ]"] {
         assert_law(
             "filter-idempotent",
-            &format!("{v} [ 2 > ] FILTER [ 2 > ] FILTER"),
-            &format!("{v} [ 2 > ] FILTER"),
+            &format!("{v} [ 2 GT ] FILTER [ 2 GT ] FILTER"),
+            &format!("{v} [ 2 GT ] FILTER"),
         );
     }
 }
@@ -136,32 +135,10 @@ fn filter_predicates_commute() {
     for v in ["[ 1 2 3 4 5 ]", "[ 5 4 3 2 1 ]"] {
         assert_law(
             "filter-commute",
-            &format!("{v} [ 2 > ] FILTER [ 4 < ] FILTER"),
-            &format!("{v} [ 4 < ] FILTER [ 2 > ] FILTER"),
-        );
-    }
-}
-
-// ── ANY / ALL De Morgan duality: ALL p ≡ ¬ ANY ¬p ──
-#[test]
-fn all_any_de_morgan() {
-    let cases = [
-        ("[ 1 2 3 ]", "0 >"),
-        ("[ 1 2 3 ]", "2 >"),
-        ("[ 1 2 3 ]", "5 >"),
-        ("[ -1 -2 -3 ]", "0 <"),
-    ];
-    for (v, p) in cases {
-        assert_law(
-            &format!("all-is-not-any-not[{v};{p}]"),
-            &format!("{v} [ {p} ] ALL"),
-            &format!("{v} [ {p} NOT ] ANY NOT"),
+            &format!("{v} [ 2 GT ] FILTER [ 4 LT ] FILTER"),
+            &format!("{v} [ 4 LT ] FILTER [ 2 GT ] FILTER"),
         );
     }
 }
 
 // ── SCAN exposes the catamorphism's intermediate accumulators ──
-// ── COND is K3-honest: a U guard does not fire (LANG.VALUES.TRUTH) ──
-//
-// A guard reducing to `unknown` (an undecidable CF comparison) must fall
-// through exactly like a `false` guard, while a definite `true` fires.

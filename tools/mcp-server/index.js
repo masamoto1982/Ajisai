@@ -11,8 +11,8 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NativeCliBackend } from "./backend/native-cli.js";
 import { WasmWorkerBackend } from "./backend/wasm-worker.js";
@@ -20,9 +20,6 @@ import { HostError, logHostError } from "./host-error.js";
 import { suggestWords } from "./word-candidates.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = process.env.AJISAI_REPO
-  ? resolve(process.env.AJISAI_REPO)
-  : resolve(here, "..", "..");
 const assetsPath = join(here, "assets");
 const manifestPath = join(assetsPath, "word-manifest.json");
 const contractsPath = join(assetsPath, "words.json");
@@ -30,6 +27,13 @@ const skillPath = join(assetsPath, "quickstart.md");
 const metadataPath = join(assetsPath, "metadata.json");
 const serverPackagePath = join(here, "package.json");
 const resultSchemaPath = join(here, "result.schema.json");
+// The one envelope every Ajisai MCP tool result is wrapped in
+// (`result.schema.json`) carries one version: the backend's report
+// (`rust/src/agent/report.rs::SCHEMA_VERSION`), which the adapter's own
+// envelopes — a host error, a `word_contract` answer — repeat rather than
+// numbering separately. The selftest checks the two agree.
+export const ENVELOPE_SCHEMA_VERSION = 3;
+
 export const LIMITS = Object.freeze({
   sourceBytes: 64 * 1024,
   wallTimeMs: 5_000,
@@ -42,6 +46,7 @@ export const LIMITS = Object.freeze({
   collectionWork: 20_000_000,
   bigintBits: 262_144,
   algebraicTerms: 512,
+  nestingDepth: 256,
 });
 /**
  * How long a saturated server waits for an execution slot before answering
@@ -54,20 +59,53 @@ export const LIMITS = Object.freeze({
  */
 export const CAPACITY_WAIT_MS = 1_000;
 
-function resolveAjisaiBin() {
-  if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
-  for (const profile of ["debug", "release"]) {
-    const candidate = join(repoRoot, "rust", "target", profile, "ajisai");
-    if (existsSync(candidate)) return candidate;
+/**
+ * The Ajisai checkout this server may discover a native binary in, or `null`.
+ *
+ * Discovery used to look at `../../rust/target` from wherever the package sat.
+ * From a checkout that is this repository; from an installed package it is two
+ * directories above `node_modules/ajisai-mcp-server` — somewhere in the user's
+ * own project, where a binary named `ajisai` is nothing this package built.
+ * So the parent counts only when this package is the checkout's
+ * `tools/mcp-server` (not a copy under `node_modules`) and the parent is an
+ * Ajisai source tree. `AJISAI_REPO` names a checkout explicitly.
+ */
+export function checkoutRoot() {
+  if (process.env.AJISAI_REPO) return resolve(process.env.AJISAI_REPO);
+  let self;
+  try {
+    self = realpathSync(here);
+  } catch {
+    return null;
   }
-  return null;
+  if (self.split(sep).includes("node_modules")) return null;
+  const candidate = resolve(self, "..", "..");
+  return existsSync(join(candidate, "rust", "Cargo.toml")) ? candidate : null;
+}
+
+/**
+ * A native binary for this server to run, or `null` for the packaged WASM
+ * backend: `AJISAI_BIN` when set, otherwise the most recently built of the
+ * checkout's release and debug binaries. A fixed order let whichever profile
+ * came first shadow a fresher build of the other.
+ */
+export function resolveAjisaiBin() {
+  if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
+  const root = checkoutRoot();
+  if (!root) return null;
+  const built = ["release", "debug"]
+    .map((profile) => join(root, "rust", "target", profile, "ajisai"))
+    .filter((candidate) => existsSync(candidate))
+    .map((candidate) => ({ candidate, mtimeMs: statSync(candidate).mtimeMs }))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return built[0]?.candidate ?? null;
 }
 
 // Backend selection: the packaged WASM worker needs neither `AJISAI_REPO` nor
 // `AJISAI_BIN` and is the self-contained default. A native binary — found via
 // the explicit `AJISAI_BIN` override, or discovered under a checked-out
 // `rust/` (local development, Docker images that build it in) — takes
-// precedence when present. Both backends return the identical schema-1
+// precedence when present. Both backends return the identical result
 // envelope (`docs/dev/agent-cli-output-contract.md`), verified case-by-case in
 // `backend/parity-test.js`, so the two agree on every result.
 //
@@ -140,13 +178,21 @@ const sourceSchema = {
         `Ajisai source text (file paths are not accepted). The effective limit is ${LIMITS.sourceBytes} UTF-8 bytes, so non-ASCII text reaches it at fewer characters than maxLength suggests. ` +
         "Syntax is postfix: operands first, then the Word — `1 2 ADD`, `[ 1 2 3 ] LENGTH`. " +
         "A string is single-quoted (`'hi'`, never \"hi\"). " +
-        "A block passed to MAP/FILTER/FOLD/ANY/ALL is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER`). " +
-        "A Word's operand shape is part of its contract and is worth checking with word_contract when unsure — several take a vector where one number looks natural, e.g. `[ 0 4 ] RANGE` and `[ [ 1 2 ] [ 3 4 ] ] ZIP`.",
+        "A block passed to MAP/FILTER/FOLD/SCAN is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 GT ] FILTER`). " +
+        "A Word's operand shape is part of its contract and is worth checking with word_contract when unsure — several take a vector where one number looks natural, e.g. `0 4 RANGE` and `[ [ 1 2 ] [ 3 4 ] ] ZIP`.",
     },
   },
   required: ["source"],
 };
-const envelopeSchema = JSON.parse(readFileSync(resultSchemaPath, "utf8"));
+// Embedded once per tool, so without its `$id`: five copies of one schema
+// under one `$id` make a client that caches validators by `$id` (Ajv, with a
+// single instance) refuse the second as a duplicate. The resource
+// `ajisai://schema/result` still serves the file as written, `$id` included.
+const { $id: _resultSchemaId, ...envelopeSchema } = JSON.parse(readFileSync(resultSchemaPath, "utf8"));
+// Counted, not written: a hand-typed "78" is a claim the registry can
+// outgrow, and `tool-description.test.js` pins that every Word counted here is
+// also named in the description.
+const REGISTRY_WORD_COUNT = JSON.parse(readFileSync(contractsPath, "utf8")).entries.length;
 const READ_ONLY_ANNOTATIONS = Object.freeze({
   readOnlyHint: true,
   destructiveHint: false,
@@ -157,7 +203,7 @@ export const TOOLS = [
   {
     name: "compute",
     // Every word of this is load-bearing, and the length is deliberate: with
-    // `tool_choice: auto` these four descriptions are the *only* text a caller
+    // `tool_choice: auto` these tool descriptions are the *only* text a caller
     // reads before deciding. The measured baseline (`eval/traces/`) says what
     // the previous one cost. It named the numeric domain and stopped there, so
     // of 118 prompts, 21 produced no call at all — twelve of them collection
@@ -181,12 +227,14 @@ export const TOOLS = [
     // of leaving "out of domain" to be inferred.
     description:
       "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
-      "Its 100 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT POW GCD RATIO), transcendentals as computable reals compared under a budget (EXP LN SIN COS ATAN PI — render them with FORMAT), comparison (EQ LT LTE GT GTE — not-equal is EQ NOT), boolean logic (AND OR NOT), " +
-      "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER BSEARCH SHAPE RESHAPE FLATTEN DEPTH), " +
-      "records — keyed data, built by RECORD from a key vector and a value vector, read by AT/KEYS/VALUES/HAS?, rewritten by WITH/WITHOUT/MERGE; TALLY and GROUP answer Records — " +
-      "higher-order blocks (MAP FILTER FOLD SCAN ANY ALL RANK), text (CHARS JOIN TOKENIZE TRIM UPPER LOWER SEARCH REPLACE NUM STR FORMAT), JSON (JSON-DECODE JSON-ENCODE — objects are Records, numbers exact, nothing rounded), absence (NIL NIL? NIL-REASON ABSENT), control (SELECT EXEC FAIL), reflection (DEFINED? DIGEST CONTRACT — a Word's or a block's contract as a Record, inferred without running it), plus DEF to name your own. " +
-      "Word names are exact and case-sensitive; the full list is the ajisai://vocabulary resource and word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
-      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: floats, I/O, and general-purpose programming. " +
+      `Its ${REGISTRY_WORD_COUNT} Words cover arithmetic (ADD SUB MUL DIV FLOOR ROUND MIN MAX SQRT POW GCD RATIO — negate with -1 MUL), comparison (EQ LT GT — not-equal is EQ NOT, at-most is GT NOT), boolean logic (TRUE FALSE AND NOT — or is a NOT b NOT AND NOT), ` +
+      "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER? BSEARCH COLLECT SHAPE RESHAPE FLATTEN DEPTH), " +
+      "records — keyed data, built by RECORD from a key vector and a value vector, read by GET KEYS VALUES HAS?, rewritten by PUT WITHOUT MERGE; TALLY and GROUP answer Records — " +
+      "higher-order blocks (MAP FILTER FOLD SCAN), text (CHARS JOIN TOKENIZE TRIM UPPER LOWER SEARCH REPLACE NUM STR FORMAT), JSON (JSON-DECODE JSON-ENCODE — objects are Records, numbers exact, nothing rounded), absence (NIL NIL? NIL-REASON ABSENT), control (SELECT EXEC FAIL), reflection (DIGEST CONTRACT — a Word's or a block's contract as a Record, inferred without running it), naming (DEF to name your own Word, BIND DEL) and output (PRINT). " +
+      "That is the whole vocabulary. Word names are case-insensitive (`add` runs as ADD) but otherwise exact — a name not listed here does not exist under another spelling; word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
+      "Each call runs one source in a fresh session with no User Words: a DEF lasts for that source only, so a program that needs a Word it defines carries the DEF in the same source. " +
+      "The result's `outcome` names which of the language's three results the run produced — `value`, `nil:<reason>` (a reasoned absence; the call still succeeds) or `error:<category>` — in the same ids the outcomes tool predicts. " +
+      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: floats, file or network I/O, and general-purpose programming. " +
       "Ajisai also has no external or real-world reference data of its own — no exchange rates, no calendars, no reading speeds, no other language's syntax semantics. Do not invent a plausible-looking number for one of those and run it through this tool to dress a guess up as an exact answer; if the question needs a real-world fact rather than a value already given or derivable from first principles inside this domain, answer directly without a call, or say you don't know.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
@@ -201,7 +249,7 @@ export const TOOLS = [
   },
   {
     name: "infer_contracts",
-    description: "Infer machine-readable contracts for user-defined Words without executing their bodies.",
+    description: "Infer machine-readable contracts for user-defined Words without executing their bodies, under the same keys and in the same vocabulary as a registered Word's contract (`inputs`, `outputs`, `partiality`, `purity`, `determinism`, `cost`, `effects`) plus `confidence` and `gaps`. Source that does not parse is the same `malformedSource` error check reports; a body calling a Word nothing defines is `partial`, with a `gap.unresolvedWord` gap.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
     annotations: READ_ONLY_ANNOTATIONS,
@@ -210,7 +258,7 @@ export const TOOLS = [
     name: "outcomes",
     description:
       "Predict, without executing it, the finite set of outcome ids an Ajisai program could produce: `value`, or one or more `nil:<reason>` / `error:<category>` ids. Ajisai is a total language (no loops, no unbounded recursion — DEF rejects every reference cycle), so this question is answerable in principle, unlike for a Turing-complete language. " +
-      "The response's `exact` field says whether the set narrows to the single outcome the program actually produces (true only for a program that calls no Word at all — a bare literal, or nothing) or is a sound but coarser superset (false): the prediction unions each reachable Word's own declared error/NIL vocabulary rather than proving which specific condition applies to the actual operands, and always includes every cross-cutting structural ceiling (`stackUnderflow` narrowed by an arity check; `executionLimitExceeded`, `resourceLimitExceeded`, `recursionLimitExceeded`, `condExhausted`, `nameConflict`, `builtinProtection`, and the rest included unconditionally once the program does anything) since none of those are any specific Word's own declared condition. `exact: false` never means wrong — it means the true single outcome is somewhere in the returned set, not narrowed further. `limitProfile` names the resource ceilings this prediction assumed. " +
+      "The response's `exact` field says whether the set narrows to the single outcome the program actually produces (true exactly when one id is returned — in practice an empty program, `value`, and source that does not tokenize or balance its brackets, `error:malformedSource`, which is decided before anything runs) or is a sound but coarser superset (false — every other program, a bare literal included, since a literal can already exceed a resource ceiling): the prediction unions each reachable Word's own declared error/NIL vocabulary rather than proving which specific condition applies to the actual operands, and always includes every cross-cutting structural ceiling (`stackUnderflow` narrowed by an arity check; `executionLimitExceeded`, `resourceLimitExceeded`, `recursionLimitExceeded`, and the rest included unconditionally once the program does anything) since none of those are any specific Word's own declared condition. `exact: false` never means wrong — it means the true single outcome is somewhere in the returned set, not narrowed further. `limitProfile` names the resource ceilings this prediction assumed. " +
       "Use this to audit an untrusted or generated program's reachable failure modes before running it with compute, not as a substitute for running it to see the actual result.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
@@ -224,18 +272,18 @@ export const TOOLS = [
     // whole list is one resource read away, so a caller that does not know the
     // name has something better to do than guess again.
     description:
-      "Return the generated canonical registry entry for a Word or alias — its arity, purity, NIL policy, contract, " +
+      "Return the generated canonical registry entry for a Word — its arity, purity, NIL policy, contract, " +
       "and `cost`: what the Word charges on each metered resource (`steps`/`numeric`/`collection`), as a growth class " +
       "in its input. Cost classes join pointwise under concatenation, so a phrase's bound is the widest bound among " +
       "its Words — read them here to budget a program before running it rather than discovering the ceiling by hitting it. " +
       "A class is how the charge *grows*, never how large it is: two programs of the same class can differ by orders of " +
-      "magnitude. Measured, `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` spends 5 `numericWork` while `2 SQRT 3 SQRT +` — also `const` — " +
+      "magnitude. Measured, `[ 1 2 3 4 5 ] [ 0 ] [ ADD ] FOLD` spends 5 `numericWork` while `2 SQRT 3 SQRT ADD` — also `const` — " +
       "spends 2048, because an algebraic value carries a multiquadratic normal form and every operation on one rebuilds it. " +
       "Budget an algebraic chain at 10^2–10^3 times a rational one of the same class, and read `resourceUsage` from a small " +
       "run when the size matters rather than inferring it from the class. " +
       "An unmatched name answers with the closest known Words in `suggestions`. " +
       "To read every Word's full contract at once instead of probing one name at a time, read the ajisai://contracts " +
-      "resource; ajisai://vocabulary lists the inventory and its semantic classification.",
+      "resource; ajisai://vocabulary lists the inventory — every name, its family and its tier.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -313,6 +361,31 @@ export class ExecutionGate {
 }
 const executionGate = new ExecutionGate(LIMITS.concurrentExecutions);
 function manifest() { return manifestCache ??= JSON.parse(readFileSync(manifestPath, "utf8")); }
+
+/**
+ * What `ajisai://vocabulary` serves: the inventory, and nothing an agent can
+ * be misled by.
+ *
+ * The manifest is a repository artifact, and it carries the repository's
+ * bookkeeping — classification axes the specification retired
+ * (`semantic_role`, `algebraic_family`, `core_tier`), coverage ids, source
+ * file paths, mixed snake_case and camelCase. Served verbatim, those read to
+ * an agent as live language concepts. The projection keeps what the resource
+ * is for: every name a program can write, its family, its tier and its kind.
+ */
+export function vocabulary() {
+  const { schemaVersion, entries } = manifest();
+  return {
+    schemaVersion,
+    wordCount: entries.filter((entry) => entry.kind === "coreword").length,
+    entries: entries.map(({ surface, family, vocabularyTier, kind }) => ({
+      name: surface,
+      kind,
+      ...(family ? { family } : {}),
+      ...(vocabularyTier ? { vocabularyTier } : {}),
+    })),
+  };
+}
 function contracts() {
   return contractsCache ??= JSON.parse(readFileSync(contractsPath, "utf8"));
 }
@@ -359,7 +432,9 @@ function provenance() {
   return {
     serverVersion: serverVersion(),
     engineVersion: engineVersion(),
-    registryDigest: registryDigest(),
+    // Named for what it digests. It was `registryDigest`, beside an engine
+    // `receipt.registryDigest` of a different hash over different content.
+    assetDigest: registryDigest(),
     backend: { kind: selected?.kind ?? null },
     limits: LIMITS,
   };
@@ -368,7 +443,7 @@ function provenance() {
 /**
  * Drop the envelope fields whose value is `null`.
  *
- * The backend fills every slot of the schema-1 envelope on every answer, so a
+ * The backend fills every slot of the envelope on every answer, so a
  * successful `compute` used to advertise `message: null`, `diagnosis: null`,
  * `aiDiagnostic: null` and `contractDecls: null` — four diagnostic-sounding
  * fields inviting a reader to look at nothing. Absence says the same thing in
@@ -400,9 +475,26 @@ function withoutEmptyFields(value) {
  *
  * Both shapes are built from one object, so the mirror cannot drift.
  */
-function envelope(value) {
+function envelope(value, context = "tool call") {
   const result = withoutEmptyFields(value);
-  return { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
+  const toolResult = { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
+  // `responseBytes` bounds what the caller receives, and what it receives is
+  // this: the result twice — structured, and serialized into the text block
+  // (where every quote is escaped again) — plus provenance. The backends
+  // apply the same number to the one copy they produce, which is the right
+  // early refusal and the wrong final one: a stack that fit it arrived as
+  // more than twice the declared ceiling (`0 12000 RANGE` measured 2.29 MB
+  // against 1 MiB). The ceiling is enforced here, on the response as sent.
+  if (Buffer.byteLength(JSON.stringify(toolResult), "utf8") > LIMITS.responseBytes) {
+    return fail(
+      new HostError(
+        "responseTooLarge",
+        `The result exceeds the ${LIMITS.responseBytes}-byte response limit. Reduce the size of the value left on the stack.`,
+      ),
+      context,
+    );
+  }
+  return toolResult;
 }
 
 /**
@@ -416,7 +508,7 @@ function envelope(value) {
 function fail(error, context = "tool call") {
   logHostError(error, context);
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: ENVELOPE_SCHEMA_VERSION,
     status: "hostError",
     error: {
       code: error.code,
@@ -438,9 +530,41 @@ function fail(error, context = "tool call") {
   };
 }
 
+/**
+ * The outcome id (`spec/outcomes.json`) a finished run produced: `value`,
+ * `nil:<reason>` or `error:<category>`.
+ *
+ * `status` separates a value from an error but folds a reasoned absence into
+ * `ok`, so the one distinction the language is built around — LANG.FAILURE's
+ * three results — used to be reconstructable only by reading the top stack
+ * node's `semantics.absence.reason`. This names it in the vocabulary
+ * `outcomes` predicts in, so a prediction and a run compare with `includes`.
+ * The classification is the one `scripts/check-outcome-prediction.mjs` and
+ * `scripts/check-outcome-bijection.mjs` apply to the CLI's report: an error
+ * is its category, a NIL on top is its reason, anything else is a value.
+ * A result it cannot classify (a NIL an implementation could not label, an
+ * error naming no category) carries no `outcome` rather than a guessed one.
+ */
+export function outcomeOf(result) {
+  if (result.status === "error") {
+    const category = result.aiDiagnostic?.category ?? result.diagnosis?.why;
+    return typeof category === "string" && category !== "" ? `error:${category}` : undefined;
+  }
+  if (result.status !== "ok") return undefined;
+  const top = Array.isArray(result.stack) ? result.stack.at(-1) : undefined;
+  if (top?.type === "nil") {
+    const reason = top.semantics?.absence?.reason;
+    return typeof reason === "string" && reason !== "" ? `nil:${reason}` : undefined;
+  }
+  return "value";
+}
+
 async function runAgent(source, command) {
-  if (typeof source !== "string" || source.length === 0) {
-    return fail(new HostError("invalidRequest", "Provide non-empty `source` text."), command);
+  // An empty program is a program — whitespace alone always ran, and the
+  // engine answers "" the same way — so only a missing or non-text `source` is
+  // the caller's mistake.
+  if (typeof source !== "string") {
+    return fail(new HostError("invalidRequest", "Provide `source` as text."), command);
   }
   if (Buffer.byteLength(source, "utf8") > LIMITS.sourceBytes) {
     return fail(
@@ -480,8 +604,12 @@ async function runAgent(source, command) {
       outcomes: "outcomes",
     }[command];
     const result = await selected[operation](source);
+    if (command === "run") {
+      const id = outcomeOf(result);
+      if (id) result.outcome = id;
+    }
     result.mcp = provenance();
-    return envelope(result);
+    return envelope(result, command);
   } catch (error) {
     // A backend throw is always a host failure (timeout, spawn/worker
     // failure, an oversized or non-JSON response) — never a translated Ajisai
@@ -498,10 +626,7 @@ function wordContract(word) {
     return fail(new HostError("invalidRequest", "Provide a `word`."), "word_contract");
   }
   const entries = contracts().entries ?? [];
-  const matches = entries.filter((entry) =>
-    entry.name.toUpperCase() === needle ||
-    entry.aliases.some((alias) => alias.toUpperCase() === needle)
-  );
+  const matches = entries.filter((entry) => entry.name.toUpperCase() === needle);
   let mcp;
   try {
     mcp = provenance();
@@ -509,7 +634,7 @@ function wordContract(word) {
     return fail(HostError.from(error), "word_contract");
   }
   return envelope({
-    schemaVersion: 1,
+    schemaVersion: ENVELOPE_SCHEMA_VERSION,
     status: "ok",
     registrySchemaVersion: contracts().schemaVersion,
     matches,
@@ -537,7 +662,7 @@ const RESOURCE_TEMPLATES = [
   {
     uriTemplate: "ajisai://words/{name}",
     name: "Ajisai canonical Word contract",
-    description: "The complete spec/words.json contract for a Word or alias.",
+    description: "The complete spec/words.json contract for a Word.",
     mimeType: "application/json",
   },
 ];
@@ -585,7 +710,7 @@ export function createServer() {
   server.setRequestHandler(ReadResourceRequestSchema, async ({ params }) => {
     const uri = params.uri;
     if (uri === "ajisai://guide/quickstart") return { contents: [{ uri, mimeType: "text/markdown", text: readFileSync(skillPath, "utf8") }] };
-    if (uri === "ajisai://vocabulary") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(manifest(), null, 2) }] };
+    if (uri === "ajisai://vocabulary") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(vocabulary(), null, 2) }] };
     if (uri === "ajisai://contracts") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(contracts(), null, 2) }] };
     if (uri === "ajisai://schema/result") return { contents: [{ uri, mimeType: "application/json", text: readFileSync(resultSchemaPath, "utf8") }] };
     if (uri === "ajisai://limits") {

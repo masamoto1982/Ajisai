@@ -22,46 +22,42 @@ use crate::types::Value;
 /// `1 2 [ 65 68 68 ]` — the word `ADD` came back as its own codepoints instead
 /// of being applied. Bridging the elements directly needs no such round-trip.
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
-    // `KEEP` modifies the `EXEC` call, never the first Word inside the block
-    // (LANG.MODIFIERS.CONSUMPTION). The block's frame is the whole stack, so
-    // the whole stack is what the call was given: under `KEEP` it stays, and
-    // what the block leaves goes on top of it. The block itself runs
-    // consuming. Left alone, the modifier used to leak in: `[ 3 ] [ 1 + ]
-    // KEEP EXEC` kept `+`'s literal and answered `[ 3/1 ] 1/1 [ 4/1 ]`.
-    let keep_call = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
-    interp.consumption_mode = crate::interpreter::ConsumptionMode::Consume;
-    let kept = keep_call.then(|| interp.stack.clone());
-    let result = exec_block(interp);
-    if let (Some(mut given), true) = (kept, result.is_ok()) {
-        let left = std::mem::take(&mut interp.stack);
-        let (values, roles) = left.into_parts();
-        for (value, role) in values.into_iter().zip(roles) {
-            given.push_with_role(value, role);
-        }
-        interp.stack = given;
-    }
-    result
+    exec_block(interp)
 }
 
 fn exec_block(interp: &mut Interpreter) -> Result<()> {
-    let target: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let Some(elements) = target.as_vector_view() else {
+        let got = target.domain_name();
         interp.stack.push(target);
         return Err(AjisaiError::declared(
             "notExecutable",
-            "EXEC: expected a Vector ([ ... ]) as the code operand, got another value",
+            format!("expected a Vector ([ ... ]) as the code operand, got {got}"),
         ));
     };
-    let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {
+    // Every refusal before the block starts puts the operand back (the ERROR
+    // discipline of every Core Word, LANG.STACK.CONSUMPTION). Once the block
+    // runs, the frame is the whole stack and what it leaves is the state.
+    //
+    // The elements are values already built, not lexemes: the numeric-literal
+    // ceiling (LANG.MACHINE.LIMITS) bounds what a lexeme may denote at the
+    // entry points that read the numeric grammar, and this is not one of
+    // them. A Scalar the program computed within its `bigintBits` used to be
+    // refused here as a "literal" of too many digits, while the same block
+    // applied by `MAP` ran it — the outcome depended on the route.
+    let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements)
+        .and_then(|tokens| {
+            crate::tokenizer::validate_code_tokens(&tokens)
+                .map_err(AjisaiError::MalformedSource)
+                .map(|()| tokens)
+        }) {
         Ok(t) => t,
         Err(e) => {
             interp.stack.push(target);
             return Err(e);
         }
     };
-    crate::tokenizer::validate_code_tokens(&tokens).map_err(AjisaiError::MalformedSource)?;
-    interp.check_source_numeric_literals(&tokens)?;
     // The block `EXEC` runs is its own token stream and is never the enclosing
     // word's tail position — see `Interpreter::execute_nested_block`.
     interp.execute_nested_block(&tokens)

@@ -5,9 +5,9 @@
 // originally chosen by type in docs/dev/competitive-advantage-work-order-2026-08.md
 // Phase 2).
 //
-// 100 Words in one flat dictionary with no imports means the language's whole
+// 86 Words in one flat dictionary with no imports means the language's whole
 // input/outcome surface is finite. Excluding the variable/control-arity Words
-// (COLLECT, EXEC, OR-NIL) and the KEEP modifier leaves the rest with a
+// (COLLECT, EXEC, OR-NIL) leaves the rest with a
 // fixed integer arity; every (Word, domain tuple) pair is run through the
 // real `ajisai` CLI and its outcome recorded as a stable id — never the
 // human-readable `message`, which can be reworded without changing meaning.
@@ -24,7 +24,7 @@
 
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { cpus, tmpdir } from 'node:os';
+import { cpus, tmpdir, totalmem } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -74,22 +74,19 @@ function resolveAjisaiBin() {
 // Domains considered and rejected, with the reason (kept here so the
 // rejection is not silently rediscovered):
 //
-//   - `scalarFraction` ('1 2 /'), meant to reach `nonInteger`: RANDOM and PUT
-//     are the only two Words declaring `nonInteger`, and both raise
-//     `structureError` for a fractional operand instead — confirmed live
-//     (`1 2 / 1 RANDOM`, `[ 1 2 3 ] 1 2 / 9 PUT`). `nonInteger` is currently
-//     unreachable by any input; this is an implementation-vs-registry gap to
-//     report, not a domain to add (Phase 3 does not fix `rust/`).
+//   - `scalarFraction` ('1 2 DIV'), meant to reach `invalidInteger`: the table
+//     already observes it through the integer-taking Words' existing domains,
+//     so the whole table need not carry another.
 //   - `vectorRagged` ('[ [ 1 ] [ 2 3 ] ]'), meant to reach `shapeMismatch`:
 //     a ragged vector broadcasts element-wise against a same-length flat
 //     vector instead of raising (confirmed: `[ [ 1 ] [ 2 3 ] ] [ 1 2 ] ADD`
 //     answers a value). `shapeMismatch` is reached far more directly by two
 //     *flat* vectors of different lengths, which is what `vectorTriple`
 //     below is for.
-//   - `codeBlockFails` ('{ 1 0 / }'), meant to reach the retired
+//   - `codeBlockFails` ('{ 1 0 DIV }'), meant to reach the retired
 //     `NilReason::ExecutionFailure`: that reason no longer exists (Phase 1
 //     deleted it as unreachable), and separately `{ }` is no longer valid
-//     source syntax at all (confirmed: `{ 1 0 / }` is a MalformedSource
+//     source syntax at all (confirmed: `{ 1 0 DIV }` is a MalformedSource
 //     parse error, not a CodeBlock value) — code and data share `[ ]` since
 //     the CodeBlock/Vector unification. Both premises this domain was
 //     designed around are gone.
@@ -107,7 +104,7 @@ function resolveAjisaiBin() {
 const DOMAINS = [
   { id: 'scalarOne', source: '1', motivatedBy: [] },
   { id: 'scalarZero', source: '0', motivatedBy: ['divisionByZero'] },
-  { id: 'scalarNegative', source: '1 NEG', motivatedBy: ['domainMiss'] },
+  { id: 'scalarNegative', source: '-1', motivatedBy: ['domainMiss'] },
   { id: 'scalarLarge', source: '999', motivatedBy: ['indexOutOfBounds'] },
   { id: 'booleanTrue', source: 'TRUE', motivatedBy: [] },
   { id: 'textShort', source: "'a'", motivatedBy: [] },
@@ -133,8 +130,7 @@ function* domainTuples(arity) {
 // ---------------------------------------------------------------------------
 // Word selection (Step 2.2, pitfalls A/B). `stack.inputs` is a plain integer
 // for every Word except COLLECT/EXEC/OR-NIL (a JSON string: "variable" or
-// "control" in the current spec/words.json); KEEP has a numeric arity (0) but
-// is a modifier applied to the next Word, not a Word to expand on its own.
+// "control" in the current spec/words.json).
 // This is not a hardcoded list (Phase 3 pitfall E): whichever Words currently
 // have non-numeric `stack.inputs` are excluded, whatever their names are.
 // ---------------------------------------------------------------------------
@@ -158,10 +154,6 @@ function selectWords(words) {
   const excluded = [];
   const domainWords = [];
   for (const word of words) {
-    if (word.name === 'KEEP') {
-      excluded.push({ word: word.name, reason: 'modifierNotWord' });
-      continue;
-    }
     if (typeof word.stack.inputs !== 'number') {
       excluded.push({ word: word.name, reason: arityExclusionReason(word) });
       continue;
@@ -180,23 +172,23 @@ function selectWords(words) {
 
 function classifyOutcome(json) {
   if (json.status === 'error') {
-    // `aiDiagnostic.kind` is the fine per-condition `ErrorCategory` protocol
+    // `aiDiagnostic.category` is the fine per-condition `ErrorCategory` protocol
     // string (`"indexOutOfBounds"`, `"stackUnderflow"`, a Word's own declared
     // condition...); `diagnosis.why` is the coarse ~17-bucket `CauseClass`
     // (`"valueShape"`, `"index"`...). Classifying by `why` alone is what made
     // the pre-Phase-3 table collapse dozens of distinct declared conditions
-    // into one `error:valueShape` bucket. `kind` is `null` only for a raw
+    // into one `error:valueShape` bucket. `category` is `null` only for a raw
     // tokenize-time failure that predates word resolution (confirmed:
     // rust/src/agent/api.rs and cli/mod.rs pass `category: None` to
     // `error_report` on that one path) — no domain-tuple program reaches it,
     // but the fallback keeps this generator from crashing if one ever does.
-    const kind = json.aiDiagnostic?.kind;
-    if (typeof kind === 'string' && kind !== '') {
-      return `error:${kind}`;
+    const category = json.aiDiagnostic?.category;
+    if (typeof category === 'string' && category !== '') {
+      return `error:${category}`;
     }
     const why = json.diagnosis?.why;
     if (typeof why !== 'string' || why === '') {
-      fail(`error report has neither aiDiagnostic.kind nor diagnosis.why: ${JSON.stringify(json)}`);
+      fail(`error report has neither aiDiagnostic.category nor diagnosis.why: ${JSON.stringify(json)}`);
     }
     return `error:${why}`;
   }
@@ -222,22 +214,56 @@ function runCellAsync(ajisaiBin, scratchDir, counter, program) {
   return new Promise((resolveCell) => {
     const file = join(scratchDir, `cell-${counter}.ajisai`);
     writeFileSync(file, `${program}\n`);
-    const proc = spawn(ajisaiBin, ['run', file, '--json']);
+    const proc = spawn(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted']);
     let stdout = '';
+    let stderr = '';
     proc.stdout.on('data', (chunk) => {
       stdout += chunk;
     });
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
     proc.on('error', (err) => fail(`failed to spawn ajisai CLI: ${err.message}`));
-    proc.on('close', () => {
+    proc.on('close', (code, signal) => {
+      // A child killed mid-write leaves a truncated stdout, which used to be
+      // reported only as invalid JSON — and a cell like `[ 0 1000001 ] 999
+      // RANGE` peaks at ~3 GB, so under memory pressure the kernel's OOM
+      // killer is the likeliest cause. Name the signal instead of the symptom.
+      if (signal !== null) {
+        fail(
+          `CLI for ${JSON.stringify(program)} was killed by ${signal}`
+            + (signal === 'SIGKILL' ? ' (likely out of memory; see WORKER_MEMORY_BYTES)' : '')
+            + ` after ${stdout.length} bytes of stdout`
+        );
+      }
+      // The CLI exits 0 (OK) or 1 (a language ERROR); anything else is a
+      // failure of the CLI itself, whose stdout is not a report.
+      if (code !== 0 && code !== 1) {
+        fail(`CLI for ${JSON.stringify(program)} exited ${code}: ${stderr.slice(0, 2000)}`);
+      }
       let json;
       try {
         json = JSON.parse(stdout);
-      } catch {
-        fail(`CLI stdout for ${JSON.stringify(program)} is not valid JSON:\n${stdout}`);
+      } catch (err) {
+        fail(
+          `CLI stdout for ${JSON.stringify(program)} is not valid JSON (${err.message}); `
+            + `${stdout.length} bytes, starting:\n${stdout.slice(0, 2000)}`
+        );
       }
       resolveCell(classifyOutcome(json));
     });
   });
+}
+
+// One CLI per CPU, but never more than memory holds. A single cell can be
+// large: `[ 0 1000001 ] 999 RANGE` answers a million-element stack, and the CLI
+// peaks near 3.2 GB rendering it while this process holds its ~200 MB report.
+// Four of those at once exceed a 16 GB machine, and the kernel's OOM killer
+// then takes one child mid-write — the check's intermittent failure. Budgeting
+// 4 GiB per worker keeps the worst case inside memory on any machine.
+const WORKER_MEMORY_BYTES = 4 * 1024 ** 3;
+function poolSize() {
+  return Math.max(1, Math.min(cpus().length, Math.floor(totalmem() / WORKER_MEMORY_BYTES)));
 }
 
 // A fixed-size pool of workers pulling from a shared index, each awaiting its
@@ -284,7 +310,7 @@ async function buildTable(ajisaiBin) {
     const jobs = specs.map(
       (spec, i) => () => runCellAsync(ajisaiBin, scratchDir, i, spec.program),
     );
-    const outcomes = await runPool(jobs, cpus().length);
+    const outcomes = await runPool(jobs, poolSize());
     cells = specs.map((spec, i) => ({ word: spec.word, inputs: spec.inputs, outcome: outcomes[i] }));
   } finally {
     rmSync(scratchDir, { recursive: true, force: true });

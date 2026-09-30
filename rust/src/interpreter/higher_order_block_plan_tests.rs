@@ -1,8 +1,8 @@
 //! A higher-order Word's block is compiled once, not re-interpreted per element.
 //!
-//! `MAP`, `FILTER`, `FOLD`, `ALL` and `ANY` used to walk their block's tokens
+//! `MAP`, `FILTER` and `FOLD` used to walk their block's tokens
 //! again for every element, which means resolving every Symbol in it by name
-//! every time: `[ ABS ] MAP` over 20,000 lanes hashed `"ABS"` and probed the
+//! every time: `[ SQRT ] MAP` over 20,000 lanes hashed `"SQRT"` and probed the
 //! dictionary 20,000 times to reach the one Word it names. A block is fixed for
 //! the length of the loop, so it is compiled before the loop instead.
 //!
@@ -36,13 +36,9 @@ mod tests {
     async fn each_higher_order_word_answers_the_same_through_a_compiled_block() {
         for (program, expected) in [
             ("[ 1 2 3 ] [ 2 MUL ] MAP", "[ 2/1 4/1 6/1 ]"),
-            ("[ -1 2 -3 ] [ ABS ] MAP", "[ 1/1 2/1 3/1 ]"),
-            ("[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER", "[ 2/1 4/1 ]"),
+            ("[ -1 2 -3 ] [ -1 MUL ] MAP", "[ 1/1 -2/1 3/1 ]"),
+            ("[ 1 2 3 4 ] [ 2 GT ] FILTER", "[ 3/1 4/1 ]"),
             ("[ 1 2 3 4 ] 0 [ ADD ] FOLD", "10/1"),
-            ("[ 1 2 3 ] [ 0 GT ] ALL", "TRUE"),
-            ("[ 1 -2 3 ] [ 0 GT ] ALL", "FALSE"),
-            ("[ 1 -2 3 ] [ 0 LT ] ANY", "TRUE"),
-            ("[ 1 2 3 ] [ 0 LT ] ANY", "FALSE"),
         ] {
             assert_eq!(answer(program).await, expected, "`{program}`");
         }
@@ -54,7 +50,7 @@ mod tests {
     async fn a_block_calling_a_user_word_answers_the_same() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ X | X 2 MUL 1 ADD ] 'F' DEF")
+            .execute("[ 2 MUL 1 ADD ] 'F' DEF")
             .await
             .expect("F defines");
         interp.update_stack(Vec::new());
@@ -76,7 +72,7 @@ mod tests {
     async fn a_block_that_redefines_a_word_is_not_served_from_its_own_stale_plan() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ X | X 100 ADD ] 'G' DEF")
+            .execute("[ 100 ADD ] 'G' DEF")
             .await
             .expect("G defines");
         interp.update_stack(Vec::new());
@@ -84,7 +80,7 @@ mod tests {
         // Element 1 runs G as `100 ADD`, then redefines it to `1 ADD`;
         // elements 2 and 3 must see the redefinition.
         interp
-            .execute("[ 1 2 3 ] [ G [ X | X 1 ADD ] 'G' DEF ] MAP")
+            .execute("[ 1 2 3 ] [ G [ 1 ADD ] 'G' DEF ] MAP")
             .await
             .expect("a block that redefines a word runs");
         assert_eq!(
@@ -104,7 +100,7 @@ mod tests {
             // the fallback rather than a lowered op.
             ("[ 1 2 ] [ 'X' BIND X X ADD ] MAP", "[ 2/1 4/1 ]"),
             (
-                "[ 1 2 ] [ 'E' BIND 7 E 0 DIV NIL? SELECT ] MAP",
+                "[ 1 2 ] [ 'E' BIND E 0 DIV 'S' BIND 7 S S NIL? SELECT ] MAP",
                 "[ 7/1 7/1 ]",
             ),
         ] {

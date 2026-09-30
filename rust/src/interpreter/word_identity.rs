@@ -22,8 +22,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::core_word_aliases::canonicalize_core_word_name;
 use crate::types::{Token, WordDefinition};
+use crate::word_name::canonical_word_name;
 
 use super::Interpreter;
 
@@ -64,36 +64,41 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
         }
         Token::Symbol(s) => {
             bytes.push(b'Y');
-            bytes.extend_from_slice(canonicalize_core_word_name(s).as_bytes());
+            bytes.extend_from_slice(canonical_word_name(s).as_bytes());
         }
         Token::VectorStart => bytes.push(b'['),
         Token::VectorEnd => bytes.push(b']'),
-        Token::RecordStart => bytes.push(b'{'),
-        Token::RecordEnd => bytes.push(b'}'),
-        Token::LineBreak => bytes.push(b'\n'),
+        Token::Value(value) => {
+            bytes.push(b'V');
+            bytes.extend_from_slice(value_identity(value).as_bytes());
+        }
     }
+}
+
+/// The identity of a value a body carries whole (`Token::Value`): its
+/// denotation digest (LANG.VALUES.DENOTATION), so equal values identify
+/// alike.
+fn value_identity(value: &crate::types::Value) -> String {
+    crate::agent::observation_digest::value_digest(value)
 }
 
 /// Canonical content key for a word body, independent of references' identities
 /// (references are keyed by their canonical spelling). Two textually identical
-/// bodies — e.g. the same definition exported and re-imported into another
-/// dictionary — produce the same key and can share one stored body (LANG.AUTHORITY.FREEDOM
+/// bodies — e.g. the same definition exported and imported again under another
+/// name — produce the same key and can share one stored body (LANG.AUTHORITY.FREEDOM
 /// content store). Exact-rational numbers are normalized so `1` and `1/1` agree.
-pub(crate) fn body_content_key(lines: &[crate::types::ExecutionLine]) -> String {
+pub(crate) fn body_content_key(body: &[Token]) -> String {
     let mut bytes = Vec::new();
-    for line in lines {
-        bytes.push(0x1d);
-        for tok in line.body_tokens.iter() {
-            bytes.push(0x1f);
-            encode_token(&mut bytes, tok);
-        }
+    for tok in body {
+        bytes.push(0x1f);
+        encode_token(&mut bytes, tok);
     }
     content_digest(&bytes)
 }
 
 /// One canonical element of a word body.
 enum Atom {
-    /// A reference to another user word (a dependency), by fully-qualified name.
+    /// A reference to another user word (a dependency), by name.
     Ref(String),
     /// Any other token, already serialized to canonical bytes.
     Raw(Vec<u8>),
@@ -216,8 +221,8 @@ fn tarjan_sccs(nodes: &HashSet<String>, adj: &HashMap<String, Vec<String>>) -> V
 
 impl Interpreter {
     /// Content identity of a user word, if it has been computed.
-    pub(crate) fn word_identity(&self, fq_name: &str) -> Option<&String> {
-        self.word_identities.get(fq_name)
+    pub(crate) fn word_identity(&self, name: &str) -> Option<&String> {
+        self.word_identities.get(name)
     }
 
     /// Reclaim content-store bodies no longer referenced by any definition.
@@ -238,84 +243,74 @@ impl Interpreter {
 
     fn build_word_shape(&self, def: &WordDefinition, user_set: &HashSet<String>) -> Vec<Atom> {
         let mut atoms = Vec::new();
-        // A header is encoded by its arity, and each parameter by its position
-        // (`A0`, `A1`, …) wherever it is written: two definitions that differ
-        // only in what they call their parameters are one Word
-        // (LANG.DICTIONARY.MUTATION), and a header-less body — which has no
-        // arity to state — never shares an encoding with one that has.
-        if let Some(params) = &def.params {
-            let mut b = vec![b'H'];
-            b.extend_from_slice(params.len().to_string().as_bytes());
-            atoms.push(Atom::Raw(b));
-        }
-        let param_position = |name: &str| {
-            def.params
-                .as_ref()
-                .and_then(|p| p.iter().position(|n| n == name))
-        };
-        for line in def.lines.iter() {
-            atoms.push(structural_atom(b'\n'));
-            for tok in line.body_tokens.iter() {
-                let atom = match tok {
-                    Token::Number(literal) => number_atom(literal),
-                    Token::String(s) => {
-                        let mut b = vec![b'S'];
-                        b.extend_from_slice(s.as_bytes());
-                        Atom::Raw(b)
+        for tok in def.body.iter() {
+            let atom = match tok {
+                Token::Number(literal) => number_atom(literal),
+                Token::String(s) => {
+                    let mut b = vec![b'S'];
+                    b.extend_from_slice(s.as_bytes());
+                    Atom::Raw(b)
+                }
+                Token::Symbol(s) => self.symbol_atom(s, def, user_set),
+                Token::VectorStart => structural_atom(b'['),
+                Token::VectorEnd => structural_atom(b']'),
+                Token::Value(value) => {
+                    let mut b = vec![b'V'];
+                    b.extend_from_slice(value_identity(value).as_bytes());
+                    atoms.push(Atom::Raw(b));
+                    // A name inside a value the body carries whole is one the
+                    // body can run (`body_symbols`), so the Word it resolves to
+                    // is part of this identity exactly as a top-level
+                    // Symbol's is — or a redefinition of it would change what
+                    // this Word does and leave its identity where it was.
+                    let mut names = Vec::new();
+                    crate::interpreter::body_symbols::value_symbol_names(value, &mut names);
+                    for name in names {
+                        atoms.push(self.symbol_atom(&name, def, user_set));
                     }
-                    Token::Symbol(s)
-                        if param_position(&canonicalize_core_word_name(s)).is_some() =>
-                    {
-                        let position = param_position(&canonicalize_core_word_name(s)).unwrap_or(0);
-                        let mut b = vec![b'A'];
-                        b.extend_from_slice(position.to_string().as_bytes());
-                        Atom::Raw(b)
-                    }
-                    Token::Symbol(s) => {
-                        let canon = canonicalize_core_word_name(s);
-                        match self.resolve_word_entry(&canon) {
-                            Some((resolved, rdef)) => {
-                                if def.dependencies.contains(resolved.as_ref()) {
-                                    // A user-word dependency fixed at definition time:
-                                    // encode the recorded target rather than treating a
-                                    // later same-named word as a fresh capture.
-                                    Atom::Ref(resolved.to_string())
-                                } else if rdef.is_builtin {
-                                    // Core word: stable global vocabulary,
-                                    // encoded by its canonical resolved name.
-                                    let mut b = vec![b'G'];
-                                    b.extend_from_slice(resolved.as_bytes());
-                                    Atom::Raw(b)
-                                } else if user_set.contains(resolved.as_ref()) {
-                                    // A user word not recorded in this definition's
-                                    // dependency set was not resolved when the word was
-                                    // authored. Keep it as a free symbol so adding an
-                                    // unrelated word cannot recapture existing content.
-                                    let mut b = vec![b'F'];
-                                    b.extend_from_slice(canon.as_bytes());
-                                    Atom::Raw(b)
-                                } else {
-                                    Atom::Ref(resolved.to_string())
-                                }
-                            }
-                            // Free / unresolved symbol: encoded by canonical name.
-                            None => {
-                                let mut b = vec![b'F'];
-                                b.extend_from_slice(canon.as_bytes());
-                                Atom::Raw(b)
-                            }
-                        }
-                    }
-                    Token::VectorStart => structural_atom(b'['),
-                    Token::VectorEnd => structural_atom(b']'),
-                    Token::RecordStart => structural_atom(b'{'),
-                    Token::RecordEnd => structural_atom(b'}'),
-                    Token::LineBreak => structural_atom(b'\n'),
-                };
-                atoms.push(atom);
-            }
+                    continue;
+                }
+            };
+            atoms.push(atom);
         }
         atoms
+    }
+
+    /// The identity atom for one name a body holds.
+    fn symbol_atom(&self, s: &str, def: &WordDefinition, user_set: &HashSet<String>) -> Atom {
+        let canon = canonical_word_name(s);
+        match self.resolve_word_entry(&canon) {
+            Some((resolved, rdef)) => {
+                if def.dependencies.contains(resolved.as_ref()) {
+                    // A user-word dependency fixed at definition time:
+                    // encode the recorded target rather than treating a
+                    // later same-named word as a fresh capture.
+                    Atom::Ref(resolved.to_string())
+                } else if rdef.is_builtin {
+                    // Core word: stable global vocabulary,
+                    // encoded by its canonical resolved name.
+                    let mut b = vec![b'G'];
+                    b.extend_from_slice(resolved.as_bytes());
+                    Atom::Raw(b)
+                } else if user_set.contains(resolved.as_ref()) {
+                    // A user word not recorded in this definition's
+                    // dependency set was not resolved when the word was
+                    // authored. Keep it as a free symbol so adding an
+                    // unrelated word cannot recapture existing content.
+                    let mut b = vec![b'F'];
+                    b.extend_from_slice(canon.as_bytes());
+                    Atom::Raw(b)
+                } else {
+                    Atom::Ref(resolved.to_string())
+                }
+            }
+            // Free / unresolved symbol: encoded by canonical name.
+            None => {
+                let mut b = vec![b'F'];
+                b.extend_from_slice(canon.as_bytes());
+                Atom::Raw(b)
+            }
+        }
     }
 
     /// Recompute content identities for every user word (Section 8.6). Cheap

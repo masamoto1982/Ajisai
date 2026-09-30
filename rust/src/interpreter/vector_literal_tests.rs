@@ -1,7 +1,7 @@
 //! Tests for compile-time literal-vector lowering (`CompiledOp::PushVectorLiteral`).
 //!
 //! A fully-literal vector is prebuilt once at compile time with the same
-//! promoted value and element hint `collect_vector` produces, so the line runs
+//! promoted value `collect_vector` produces, so the line runs
 //! compiled instead of falling back to the interpreter. These tests pin that the
 //! lowered path is byte-for-byte identical to the interpreted one across element
 //! kinds, that non-literal vectors still fall back, and that errors are kept.
@@ -22,7 +22,7 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
 }
 
 /// Run `src` twice — lowering on and off — and assert the resulting stacks are
-/// identical (value and the rendered form, which depends on the element hint).
+/// identical (value and rendered form).
 fn assert_on_equals_off(src: &str) -> String {
     let mut on = Interpreter::new();
     on.set_vector_literal_enabled(true);
@@ -52,15 +52,15 @@ fn render(interp: &Interpreter) -> String {
 
 #[test]
 fn literal_vector_shapes_match_interpreter() {
-    // Numeric (tensor-promoted), boolean (TruthValue hint), string (Text),
+    // Numeric (tensor-promoted), boolean, string,
     // NIL-bearing, nested, and arithmetic-over-literals all agree.
     let cases = [
-        "[ | [ 1 2 3 ] [ 4 5 6 ] + ] 'W' DEF W",
-        "[ | [ TRUE FALSE TRUE ] ] 'W' DEF W",
-        "[ | [ 'a' 'b' 'c' ] ] 'W' DEF W",
-        "[ | [ 1 NIL 3 ] ] 'W' DEF W",
-        "[ | [ [ 1 2 ] [ 3 4 ] ] ] 'W' DEF W",
-        "[ | [ 1 2 3 4 ] [ 2 2 2 2 ] * [ 1 1 1 1 ] - ] 'W' DEF W",
+        "[ [ 1 2 3 ] [ 4 5 6 ] ADD ] 'W' DEF W",
+        "[ [ TRUE FALSE TRUE ] ] 'W' DEF W",
+        "[ [ 'a' 'b' 'c' ] ] 'W' DEF W",
+        "[ [ 1 NIL 3 ] ] 'W' DEF W",
+        "[ [ [ 1 2 ] [ 3 4 ] ] ] 'W' DEF W",
+        "[ [ 1 2 3 4 ] [ 2 2 2 2 ] MUL [ 1 1 1 1 ] SUB ] 'W' DEF W",
     ];
     for src in cases {
         assert_on_equals_off(src);
@@ -68,10 +68,8 @@ fn literal_vector_shapes_match_interpreter() {
 }
 
 #[test]
-fn boolean_vector_keeps_truth_value_rendering() {
-    // The element hint is what makes a boolean vector render as TRUE/FALSE; the
-    // lowered op must carry it so the display is unchanged.
-    let rendered = assert_on_equals_off("[ | [ TRUE FALSE ] ] 'W' DEF W");
+fn boolean_vector_renders_its_booleans() {
+    let rendered = assert_on_equals_off("[ [ TRUE FALSE ] ] 'W' DEF W");
     assert!(
         rendered.contains("TRUE") && rendered.contains("FALSE"),
         "boolean vector should render as TRUE/FALSE, got: {rendered}"
@@ -85,7 +83,7 @@ fn symbol_in_vector_is_data_not_executed() {
     // is therefore a fully literal vector — TEN is the string "TEN", never the
     // word's result — and lowers identically on the compiled and interpreted
     // paths. This is the regression guard for the retired word-execution behavior.
-    let src = "[ | [ 10 ] ] 'TEN' DEF\n[ | [ TEN 2 3 ] ] 'W' DEF\nW";
+    let src = "[ [ 10 ] ] 'TEN' DEF\n[ [ TEN 2 3 ] ] 'W' DEF\nW";
     let rendered = assert_on_equals_off(src);
     assert!(
         rendered.contains("TEN"),
@@ -104,7 +102,7 @@ fn vector_literal_is_independent_of_dictionary_state() {
     // `[ FOO 1 ]` executed FOO when defined and was data otherwise — a
     // dictionary-state-dependent meaning. Now both are the data `[ "FOO" 1 ]`.
     let mut with_word = Interpreter::new();
-    block_on(with_word.execute("[ | [ 99 ] ] 'FOO' DEF\n[ FOO 1 ]")).unwrap();
+    block_on(with_word.execute("[ [ 99 ] ] 'FOO' DEF\n[ FOO 1 ]")).unwrap();
 
     let mut without_word = Interpreter::new();
     block_on(without_word.execute("[ FOO 1 ]")).unwrap();
@@ -128,7 +126,7 @@ fn empty_vector_lowers_identically_both_paths() {
     for enabled in [true, false] {
         let mut interp = Interpreter::new();
         interp.set_vector_literal_enabled(enabled);
-        block_on(interp.execute("[ | [ ] ] 'W' DEF\nW")).expect("`[ ]` is a value");
+        block_on(interp.execute("[ [ ] ] 'W' DEF\nW")).expect("`[ ]` is a value");
         let val = interp.get_stack().last().expect("a result").clone();
         assert!(!val.is_nil(), "the empty vector is not an absence");
         assert_eq!(
@@ -141,7 +139,7 @@ fn empty_vector_lowers_identically_both_paths() {
 
 #[test]
 fn matches_readme_vector_example() {
-    let rendered = assert_on_equals_off("[ | [ 1 2 3 ] [ 4 5 6 ] + ] 'W' DEF W");
+    let rendered = assert_on_equals_off("[ [ 1 2 3 ] [ 4 5 6 ] ADD ] 'W' DEF W");
     assert!(
         rendered.contains("5/1") && rendered.contains("7/1") && rendered.contains("9/1"),
         "expected [ 5/1 7/1 9/1 ], got: {rendered}"

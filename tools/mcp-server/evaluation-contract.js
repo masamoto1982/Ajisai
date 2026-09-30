@@ -1,4 +1,4 @@
-const TOOL_NAMES = new Set(["compute", "check", "infer_contracts", "word_contract"]);
+const TOOL_NAMES = new Set(["compute", "check", "infer_contracts", "outcomes", "word_contract"]);
 
 /**
  * The languages every corpus case is asked in.

@@ -10,32 +10,21 @@
 //! *expresses* it; these are here because expressibility was never the whole
 //! question.
 
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
-use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::semantic::Recoverability;
-use crate::types::{Interpretation, RecordData, Value, ValueData};
+use crate::interpreter::Interpreter;
+use crate::types::{RecordData, Value, ValueData};
 use std::collections::HashMap;
 
-/// Take the Word's single operand, honouring `KEEP`.
+/// Take the Word's single operand off the stack.
 pub(super) fn take_operand(interp: &mut Interpreter) -> Result<Value> {
-    if interp.consumption_mode == ConsumptionMode::Keep {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
-    }
+    interp.stack.pop().ok_or(AjisaiError::stack_underflow())
 }
 
-/// Put an operand back when the Word failed and did consume it.
+/// Put an operand back when the Word failed after consuming it.
 pub(super) fn restore(interp: &mut Interpreter, value: Value) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.push(value);
-    }
+    interp.stack.push(value);
 }
 
 /// The elements of a vector operand, or a structure error naming what came
@@ -49,7 +38,7 @@ pub(super) fn elements_of(value: &Value, expected: &str) -> Result<Vec<Value>> {
         // six, unlike Phase 2's shared-helper cases, so the remap is safe here.
         None => Err(AjisaiError::declared(
             "nonVector",
-            format!("expected {}, got a non-vector value", expected),
+            format!("expected {}, got {}", expected, value.domain_name()),
         )),
     }
 }
@@ -88,25 +77,12 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
     }
 
     match order_indices(&items) {
-        Ok(Some(perm)) => {
+        Ok(perm) => {
             let out: Vec<Value> = perm
                 .into_iter()
                 .map(|i| Value::from_int(i as i64))
                 .collect();
-            interp
-                .stack
-                .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
-            Ok(())
-        }
-        // A required comparison exhausted its refinement budget: no
-        // permutation exists to report, so `ORDER` yields the logical
-        // Unknown (LANG.VALUES.EXACT) — a plain NIL, since a permutation
-        // vector is not a truth value.
-        Ok(None) => {
-            interp.stack.push(Value::nil_with_reason(
-                NilReason::Undecidable,
-                Recoverability::Retryable,
-            ));
+            interp.stack.push(Value::from_vector(out));
             Ok(())
         }
         Err(e) => {
@@ -230,9 +206,7 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     match dense_integer_distinct_with_counts(interp, &value) {
         Ok(Some(distinct)) => {
             let lanes: Vec<i64> = distinct.into_iter().map(|(lane, _)| lane).collect();
-            interp
-                .stack
-                .push_with_role(Value::from_int_tensor(lanes), Interpretation::Unassigned);
+            interp.stack.push(Value::from_int_tensor(lanes));
             return Ok(());
         }
         Ok(None) => {}
@@ -252,9 +226,7 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     match distinct_with_counts(interp, &items) {
         Ok(distinct) => {
             let out: Vec<Value> = distinct.into_iter().map(|(value, _)| value).collect();
-            interp
-                .stack
-                .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+            interp.stack.push(Value::from_vector(out));
             Ok(())
         }
         Err(e) => {
@@ -321,41 +293,36 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
 /// fail and charges nothing the scan has not already charged.
 fn push_tally(interp: &mut Interpreter, keys: Vec<Value>, counts: Vec<Value>) {
     let record = RecordData::new(keys, counts).expect("distinct_with_counts yields distinct keys");
-    interp
-        .stack
-        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+    interp.stack.push(Value::from_record(record));
 }
 
-/// `GROUP ( [ values ] [ keys ] -> [ record ] )`: a Record from each key to
+/// `GROUP ( [ keys ] [ values ] -> [ record ] )`: a Record from each key to
 /// the Vector of the `values` at its positions, keys in the order
-/// `UNIQUE keys` reports them.
+/// `UNIQUE keys` reports them. Keys come first, as they do for `RECORD`.
 ///
 /// The core of a centroid update, a decision-tree split, a per-class tally and
 /// a stratified partition. Written out, each of those was a nested scan over
 /// the keys with the index plumbing done by hand.
 pub fn op_group(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
-    let keep = interp.consumption_mode == ConsumptionMode::Keep;
-    let keys_value = interp.stack.pop().expect("checked by len()");
     let values_value = interp.stack.pop().expect("checked by len()");
+    let keys_value = interp.stack.pop().expect("checked by len()");
 
     let put_back = |interp: &mut Interpreter, values: &Value, keys: &Value| {
-        if !keep {
-            interp.stack.push(values.clone());
-            interp.stack.push(keys.clone());
-        }
+        interp.stack.push(keys.clone());
+        interp.stack.push(values.clone());
     };
 
-    let values = match elements_of(&values_value, "vector as first operand") {
+    let values = match elements_of(&values_value, "vector as second operand") {
         Ok(items) => items,
         Err(e) => {
             put_back(interp, &values_value, &keys_value);
             return Err(e);
         }
     };
-    let keys = match elements_of(&keys_value, "vector as second operand") {
+    let keys = match elements_of(&keys_value, "vector as first operand") {
         Ok(items) => items,
         Err(e) => {
             put_back(interp, &values_value, &keys_value);
@@ -365,10 +332,7 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
 
     if values.len() != keys.len() {
         put_back(interp, &values_value, &keys_value);
-        return Err(AjisaiError::VectorLengthMismatch {
-            len1: values.len(),
-            len2: keys.len(),
-        });
+        return Err(AjisaiError::length_mismatch(keys.len(), values.len()));
     }
 
     // Two prices, because `GROUP` does two things: it hashes each key to find
@@ -401,17 +365,11 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    if keep {
-        interp.stack.push(values_value);
-        interp.stack.push(keys_value);
-    }
     let (keys, buckets): (Vec<Value>, Vec<Value>) = groups
         .into_iter()
         .map(|(key, bucket)| (key, Value::from_vector(bucket)))
         .unzip();
     let record = RecordData::new(keys, buckets).expect("group keys are distinct by construction");
-    interp
-        .stack
-        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+    interp.stack.push(Value::from_record(record));
     Ok(())
 }

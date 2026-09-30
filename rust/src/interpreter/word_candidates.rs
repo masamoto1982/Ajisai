@@ -3,8 +3,8 @@
 //! The unknown-name diagnosis has always told a reader to check the spelling
 //! without saying what the spelling might have been — the one next-check an
 //! agent cannot act on, even though the entire vocabulary it would need is
-//! compiled into the same binary. This module answers it: the Corewords, their
-//! aliases, and whatever names the failing interpreter additionally knows,
+//! compiled into the same binary. This module answers it: the Corewords
+//! and whatever names the failing interpreter additionally knows,
 //! ranked by edit distance from the name that did not resolve.
 //!
 //! Deliberately conservative. A suggestion that is not a plausible typo is
@@ -12,7 +12,6 @@
 //! meant — so the distance ceiling scales with the name's length and only the
 //! closest few survive.
 
-use crate::core_word_aliases::CORE_WORD_ALIASES;
 use crate::coreword_registry::get_builtin_word_registry;
 
 /// How many suggestions a diagnosis carries at most.
@@ -44,11 +43,6 @@ pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>
     let vocabulary = get_builtin_word_registry()
         .iter()
         .map(|entry| entry.name.to_string())
-        .chain(
-            CORE_WORD_ALIASES
-                .iter()
-                .map(|alias| alias.alias.to_string()),
-        )
         .chain(extra.map(|word| word.to_string()));
 
     let mut scored: Vec<(usize, String)> = Vec::new();
@@ -125,9 +119,9 @@ mod tests {
 
     #[test]
     fn user_words_are_matched_beside_the_compiled_in_vocabulary() {
-        let user = ["EXAMPLE@DOUBLE".to_string()];
-        let candidates = suggest_words("EXAMPLE@DOUBEL", user.iter().map(String::as_str));
-        assert_eq!(candidates, vec!["EXAMPLE@DOUBLE".to_string()]);
+        let user = ["DOUBLE".to_string()];
+        let candidates = suggest_words("DOUBEL", user.iter().map(String::as_str));
+        assert_eq!(candidates, vec!["DOUBLE".to_string()]);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 //! Resolution laws for `crate::interpreter::resolve_word`.
 //!
 //! LANG.DICTIONARY.RESOLUTION: "The dictionary has two tiers. **Core** holds
-//! the 57 canonical Words and is sealed: a Core name cannot be redefined or
+//! the canonical Words and is sealed: a Core name cannot be redefined or
 //! deleted. **User** holds definitions made by `DEF`. Resolution is a
 //! deterministic function of the normalized name and the current dictionary,
 //! and User never shadows Core." And: "Those two tiers are the whole
@@ -39,7 +39,7 @@ mod tests {
     #[tokio::test]
     async fn a_user_name_resolves_to_user_by_its_bare_name() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
 
         let (name, def) = interp.resolve_word_entry("INC").expect("INC was defined");
         assert_eq!(name.as_ref(), "INC", "a name is the whole address");
@@ -49,7 +49,7 @@ mod tests {
     #[tokio::test]
     async fn resolution_is_case_insensitive() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
         for spelling in ["INC", "inc", "Inc"] {
             assert_eq!(
                 interp
@@ -76,11 +76,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_qualified_path_is_not_a_name() {
+    async fn an_at_sign_is_an_ordinary_name_character() {
         // `DICT@WORD` addressed a tier that no longer exists. It is now just a
-        // name that nothing holds.
+        // name: held by nothing until defined, and by that word once it is.
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
 
         for path in [
             "EXAMPLE@INC",
@@ -90,20 +90,16 @@ mod tests {
         ] {
             assert!(
                 interp.resolve_word_entry(path).is_none(),
-                "{path} must not resolve"
+                "{path} resolves to nothing"
             );
         }
-    }
 
-    #[tokio::test]
-    async fn a_bare_name_is_never_ambiguous() {
-        // Ambiguity was a consequence of several dictionaries holding a name.
-        // With one User tier a name is held or it is not.
-        let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
-        assert!(interp.check_ambiguity("INC").is_empty());
-        assert!(interp.check_ambiguity("ADD").is_empty());
-        assert!(interp.check_ambiguity("NOPE").is_empty());
+        define(&mut interp, "EXAMPLE@INC", "2 ADD");
+        let (name, def) = interp
+            .resolve_word_entry("example@inc")
+            .expect("a defined name resolves, case-folded like any other");
+        assert_eq!(name.as_ref(), "EXAMPLE@INC");
+        assert!(!def.is_builtin);
     }
 
     #[tokio::test]
@@ -115,8 +111,8 @@ mod tests {
     #[tokio::test]
     async fn a_redefinition_replaces_the_user_entry() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
-        define(&mut interp, "INC", "X | X 2 ADD");
+        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "2 ADD");
 
         interp.execute("5 INC").await.expect("INC runs");
         assert_eq!(
@@ -148,7 +144,7 @@ mod tests {
     #[tokio::test]
     async fn a_redefinition_is_not_served_from_the_cache() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
 
         // Resolve once so the first definition is certainly cached.
         interp.execute("5 INC").await.expect("INC runs");
@@ -158,7 +154,7 @@ mod tests {
         );
         interp.update_stack(Vec::new());
 
-        define(&mut interp, "INC", "X | X 10 ADD");
+        define(&mut interp, "INC", "10 ADD");
         interp.execute("5 INC").await.expect("INC runs again");
         assert_eq!(
             format!("{}", interp.get_stack().last().expect("a result")),
@@ -173,7 +169,7 @@ mod tests {
     async fn every_redefinition_in_a_chain_is_the_one_that_resolves() {
         let mut interp = Interpreter::new();
         for (addend, expected) in [(1, "6/1"), (2, "7/1"), (3, "8/1"), (100, "105/1")] {
-            define(&mut interp, "INC", &format!("X | X {addend} ADD"));
+            define(&mut interp, "INC", &format!("{addend} ADD"));
             interp.execute("5 INC").await.expect("INC runs");
             assert_eq!(
                 format!("{}", interp.get_stack().last().expect("a result")),
@@ -187,7 +183,7 @@ mod tests {
     #[tokio::test]
     async fn a_deleted_word_is_not_served_from_the_cache() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "GONE", "X | X 1 ADD");
+        define(&mut interp, "GONE", "1 ADD");
 
         interp.execute("5 GONE").await.expect("GONE runs");
         interp.update_stack(Vec::new());
@@ -223,10 +219,9 @@ mod tests {
     // which is the most-travelled path the interpreter has, and neither could
     // produce anything but the name already in hand.
     //
-    // `canonicalize_core_word_name` returns one of three things, and all three
-    // are uppercase: an alias's canonical name (every entry in the table is),
-    // the input unchanged when it is ASCII with no lowercase byte (uppercasing
-    // that is the identity), or an owned `to_uppercase()`. Resolution looks a
+    // `canonical_word_name` returns one of two things, and both are
+    // uppercase: the input unchanged when it is ASCII with no lowercase byte
+    // (uppercasing that is the identity), or an owned `to_uppercase()`. Resolution looks a
     // name up in Core and then in User and answers with the key it looked up —
     // when the dictionary had named tiers and `DICT@WORD` paths it could answer
     // with a different, qualified name, and that is what the returned copy was
@@ -255,17 +250,16 @@ mod tests {
         }
     }
 
-    /// Resolution answers with the canonical name, whatever spelling it was
-    /// asked with — an alias included. This is the invariant that lets the
+    /// Resolution answers with the canonical name, whatever case it was asked
+    /// with. This is the invariant that lets the
     /// resolved name be *shared* rather than copied: there is nothing in it that
     /// the caller's own canonical name does not already say.
     #[tokio::test]
     async fn a_resolution_answers_with_the_canonical_name() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
 
         for (asked, canonical) in [
-            ("+", "ADD"),
             ("add", "ADD"),
             ("ADD", "ADD"),
             ("Add", "ADD"),
@@ -302,7 +296,7 @@ mod tests {
     #[tokio::test]
     async fn a_session_reset_leaves_no_resolution_behind() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
 
         // Run it so the resolution is certainly cached.
         interp.execute("5 INC").await.expect("INC runs");
@@ -343,15 +337,15 @@ mod tests {
     #[tokio::test]
     async fn the_retired_resolve_cache_counters_stay_and_stay_zero() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "1 ADD");
         // Resolve plenty, through Core, through User, and across a redefinition,
         // which is every path that used to move one of these.
         interp
-            .execute("[ 0 200 ] RANGE [ INC ] MAP")
+            .execute("0 200 RANGE [ INC ] MAP")
             .await
             .expect("runs");
         interp.update_stack(Vec::new());
-        define(&mut interp, "INC", "X | X 2 ADD");
+        define(&mut interp, "INC", "2 ADD");
         interp.execute("5 INC").await.expect("runs");
 
         let metrics = interp.runtime_metrics();

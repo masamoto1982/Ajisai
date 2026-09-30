@@ -1,34 +1,27 @@
-//! Test suite for `crate::core_word_aliases` canonicalization.
+//! Test suite for `crate::word_name` canonicalization.
 
 use crate::interpreter::Interpreter;
 
-async fn assert_same_stack(left_code: &str, right_code: &str) {
-    let mut left = Interpreter::new();
-    left.execute("").await.unwrap();
-    left.execute(left_code).await.unwrap();
-
-    let mut right = Interpreter::new();
-    right.execute("").await.unwrap();
-    right.execute(right_code).await.unwrap();
-
-    assert_eq!(left.get_stack(), right.get_stack());
-}
-
+/// A Word has exactly one name. The symbol spellings `ADD SUB MUL DIV EQ LT GT` were
+/// once aliases of `ADD SUB MUL DIV EQ LT GT`; they were deleted so the
+/// vocabulary has one spelling per concept, and are ordinary names now:
+/// canonicalization leaves them unchanged and, undefined, they are unknown
+/// words like any other.
 #[tokio::test]
-async fn symbol_aliases_execute_same_as_canonical_words() {
-    assert_same_stack("1 2 +", "1 2 ADD").await;
-    assert_same_stack("5 3 -", "5 3 SUB").await;
-    assert_same_stack("2 4 *", "2 4 MUL").await;
-    assert_same_stack("8 2 /", "8 2 DIV").await;
-    assert_same_stack("1 1 =", "1 1 EQ").await;
-    assert_same_stack("1 2 <", "1 2 LT").await;
-    assert_same_stack("2 1 >", "2 1 GT").await;
-    assert_same_stack("7 2 %", "7 2 MOD").await;
-}
-#[tokio::test]
-async fn symbol_alias_canonicalizes_to_english_word() {
-    use crate::core_word_aliases::canonicalize_core_word_name;
-    assert_eq!(canonicalize_core_word_name("+"), "ADD");
+async fn former_symbol_aliases_are_ordinary_names() {
+    use crate::word_name::canonical_word_name;
+    for symbol in ["+", "-", "*", "/", "=", "<", ">"] {
+        assert_eq!(canonical_word_name(symbol), symbol);
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute(&format!("1 2 {symbol}"))
+            .await
+            .expect_err("an undefined name is an unknown word");
+        assert!(
+            err.to_string().contains("Unknown word"),
+            "`{symbol}`: {err}"
+        );
+    }
 }
 
 /// `OR-NIL` has no symbol or legacy-name sugar: `^` and `VENT` (the former
@@ -37,9 +30,9 @@ async fn symbol_alias_canonicalizes_to_english_word() {
 /// unchanged rather than folding them onto `OR-NIL`.
 #[tokio::test]
 async fn caret_and_legacy_vent_spelling_are_no_longer_aliases() {
-    use crate::core_word_aliases::canonicalize_core_word_name;
-    assert_eq!(canonicalize_core_word_name("^"), "^");
-    assert_eq!(canonicalize_core_word_name("VENT"), "VENT");
+    use crate::word_name::canonical_word_name;
+    assert_eq!(canonical_word_name("^"), "^");
+    assert_eq!(canonical_word_name("VENT"), "VENT");
 }
 
 /// `?` is the host's spelling of a lookup, not a Word alias, so canonicalization
@@ -47,44 +40,38 @@ async fn caret_and_legacy_vent_spelling_are_no_longer_aliases() {
 /// named `?` would resolve to a Word that no longer exists.
 #[tokio::test]
 async fn the_lookup_mark_is_not_a_word_alias() {
-    use crate::core_word_aliases::canonicalize_core_word_name;
-    assert_eq!(canonicalize_core_word_name("?"), "?");
+    use crate::word_name::canonical_word_name;
+    assert_eq!(canonical_word_name("?"), "?");
 }
 
 /// Lexical / structural surface forms are documented as named concepts but are
-/// never runtime words: `canonicalize_core_word_name` must not return their
+/// never runtime words: `canonical_word_name` must not return their
 /// concept names. (See `crate::surface_forms`.)
 #[tokio::test]
 async fn surface_form_concepts_are_not_runtime_canonicalizations() {
-    use crate::core_word_aliases::canonicalize_core_word_name;
     use crate::surface_forms::lookup_surface_form;
+    use crate::word_name::canonical_word_name;
 
     assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
     assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
 
-    assert_ne!(canonicalize_core_word_name("#"), "COMMENT-LINE");
-    assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
-    assert_ne!(canonicalize_core_word_name("]"), "END-VECTOR");
-    assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
+    assert_ne!(canonical_word_name("#"), "COMMENT-LINE");
+    assert_ne!(canonical_word_name("["), "BEGIN-VECTOR");
+    assert_ne!(canonical_word_name("]"), "END-VECTOR");
+    assert_ne!(canonical_word_name("'"), "STRING-QUOTE");
 }
 
-/// 手3 (dispatch de-allocation): canonicalization must not allocate on the two
-/// dominant dispatch cases — a symbol alias (borrows the `&'static` canonical
-/// name) and an already-uppercase word (borrows the input slice). Only a name
-/// that genuinely needs case folding takes the owned path.
+/// 手3 (dispatch de-allocation): canonicalization must not allocate on the
+/// dominant dispatch case — an already-uppercase word borrows the input slice.
+/// Only a name that genuinely needs case folding takes the owned path.
 #[test]
 fn canonicalize_borrows_without_allocating_on_hot_paths() {
-    use crate::core_word_aliases::canonicalize_core_word_name;
+    use crate::word_name::canonical_word_name;
     use std::borrow::Cow;
 
-    // Symbol alias → borrowed &'static canonical, value still correct.
-    let add = canonicalize_core_word_name("+");
-    assert!(matches!(add, Cow::Borrowed(_)), "alias must borrow");
-    assert_eq!(add, "ADD");
-
-    // Already-uppercase non-alias word → input borrowed unchanged.
-    for word in ["MAP", "LENGTH", "TIME@NOW", "USER-WORD"] {
-        let canon = canonicalize_core_word_name(word);
+    // Already-uppercase word → input borrowed unchanged.
+    for word in ["MAP", "LENGTH", "TIME@NOW", "USER-WORD", "+"] {
+        let canon = canonical_word_name(word);
         assert!(
             matches!(canon, Cow::Borrowed(_)),
             "uppercase word {word} must borrow"
@@ -93,30 +80,16 @@ fn canonicalize_borrows_without_allocating_on_hot_paths() {
     }
 
     // Mixed/lowercase requires folding → owned, and folds correctly.
-    let folded = canonicalize_core_word_name("map");
+    let folded = canonical_word_name("map");
     assert!(matches!(folded, Cow::Owned(_)), "lowercase must fold owned");
     assert_eq!(folded, "MAP");
 }
 
-/// Canonicalization over the whole alias table, plus the shapes that sit at its
-/// edges: an empty name, a non-ASCII one, a name that merely *starts* like an
-/// alias, and one that is alphanumeric-with-a-digit. Added while testing — and
-/// rejecting — a fast screen in front of the alias walk; the screen is gone but
-/// the coverage is worth keeping, since nothing else pinned these.
+/// Canonicalization at the edges: an empty name, a non-ASCII one, a name
+/// that starts with a symbol, and one that is alphanumeric-with-a-digit.
 #[test]
-fn canonicalization_is_exact_over_the_alias_table_and_its_edges() {
-    use crate::core_word_aliases::{canonicalize_core_word_name, CORE_WORD_ALIASES};
-
-    for entry in CORE_WORD_ALIASES {
-        if let Some(canonical) = entry.canonical {
-            assert_eq!(
-                canonicalize_core_word_name(entry.alias),
-                canonical,
-                "alias `{}` must still reach its canonical name",
-                entry.alias
-            );
-        }
-    }
+fn canonicalization_is_exact_at_its_edges() {
+    use crate::word_name::canonical_word_name;
 
     for (name, expected) in [
         ("", ""),
@@ -130,7 +103,7 @@ fn canonicalization_is_exact_over_the_alias_table_and_its_edges() {
         ("TIME@NOW", "TIME@NOW"),
     ] {
         assert_eq!(
-            canonicalize_core_word_name(name),
+            canonical_word_name(name),
             expected,
             "`{name}` must canonicalize to `{expected}`"
         );

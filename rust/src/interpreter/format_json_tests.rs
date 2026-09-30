@@ -24,6 +24,7 @@ mod format_json_tests {
         let mut interp = Interpreter::new();
         let err = interp.execute(code).await.expect_err("must raise an ERROR");
         crate::error::ErrorCategory::from_error(&err)
+            .expect("a program ERROR has a category")
             .as_protocol_str()
             .to_string()
     }
@@ -37,17 +38,17 @@ mod format_json_tests {
         assert_eq!(top("1/8 2 FORMAT").await, "'0.13'");
         assert_eq!(top("3/8 2 FORMAT").await, "'0.38'");
         assert_eq!(top("-1/8 2 FORMAT").await, "'-0.13'");
-        // One rule in the language: FORMAT agrees with ROUND and QUANTIZE.
+        // One rule in the language: FORMAT agrees with ROUND.
         assert_eq!(
-            top("5/2 ROUND -5/2 ROUND 1/8 100 QUANTIZE").await,
+            top("5/2 ROUND -5/2 ROUND 1/8 100 MUL ROUND 100 DIV").await,
             "3/1 -3/1 13/100"
         );
         assert_eq!(top("-1/1000 2 FORMAT").await, "'0.00'");
         assert_eq!(top("12345 2 FORMAT").await, "'12345.00'");
         assert_eq!(top("0 3 FORMAT").await, "'0.000'");
         assert_eq!(top("2 SQRT 3 FORMAT").await, "'1.414'");
-        assert_eq!(top("2 SQRT NEG 3 FORMAT").await, "'-1.414'");
-        assert_eq!(top("PI 4 FORMAT").await, "'3.1416'");
+        assert_eq!(top("2 SQRT -1 MUL 3 FORMAT").await, "'-1.414'");
+        assert_eq!(top("2 SQRT 3 SQRT ADD 4 FORMAT").await, "'3.1463'");
         // Text, not a number: the rounded quantity never re-enters arithmetic.
         assert_eq!(error_of("1/3 2 FORMAT 1 ADD").await, "nonNumeric");
     }
@@ -55,16 +56,21 @@ mod format_json_tests {
     #[tokio::test]
     async fn format_refuses_malformed_use_and_restores_operands() {
         assert_eq!(error_of("'x' 2 FORMAT").await, "nonNumeric");
-        assert_eq!(error_of("[ 1 2 ] 2 FORMAT").await, "nonNumeric");
-        assert_eq!(error_of("1 -1 FORMAT").await, "invalidCount");
-        assert_eq!(error_of("1 1/2 FORMAT").await, "invalidCount");
-        assert_eq!(error_of("1 'x' FORMAT").await, "invalidCount");
-        assert_eq!(error_of("NIL 2 FORMAT").await, "nonNumeric");
-        assert_eq!(error_of("1 NIL FORMAT").await, "invalidCount");
+        // A Vector value lifts FORMAT over its elements.
+        assert_eq!(top("[ 1 2 ] 2 FORMAT").await, "[ '1.00' '2.00' ]");
+        assert_eq!(error_of("1 -1 FORMAT").await, "invalidInteger");
+        assert_eq!(error_of("1 1/2 FORMAT").await, "invalidInteger");
+        assert_eq!(error_of("1 'x' FORMAT").await, "invalidInteger");
+        // Both operands are data: an absent one passes through.
+        assert_eq!(top("NIL 2 FORMAT NIL?").await, "TRUE");
+        assert_eq!(top("1 NIL FORMAT NIL?").await, "TRUE");
         let mut interp = Interpreter::new();
         let _ = interp.execute("1 -1 FORMAT").await;
         assert_eq!(interp.stack.len(), 2);
-        assert_eq!(top("1/3 2 KEEP FORMAT").await, "1/3 2/1 '0.33'");
+        assert_eq!(
+            top("1/3 'X' BIND 2 'N' BIND X N X N FORMAT").await,
+            "1/3 2/1 '0.33'"
+        );
     }
 
     #[tokio::test]
@@ -78,10 +84,10 @@ mod format_json_tests {
         assert_eq!(top("'-1.5e2' JSON-DECODE").await, "-150/1");
         assert_eq!(top("'[]' JSON-DECODE").await, "[ ]");
         assert_eq!(top("'{}' JSON-DECODE").await, "{ }");
-        assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "NIL 'literal'");
+        assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "'literal'");
         assert_eq!(top("'\"caf\\u00e9\"' JSON-DECODE").await, "'café'");
         assert_eq!(
-            top("'{\"k\": {\"n\": [1, [2]]}}' JSON-DECODE 'k' AT 'n' AT 1 GET").await,
+            top("'{\"k\": {\"n\": [1, [2]]}}' JSON-DECODE 'k' GET 'n' GET 1 GET").await,
             "[ 2/1 ]"
         );
     }
@@ -98,13 +104,13 @@ mod format_json_tests {
         ] {
             assert_eq!(
                 top(&format!("{bad} JSON-DECODE NIL-REASON")).await,
-                "NIL 'invalidEncoding'",
+                "'invalidEncoding'",
                 "{bad}"
             );
         }
         assert_eq!(error_of("5 JSON-DECODE").await, "nonText");
-        assert_eq!(error_of("NIL JSON-DECODE").await, "nonText");
-        assert_eq!(top("'[1]' KEEP JSON-DECODE").await, "'[1]' [ 1/1 ]");
+        assert_eq!(top("NIL JSON-DECODE NIL?").await, "TRUE");
+        assert_eq!(top("'[1]' 'S' BIND S S JSON-DECODE").await, "'[1]' [ 1/1 ]");
     }
 
     #[tokio::test]
@@ -125,14 +131,14 @@ mod format_json_tests {
         assert_eq!(top("[ ] JSON-ENCODE").await, "'[]'");
         for no_image in [
             "2 SQRT",
-            "PI",
+            "2 SQRT 3 SQRT ADD",
             "[ ADD ] 0 GET",
             "[ 1 ] [ 2 ] RECORD",
             "[ 1 2 SQRT ]",
         ] {
             assert_eq!(
                 top(&format!("{no_image} JSON-ENCODE NIL-REASON")).await,
-                "NIL 'domainMiss'",
+                "'domainMiss'",
                 "{no_image}"
             );
         }
@@ -146,12 +152,12 @@ mod format_json_tests {
             "'quote \" and \\ and newline\n'",
             "[ [ 1 2 ] [ 3 4 ] ]",
             "[ ]",
-            "{ }",
+            "[ ] [ ] RECORD",
         ] {
-            // KEEP holds the value under its text; DECODE rebuilds it beside
-            // it, and EQ takes both.
+            // BIND holds the value; DECODE rebuilds it beside a second
+            // reading of it, and EQ takes both.
             assert_eq!(
-                top(&format!("{value} KEEP JSON-ENCODE JSON-DECODE EQ")).await,
+                top(&format!("{value} 'V' BIND V V JSON-ENCODE JSON-DECODE EQ")).await,
                 "TRUE",
                 "{value}"
             );
@@ -160,6 +166,9 @@ mod format_json_tests {
         // string, and comes back as that String: NUM recovers the number,
         // and no digit was rounded on the way.
         assert_eq!(top("1/3 JSON-ENCODE JSON-DECODE").await, "'1/3'");
-        assert_eq!(top("1/3 KEEP JSON-ENCODE JSON-DECODE NUM EQ").await, "TRUE");
+        assert_eq!(
+            top("1/3 'V' BIND V V JSON-ENCODE JSON-DECODE NUM EQ").await,
+            "TRUE"
+        );
     }
 }

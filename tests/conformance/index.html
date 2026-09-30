@@ -85,7 +85,7 @@
 
 <section class="ajisai-case" id="core-vector-literal-ignores-dictionary" data-category="core">
   <h3>A Vector literal denotes the same value when the name is a defined Word</h3>
-  <pre class="ajisai-source">[ | [ 99 ] ] 'FOO' DEF
+  <pre class="ajisai-source">[ [ 99 ] ] 'FOO' DEF
 [ FOO 1 ]</pre>
   <pre class="ajisai-expect-result">[ FOO 1/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
@@ -114,70 +114,77 @@
 
 <section class="ajisai-case" id="core-exact-addition" data-category="core">
   <h3>Exact addition</h3>
-  <pre class="ajisai-source">3 4 +</pre>
+  <pre class="ajisai-source">3 4 ADD</pre>
   <pre class="ajisai-expect-result">7/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-bignum-does-not-fall-to-float" data-category="core">
   <h3>Arbitrary-precision integers do not fall back to float</h3>
-  <pre class="ajisai-source">1000000000000 1000000000000 *</pre>
+  <pre class="ajisai-source">1000000000000 1000000000000 MUL</pre>
   <pre class="ajisai-expect-result">1000000000000000000000000/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-exact-division" data-category="core">
   <h3>Exact division yields an exact rational</h3>
-  <pre class="ajisai-source">1 3 /</pre>
+  <pre class="ajisai-source">1 3 DIV</pre>
   <pre class="ajisai-expect-result">1/3</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-division-by-zero-is-nil" data-category="core">
   <h3>Division by zero is NIL (a specified absence, not a trap)</h3>
-  <pre class="ajisai-source">1 0 /</pre>
+  <pre class="ajisai-source">1 0 DIV</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-reason-division-by-zero" data-category="core">
-  <h3>NIL-REASON reads the reason of a Bubble/NIL as a protocol string (LANG.VALUES.NIL/LANG.OBSERVATION.DIAGNOSIS)</h3>
-  <pre class="ajisai-source">1 0 / NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <h3>NIL-REASON reads the reason of a NIL as a protocol string (LANG.VALUES.NIL/LANG.OBSERVATION.DIAGNOSIS)</h3>
+  <pre class="ajisai-source">1 0 DIV NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-check-true-retains-source" data-category="core">
-  <h3>NIL? is TRUE for an operational NIL and retains the inspected value (LANG.OBSERVATION.DIAGNOSIS)</h3>
-  <pre class="ajisai-source">1 0 / NIL?</pre>
-  <pre class="ajisai-expect-result">NIL TRUE</pre>
+<section class="ajisai-case" id="core-nil-check-true-consumes-source" data-category="core">
+  <h3>NIL? is TRUE for an operational NIL and consumes the inspected value (LANG.OBSERVATION.DIAGNOSIS, LANG.STACK.CONSUMPTION)</h3>
+  <pre class="ajisai-source">1 0 DIV NIL?</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-check-false-for-present-value" data-category="core">
-  <h3>NIL? is FALSE for a present value and retains it (LANG.OBSERVATION.DIAGNOSIS)</h3>
+  <h3>NIL? is FALSE for a present value and consumes it (LANG.OBSERVATION.DIAGNOSIS, LANG.STACK.CONSUMPTION)</h3>
   <pre class="ajisai-source">5 NIL?</pre>
-  <pre class="ajisai-expect-result">5/1 FALSE</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-reason-present-value-is-nil" data-category="core">
-  <h3>NIL-REASON on a present value is NIL, never an error (Bubble Rule, LANG.OBSERVATION.DIAGNOSIS)</h3>
+  <h3>NIL-REASON on a present value is NIL, never an error (NIL Projection Rule, LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">5 NIL-REASON</pre>
-  <pre class="ajisai-expect-result">5/1 NIL</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-reason-of-a-present-value-is-domain-miss" data-category="core">
+  <h3>NIL-REASON's NIL for a present value is domainMiss: a well-formed operand outside the question's domain (LANG.FAILURE.PROJECT)</h3>
+  <pre class="ajisai-source">5 NIL-REASON NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absent-declares-a-reasoned-nil" data-category="core">
   <h3>ABSENT makes a NIL whose reason is the program's own text, and NIL-REASON answers that text (LANG.VALUES.NIL)</h3>
   <pre class="ajisai-source">'rate not quoted' ABSENT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'rate not quoted'</pre>
+  <pre class="ajisai-expect-result">'rate not quoted'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absent-is-recoverable" data-category="core">
   <h3>A declared absence is an ordinary NIL: NIL? sees it and SELECT recovers it (LANG.FAILURE.RECOVERY)</h3>
-  <pre class="ajisai-source">0 'rate not quoted' ABSENT NIL? SELECT</pre>
+  <pre class="ajisai-source">'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">0/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -199,35 +206,35 @@
 
 <section class="ajisai-case" id="core-map" data-category="core">
   <h3>MAP applies a user block element-wise</h3>
-  <pre class="ajisai-source">[ X | X 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</pre>
+  <pre class="ajisai-source">[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</pre>
   <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-fold" data-category="core">
   <h3>FOLD reduces with an initial accumulator</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 ] [ 0 ] [ + ] FOLD</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 ] [ 0 ] [ ADD ] FOLD</pre>
   <pre class="ajisai-expect-result">[ 10/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-scan" data-category="core">
   <h3>SCAN answers the accumulator after each element, one lane per lane</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 ] 0 [ + ] SCAN</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 ] 0 [ ADD ] SCAN</pre>
   <pre class="ajisai-expect-result">[ 1/1 3/1 6/1 10/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-scan-empty" data-category="core">
   <h3>SCAN of an empty Vector answers an empty Vector: the seed is not a lane</h3>
-  <pre class="ajisai-source">[ ] 7 [ + ] SCAN</pre>
+  <pre class="ajisai-source">[ ] 7 [ ADD ] SCAN</pre>
   <pre class="ajisai-expect-result">[ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-scan-nil-target" data-category="core">
   <h3>SCAN of an absent Vector answers that same absence</h3>
-  <pre class="ajisai-source">NIL 7 [ + ] SCAN</pre>
+  <pre class="ajisai-source">NIL 7 [ ADD ] SCAN</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -241,83 +248,23 @@
 
 <section class="ajisai-case" id="core-nil-propagation" data-category="core">
   <h3>NIL propagates through arithmetic</h3>
-  <pre class="ajisai-source">NIL 1 +</pre>
+  <pre class="ajisai-source">NIL 1 ADD</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- Comparison is still total over Tier <= 1 — everything the current
-     vocabulary can construct numerically (rationals, and the multiquadratic
-     field generated by square roots of non-negative rationals) — so no
-     comparison can produce the logical UNKNOWN (U): even COMPARE-WITHIN
-     decides composed algebraic operands exactly, independent of its budget.
-     U reachable that way is still reserved for an unbuilt Tier 2 (general
-     computable reals). But AND / OR / NOT read any NIL operand — including
-     the bare NIL literal — in truth position as UNKNOWN, so U is reachable
-     from source today through them; the "NIL IN LOGIC" section above pins
-     its U rows at the source level, not only by native unit tests. -->
+<!-- Comparison is total over every number the language holds (rationals,
+     and the multiquadratic field generated by square roots of non-negative
+     rationals), so no comparison produces the logical UNKNOWN (U) of its own.
+     U arises only from a NIL read in truth position: AND / NOT read any NIL
+     operand — including the bare NIL literal — as UNKNOWN; the "NIL IN LOGIC"
+     section above pins its U rows at the source level, not only by native
+     unit tests. -->
 
 <section class="ajisai-case" id="core-user-definition-resolved" data-category="core">
   <h3>A user-defined word resolves through the dictionary</h3>
-  <pre class="ajisai-source">[ X | X [ 10 ] + ] 'ADD10' DEF 5 ADD10</pre>
+  <pre class="ajisai-source">[ [ 10 ] ADD ] 'ADD10' DEF 5 ADD10</pre>
   <pre class="ajisai-expect-result">[ 15/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<!-- A parameter header states a Word's arity (LANG.SOURCE.FRAME): the call
-     takes exactly the declared operands, deepest first, and the body runs on
-     an empty stack, so what KEEP keeps is read from the definition
-     (LANG.MODIFIERS.CONSUMPTION). -->
-
-<section class="ajisai-case" id="core-header-takes-declared-operands" data-category="core">
-  <h3>A parameter header binds exactly the declared operands, deepest first (LANG.SOURCE.FRAME)</h3>
-  <pre class="ajisai-source">[ A B | A B - ] 'DIFF' DEF 1 10 3 DIFF</pre>
-  <pre class="ajisai-expect-result">1/1 7/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-header-frame-starts-empty" data-category="core">
-  <h3>A Word's body cannot read below its own empty frame (LANG.SOURCE.FRAME)</h3>
-  <pre class="ajisai-source">[ B | B EXEC ] 'RUN' DEF 1 2 [ + ] RUN</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">underflow</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-def-refuses-a-body-that-always-reads-below-its-frame" data-category="core">
-  <h3>DEF refuses a body whose fixed stack effect reads below its frame (LANG.SOURCE.FRAME)</h3>
-  <pre class="ajisai-source">[ X | + ] 'BAD' DEF</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">below its frame</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-def-requires-a-parameter-header" data-category="core">
-  <h3>DEF refuses a body without a parameter header (LANG.SOURCE.FRAME)</h3>
-  <pre class="ajisai-source">[ 2 * ] 'TWICE' DEF</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">parameter header</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-header-word" data-category="core">
-  <h3>KEEP on a header-carrying Word keeps exactly the declared operands (LANG.MODIFIERS.CONSUMPTION)</h3>
-  <pre class="ajisai-source">[ A B | A B - ] 'DIFF' DEF 10 3 KEEP DIFF</pre>
-  <pre class="ajisai-expect-result">10/1 3/1 7/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-exec-modifies-the-call" data-category="core">
-  <h3>KEEP modifies the EXEC call, not the first Word inside its block (LANG.MODIFIERS.CONSUMPTION)</h3>
-  <pre class="ajisai-source">[ 3 ] [ 1 + ] KEEP EXEC</pre>
-  <pre class="ajisai-expect-result">[ 3/1 ] [ 1/1 + ] [ 4/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-exec-keeps-the-whole-stack" data-category="core">
-  <h3>KEEP EXEC keeps the whole stack the block ran on, beneath what the block leaves (LANG.MODIFIERS.CONSUMPTION)</h3>
-  <pre class="ajisai-source">1 [ 3 ] [ 1 + ] KEEP EXEC</pre>
-  <pre class="ajisai-expect-result">1/1 [ 3/1 ] [ 1/1 + ] 1/1 [ 4/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -330,28 +277,28 @@
 
 <section class="ajisai-case" id="core-vector-scalar-broadcast-add" data-category="core">
   <h3>Vector + vector is element-wise</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 4 5 6 ] +</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 4 5 6 ] ADD</pre>
   <pre class="ajisai-expect-result">[ 5/1 7/1 9/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-vector-singleton-broadcast-mul" data-category="core">
   <h3>A singleton vector broadcasts across a vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 10 ] *</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 10 ] MUL</pre>
   <pre class="ajisai-expect-result">[ 10/1 20/1 30/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-get-negative-index" data-category="core">
   <h3>GET with a negative index counts from the end</h3>
-  <pre class="ajisai-source">[ 10 20 30 ] [ -1 ] GET</pre>
+  <pre class="ajisai-source">[ 10 20 30 ] -1 GET</pre>
   <pre class="ajisai-expect-result">30/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-get-zero-index" data-category="core">
   <h3>GET index 0 is the first element</h3>
-  <pre class="ajisai-source">[ 10 20 30 ] [ 0 ] GET</pre>
+  <pre class="ajisai-source">[ 10 20 30 ] 0 GET</pre>
   <pre class="ajisai-expect-result">10/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -372,7 +319,7 @@
 
 <section class="ajisai-case" id="core-range" data-category="core">
   <h3>RANGE generates an inclusive integer sequence</h3>
-  <pre class="ajisai-source">[ 1 5 ] RANGE</pre>
+  <pre class="ajisai-source">1 5 RANGE</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -386,21 +333,14 @@
 
 <section class="ajisai-case" id="core-take" data-category="core">
   <h3>TAKE keeps the first N elements</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 3 ] TAKE</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] 3 TAKE</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-modifier" data-category="core">
-  <h3>KEEP retains operands and also pushes the result</h3>
-  <pre class="ajisai-source">3 4 KEEP ADD</pre>
-  <pre class="ajisai-expect-result">3/1 4/1 7/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-absence-fallback" data-category="core">
-  <h3>A chosen fallback turns a division-by-zero Bubble into a value</h3>
-  <pre class="ajisai-source">99 1 0 / NIL? SELECT</pre>
+  <h3>A chosen fallback turns a division-by-zero NIL into a value</h3>
+  <pre class="ajisai-source">1 0 DIV 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -468,8 +408,8 @@
 </section>
 
 <section class="ajisai-case" id="core-kleene-or-definite" data-category="core">
-  <h3>Kleene OR of TRUE and FALSE is TRUE</h3>
-  <pre class="ajisai-source">TRUE FALSE OR</pre>
+  <h3>Kleene disjunction of TRUE and FALSE is TRUE (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">TRUE NOT FALSE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -480,11 +420,9 @@
      cement the decided-comparison truth-value rendering discussed in the
      evaluation note. -->
 
-<!-- Exact-real observations are canonical flat continued fractions
-     (`[ a0; a1, a2, … ]`) at the language boundary. These cases deliberately
-     pin the current CF display budget so regressions to Rust Debug names,
-     sqrt(...) wrappers, or approximate ~n/d rationals are conformance
-     failures. -->
+<!-- An irrational observes as its exact normal form written as one token
+     (`sqrt(2)`, `1/1+sqrt(2)`) at the language boundary: never truncated,
+     never an approximate ~n/d rational, and one element inside a Vector. -->
 
 <!-- LANG.VALUES.EXACT / LANG.VALUES.EXACT exactness over the admitted domain D: the six relations
      are total and exact for every value the current Coreword set can
@@ -494,7 +432,7 @@
 
 <!-- ===================== CORE: SIGNATURES & PARTIALITY ===================== -->
 <!-- These cases pin stack signatures, consumption, and rounding/error rules
-     that LANG.MODIFIERS.CONSUMPTION, LANG.OBSERVATION.DIAGNOSIS, LANG.VALUES.EXACT,
+     that LANG.STACK.CONSUMPTION, LANG.OBSERVATION.DIAGNOSIS, LANG.VALUES.EXACT,
      LANG.VALUES.DISJOINT and LANG.FAILURE.PROJECT now state
      normatively, so that an independent port reproduces them exactly. -->
 
@@ -505,9 +443,9 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-range-with-step" data-category="core">
-  <h3>RANGE accepts an optional step and includes the end point</h3>
-  <pre class="ajisai-source">[ 1 10 2 ] RANGE</pre>
+<section class="ajisai-case" id="core-range-stride-is-a-multiplication" data-category="core">
+  <h3>RANGE includes both bounds, and a stride is a multiplication of it</h3>
+  <pre class="ajisai-source">0 4 RANGE 2 MUL 1 ADD</pre>
   <pre class="ajisai-expect-result">[ 1/1 3/1 5/1 7/1 9/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -516,6 +454,35 @@
   <h3>COLLECT gathers a leading-count N of stack values</h3>
   <pre class="ajisai-source">1 2 3 3 COLLECT</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A `#` or a quote inside a name is part of that name (LANG.SOURCE.TEXT),
+     and the delimiter check reads the same tokens the scan produced. A
+     text-level pre-pass used to read the `#` as a comment swallowing `]`. -->
+
+<section class="ajisai-case" id="core-glued-comment-character-is-a-name" data-category="core">
+  <h3>A '#' glued inside a name starts no comment, so the vector around it is balanced</h3>
+  <pre class="ajisai-source">[ C# ] LENGTH</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A zero denominator is a source error: the program is refused before it
+     runs, so nothing is printed. -->
+
+<section class="ajisai-case" id="core-zero-denominator-is-a-source-error" data-category="core">
+  <h3>1/0 is refused as source before anything runs, so the PRINT before it never happens</h3>
+  <pre class="ajisai-source">1 PRINT 1/0</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">zero denominator</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-collect-zero-is-empty" data-category="core">
+  <h3>COLLECT's count is a non-negative integer, so zero collects nothing and leaves the stack below alone</h3>
+  <pre class="ajisai-source">1 0 COLLECT</pre>
+  <pre class="ajisai-expect-result">1/1 [ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -530,7 +497,7 @@
   <h3>CONCAT rejects a String: it is a Vector Word, and String is not a Vector</h3>
   <pre class="ajisai-source">'ab' 'cd' CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -552,7 +519,7 @@
   <h3>A one-character String is not a one-element Vector either</h3>
   <pre class="ajisai-source">'ab' 'c' CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -560,7 +527,7 @@
   <h3>LENGTH rejects a String: character count is reached through CHARS</h3>
   <pre class="ajisai-source">'abc' LENGTH</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">LENGTH: expected a Vector, got a non-vector value</pre>
+  <pre class="ajisai-expect-error">LENGTH: expected a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -568,7 +535,7 @@
   <h3>GET rejects a String rather than answering a bare code point</h3>
   <pre class="ajisai-source">'abc' 1 GET</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">GET: expected a Vector, got a non-vector value</pre>
+  <pre class="ajisai-expect-error">GET: expected a Vector or a Record, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -583,7 +550,7 @@
   <h3>CONCAT refuses a non-vector operand (errorWhen: nonVector)</h3>
   <pre class="ajisai-source">[ 1 2 ] TRUE CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got Boolean</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -591,7 +558,7 @@
   <h3>CONCAT takes exactly two operands; a trailing scalar is not a count</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 3 4 ] 2 CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -609,27 +576,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-mod-by-zero-projects" data-category="core">
-  <h3>MOD by zero projects to NIL, as division by zero does</h3>
-  <pre class="ajisai-source">5 0 MOD</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-mod-projects-the-zero-divisor-lane-only" data-category="core">
-  <h3>A zero divisor empties its own MOD lane, not the vector around it</h3>
-  <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] %</pre>
-  <pre class="ajisai-expect-result">[ 0/1 0/1 NIL ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-mod-passes-a-nil-lane-through" data-category="core">
-  <h3>MOD passes a NIL lane through like every other arithmetic Word</h3>
-  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] %</pre>
-  <pre class="ajisai-expect-result">[ 1/1 NIL 1/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <!-- ============================ HOSTED ============================ -->
 
 <!-- Child runtime (Section 10.8): AWAIT's [status result-stack] is a pure
@@ -638,30 +584,29 @@
      here. Categorized hosted: the Core-only reference interpreter does not
      implement the (Quarantined) child-runtime words. -->
 
-<!-- Recovering an absence is `NIL?` and `SELECT`, not a construct of its own.
-     `NIL?` answers its subject and whether it is absent, which puts the truth
-     exactly where `SELECT` wants it, so `fallback X NIL? SELECT` reads as
-     "X, or the fallback if X is absent" with nothing named and nothing
-     repeated. The retired `OR-NIL` did the same job lazily, by skipping the
-     following source unit. -->
+<!-- Recovering an absence is `BIND`, `NIL?` and `SELECT`, not a construct of
+     its own. `NIL?` consumes its subject and answers whether it was absent,
+     which puts the truth exactly where `SELECT` wants it, so
+     `subject 'S' BIND fallback S S NIL? SELECT` reads as "S, or the fallback
+     if S is absent": the subject is named once and read twice. -->
 
 <section class="ajisai-case" id="core-absence-present-value-is-kept" data-category="core">
   <h3>A present value is kept and the fallback is not chosen</h3>
-  <pre class="ajisai-source">99 5 NIL? SELECT</pre>
+  <pre class="ajisai-source">5 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absence-written-nil-takes-the-fallback" data-category="core">
   <h3>A written NIL takes the fallback, as a computed one does</h3>
-  <pre class="ajisai-source">99 NIL NIL? SELECT</pre>
+  <pre class="ajisai-source">NIL 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absence-fallback-is-an-ordinary-operand" data-category="core">
   <h3>The fallback is an ordinary operand: a phrase computes it like any other</h3>
-  <pre class="ajisai-source">2 3 ADD NIL NIL? SELECT</pre>
+  <pre class="ajisai-source">NIL 'S' BIND 2 3 ADD S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -714,7 +659,7 @@
        the block finishes with an empty stack. -->
   <pre class="ajisai-source">[ 1 2 ] [ PRINT ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">MAP: expected return value, got empty stack</pre>
+  <pre class="ajisai-expect-error">MAP: expected the block to leave one value, and it left none</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span></div>
 </section>
 
@@ -727,7 +672,7 @@
 
 <section class="ajisai-case" id="core-filter-block" data-category="core">
   <h3>FILTER keeps elements for which the predicate is TRUE</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 ] [ 2 DIV 'H' BIND H FLOOR H EQ ] FILTER</pre>
   <pre class="ajisai-expect-result">[ 2/1 4/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -739,42 +684,27 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-any-predicate" data-category="core">
-  <h3>ANY is FALSE when no element satisfies the predicate</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 GT ] ANY</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-all-predicate" data-category="core">
-  <h3>ALL is TRUE when every element satisfies the predicate</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 0 GT ] ALL</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <!-- Truth has exactly three values, TRUE/FALSE/UNKNOWN (LANG.VALUES.TRUTH),
      and the domains are disjoint (LANG.VALUES.DISJOINT), so a predicate block
      decides in the Boolean domain (definitely or as UNKNOWN) or not at all: a
      Scalar is not truth, and a singleton Vector is not its element. -->
 
+<section class="ajisai-case" id="core-filter-drops-unknown-predicate" data-category="core">
+  <h3>FILTER's predicate is read in truth position: an UNKNOWN (a NIL) is a truth value, and only TRUE keeps an element (LANG.VALUES.TRUTH)</h3>
+  <pre class="ajisai-source">[ 1 0 2 ] [ 'X' BIND 1 X DIV 1/3 GT ] FILTER</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-filter-rejects-scalar-predicate" data-category="core">
   <h3>A FILTER predicate that yields a Scalar names the declared condition nonTruthValue</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 1 ] FILTER</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value from the predicate block, got a non-truth value</pre>
+  <pre class="ajisai-expect-error">FILTER: expected a truth value from the predicate block, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-all-rejects-singleton-vector-predicate" data-category="core">
-  <h3>An ALL predicate that yields a singleton Vector names the declared condition nonTruthValue</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ [ TRUE ] ] ALL</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value from the predicate block, got a non-truth value</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<!-- AND / OR / NOT are booleanLogic: a Scalar operand raises the registered
+<!-- AND / NOT are booleanLogic: a Scalar operand raises the registered
      nonTruthValue ERROR rather than being read as truth (only TRUE, FALSE,
      and NIL — read as UNKNOWN — are valid operands). -->
 
@@ -782,7 +712,7 @@
   <h3>AND rejects a Scalar operand: 1 is not TRUE</h3>
   <pre class="ajisai-source">1 1 AND</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value, got a non-truth value</pre>
+  <pre class="ajisai-expect-error">AND: expected a truth value, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -790,7 +720,7 @@
   <h3>NOT rejects a Scalar operand: 0 is not FALSE</h3>
   <pre class="ajisai-source">0 NOT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value, got a non-truth value</pre>
+  <pre class="ajisai-expect-error">NOT: expected a truth value, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -807,13 +737,6 @@
      coverage (success path, failure path, nil_policy, partiality) in the
      language-independent form §"Conformance and Identity" requires. -->
 
-<section class="ajisai-case" id="core-mod-success" data-category="core">
-  <h3>MOD of exact integers is the exact remainder</h3>
-  <pre class="ajisai-source">10 3 MOD</pre>
-  <pre class="ajisai-expect-result">1/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-floor-positive" data-category="core">
   <h3>FLOOR rounds toward negative infinity (positive operand)</h3>
   <pre class="ajisai-source">3.7 FLOOR</pre>
@@ -828,32 +751,11 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-lte-equal-true" data-category="core">
-  <h3>LTE is TRUE on equality (weak order)</h3>
-  <pre class="ajisai-source">2 2 LTE</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-lte-greater-false" data-category="core">
-  <h3>LTE is FALSE when the left operand is greater</h3>
-  <pre class="ajisai-source">3 2 LTE</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-gte-equal-true" data-category="core">
-  <h3>GTE is TRUE on equality (weak order)</h3>
-  <pre class="ajisai-source">2 2 GTE</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-add-underflow-error" data-category="core">
   <h3>ADD with one operand raises stackUnderflow (requires violated, LANG.CONFORMANCE.FAMILIES)</h3>
   <pre class="ajisai-source">1 ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <pre class="ajisai-expect-error">stack underflow</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -861,12 +763,13 @@
   <h3>Element-wise ADD of unequal non-singleton shapes is an error, not a guess</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 1 2 3 ] ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Cannot broadcast shapes</pre>
+  <pre class="ajisai-expect-error">expected shapes that align</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <!-- ===================== CORE: K3 TRUTH TABLES (LANG.VALUES.TRUTH) ===================== -->
-<!-- The strong-Kleene tables for AND/OR/NOT, TRUE/FALSE/UNKNOWN. The
+<!-- The strong-Kleene tables for AND/NOT, TRUE/FALSE/UNKNOWN, and the
+     disjunction written from them (a NOT b NOT AND NOT). The
      definite rows are below; the UNKNOWN rows, where a NIL operand is read
      in truth position, are the "NIL IN LOGIC" section right after this
      one. -->
@@ -893,22 +796,22 @@
 </section>
 
 <section class="ajisai-case" id="core-k3-or-tt" data-category="core">
-  <h3>K3 OR: T ∨ T = T</h3>
-  <pre class="ajisai-source">TRUE TRUE OR</pre>
+  <h3>K3 disjunction: T ∨ T = T (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">TRUE NOT TRUE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-k3-or-ft" data-category="core">
-  <h3>K3 OR: F ∨ T = T</h3>
-  <pre class="ajisai-source">FALSE TRUE OR</pre>
+  <h3>K3 disjunction: F ∨ T = T (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">FALSE NOT TRUE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-k3-or-ff" data-category="core">
-  <h3>K3 OR: F ∨ F = F</h3>
-  <pre class="ajisai-source">FALSE FALSE OR</pre>
+  <h3>K3 disjunction: F ∨ F = F (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">FALSE NOT FALSE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -921,8 +824,8 @@
 </section>
 
 <section class="ajisai-case" id="core-k3-or-tf" data-category="core">
-  <h3>K3 OR: T ∨ F = T</h3>
-  <pre class="ajisai-source">TRUE FALSE OR</pre>
+  <h3>K3 disjunction: T ∨ F = T (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">TRUE NOT FALSE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -942,8 +845,8 @@
 </section>
 
 <!-- ===================== CORE: NIL IN LOGIC — THE UNKNOWN ROWS (LANG.VALUES.TRUTH) ===================== -->
-<!-- NIL read in truth position is UNKNOWN. FALSE absorbs into AND and TRUE
-     absorbs into OR even against an UNKNOWN operand — the absorbing side
+<!-- NIL read in truth position is UNKNOWN. FALSE absorbs into AND, and so
+     TRUE into the disjunction written from it, even against an UNKNOWN operand — the absorbing side
      alone decides, from either operand position. Only where neither operand
      is the absorbing value does the UNKNOWN operand itself surface. -->
 
@@ -976,29 +879,29 @@
 </section>
 
 <section class="ajisai-case" id="core-logic-nil-or-true" data-category="core">
-  <h3>NIL ∨ T: TRUE absorbs the UNKNOWN operand into TRUE</h3>
-  <pre class="ajisai-source">NIL TRUE OR</pre>
+  <h3>NIL ∨ T: TRUE absorbs the UNKNOWN operand into TRUE (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">NIL NOT TRUE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-true-or-nil" data-category="core">
-  <h3>T ∨ NIL: TRUE absorbs the UNKNOWN operand into TRUE</h3>
-  <pre class="ajisai-source">TRUE NIL OR</pre>
+  <h3>T ∨ NIL: TRUE absorbs the UNKNOWN operand into TRUE (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">TRUE NOT NIL NOT AND NOT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-nil-or-false" data-category="core">
-  <h3>NIL ∨ F is NIL/UNKNOWN (FALSE does not absorb into OR)</h3>
-  <pre class="ajisai-source">NIL FALSE OR</pre>
+  <h3>NIL ∨ F is NIL/UNKNOWN (FALSE does not absorb into OR) (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">NIL NOT FALSE NOT AND NOT</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-false-or-nil" data-category="core">
-  <h3>F ∨ NIL is NIL/UNKNOWN (FALSE does not absorb into OR)</h3>
-  <pre class="ajisai-source">FALSE NIL OR</pre>
+  <h3>F ∨ NIL is NIL/UNKNOWN (FALSE does not absorb into OR) (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">FALSE NOT NIL NOT AND NOT</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1018,33 +921,32 @@
 </section>
 
 <section class="ajisai-case" id="core-logic-nil-or-nil" data-category="core">
-  <h3>NIL ∨ NIL is NIL/UNKNOWN: neither side absorbs the other</h3>
-  <pre class="ajisai-source">NIL NIL OR</pre>
+  <h3>NIL ∨ NIL is NIL/UNKNOWN: neither side absorbs the other (a disjunction is written with <code>NOT</code> and <code>AND</code>)</h3>
+  <pre class="ajisai-source">NIL NOT NIL NOT AND NOT</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- Being read in truth position adds the truthValue axis; it takes no
-     observation away. UNKNOWN is still the NIL it is, so every absence-facing
-     Word answers about it exactly as it would about any other NIL. -->
+<!-- UNKNOWN is the NIL it is, so every absence-facing Word answers about it
+     exactly as it would about any other NIL. -->
 
 <section class="ajisai-case" id="core-logic-unknown-is-an-absence" data-category="core">
   <h3>UNKNOWN is an absence: NIL? answers TRUE</h3>
   <pre class="ajisai-source">TRUE NIL AND NIL?</pre>
-  <pre class="ajisai-expect-result">NIL TRUE</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-unknown-keeps-its-reason" data-category="core">
   <h3>UNKNOWN keeps the reason it arrived with: NIL-REASON still reports it</h3>
   <pre class="ajisai-source">1 0 DIV TRUE AND NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-unknown-takes-a-fallback" data-category="core">
   <h3>An UNKNOWN takes a fallback, like any other absence</h3>
-  <pre class="ajisai-source">99 TRUE NIL AND NIL? SELECT</pre>
+  <pre class="ajisai-source">TRUE NIL AND 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1053,6 +955,24 @@
   <h3>UNKNOWN passes through a passthrough Word, like any other absence</h3>
   <pre class="ajisai-source">TRUE NIL AND 1 ADD</pre>
   <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A value is what it denotes, never how it was made: the same truth value
+     reached by two different Words is one value, and a NIL that passed
+     through arithmetic is the NIL it was. -->
+
+<section class="ajisai-case" id="core-truth-value-is-denoted-not-produced" data-category="core">
+  <h3>A truth value is the same value whichever Word produced it (LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">3 2 GT [ 3 4 ] [ 2 GT ] MAP TRUE [ AND ] FOLD EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-through-arithmetic-is-the-same-nil" data-category="core">
+  <h3>A NIL passed through MUL is the NIL it was (LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">NIL -1 MUL DIGEST NIL DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1079,13 +999,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-passthrough-mod" data-category="core">
-  <h3>MOD passes a NIL operand through</h3>
-  <pre class="ajisai-source">NIL 3 MOD</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-nil-passthrough-floor" data-category="core">
   <h3>FLOOR passes NIL through</h3>
   <pre class="ajisai-source">NIL FLOOR</pre>
@@ -1107,13 +1020,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-passthrough-gte" data-category="core">
-  <h3>GTE passes a NIL operand through</h3>
-  <pre class="ajisai-source">1 NIL GTE</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-nil-passthrough-eq" data-category="core">
   <h3>EQ of NIL and NIL is NIL, not TRUE (comparison is passthrough)</h3>
   <pre class="ajisai-source">NIL NIL EQ</pre>
@@ -1123,49 +1029,42 @@
 
 <section class="ajisai-case" id="core-nil-leftmost-reason-preserved" data-category="core">
   <h3>Combining two reasoned NILs preserves the leftmost reason (LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">1 0 / 'abc' NUM ADD NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-source">1 0 DIV 'abc' NUM ADD NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <!-- Passthrough is not confined to the arithmetic and comparison families: a
-     Word that declares it passes the bubble through whatever its family, and
+     Word that declares it passes the NIL through whatever its family, and
      an absent operand is never a malformed one. SORT used to raise here. -->
 
 <section class="ajisai-case" id="core-sort-passes-a-nil-through-with-its-reason" data-category="core">
   <h3>SORT passes a NIL through with its reason, rather than raising</h3>
   <pre class="ajisai-source">1 0 DIV SORT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-nil-passthrough-keeps-operands-under-keep" data-category="core">
-  <h3>KEEP retains the operand a passthrough Word would have eaten, bubble on top</h3>
-  <pre class="ajisai-source">1 0 DIV KEEP SORT</pre>
-  <pre class="ajisai-expect-result">NIL NIL</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <!-- ===================== CORE: CREATES-NIL PROJECTIONS (LANG.FAILURE.PASSTHROUGH, LANG.FAILURE.PROJECT) ===================== -->
 
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
-  <h3>GET out of bounds projects to a reasoned Bubble</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 9 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <h3>GET out of bounds projects to a reasoned NIL</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 9 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-num-parse-failure-reason" data-category="core">
-  <h3>NUM of unparsable text is a Bubble with reason invalidEncoding</h3>
+  <h3>NUM of unparsable text is a NIL with reason invalidEncoding</h3>
   <pre class="ajisai-source">'abc' NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-zero-div-zero-reason" data-category="core">
-  <h3>0/0 is the same divisionByZero Bubble as 1/0</h3>
-  <pre class="ajisai-source">0 0 / NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <h3>0/0 is the same divisionByZero NIL as 1/0</h3>
+  <pre class="ajisai-source">0 0 DIV NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1177,7 +1076,7 @@
 
 <section class="ajisai-case" id="core-take-zero-is-empty-vector" data-category="core">
   <h3>TAKE 0 yields the empty vector, and does not project</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] TAKE</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 0 TAKE</pre>
   <pre class="ajisai-expect-result">[ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1241,22 +1140,29 @@
 <section class="ajisai-case" id="core-num-rejects-truncated-decimal" data-category="core">
   <h3>NUM projects a truncated decimal to NIL, as source would reject it</h3>
   <pre class="ajisai-source">'.5' NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-num-rejects-digit-separator" data-category="core">
   <h3>NUM projects an underscore digit separator to NIL: it is not Ajisai source</h3>
   <pre class="ajisai-source">'1_000' NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-num-rejects-nil" data-category="core">
-  <h3>NUM rejects a NIL operand with a channel error (not passthrough, LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">NIL NUM</pre>
+<section class="ajisai-case" id="core-num-passes-a-nil-through" data-category="core">
+  <h3>NUM reads its operand as data, so an absent operand passes through with its reason (LANG.FAILURE.PASSTHROUGH)</h3>
+  <pre class="ajisai-source">0 0 DIV NUM NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-num-rejects-number" data-category="core">
+  <h3>NUM parses Text only: a number operand is nonText, not a passthrough</h3>
+  <pre class="ajisai-source">5 NUM</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">NUM: expected String, got Nil</pre>
+  <pre class="ajisai-expect-error">NUM: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1295,10 +1201,11 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-join-codepoints" data-category="core">
-  <h3>JOIN interprets a numeric vector as code points</h3>
+<section class="ajisai-case" id="core-join-rejects-codepoints" data-category="core">
+  <h3>JOIN takes Strings only: a number is not a code point (LANG.VALUES.DISJOINT)</h3>
   <pre class="ajisai-source">[ 104 105 ] JOIN</pre>
-  <pre class="ajisai-expect-result">'hi'</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector of Strings, got Scalar at index 0</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1309,28 +1216,28 @@
   reason — citing a "Section 7.6.1" that no longer exists in SPECIFICATION.html.
   STR declares `passthrough` in spec/words.json, and LANG.FAILURE.PASSTHROUGH
   says an input NIL "flows to the registered output position without changing
-  its reason". Destroying the reason made the bubble undiagnosable exactly where
+  its reason". Destroying the reason made the NIL undiagnosable exactly where
   the absence model requires it to stay diagnosable, so the expectation is
   corrected to the canon rather than the runtime kept at the old behavior.
 -->
 <section class="ajisai-case" id="core-str-passes-a-nil-through-with-its-reason" data-category="core">
   <h3>STR passes a NIL through with its reason intact (LANG.FAILURE.PASSTHROUGH)</h3>
   <pre class="ajisai-source">0 0 DIV STR NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-str-flattens-container-leaves" data-category="core">
-  <h3>STR of a vector space-joins its flat leaves, and a String leaf stays text</h3>
-  <pre class="ajisai-source">[ 'AB' 'CD' ] STR</pre>
-  <pre class="ajisai-expect-result">'AB CD'</pre>
+<section class="ajisai-case" id="core-str-lifts-over-a-vector" data-category="core">
+  <h3>STR lifts over a Vector, keeping its structure, and a String leaf stays text</h3>
+  <pre class="ajisai-source">[ 'AB' [ 1 2 ] ] STR</pre>
+  <pre class="ajisai-expect-result">[ 'AB' [ '1' '2' ] ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-str-nil-leaf-renders-letters" data-category="core">
-  <h3>STR renders a NIL leaf inside a vector as the letters NIL</h3>
-  <pre class="ajisai-source">[ 1 NIL ] STR</pre>
-  <pre class="ajisai-expect-result">'1 NIL'</pre>
+<section class="ajisai-case" id="core-str-is-the-inverse-of-num-per-element" data-category="core">
+  <h3>STR is NUM's inverse element by element, and a NIL lane passes through</h3>
+  <pre class="ajisai-source">[ 1/3 NIL ] STR [ 1/3 NIL ] STR NUM</pre>
+  <pre class="ajisai-expect-result">[ '1/3' NIL ] [ 1/3 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1343,30 +1250,22 @@
   <h3>JOIN has no separator operand: a String on top is the target, not a separator</h3>
   <pre class="ajisai-source">[ 'A' 'B' 'C' ] ',' JOIN</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: expected Vector, got String</pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-join-mixed-text-and-codepoints" data-category="core">
-  <h3>JOIN appends Text elements as content and integer elements as code points</h3>
-  <pre class="ajisai-source">[ 'AJIS' 65 73 ] JOIN</pre>
+<section class="ajisai-case" id="core-join-chars-round-trip" data-category="core">
+  <h3>JOIN inverts CHARS: every element CHARS yields is a one-character String</h3>
+  <pre class="ajisai-source">'AJISAI' CHARS JOIN</pre>
   <pre class="ajisai-expect-result">'AJISAI'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-join-rejects-boolean-element" data-category="core">
-  <h3>JOIN rejects a non-Text, non-code-point element as malformed use</h3>
+  <h3>JOIN rejects a non-String element as malformed use</h3>
   <pre class="ajisai-source">[ 'A' TRUE ] JOIN</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: all elements must be strings, found boolean at index 1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-join-rejects-invalid-codepoint" data-category="core">
-  <h3>JOIN rejects a numeric element outside the valid code-point range</h3>
-  <pre class="ajisai-source">[ 'A' -3 ] JOIN</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: invalid character code at index 1</pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector of Strings, got Boolean at index 1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1382,7 +1281,7 @@
 <section class="ajisai-case" id="core-eq-nil-passthrough-preserves-reason" data-category="core">
   <h3>EQ passthrough preserves the leftmost NIL operand's reason (Section 4.5.1)</h3>
   <pre class="ajisai-source">1 0 DIV 1 EQ NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1420,7 +1319,7 @@
   <h3>JOIN of a bare scalar is a type error</h3>
   <pre class="ajisai-source">5 JOIN</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: expected Vector, got Number</pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1435,7 +1334,7 @@
   <h3>TRIM of a non-Text operand is a type error</h3>
   <pre class="ajisai-source">5 TRIM</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">TRIM: expected String, got Number</pre>
+  <pre class="ajisai-expect-error">TRIM: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1446,29 +1345,55 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-tokenize-empty-separator" data-category="core">
+  <h3>TOKENIZE with the empty separator splits between every character, as SEARCH and REPLACE read the empty pattern</h3>
+  <pre class="ajisai-source">'abc' '' TOKENIZE</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' 'c' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-tokenize-type-error" data-category="core">
   <h3>TOKENIZE of a non-Text subject is a type error</h3>
   <pre class="ajisai-source">5 'a' TOKENIZE</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">TOKENIZE: expected String, got Number</pre>
+  <pre class="ajisai-expect-error">TOKENIZE: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-
-
 
 <!-- ===================== CORE: VECTOR AND TENSOR WORDS (LANG.COLLECTIONS.LIFT, LANG.COLLECTIONS.LIFT) ===================== -->
 
 <section class="ajisai-case" id="core-fill-1d" data-category="core">
   <h3>FILL builds a vector of a given shape filled with a value</h3>
-  <pre class="ajisai-source">[ 3 7 ] FILL</pre>
+  <pre class="ajisai-source">[ 3 ] 7 FILL</pre>
   <pre class="ajisai-expect-result">[ 7/1 7/1 7/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-fill-2d" data-category="core">
   <h3>FILL builds a nested tensor for a multi-dimensional shape</h3>
-  <pre class="ajisai-source">[ 2 2 0 ] FILL</pre>
+  <pre class="ajisai-source">[ 2 2 ] 0 FILL</pre>
   <pre class="ajisai-expect-result">[ [ 0/1 0/1 ] [ 0/1 0/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fill-any-leaf" data-category="core">
+  <h3>FILL fills with a leaf of any domain, not only a number</h3>
+  <pre class="ajisai-source">[ 2 ] 'a' FILL</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'a' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-shape-image-round-trips" data-category="core">
+  <h3>A shape is whatever SHAPE answers, a zero-length axis included, so FILL and RESHAPE accept it</h3>
+  <pre class="ajisai-source">[ [ ] [ ] ] SHAPE 0 FILL [ ] [ 2 0 ] RESHAPE EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-shape-is-rank-zero" data-category="core">
+  <h3>The empty shape is rank 0: FILL answers the value itself, as 5 SHAPE is [ ]</h3>
+  <pre class="ajisai-source">5 SHAPE 7 FILL [ 7 ] [ ] RESHAPE</pre>
+  <pre class="ajisai-expect-result">7/1 7/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1487,7 +1412,7 @@
 </section>
 
 <section class="ajisai-case" id="core-sqrt-lifts-over-a-vector" data-category="core">
-  <h3>SQRT applies element-wise, and a negative lane bubbles alone</h3>
+  <h3>SQRT applies element-wise, and a negative lane projects alone</h3>
   <pre class="ajisai-source">[ 4 -1 ] SQRT</pre>
   <pre class="ajisai-expect-result">[ 2/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1495,14 +1420,14 @@
 
 <section class="ajisai-case" id="core-arithmetic-preserves-nil-lanes" data-category="core">
   <h3>Arithmetic applied directly to a vector preserves each NIL lane</h3>
-  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] *</pre>
+  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] MUL</pre>
   <pre class="ajisai-expect-result">[ 2/1 NIL 6/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-arithmetic-consumes-projected-nil-lane" data-category="core">
   <h3>A lane a previous Word projected to NIL stays NIL through the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 4 -1 ] SQRT [ 2 ] *</pre>
+  <pre class="ajisai-source">[ 4 -1 ] SQRT [ 2 ] MUL</pre>
   <pre class="ajisai-expect-result">[ 4/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1518,15 +1443,15 @@
 
 <section class="ajisai-case" id="core-arithmetic-preserves-a-nil-lanes-reason" data-category="core">
   <h3>A NIL lane keeps the reason it was created with through the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] ADD 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-arithmetic-preserves-an-exact-lanes-nil" data-category="core">
   <h3>A NIL lane beside an irrational one is still a NIL after the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV [ 1 1 ] ADD 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1540,28 +1465,28 @@
 
 <section class="ajisai-case" id="core-nil-lane-survives-a-structural-rebuild" data-category="core">
   <h3>A NIL lane keeps its reason when the vector is rebuilt around it</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 3 4 ] CONCAT [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] DIV [ 3 4 ] CONCAT 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-written-nil-lane-keeps-its-own-reason" data-category="core">
   <h3>A NIL written into a vector literal still reports itself as written after the lift</h3>
-  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] * [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'literal'</pre>
+  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] MUL 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'literal'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-division-projects-the-zero-divisor-lane-only" data-category="core">
   <h3>A zero divisor empties its own lane, not the vector around it</h3>
-  <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] /</pre>
+  <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] DIV</pre>
   <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-division-projects-lane-after-broadcast" data-category="core">
   <h3>A broadcast dividend keeps the lanes whose divisor was not zero</h3>
-  <pre class="ajisai-source">[ 6 ] [ 1 2 0 ] /</pre>
+  <pre class="ajisai-source">[ 6 ] [ 1 2 0 ] DIV</pre>
   <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1590,21 +1515,21 @@
 <section class="ajisai-case" id="core-put-out-of-bounds-projects" data-category="core">
   <h3>PUT projects an out-of-range index to NIL, the same answer GET gives on the same condition</h3>
   <pre class="ajisai-source">[ 1 2 3 ] 9 5 PUT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-put-out-of-bounds-recovered" data-category="core">
   <h3>A projected PUT is recovered with the vector the caller already wrote — no data is lost by projecting</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-take-exceeds-length-projects" data-category="core">
   <h3>TAKE beyond the vector length projects to NIL, not a shorter vector and not an error</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 5 TAKE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1623,42 +1548,60 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: THE MODIFIER AXIS ===================== -->
-<!-- There is one modifier axis, consumption: a Word consumes the operands it
-     reads unless KEEP is in force. -->
+<!-- ===================== CORE: CONSUMPTION (LANG.STACK.CONSUMPTION) ===================== -->
+<!-- A Word consumes the operands it reads, and nothing modifies this. A value
+     used more than once is named with BIND. -->
 
-<section class="ajisai-case" id="core-keep-on-comparison" data-category="core">
-  <h3>KEEP retains comparison operands beneath the Boolean result</h3>
-  <pre class="ajisai-source">3 4 KEEP LT</pre>
-  <pre class="ajisai-expect-result">3/1 4/1 TRUE</pre>
+<section class="ajisai-case" id="core-bind-reuses-a-value" data-category="core">
+  <h3>A value used twice is named with BIND (LANG.STACK.CONSUMPTION)</h3>
+  <pre class="ajisai-source">5 'N' BIND N N 1 ADD</pre>
+  <pre class="ajisai-expect-result">5/1 6/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-on-unary-vector-word" data-category="core">
-  <h3>KEEP retains the operand of a unary vector word</h3>
-  <pre class="ajisai-source">[ 1 2 ] KEEP REVERSE</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ] [ 2/1 1/1 ]</pre>
+<section class="ajisai-case" id="core-bind-destructure-mismatch" data-category="core">
+  <h3>BIND destructuring is exact: a name count that differs from the element count is shapeMismatch</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 'A' 'B' ] BIND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">BIND: 2 names cannot destructure a Vector of 3 elements</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-on-a-word-with-no-result" data-category="core">
-  <h3>KEEP retains the operands of a Word that answers with nothing</h3>
-  <pre class="ajisai-source">5 KEEP 'X' BIND X</pre>
-  <pre class="ajisai-expect-result">5/1 'X' 5/1</pre>
+<section class="ajisai-case" id="core-keep-is-not-a-word" data-category="core">
+  <h3>KEEP is not a Word: nothing modifies consumption (LANG.STACK.CONSUMPTION)</h3>
+  <pre class="ajisai-source">3 4 KEEP ADD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Unknown word</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-on-higher-order-word" data-category="core">
-  <h3>KEEP on a higher-order Word retains the collection it walks</h3>
-  <pre class="ajisai-source">[ 1 2 ] KEEP [ 2 MUL ] MAP</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ] [ 2/1 4/1 ]</pre>
+<!-- Whitespace is the sole token delimiter and carries nothing else: a line
+     break inside a body is not a statement boundary, so layout is not part of
+     a Word's content identity. -->
+
+<section class="ajisai-case" id="core-layout-is-not-content" data-category="core">
+  <h3>A body written across lines is the same Word as the flat one (LANG.SOURCE.TEXT)</h3>
+  <pre class="ajisai-source">[ 1 2
+ADD ] 'A' DEF [ 1 2 ADD ] 'B' DEF [ A B ] 0 GET DIGEST [ A B ] 1 GET DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-on-predicate-higher-order-word" data-category="core">
-  <h3>The same rule holds for the predicate higher-order Words</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] KEEP [ 1 GT ] ANY</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] TRUE</pre>
+<!-- An absent lane passes through a unary rounding Word with its reason
+     (LANG.FAILURE.PASSTHROUGH); it once aborted the process, and before that
+     fix a lane that survived lost its reason. -->
+
+<section class="ajisai-case" id="core-floor-passes-a-nil-lane-through" data-category="core">
+  <h3>FLOOR over a Vector keeps an absent lane absent</h3>
+  <pre class="ajisai-source">[ NIL 7/2 ] FLOOR</pre>
+  <pre class="ajisai-expect-result">[ NIL 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-floor-keeps-a-lane-reason" data-category="core">
+  <h3>FLOOR keeps the reason an absent lane carries</h3>
+  <pre class="ajisai-source">1 0 DIV 7/2 2 COLLECT FLOOR 0 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1666,14 +1609,14 @@
 
 <section class="ajisai-case" id="core-absence-vector-fallback" data-category="core">
   <h3>A Vector is a fallback like any other value</h3>
-  <pre class="ajisai-source">[ 5 ] NIL NIL? SELECT</pre>
+  <pre class="ajisai-source">NIL 'S' BIND [ 5 ] S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">[ 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absence-is-asked-of-the-whole-value" data-category="core">
   <h3>NIL? asks about the whole value: a Vector holding an absent lane is present</h3>
-  <pre class="ajisai-source">[ 0 0 ] [ 1 NIL ] NIL? SELECT</pre>
+  <pre class="ajisai-source">[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">[ 1/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1713,7 +1656,7 @@
   <h3>Lane counts that neither match nor reduce to one are a shape error</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 10 20 ] [ TRUE FALSE TRUE ] SELECT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">broadcast</pre>
+  <pre class="ajisai-expect-error">expected shapes that align</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1729,7 +1672,7 @@ SELECT</pre>
 
 <section class="ajisai-case" id="core-word-body-multi-line-select" data-category="core">
   <h3>A word body may hold a multi-line SELECT inside a nested block</h3>
-  <pre class="ajisai-source">[ X | X [ 'N' BIND
+  <pre class="ajisai-source">[ [ 'N' BIND
 [ 1 ] [ 0 ]
 N [ 0 ] GT
 SELECT ] MAP ] 'STEPFN' DEF
@@ -1740,7 +1683,7 @@ SELECT ] MAP ] 'STEPFN' DEF
 
 <section class="ajisai-case" id="core-word-body-line-break-still-separates" data-category="core">
   <h3>A line break at the body's own level still separates statements</h3>
-  <pre class="ajisai-source">[ | 1 2 ADD
+  <pre class="ajisai-source">[ 1 2 ADD
 10 MUL ] 'W' DEF
 W</pre>
   <pre class="ajisai-expect-result">30/1</pre>
@@ -1758,7 +1701,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-filter-nil-target" data-category="core">
   <h3>FILTER of a NIL target yields NIL</h3>
-  <pre class="ajisai-source">NIL [ 2 MOD 0 EQ ] FILTER</pre>
+  <pre class="ajisai-source">NIL [ 2 DIV 'H' BIND H FLOOR H EQ ] FILTER</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1777,38 +1720,10 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-fold-nil-target-returns-init" data-category="core">
-  <h3>FOLD of a NIL target yields the initial accumulator unchanged</h3>
-  <pre class="ajisai-source">NIL 42 [ ADD ] FOLD</pre>
-  <pre class="ajisai-expect-result">42/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-any-nil-target-false" data-category="core">
-  <h3>ANY of a NIL target is FALSE</h3>
-  <pre class="ajisai-source">NIL [ 5 GT ] ANY</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-all-nil-target-true" data-category="core">
-  <h3>ALL of a NIL target is vacuously TRUE</h3>
-  <pre class="ajisai-source">NIL [ 5 GT ] ALL</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-any-short-circuit-true" data-category="core">
-  <h3>ANY is TRUE when at least one element satisfies the predicate</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 2 GT ] ANY</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-all-not-every-false" data-category="core">
-  <h3>ALL is FALSE when some element fails the predicate</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 2 GT ] ALL</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
+<section class="ajisai-case" id="core-fold-nil-target-passes-through" data-category="core">
+  <h3>FOLD of an absent Vector is that absence, not the initial accumulator: the Vector is data (LANG.FAILURE.PASSTHROUGH)</h3>
+  <pre class="ajisai-source">0 0 DIV 42 [ ADD ] FOLD NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1816,7 +1731,7 @@ W</pre>
   <h3>MAP of a non-vector, non-NIL target names the declared condition nonVector</h3>
   <pre class="ajisai-source">5 [ 2 MUL ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">MAP: expected a Vector, got a non-vector value</pre>
+  <pre class="ajisai-expect-error">MAP: expected a Vector, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1824,7 +1739,7 @@ W</pre>
   <h3>A MAP block that consumes more than its element underflows</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ ADD ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <pre class="ajisai-expect-error">stack underflow</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1841,7 +1756,7 @@ W</pre>
   <h3>EXEC surfaces an underflow raised inside the block</h3>
   <pre class="ajisai-source">[ ADD ] EXEC</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <pre class="ajisai-expect-error">stack underflow</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1861,7 +1776,7 @@ W</pre>
   <h3>EXEC rejects a Scalar: data is never code (errorWhen: notExecutable)</h3>
   <pre class="ajisai-source">5 EXEC</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">EXEC: expected a Vector ([ ... ]) as the code operand, got another value</pre>
+  <pre class="ajisai-expect-error">EXEC: expected a Vector ([ ... ]) as the code operand, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1872,7 +1787,65 @@ W</pre>
 <section class="ajisai-case" id="core-contract-block-pure" data-category="core">
   <h3>CONTRACT infers a pure block as pure, with no gaps, as a contract Record</h3>
   <pre class="ajisai-source">[ 1 2 ADD ] CONTRACT</pre>
-  <pre class="ajisai-expect-result">{ 'inputs' 0/1 'outputs' 1/1 'nil' 'propagates' 'purity' 'pure' 'determinism' 'deterministic' 'cost' { 'steps' 'const' 'numeric' 'const' 'collection' 'const' } 'effects' [ ] 'confidence' 'complete' 'gaps' [ ] }</pre>
+  <pre class="ajisai-expect-result">{ 'inputs' 0/1 'outputs' 1/1 'partiality' 'total' 'purity' 'pure' 'determinism' 'deterministic' 'cost' { 'steps' 'const' 'numeric' 'const' 'collection' 'const' } 'effects' [ ] 'confidence' 'complete' 'gaps' [ ] }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A body built from a Vector can carry a Record whole, and a Symbol inside
+     it is a name the body holds as surely as a top-level one: `'k' GET EXEC`
+     runs it. The DEF-time acyclicity check read only top-level Symbols, so
+     this Word was accepted and then recursed until a ceiling stopped it. -->
+
+<section class="ajisai-case" id="core-def-record-held-self-reference" data-category="core">
+  <h3>DEF refuses a body that names itself through a Record it carries (LANG.DICTIONARY.ACYCLIC)</h3>
+  <pre class="ajisai-source">[ 'k' ] [ [ W ] ] RECORD 1 COLLECT [ 'k' GET EXEC ] CONCAT 'W' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-del-record-held-dependency" data-category="core">
+  <h3>A Word named inside a Record another body carries is a dependency, so DEL refuses it (LANG.DICTIONARY.MUTATION)</h3>
+  <pre class="ajisai-source">[ 1 ] 'W' DEF [ 'k' ] [ [ W ] ] RECORD 1 COLLECT 'V' DEF 'W' DEL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">referenced by V</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A binding is looked up when its Vector runs, so a value that names its
+     own binding would call itself with no Word in between. BIND applies
+     DEF's acyclicity rule over the bindings the frame can see. -->
+
+<section class="ajisai-case" id="core-bind-self-reference" data-category="core">
+  <h3>BIND refuses a value that reaches its own name through other bindings (LANG.DICTIONARY.ACYCLIC)</h3>
+  <pre class="ajisai-source">[ G EXEC ] 'F' BIND [ F EXEC ] 'G' BIND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">directly or through other bindings</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-bind-acyclic-chain" data-category="core">
+  <h3>A binding that runs another binding is not a cycle</h3>
+  <pre class="ajisai-source">[ 1 ] 'F' BIND [ F EXEC F EXEC ADD ] 'G' BIND G EXEC</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- EXEC's operand here is a Vector taken out of data, which inference read
+     only as inert data: the PRINT inside is invisible to it. Inferring
+     `pure`/`complete` there would verify a false declaration. -->
+
+<section class="ajisai-case" id="core-contract-unread-code-operand-is-a-gap" data-category="core">
+  <h3>CONTRACT does not vouch for code it never read: a code operand that is not a literal is a gap</h3>
+  <pre class="ajisai-source">[ [ [ 42 PRINT ] ] 0 GET EXEC ] CONTRACT 'C' BIND C 'confidence' GET C 'gaps' GET</pre>
+  <pre class="ajisai-expect-result">'conservative' [ 'gap.unmodelledControlFlow' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-one-vocabulary" data-category="core">
+  <h3>A block's contract and a Core Word's answer a shared key in one vocabulary (LANG.CONTRACT.REGISTRY)</h3>
+  <pre class="ajisai-source">[ PRINT ] 0 GET CONTRACT 'determinism' GET [ 42 PRINT ] CONTRACT 'determinism' GET EQ [ DIV ] 0 GET CONTRACT 'partiality' GET [ 1 0 DIV ] CONTRACT 'partiality' GET EQ</pre>
+  <pre class="ajisai-expect-result">TRUE TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1882,7 +1855,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-block-never-runs" data-category="core">
   <h3>CONTRACT reports a block's effect without ever performing it</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] CONTRACT 'effects' AT</pre>
+  <pre class="ajisai-source">[ 42 PRINT ] CONTRACT 'effects' GET</pre>
   <pre class="ajisai-expect-result">[ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1894,7 +1867,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-block-gap" data-category="core">
   <h3>CONTRACT reports an unresolved dependency as a gap, not an error</h3>
-  <pre class="ajisai-source">[ UNDEFINED-WORD ] CONTRACT 'confidence' AT [ UNDEFINED-WORD ] CONTRACT 'gaps' AT</pre>
+  <pre class="ajisai-source">[ UNDEFINED-WORD ] CONTRACT 'confidence' GET [ UNDEFINED-WORD ] CONTRACT 'gaps' GET</pre>
   <pre class="ajisai-expect-result">'conservative' [ 'gap.unresolvedWord' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1907,33 +1880,14 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- Reflection (Phase 6 of the vocabulary-100 work order): DEFINED? asks
-     the resolution execution itself performs (LANG.DICTIONARY.RESOLUTION),
-     of a Symbol — a String is not a name (LANG.DICTIONARY.ACYCLIC). -->
-
-<section class="ajisai-case" id="core-defined-resolves-either-tier" data-category="core">
-  <h3>DEFINED? answers whether a Symbol resolves in Core or in User</h3>
-  <pre class="ajisai-source">[ ADD ] 0 GET DEFINED? [ TWICE ] 0 GET DEFINED? [ X | X 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</pre>
-  <pre class="ajisai-expect-result">TRUE FALSE TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-defined-string-is-not-a-name" data-category="core">
-  <h3>DEFINED? refuses a String: no Word turns text into a name</h3>
-  <pre class="ajisai-source">'ADD' DEFINED?</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a Symbol naming a Word</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <!-- DIGEST exposes the content identity the dictionary already keeps
      (LANG.DICTIONARY.MUTATION) and, for a value, the digest of its
      denotation (LANG.VALUES.DENOTATION): equal values digest alike whatever
-     built them, and a computable real has no finite form to digest. -->
+     built them. -->
 
 <section class="ajisai-case" id="core-digest-word-identity" data-category="core">
   <h3>DIGEST is a Word's content identity: content, not spelling</h3>
-  <pre class="ajisai-source">[ X | X 2 MUL ] 'TWICE' DEF [ X | X 2 MUL ] 'DOUBLE' DEF [ X | X 3 MUL ] 'THRICE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ [ TWICE ] 0 GET DIGEST [ THRICE ] 0 GET DIGEST EQ</pre>
+  <pre class="ajisai-source">[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ 3 MUL ] 'THRICE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ [ TWICE ] 0 GET DIGEST [ THRICE ] 0 GET DIGEST EQ</pre>
   <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1945,10 +1899,10 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-digest-computable-real" data-category="core">
-  <h3>DIGEST projects undecidable for a computable real</h3>
-  <pre class="ajisai-source">PI DIGEST NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'undecidable'</pre>
+<section class="ajisai-case" id="core-digest-absent-text" data-category="core">
+  <h3>DIGEST of an ABSENT NIL includes its Text: two ABSENT NILs are the same value exactly when their Texts are equal (LANG.VALUES.NIL)</h3>
+  <pre class="ajisai-source">'a' ABSENT DIGEST 'b' ABSENT DIGEST EQ 'a' ABSENT DIGEST 'a' ABSENT DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">FALSE TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1958,48 +1912,48 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-core-word-record" data-category="core">
   <h3>CONTRACT answers a Core Word's registered record as a Record</h3>
-  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' AT [ DIV ] 0 GET CONTRACT 'projection' AT [ SORT ] 0 GET CONTRACT 'tier' AT</pre>
+  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' GET [ DIV ] 0 GET CONTRACT 'projection' GET [ SORT ] 0 GET CONTRACT 'vocabularyTier' GET</pre>
   <pre class="ajisai-expect-result">2/1 [ 'divisionByZero' ] 'standard'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-contract-user-word-is-its-body" data-category="core">
   <h3>CONTRACT of a User Word is CONTRACT of its body, and runs nothing</h3>
-  <pre class="ajisai-source">[ | 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
+  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' GET</pre>
   <pre class="ajisai-expect-result">TRUE [ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-contract-unknown-name" data-category="core">
-  <h3>CONTRACT projects missingField for a Symbol naming no Word</h3>
+  <h3>CONTRACT projects notFound for a Symbol naming no Word</h3>
   <pre class="ajisai-source">[ NOPE ] 0 GET CONTRACT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- POW (Phase 7 of the vocabulary-100 work order): the cheapest tier that
-     holds the answer (LANG.VALUES.EXACT). Integer exponents stay in the
-     base's tier, p/2 stays in the field through SQRT, an exact root answers
-     the rational, and everything else is exp(y·ln x), a computable real. -->
+<!-- POW answers inside the exact field (LANG.VALUES.EXACT). Integer
+     exponents stay in the base's tier, p/2 over a non-negative rational base
+     stays in the field through SQRT, and every other exponent leaves the
+     field and projects domainMiss. -->
 
 <section class="ajisai-case" id="core-pow-exact-tiers" data-category="core">
   <h3>POW stays exact where the field holds the answer</h3>
-  <pre class="ajisai-source">2 10 POW 2 -2 POW 8 1/3 POW 2 1/2 POW 2 SQRT EQ 2 SQRT 2 POW [ 1 2 3 ] 2 POW</pre>
+  <pre class="ajisai-source">2 10 POW 2 -2 POW 4 1/2 POW 2 1/2 POW 2 SQRT EQ 2 SQRT 2 POW [ 1 2 3 ] 2 POW</pre>
   <pre class="ajisai-expect-result">1024/1 1/4 2/1 TRUE 2/1 [ 1/1 4/1 9/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-pow-computable-real" data-category="core">
-  <h3>POW answers a computable real elsewhere, compared under a budget</h3>
-  <pre class="ajisai-source">2 1/3 POW 6 FORMAT PI 2 POW 6 FORMAT 2 1/3 POW 3 POW 2 EQ</pre>
-  <pre class="ajisai-expect-result">'1.259921' '9.869604' NIL</pre>
+<section class="ajisai-case" id="core-pow-outside-the-field" data-category="core">
+  <h3>POW projects domainMiss for an exponent that leaves the field</h3>
+  <pre class="ajisai-source">8 1/3 POW NIL-REASON 2 2 SQRT POW NIL-REASON 2 SQRT 1/2 POW NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss' 'domainMiss' 'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-pow-projections" data-category="core">
   <h3>POW projects what has no real value, by the declared reason</h3>
-  <pre class="ajisai-source">0 -1 POW NIL-REASON -8 1/3 POW NIL-REASON PI PI SUB 1/3 POW NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero' NIL 'domainMiss' NIL 'undecidable'</pre>
+  <pre class="ajisai-source">0 -1 POW NIL-REASON -2 1/2 POW NIL-REASON 2 1000000000 POW NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero' 'domainMiss' 'spaceExhausted'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2015,17 +1969,17 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-rejected" data-category="core">
   <h3>DEF refuses a directly self-referential definition</h3>
-  <pre class="ajisai-source">[ | DOOMY ] 'DOOMY' DEF</pre>
+  <pre class="ajisai-source">[ DOOMY ] 'DOOMY' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-mutually-referential-definition-rejected" data-category="core">
   <h3>DEF refuses a definition that closes a mutual reference cycle</h3>
-  <pre class="ajisai-source">[ | B ] 'A' DEF [ | A ] 'B' DEF</pre>
+  <pre class="ajisai-source">[ B ] 'A' DEF [ A ] 'B' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2037,40 +1991,40 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-map-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through a MAP block</h3>
-  <pre class="ajisai-source">[ X | X [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ] 'FIB' DEF</pre>
+  <pre class="ajisai-source">[ [ 1 2 ] SUB [ FIB ] MAP 0 [ ADD ] FOLD ] 'FIB' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-exec-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through an EXEC block</h3>
-  <pre class="ajisai-source">[ N | N 1 - [ CNT ] EXEC 1 + ] 'CNT' DEF</pre>
+  <pre class="ajisai-source">[ 1 SUB [ CNT ] EXEC 1 ADD ] 'CNT' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-filter-predicate-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through an EXEC block inside a would-be FILTER predicate</h3>
-  <pre class="ajisai-source">[ | [ 1 2 ] [ [ EVENP ] EXEC ] FILTER ] 'EVENP' DEF</pre>
+  <pre class="ajisai-source">[ [ 1 2 ] [ [ EVENP ] EXEC ] FILTER ] 'EVENP' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-mutually-referential-definition-through-exec-block-rejected" data-category="core">
   <h3>DEF refuses a mutual reference cycle reached only through an EXEC block</h3>
-  <pre class="ajisai-source">[ N | N 1 - [ B ] EXEC ] 'A' DEF
-[ | [ A ] EXEC ] 'B' DEF</pre>
+  <pre class="ajisai-source">[ 1 SUB [ B ] EXEC ] 'A' DEF
+[ [ A ] EXEC ] 'B' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-del-removes-word" data-category="core">
   <h3>DEL removes a user word; calling it afterwards is unknownWord</h3>
-  <pre class="ajisai-source">[ X | X 2 MUL ] 'D2' DEF 'D2' DEL 5 D2</pre>
+  <pre class="ajisai-source">[ 2 MUL ] 'D2' DEF 'D2' DEL 5 D2</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Unknown word: D2</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2084,13 +2038,20 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-user-word-composition" data-category="core">
-  <h3>A user word calling another user word resolves through the dictionary</h3>
-  <pre class="ajisai-source">[ X | X 2 MUL ] 'A2' DEF [ X | X A2 4 ADD ] 'B2' DEF 5 B2</pre>
-  <pre class="ajisai-expect-result">14/1</pre>
+<section class="ajisai-case" id="core-del-referenced-word-error" data-category="core">
+  <h3>DEL of a word another word still references is definitionConflict (LANG.DICTIONARY.MUTATION)</h3>
+  <pre class="ajisai-source">[ 2 MUL ] 'D2' DEF [ D2 D2 ] 'D4' DEF 'D2' DEL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Cannot delete 'D2': referenced by D4</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-user-word-composition" data-category="core">
+  <h3>A user word calling another user word resolves through the dictionary</h3>
+  <pre class="ajisai-source">[ 2 MUL ] 'A2' DEF [ A2 4 ADD ] 'B2' DEF 5 B2</pre>
+  <pre class="ajisai-expect-result">14/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <section class="ajisai-case" id="core-unknown-word-error" data-category="core">
   <h3>An unresolvable word is an unknownWord error</h3>
@@ -2105,8 +2066,6 @@ W</pre>
 <!-- Observable resolution contract of a partial import (Section 9.2):
      selected words resolve bare and qualified; unselected siblings resolve
      in neither form. -->
-
-<!-- ===================== CORE: QUANTIZE AND CONSERVE (LANG.VALUES.EXACT, LANG.VALUES.EXACT) ===================== -->
 
 <!-- JSON module basics (pure words, so `core` per the established contract:
      cf. core-qualified-name-requires-import, which exercises MATH@SQRT).
@@ -2129,7 +2088,7 @@ W</pre>
          module vocabulary that owned ALGO@SORT was removed, and the Core SORT
          now passes a NIL through per its `passthrough` declaration, enforced
          at dispatch. Pinned by core-sort-passes-a-nil-through-with-its-reason.
-       - The reason string of the MATH@SQRT negative-radicand Bubble
+       - The reason string of the MATH@SQRT negative-radicand NIL
          (implementation reports `divisionByZero`; the LANG.FAILURE.PROJECT taxonomy has no
          pinned reason for a negative radicand). Only the NIL projection
          itself is pinned (core-math-sqrt-negative-nil).
@@ -2154,70 +2113,21 @@ W</pre>
 
 <!-- ===================== MATH module (core: pure words) ===================== -->
 
-<!-- Tier 2 (LANG.VALUES.EXACT): `PI` is the first Word that constructs a general
-     computable real, so a comparison can now reach the logical UNKNOWN, while
-     every Tier 0/1 operand a program can otherwise build still decides
-     regardless of budget (LANG.VALUES.EXACT). -->
+<!-- LANG.VALUES.EXACT: order and equality decide over the whole field, so a
+     comparison of two irrationals answers TRUE or FALSE, never UNKNOWN, and
+     the Words that select or sort by that order always select. -->
 
-<section class="ajisai-case" id="core-pi-is-a-computable-real" data-category="core">
-  <h3>PI is a Tier 2 computable real</h3>
-  <pre class="ajisai-source">PI</pre>
-  <pre class="ajisai-expect-result">[ 3; 7, 15, 1, 292, 1, … ]</pre>
+<section class="ajisai-case" id="core-field-order-decides" data-category="core">
+  <h3>Two irrationals in the field are ordered exactly</h3>
+  <pre class="ajisai-source">10 SQRT 2 SQRT 3 SQRT ADD LT 2 SQRT 3 SQRT MUL 6 SQRT EQ</pre>
+  <pre class="ajisai-expect-result">FALSE TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-pi-decides-against-a-separated-rational" data-category="core">
-  <h3>PI compared against a clearly-separated rational still decides</h3>
-  <pre class="ajisai-source">PI 3 GT</pre>
+<section class="ajisai-case" id="core-field-min-selects" data-category="core">
+  <h3>MIN of two irrationals selects one of them</h3>
+  <pre class="ajisai-source">10 SQRT 2 SQRT 3 SQRT ADD MIN 2 SQRT 3 SQRT ADD EQ</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<!-- Two independently-constructed PI values have numerically-identical, not
-     pointer-identical, enclosures: they never separate under continued
-     refinement, so the comparison budget exhausts and the relation is
-     genuinely UNKNOWN rather than false (LANG.VALUES.TRUTH). -->
-
-<section class="ajisai-case" id="core-pi-pi-eq-is-unknown" data-category="core">
-  <h3>Two independently-built PI values are an undecidable equality</h3>
-  <pre class="ajisai-source">PI PI EQ</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-pi-pi-lt-is-unknown" data-category="core">
-  <h3>Two independently-built PI values are an undecidable order</h3>
-  <pre class="ajisai-source">PI PI LT</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<!-- LANG.VALUES.DENOTATION: a value is what it denotes, never how it was made.
-     One PI bound and used twice is the same two PI as two freshly built ones, so
-     equality must answer them alike rather than from allocation identity, which
-     LANG.AUTHORITY.FREEDOM lists as no semantic discriminant. -->
-
-<section class="ajisai-case" id="core-pi-equality-ignores-construction-history" data-category="core">
-  <h3>A reused PI is no more decidable than two freshly built ones</h3>
-  <pre class="ajisai-source">PI 'X' BIND X X EQ</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-pi-equality-entails-its-order" data-category="core">
-  <h3>Equality and the order it entails agree on a reused PI</h3>
-  <pre class="ajisai-source">PI 'X' BIND X X GTE</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<!-- MIN/MAX/SORT/ORDER's output domain is numeric, not truth, so the same
-     undecidable pair projects to a plain NIL rather than UNKNOWN. -->
-
-<section class="ajisai-case" id="core-pi-pi-min-is-nil" data-category="core">
-  <h3>MIN of an undecidable PI pair is NIL, not a selected operand</h3>
-  <pre class="ajisai-source">PI PI MIN</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2234,14 +2144,14 @@ W</pre>
 
 <section class="ajisai-case" id="core-dict-name-is-the-whole-address" data-category="core">
   <h3>A Word's name is its whole address</h3>
-  <pre class="ajisai-source">[ X | X 1 ADD ] 'INC' DEF 5 INC</pre>
+  <pre class="ajisai-source">[ 1 ADD ] 'INC' DEF 5 INC</pre>
   <pre class="ajisai-expect-result">6/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-dict-qualified-path-is-not-a-name" data-category="core">
   <h3>A qualified path addresses no tier</h3>
-  <pre class="ajisai-source">[ X | X 1 ADD ] 'INC' DEF 5 EXAMPLE@INC</pre>
+  <pre class="ajisai-source">[ 1 ADD ] 'INC' DEF 5 EXAMPLE@INC</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Unknown word: EXAMPLE@INC</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2249,7 +2159,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-dict-user-never-shadows-core" data-category="core">
   <h3>User never shadows Core: the seal refuses the definition outright</h3>
-  <pre class="ajisai-source">[ | 1 ] 'ADD' DEF</pre>
+  <pre class="ajisai-source">[ 1 ] 'ADD' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">ADD</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2257,7 +2167,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-dict-del-rejects-qualified-path" data-category="core">
   <h3>DEL takes a name, not a path</h3>
-  <pre class="ajisai-source">[ X | X 1 ADD ] 'INC' DEF 'EXAMPLE@INC' DEL</pre>
+  <pre class="ajisai-source">[ 1 ADD ] 'INC' DEF 'EXAMPLE@INC' DEL</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">is not defined</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2267,12 +2177,7 @@ W</pre>
 <!-- LANG.COLLECTIONS.LIFT: "An arithmetic or comparison Word applies
      element-wise when given vectors. Two vectors combine element-wise when
      their lengths are equal; a scalar combines with every element of a vector.
-     Any other pairing is ERROR."
-
-     The comparison family used to do the reverse of this — it projected a
-     one-element Vector to its element and refused the element-wise
-     application — and the unary arithmetic Words took a scalar only, although
-     ABS/NEG/SIGN each already declare LANG.COLLECTIONS.LIFT. -->
+     Any other pairing is ERROR." -->
 
 <section class="ajisai-case" id="core-lift-comparison-vector-scalar" data-category="core">
   <h3>A scalar combines with every element of a vector</h3>
@@ -2299,7 +2204,7 @@ W</pre>
   <h3>Any other pairing is ERROR — this is the shapeMismatch each ordering Word registers</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 ] LT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Cannot broadcast shapes</pre>
+  <pre class="ajisai-expect-error">expected shapes that align</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2314,13 +2219,6 @@ W</pre>
   <h3>Each lane preserves the scalar law's NIL distinction</h3>
   <pre class="ajisai-source">[ 1 NIL ] 2 LT</pre>
   <pre class="ajisai-expect-result">[ TRUE NIL ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-lift-unary-abs" data-category="core">
-  <h3>ABS applies element-wise, as its declared LANG.COLLECTIONS.LIFT says</h3>
-  <pre class="ajisai-source">[ -1 2 ] ABS</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2384,7 +2282,7 @@ W</pre>
   <h3>Arithmetic rejects a String rather than operating on its code points</h3>
   <pre class="ajisai-source">'A' 1 ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a number or vector</pre>
+  <pre class="ajisai-expect-error">ADD: expected a Scalar or a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2399,7 +2297,7 @@ W</pre>
   <h3>A Word name is a String, not a Vector of its code points</h3>
   <pre class="ajisai-source">[ 1 ADD ] [ 73 78 67 ] DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a name (String), got a non-text value</pre>
+  <pre class="ajisai-expect-error">DEF: expected a name (String), got Vector</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2430,7 +2328,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-map-carries-its-block-effects" data-category="core">
   <h3>MAP emits its block's output effects in index order</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ KEEP PRINT ] MAP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 'E' BIND E PRINT E ] MAP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span><span class="ajisai-effect" data-kind="print" data-payload="2/1"></span><span class="ajisai-effect" data-kind="print" data-payload="3/1"></span></div>
 </section>
@@ -2441,7 +2339,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-def-mutates-then-user-word-emits" data-category="core">
   <h3>DEF commits a definition whose later call emits its block's effect</h3>
-  <pre class="ajisai-source">[ X | X 'side' PRINT 1 ADD ] 'NOISY' DEF 5 NOISY</pre>
+  <pre class="ajisai-source">[ 'side' PRINT 1 ADD ] 'NOISY' DEF 5 NOISY</pre>
   <pre class="ajisai-expect-result">6/1</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="side"></span></div>
 </section>
@@ -2450,27 +2348,6 @@ W</pre>
 <!-- These nine Core Words had a registered contract and an executor but no
      executable case, so nothing decided whether the two agreed. Each case below
      was observed against the reference Rust CLI before being written down. -->
-
-<section class="ajisai-case" id="core-abs-negative" data-category="core">
-  <h3>ABS is the magnitude of a negative scalar</h3>
-  <pre class="ajisai-source">-2 ABS</pre>
-  <pre class="ajisai-expect-result">2/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-abs-positive-identity" data-category="core">
-  <h3>ABS leaves a non-negative scalar alone</h3>
-  <pre class="ajisai-source">2 ABS</pre>
-  <pre class="ajisai-expect-result">2/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-neg-scalar" data-category="core">
-  <h3>NEG negates a scalar</h3>
-  <pre class="ajisai-source">2 NEG</pre>
-  <pre class="ajisai-expect-result">-2/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
 <section class="ajisai-case" id="core-min-max-scalars" data-category="core">
   <h3>MIN and MAX select between two scalars</h3>
@@ -2500,6 +2377,48 @@ W</pre>
 <!-- LANG.VALUES.DENOTATION: a value is what it denotes, not how it was made.
      √8 and √2+√2 are built by different operations and are one value. -->
 
+<section class="ajisai-case" id="core-irrational-display-is-its-normal-form" data-category="core">
+  <h3>An irrational displays its exact normal form as one token, inside a Vector too</h3>
+  <pre class="ajisai-source">2 SQRT 1 2 SQRT ADD 2 SQRT 3 SQRT SUB 1/2 SQRT 3 2 COLLECT</pre>
+  <pre class="ajisai-expect-result">sqrt(2) 1/1+sqrt(2) sqrt(2)-sqrt(3) [ 1/2*sqrt(2) 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt-one-value-one-form" data-category="core">
+  <h3>One number has one normal form however it was built: the radicand is square-free, so √8 displays as 2√2 does (LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">8 SQRT 2 SQRT 2 SQRT ADD 8/9 SQRT</pre>
+  <pre class="ajisai-expect-result">2/1*sqrt(2) 2/1*sqrt(2) 2/3*sqrt(2)</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-text-words-over-a-vector" data-category="core">
+  <h3>A text Word lifts over a Vector by the one lifting rule (LANG.COLLECTIONS.LIFT)</h3>
+  <pre class="ajisai-source">[ 'ab' 'c' ] UPPER [ 'ab' 'cd' ] 'b' SEARCH</pre>
+  <pre class="ajisai-expect-result">[ 'AB' 'C' ] [ 1/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-logic-over-a-record" data-category="core">
+  <h3>NOT lifts over a Record as arithmetic does, in the value direction</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ TRUE FALSE ] RECORD NOT</pre>
+  <pre class="ajisai-expect-result">{ 'a' FALSE 'b' TRUE }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-a-key-vector" data-category="core">
+  <h3>A Vector of keys lifts GET over a Record, as a Vector of indices lifts it over a Vector</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 4 9 ] RECORD [ 'a' 'b' ] GET [ 10 20 30 ] [ 0 2 ] GET</pre>
+  <pre class="ajisai-expect-result">[ 4/1 9/1 ] [ 10/1 30/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-a-singleton-is-a-vector" data-category="core">
+  <h3>A one-element Vector index is a Vector, never its element: GET answers a one-element Vector</h3>
+  <pre class="ajisai-source">[ 10 20 30 ] [ 1 ] GET [ 10 20 30 ] 1 GET</pre>
+  <pre class="ajisai-expect-result">[ 20/1 ] 20/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-denotation-same-real-is-one-value" data-category="core">
   <h3>Values built through different histories are one value when they denote the same real</h3>
   <pre class="ajisai-source">8 SQRT 2 SQRT 2 SQRT ADD EQ</pre>
@@ -2515,14 +2434,14 @@ W</pre>
   <h3>SQRT of a non-rational radicand is malformed use</h3>
   <pre class="ajisai-source">2 SQRT SQRT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">SQRT: expected a number, got a non-numeric value</pre>
+  <pre class="ajisai-expect-error">SQRT: expected a rational Scalar, got sqrt(2)</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-sqrt-negative-projects" data-category="core">
   <h3>SQRT of a negative scalar projects to NIL with reason domainMiss</h3>
   <pre class="ajisai-source">-1 SQRT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2534,9 +2453,9 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-index-of-missing-projects" data-category="core">
-  <h3>INDEX-OF projects to NIL with reason missingField when absent</h3>
+  <h3>INDEX-OF projects to NIL with reason notFound when absent</h3>
   <pre class="ajisai-source">[ 1 2 ] 5 INDEX-OF NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2574,7 +2493,6 @@ W</pre>
      and MUSIC@SIM set the playback mode silently; the mode is observed
      through the structure of the following MUSIC@PLAY audio effect. -->
 
-
 <!-- ===================== CodeBlock/Vector unification (LANG.VALUES.DISJOINT, LANG.SOURCE.CODE) ===================== -->
 <!-- `REFLECT` (formerly here as "REFLECTION") is gone: it existed to cross a
      boundary between two domains, CodeBlock and Vector, that this unification
@@ -2586,28 +2504,21 @@ W</pre>
      sole bracket, for both. -->
 
 <section class="ajisai-case" id="core-bare-name-is-a-symbol-distinct-from-its-string" data-category="core">
-<h3>A bare name denotes a Symbol, distinct from the same spelling as a String</h3><pre class="ajisai-source">[ ADD ] [ 0 ] GET [ 'ADD' ] [ 0 ] GET EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
+<h3>A bare name denotes a Symbol, distinct from the same spelling as a String</h3><pre class="ajisai-source">[ ADD ] 0 GET [ 'ADD' ] 0 GET EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-computed-vector-defines-a-word" data-category="core">
-<h3>DEF accepts any Vector as a body, computed or literal</h3><pre class="ajisai-source">[ X | X 1 ] [ ADD ] CONCAT 'INC-C' DEF 5 INC-C</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
+<h3>DEF accepts any Vector as a body, computed or literal</h3><pre class="ajisai-source">[ 1 ] [ ADD ] CONCAT 'INC-C' DEF 5 INC-C</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
 <!-- Beta Standard Word contract cases (Issue #1429, Phase 3). -->
 <!-- Local bindings (LANG.SOURCE.FRAME). -->
 <section class="ajisai-case" id="core-binding-names-a-value" data-category="core"><h3>A binding names a value for the rest of the frame</h3><pre class="ajisai-source">[ 2 7 ] [ 'W' 'B' ] BIND W B ADD W MUL</pre><pre class="ajisai-expect-result">18/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-binding-reaches-a-block-written-in-its-frame" data-category="core"><h3>A binding reaches the blocks written in its frame</h3><pre class="ajisai-source">3 'T' BIND [ 1 2 3 ] [ T MUL ] MAP</pre><pre class="ajisai-expect-result">[ 3/1 6/1 9/1 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="core-binding-does-not-cross-a-word-call" data-category="core"><h3>A binding does not cross a Word call</h3><pre class="ajisai-source">[ | T ] 'READS-T' DEF 5 'T' BIND READS-T</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">bound in another frame</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="core-binding-does-not-cross-a-word-call" data-category="core"><h3>A binding does not cross a Word call</h3><pre class="ajisai-source">[ T ] 'READS-T' DEF 5 'T' BIND READS-T</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">bound in another frame</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-binding-may-not-shadow-a-word" data-category="core"><h3>A binding may not take a Word&#39;s name</h3><pre class="ajisai-source">5 'ADD' BIND</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">a binding may not shadow one</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-sub" data-category="core"><h3>SUB</h3><pre class="ajisai-source">5 2 SUB</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-mod" data-category="core"><h3>MOD</h3><pre class="ajisai-source">-7 3 MOD</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-round" data-category="core"><h3>ROUND</h3><pre class="ajisai-source">5/2 ROUND</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-get-gathers-several-indices" data-category="core"><h3>GET selects every index it is given</h3><pre class="ajisai-source">[ 10 20 30 40 ] [ 2 0 ] GET</pre><pre class="ajisai-expect-result">[ 30/1 10/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-get-projects-per-position" data-category="core"><h3>A gathered index that names nothing projects where it stands</h3><pre class="ajisai-source">[ 10 20 ] [ 0 9 ] GET</pre><pre class="ajisai-expect-result">[ 10/1 NIL ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-quantize" data-category="core"><h3>QUANTIZE</h3><pre class="ajisai-source">[ 119/125 32/125 ] 10 QUANTIZE</pre><pre class="ajisai-expect-result">[ 1/1 3/10 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-quantize-bounds-the-denominator" data-category="core"><h3>QUANTIZE bounds the denominator of an irrational</h3><pre class="ajisai-source">2 SQRT 10000 QUANTIZE</pre><pre class="ajisai-expect-result">7071/5000</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-quantize-domain-miss" data-category="core"><h3>A denominator that is not a positive integer projects</h3><pre class="ajisai-source">7 0 QUANTIZE</pre><pre class="ajisai-expect-result">NIL</pre><div class="ajisai-expect-effects"></div></section><section class="ajisai-case" id="standard-lte" data-category="core"><h3>LTE</h3><pre class="ajisai-source">1 2 LTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-gte" data-category="core"><h3>GTE</h3><pre class="ajisai-source">2 1 GTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-filter" data-category="core"><h3>FILTER</h3><pre class="ajisai-source">[ 1 2 3 ] [ 1 GT ] FILTER</pre><pre class="ajisai-expect-result">[ 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-any" data-category="core"><h3>ANY</h3><pre class="ajisai-source">[ 1 2 3 ] [ 2 EQ ] ANY</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-all" data-category="core"><h3>ALL</h3><pre class="ajisai-source">[ 1 2 3 ] [ 0 GT ] ALL</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-fill" data-category="core"><h3>FILL</h3><pre class="ajisai-source">[ 2 2 7 ] FILL</pre><pre class="ajisai-expect-result">[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-fill" data-category="core"><h3>FILL</h3><pre class="ajisai-source">[ 2 2 ] 7 FILL</pre><pre class="ajisai-expect-result">[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-trim" data-category="core"><h3>TRIM</h3><pre class="ajisai-source">'  hi  ' TRIM</pre><pre class="ajisai-expect-result">'hi'</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-tokenize" data-category="core"><h3>TOKENIZE</h3><pre class="ajisai-source">'a,b,c' ',' TOKENIZE</pre><pre class="ajisai-expect-result">[ 'a' 'b' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
 
@@ -2616,52 +2527,34 @@ W</pre>
 <section class="ajisai-case" id="standard-unique" data-category="core"><h3>UNIQUE</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] UNIQUE</pre><pre class="ajisai-expect-result">[ 'b' 'a' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-tally" data-category="core"><h3>TALLY answers a Record from each distinct element to its count, keys in UNIQUE order (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] TALLY</pre><pre class="ajisai-expect-result">{ 'b' 2/1 'a' 1/1 'c' 1/1 }</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-zip" data-category="core"><h3>ZIP</h3><pre class="ajisai-source">[ [ 1 2 3 ] [ 4 5 6 ] ] ZIP</pre><pre class="ajisai-expect-result">[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-ceil" data-category="core">
-  <h3>CEIL rounds toward positive infinity, from either side of zero</h3>
-  <pre class="ajisai-source">7/3 CEIL -7/3 CEIL</pre>
-  <pre class="ajisai-expect-result">3/1 -2/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="standard-ceil-of-an-integer-is-itself" data-category="core">
-  <h3>CEIL leaves an integer where it is</h3>
-  <pre class="ajisai-source">4 CEIL</pre>
-  <pre class="ajisai-expect-result">4/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="standard-ceil-lifts-over-a-vector" data-category="core">
-  <h3>CEIL applies element-wise, as FLOOR does</h3>
-  <pre class="ajisai-source">[ 1/2 -1/2 ] CEIL</pre>
-  <pre class="ajisai-expect-result">[ 1/1 0/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 <section class="ajisai-case" id="standard-drop" data-category="core">
   <h3>DROP answers everything after the first N</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] 2 DROP</pre>
   <pre class="ajisai-expect-result">[ 3/1 4/1 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-from-the-end" data-category="core">
   <h3>A negative count drops from the end</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ -2 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] -2 DROP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-zero-is-identity" data-category="core">
   <h3>DROP 0 is the vector itself, and does not project</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 0 DROP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-all-is-empty-vector" data-category="core">
   <h3>Dropping the whole length leaves the empty vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 3 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 3 DROP</pre>
   <pre class="ajisai-expect-result">[ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-exceeds-length-projects" data-category="core">
   <h3>DROP beyond the vector length projects to NIL, as TAKE does</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] DROP NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 5 DROP NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-malformed-count-still-raises" data-category="core">
@@ -2673,7 +2566,7 @@ W</pre>
 </section>
 <section class="ajisai-case" id="standard-take-and-drop-partition" data-category="core">
   <h3>TAKE and DROP are the two halves of one cut</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 ] TAKE [ 1 2 3 4 5 ] [ 2 ] DROP CONCAT</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] 2 TAKE [ 1 2 3 4 5 ] 2 DROP CONCAT</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2692,14 +2585,13 @@ W</pre>
 <section class="ajisai-case" id="core-shape-ragged-projects" data-category="core">
   <h3>A ragged vector has no shape: SHAPE projects domainMiss, not an error</h3>
   <pre class="ajisai-source">[ [ 1 2 ] [ 3 ] ] SHAPE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-shape-non-vector-error" data-category="core">
-  <h3>SHAPE of a non-vector is the program being wrong</h3>
-  <pre class="ajisai-source">5 SHAPE</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">SHAPE: expected a Vector</pre>
+<section class="ajisai-case" id="core-shape-non-vector-is-rank-zero" data-category="core">
+  <h3>A value that is not a Vector has the empty shape, as its DEPTH is 0</h3>
+  <pre class="ajisai-source">5 SHAPE 5 DEPTH</pre>
+  <pre class="ajisai-expect-result">[ ] 0/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-reshape" data-category="core">
@@ -2751,87 +2643,52 @@ W</pre>
   <pre class="ajisai-expect-result">1/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-rank" data-category="core">
-  <h3>RANK applies the block at the stated depth</h3>
-  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK</pre>
-  <pre class="ajisai-expect-result">[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-rank-1-is-map" data-category="core">
-  <h3>RANK at depth 1 is MAP</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 1 [ 2 MUL ] RANK</pre>
-  <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-rank-0-sees-the-whole-vector" data-category="core">
-  <h3>RANK at depth 0 evaluates the block once on the whole vector</h3>
-  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] 0 [ LENGTH ] RANK</pre>
-  <pre class="ajisai-expect-result">2/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-rank-stops-at-a-leaf" data-category="core">
-  <h3>A leaf met before the depth is reached is what the block gets</h3>
-  <pre class="ajisai-source">[ 1 [ 2 3 ] ] 2 [ 10 MUL ] RANK</pre>
-  <pre class="ajisai-expect-result">[ 10/1 [ 20/1 30/1 ] ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-rank-negative-depth-error" data-category="core">
-  <h3>A depth that is not a non-negative integer is the program being wrong</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] -1 [ 2 MUL ] RANK</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">RANK: expected a non-negative integer depth</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-rank-nil-target" data-category="core">
-  <h3>RANK passes an absent collection through, as MAP does</h3>
-  <pre class="ajisai-source">NIL 1 [ 2 MUL ] RANK NIL?</pre>
-  <pre class="ajisai-expect-result">NIL TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 <section class="ajisai-case" id="core-record-builds-a-keyed-correspondence" data-category="core">
   <h3>RECORD pairs a key Vector with a value Vector, keys in the order given (LANG.RECORDS.STRUCTURE)</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD</pre>
   <pre class="ajisai-expect-result">{ 'x' 1/1 'y' 2/1 }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-record-literal-builds-the-same-record" data-category="core">
-  <h3>The Record literal builds what RECORD builds from the same values (LANG.RECORDS.STRUCTURE)</h3>
-  <pre class="ajisai-source">{ 'x' 1 'y' 2 } [ 'x' 'y' ] [ 1 2 ] RECORD EQ</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-record-literal-is-the-empty-record" data-category="core">
-  <h3>An empty Record literal is the empty Record</h3>
-  <pre class="ajisai-source">{ } KEYS</pre>
-  <pre class="ajisai-expect-result">[ ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-record-literal-duplicate-key-is-an-error" data-category="core">
-  <h3>A key written twice in a Record literal raises duplicateKey, as RECORD does</h3>
-  <pre class="ajisai-source">{ 'a' 1 'a' 2 }</pre>
+<section class="ajisai-case" id="core-brace-is-an-ordinary-name" data-category="core">
+  <h3>A brace is an ordinary name, not a delimiter: only [ and ] delimit (LANG.SOURCE.TEXT)</h3>
+  <pre class="ajisai-source">{ 'x' 1 }</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">repeats the key</pre>
+  <pre class="ajisai-expect-error">Unknown word</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-record-literal-unpaired-key-is-an-error" data-category="core">
-  <h3>A key with no value in a Record literal raises the length mismatch RECORD raises</h3>
-  <pre class="ajisai-source">{ 'a' 1 'b' }</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">length</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-record-literal-nests-with-the-vector-literal" data-category="core">
-  <h3>Each literal nests inside the other, and a nested Record is one element</h3>
-  <pre class="ajisai-source">[ { 'a' 1 } { 'b' [ 2 3 ] } ] LENGTH</pre>
+
+<section class="ajisai-case" id="core-record-nests-in-a-vector" data-category="core">
+  <h3>A Record is one element of a Vector (LANG.RECORDS.STRUCTURE)</h3>
+  <pre class="ajisai-source">[ 'a' ] [ 1 ] RECORD [ 'b' ] [ 2 ] RECORD 2 COLLECT LENGTH</pre>
   <pre class="ajisai-expect-result">2/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-record-literal-evaluates-nothing" data-category="core">
-  <h3>A Record literal evaluates nothing: a bare name in one is a Symbol, as in a Vector literal (LANG.VALUES.VECTOR)</h3>
-  <pre class="ajisai-source">{ 'op' ADD } 'op' AT</pre>
-  <pre class="ajisai-expect-result">ADD</pre>
+
+<!-- A Vector run as code pushes each element it holds as the value it is:
+     a NIL keeps its reason, and a Record or an exact irrational, which no
+     source text denotes, arrives unchanged (LANG.SOURCE.CODE). -->
+
+<section class="ajisai-case" id="core-exec-keeps-a-nil-reason" data-category="core">
+  <h3>EXEC of a Vector holding a NIL pushes that NIL with its reason</h3>
+  <pre class="ajisai-source">1 0 DIV 1 COLLECT EXEC NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
+
+<section class="ajisai-case" id="core-exec-carries-an-irrational" data-category="core">
+  <h3>EXEC of a Vector holding an exact irrational pushes that irrational</h3>
+  <pre class="ajisai-source">2 SQRT 1 COLLECT EXEC 2 SQRT EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-exec-carries-a-record" data-category="core">
+  <h3>EXEC of a Vector holding a Record pushes that Record</h3>
+  <pre class="ajisai-source">[ 'x' ] [ 1 ] RECORD 1 COLLECT EXEC 'x' GET</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-record-duplicate-key-is-an-error" data-category="core">
   <h3>RECORD raises duplicateKey for a repeated key rather than choosing a value</h3>
   <pre class="ajisai-source">[ 'a' 'a' ] [ 1 2 ] RECORD</pre>
@@ -2864,27 +2721,27 @@ W</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-at-answers-by-key" data-category="core">
-  <h3>AT answers the value under a key</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'y' AT</pre>
+<section class="ajisai-case" id="core-get-answers-by-key" data-category="core">
+  <h3>GET reads a Record by key, as it reads a Vector by index</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'y' GET</pre>
   <pre class="ajisai-expect-result">2/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-at-missing-key-projects-missing-field" data-category="core">
-  <h3>AT projects missingField for a key the Record does not hold (LANG.FAILURE.PROJECT)</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+<section class="ajisai-case" id="core-get-missing-key-projects-not-found" data-category="core">
+  <h3>GET projects notFound for a key the Record does not hold (LANG.FAILURE.PROJECT)</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-with-replaces-in-place" data-category="core">
-  <h3>WITH replaces a present key's value without moving it</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'x' 9 WITH</pre>
+<section class="ajisai-case" id="core-put-replaces-a-key-in-place" data-category="core">
+  <h3>PUT replaces a present key's value without moving it</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'x' 9 PUT</pre>
   <pre class="ajisai-expect-result">{ 'x' 9/1 'y' 2/1 }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-with-appends-a-new-key" data-category="core">
-  <h3>WITH appends an absent key at the end</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' 3 WITH</pre>
+<section class="ajisai-case" id="core-put-appends-a-new-key" data-category="core">
+  <h3>PUT appends an absent key at the end</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' 3 PUT</pre>
   <pre class="ajisai-expect-result">{ 'x' 1/1 'y' 2/1 'z' 3/1 }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2895,14 +2752,14 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-without-missing-key-projects-missing-field" data-category="core">
-  <h3>WITHOUT projects missingField for an absent key</h3>
+  <h3>WITHOUT projects notFound for an absent key</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' WITHOUT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-has-asks-presence" data-category="core">
   <h3>HAS? answers presence alone: a stored NIL is present, an absent key is not</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'n' NIL WITH 'n' HAS? [ 'x' 'y' ] [ 1 2 ] RECORD 'n' HAS?</pre>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'n' NIL PUT 'n' HAS? [ 'x' 'y' ] [ 1 2 ] RECORD 'n' HAS?</pre>
   <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2945,21 +2802,21 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-member" data-category="core">
-  <h3>MEMBER answers which probes occur, lane for lane</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 2 5 ] MEMBER</pre>
-  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
+  <h3>MEMBER? answers whether one value occurs in the vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 2 MEMBER? [ 1 2 3 ] 5 MEMBER?</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="standard-member-single-probe" data-category="core">
-  <h3>A single probe answers a single truth</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 2 MEMBER</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
+<section class="ajisai-case" id="standard-member-needle-is-an-element" data-category="core">
+  <h3>The needle is compared, not read: a Vector needle is looked for as an element</h3>
+  <pre class="ajisai-source">[ [ 1 ] 2 ] [ 1 ] MEMBER? [ 1 2 ] [ 2 ] MEMBER?</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-member-over-text" data-category="core">
   <h3>Membership is value equality, so texts work too</h3>
-  <pre class="ajisai-source">[ 'a' 'b' ] [ 'b' 'c' ] MEMBER</pre>
-  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
+  <pre class="ajisai-source">[ 'a' 'b' ] 'b' MEMBER?</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-bsearch" data-category="core">
@@ -2975,9 +2832,9 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-bsearch-absent-key-projects" data-category="core">
-  <h3>An absent key is a missingField lane, not an error</h3>
+  <h3>An absent key is a notFound lane, not an error</h3>
   <pre class="ajisai-source">[ 1 3 5 7 ] 4 BSEARCH NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-bsearch-unsorted-raises" data-category="core">
@@ -2994,9 +2851,9 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-search-absent-projects" data-category="core">
-  <h3>A needle that does not occur projects missingField</h3>
+  <h3>A needle that does not occur projects notFound</h3>
   <pre class="ajisai-source">'hello' 'z' SEARCH NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-search-empty-needle" data-category="core">
@@ -3031,13 +2888,12 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP</pre><pre class="ajisai-expect-result">{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
 
 <!-- FORMAT is the one rounding boundary (LANG.VALUES.EXACT): a scalar
      becomes decimal text at a stated digit count, a tie away from zero as
-     ROUND and QUANTIZE round, exact at every tier; the last digit of a
-     computable real is settled under the comparison budget or projected,
-     never guessed. -->
+     ROUND rounds, exact at every tier: an irrational's last digit is
+     decided, never guessed. -->
 
 <section class="ajisai-case" id="standard-format-ties-away-from-zero" data-category="core">
   <h3>FORMAT renders decimal text at a stated precision, a tie away from zero like ROUND</h3>
@@ -3061,14 +2917,14 @@ W</pre>
   <h3>UPPER refuses a non-String operand</h3>
   <pre class="ajisai-source">42 UPPER</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">UPPER: expected String</pre>
+  <pre class="ajisai-expect-error">UPPER: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="standard-format-irrational" data-category="core">
-  <h3>FORMAT settles an irrational's last digit exactly, and PI's under budget</h3>
-  <pre class="ajisai-source">2 SQRT 3 FORMAT PI 4 FORMAT</pre>
-  <pre class="ajisai-expect-result">'1.414' '3.1416'</pre>
+  <h3>FORMAT settles an irrational's last digit exactly</h3>
+  <pre class="ajisai-source">2 SQRT 3 FORMAT 2 SQRT 3 SQRT ADD 4 FORMAT</pre>
+  <pre class="ajisai-expect-result">'1.414' '3.1463'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -3101,7 +2957,7 @@ W</pre>
 <section class="ajisai-case" id="standard-json-decode-invalid-encoding" data-category="core">
   <h3>JSON-DECODE projects invalidEncoding for text that is not one JSON value</h3>
   <pre class="ajisai-source">'[1,' JSON-DECODE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -3118,7 +2974,7 @@ W</pre>
 
 <section class="ajisai-case" id="standard-json-encode-lexeme-string" data-category="core">
   <h3>JSON-ENCODE writes a rational with no finite decimal as its lexeme, never rounded</h3>
-  <pre class="ajisai-source">1/3 JSON-ENCODE KEEP JSON-DECODE NUM</pre>
+  <pre class="ajisai-source">1/3 JSON-ENCODE 'J' BIND J J JSON-DECODE NUM</pre>
   <pre class="ajisai-expect-result">'"1/3"' 1/3</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -3126,13 +2982,13 @@ W</pre>
 <section class="ajisai-case" id="standard-json-encode-no-image" data-category="core">
   <h3>JSON-ENCODE projects domainMiss for a value with no JSON image</h3>
   <pre class="ajisai-source">2 SQRT JSON-ENCODE NIL-REASON [ ADD ] 0 GET JSON-ENCODE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss' NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">'domainMiss' 'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="standard-json-round-trip" data-category="core">
   <h3>JSON-DECODE after JSON-ENCODE is the identity on the JSON image</h3>
-  <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ</pre>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD 'R' BIND R R JSON-ENCODE JSON-DECODE EQ</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -3143,66 +2999,18 @@ W</pre>
 <section class="ajisai-case" id="standard-gcd" data-category="core">
   <h3>GCD of two integers, non-negative; a non-integer projects domainMiss</h3>
   <pre class="ajisai-source">12 18 GCD -12 18 GCD 0 0 GCD [ 12 9 ] 6 GCD 1/2 4 GCD NIL-REASON</pre>
-  <pre class="ajisai-expect-result">6/1 6/1 0/1 [ 6/1 3/1 ] NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">6/1 6/1 0/1 [ 6/1 3/1 ] 'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="standard-ratio" data-category="core">
   <h3>RATIO opens a rational into its reduced numerator and denominator</h3>
-  <pre class="ajisai-source">6/4 RATIO -3 RATIO 2 SQRT RATIO NIL-REASON PI RATIO NIL-REASON</pre>
-  <pre class="ajisai-expect-result">[ 3/1 2/1 ] [ -3/1 1/1 ] NIL 'domainMiss' NIL 'undecidable'</pre>
+  <pre class="ajisai-source">6/4 RATIO -3 RATIO 2 SQRT RATIO NIL-REASON</pre>
+  <pre class="ajisai-expect-result">[ 3/1 2/1 ] [ -3/1 1/1 ] 'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- The transcendental Words answer computable reals (LANG.VALUES.EXACT):
-     exact at the arguments that make them rational, decisive against
-     separated rationals, and honestly UNKNOWN against what the budget cannot
-     tell them from. -->
-
-<section class="ajisai-case" id="standard-exp" data-category="core">
-  <h3>EXP is exact at 0 and a computable real elsewhere</h3>
-  <pre class="ajisai-source">0 EXP 1 EXP 10 FORMAT 1 EXP 2 GT 1 EXP 3 LT</pre>
-  <pre class="ajisai-expect-result">1/1 '2.7182818285' TRUE TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="standard-transcendental-starves-honestly" data-category="core">
-  <h3>Two computable reals are never proven equal: the comparison starves to UNKNOWN</h3>
-  <pre class="ajisai-source">1 EXP 1 EXP EQ 1 ATAN 4 MUL PI EQ PI SIN 0 EQ</pre>
-  <pre class="ajisai-expect-result">NIL NIL NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="standard-ln" data-category="core">
-  <h3>LN is exact at 1 and a computable real elsewhere</h3>
-  <pre class="ajisai-source">1 LN 10 LN 6 FORMAT 10 LN 2 LN DIV 3 GT</pre>
-  <pre class="ajisai-expect-result">0/1 '2.302585' TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="standard-ln-domain" data-category="core">
-  <h3>LN projects domainMiss outside the positive reals, undecidable for an unseparated sign</h3>
-  <pre class="ajisai-source">0 LN NIL-REASON -1 LN NIL-REASON PI PI SUB LN NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss' NIL 'domainMiss' NIL 'undecidable'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="standard-sin-cos" data-category="core">
-  <h3>SIN and COS take radians, reduce through π, and are exact at 0</h3>
-  <pre class="ajisai-source">0 SIN 0 COS 1 SIN 6 FORMAT PI 3 DIV SIN 6 FORMAT PI 4 DIV COS 6 FORMAT 100 SIN 6 FORMAT</pre>
-  <pre class="ajisai-expect-result">0/1 1/1 '0.841471' '0.866025' '0.707107' '-0.506366'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="standard-atan" data-category="core">
-  <h3>ATAN is total; four times atan 1 encloses π</h3>
-  <pre class="ajisai-source">0 ATAN 1 ATAN 4 MUL 8 FORMAT 1000 ATAN 6 FORMAT -1/3 ATAN 6 FORMAT</pre>
-  <pre class="ajisai-expect-result">0/1 '3.14159265' '1.569796' '-0.321751'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="kernel-random" data-category="core"><h3>RANDOM draws the same exact rationals for the same seed</h3><pre class="ajisai-source">7 3 RANDOM</pre><pre class="ajisai-expect-result">[ 3344595609062871/9007199254740992 861149483440519/2251799813685248 3413160536610049/4503599627370496 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-index-of" data-category="core"><h3>INDEX-OF</h3><pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-abs" data-category="core"><h3>ABS</h3><pre class="ajisai-source">-2 ABS</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-min" data-category="core"><h3>MIN</h3><pre class="ajisai-source">1 2 MIN</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-max" data-category="core"><h3>MAX</h3><pre class="ajisai-source">1 2 MAX</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
 

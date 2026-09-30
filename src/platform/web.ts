@@ -1,42 +1,30 @@
 // The web host: IndexedDB persistence and the browser's own file dialogs.
 
 import type {
-    ExportData,
     FileIO,
     InterpreterStateSnapshot,
     OpenResult,
     Persistence,
     SaveResult,
-    TablePayload
+    StoredInterpreterState
 } from './index';
-
-// The record shapes this store writes are the shapes `exportAll` hands back,
-// so they are read off `ExportData` rather than restated. They used to be two
-// local `interface`s spelling out the same fields — a copy that had already
-// dropped the `readonly` markers, and that a new field on `ExportData` would
-// have left behind silently: the writes below would keep compiling and keep
-// omitting it, and only an export would show the gap. The Tauri store derives
-// its own `StoredData` the same way.
-type TableData = ExportData['tables'][number];
-type InterpreterState = NonNullable<ExportData['interpreterState']>;
 
 /** The one serialization every JSON document this host writes uses. */
 export const formatJsonDocument = (data: unknown): string => JSON.stringify(data, null, 2);
 
 /**
- * The stored interpreter record read back as the snapshot the GUI restores
- * from, or null when nothing is stored. Both hosts store the same record and
- * answer the same snapshot, so the reading is written once.
+ * The stored record read back as the snapshot the GUI restores from, or null
+ * when nothing is stored. Both hosts store the same record and answer the
+ * same snapshot, so the reading is written once.
  */
 export const readInterpreterStateSnapshot = (
-    result: InterpreterState | null | undefined
+    result: StoredInterpreterState | null
 ): InterpreterStateSnapshot | null => {
     if (!result) {
         return null;
     }
     return {
         stateVersion: Number(result.stateVersion),
-        stack: result.stack as InterpreterStateSnapshot['stack'],
         stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
         userWords: result.userWords as InterpreterStateSnapshot['userWords'],
         activeDictionarySheet: result.activeDictionarySheet
@@ -60,11 +48,16 @@ const withObjectStore = <T>(
     return action(store, transaction);
 };
 
+// One record, under one key, in one object store. A second store, `tables`,
+// was created, cleared, exported and migrated for years without anything
+// ever writing a row to it; version 5 drops it.
+const STATE_STORE = 'interpreter_state';
+const STATE_KEY = 'interpreter_state';
+const RETIRED_TABLES_STORE = 'tables';
+
 class WebPersistence implements Persistence {
     private dbName = 'AjisaiDB';
-    private version = 4;
-    private storeName = 'tables';
-    private stateStoreName = 'interpreter_state';
+    private version = 5;
     private db: IDBDatabase | null = null;
     private openPromise: Promise<IDBDatabase> | null = null;
 
@@ -99,12 +92,12 @@ class WebPersistence implements Persistence {
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
 
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    db.createObjectStore(this.storeName, { keyPath: 'name' });
+                if (db.objectStoreNames.contains(RETIRED_TABLES_STORE)) {
+                    db.deleteObjectStore(RETIRED_TABLES_STORE);
                 }
 
-                if (!db.objectStoreNames.contains(this.stateStoreName)) {
-                    db.createObjectStore(this.stateStoreName, { keyPath: 'key' });
+                if (!db.objectStoreNames.contains(STATE_STORE)) {
+                    db.createObjectStore(STATE_STORE, { keyPath: 'key' });
                 }
             };
         });
@@ -112,51 +105,12 @@ class WebPersistence implements Persistence {
         await this.openPromise;
     }
 
-    async saveTable(name: string, schema: unknown, records: unknown): Promise<void> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
-            const tableData: TableData = {
-                name,
-                schema,
-                records,
-                updatedAt: new Date().toISOString()
-            };
-            await promisifyRequest(store.put(tableData));
-        });
-    }
-
-    async loadTable(name: string): Promise<TablePayload | null> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readonly', async store => {
-            const result = await promisifyRequest(store.get(name));
-            return result ? { schema: result.schema, records: result.records } : null;
-        });
-    }
-
-    async collectTableNames(): Promise<string[]> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readonly', async store =>
-            (await promisifyRequest(store.getAllKeys())) as string[]
-        );
-    }
-
-    async deleteTable(name: string): Promise<void> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
-            await promisifyRequest(store.delete(name));
-        });
-    }
-
     async saveInterpreterState(state: InterpreterStateSnapshot): Promise<void> {
         if (!this.db) await this.open();
 
-        return withObjectStore(this.db!, this.stateStoreName, 'readwrite', async store => {
-            const stateData: InterpreterState = {
-                key: 'interpreter_state',
+        return withObjectStore(this.db!, STATE_STORE, 'readwrite', async store => {
+            const stateData: StoredInterpreterState = {
+                key: STATE_KEY,
                 ...state,
                 updatedAt: new Date().toISOString()
             };
@@ -165,85 +119,23 @@ class WebPersistence implements Persistence {
     }
 
     async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
-        if (!this.db) await this.open();
-
-        return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store =>
-            readInterpreterStateSnapshot(await promisifyRequest(store.get('interpreter_state')))
-        );
+        return readInterpreterStateSnapshot(await this.exportInterpreterState());
     }
 
     async clearAll(): Promise<void> {
         if (!this.db) await this.open();
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readwrite');
-
-            const tableStore = transaction.objectStore(this.storeName);
-            const stateStore = transaction.objectStore(this.stateStoreName);
-
-            tableStore.clear();
-            stateStore.clear();
-
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
+        return withObjectStore(this.db!, STATE_STORE, 'readwrite', async store => {
+            await promisifyRequest(store.clear());
         });
     }
 
-    async exportAll(): Promise<ExportData> {
+    async exportInterpreterState(): Promise<StoredInterpreterState | null> {
         if (!this.db) await this.open();
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readonly');
-
-            const result: ExportData = {
-                tables: [],
-                interpreterState: null
-            };
-
-            const tableStore = transaction.objectStore(this.storeName);
-            const tableRequest = tableStore.getAll();
-
-            tableRequest.onsuccess = () => {
-                result.tables = tableRequest.result as ExportData['tables'];
-
-                const stateStore = transaction.objectStore(this.stateStoreName);
-                const stateRequest = stateStore.get('interpreter_state');
-
-                stateRequest.onsuccess = () => {
-                    result.interpreterState = stateRequest.result as ExportData['interpreterState'];
-                    resolve(result);
-                };
-            };
-
-            tableRequest.onerror = () => reject(tableRequest.error);
-        });
-    }
-
-    async importAll(data: ExportData): Promise<void> {
-        if (!this.db) await this.open();
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readwrite');
-
-            const tableStore = transaction.objectStore(this.storeName);
-            const stateStore = transaction.objectStore(this.stateStoreName);
-
-            tableStore.clear();
-            stateStore.clear();
-
-            if (data.tables && data.tables.length > 0) {
-                for (const table of data.tables) {
-                    tableStore.put(table);
-                }
-            }
-
-            if (data.interpreterState) {
-                stateStore.put(data.interpreterState);
-            }
-
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-        });
+        return withObjectStore(this.db!, STATE_STORE, 'readonly', async store =>
+            ((await promisifyRequest(store.get(STATE_KEY))) as StoredInterpreterState | undefined) ?? null
+        );
     }
 }
 
@@ -284,20 +176,20 @@ export class WebFileIO implements FileIO {
     }
 
     async openJsonFile(): Promise<OpenResult | null> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
 
-            input.onchange = async (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
+            input.onchange = () => {
+                const file = input.files?.[0];
                 if (!file) {
                     resolve(null);
                     return;
                 }
-
-                const text = await readFileAsText(file);
-                resolve({ filename: file.name, text });
+                readFileAsText(file)
+                    .then((text) => resolve({ filename: file.name, text }))
+                    .catch(reject);
             };
 
             input.click();

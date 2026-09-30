@@ -44,7 +44,7 @@ pub(crate) fn completed_run_report(
                 interp.max_execution_steps(),
                 "ok",
                 &resource_usage,
-                digest.as_deref(),
+                &digest,
             );
             Report {
                 status: "ok",
@@ -60,27 +60,17 @@ pub(crate) fn completed_run_report(
                 contract_decls: None,
                 stack_elided: None,
                 observation_digest: digest,
-                receipt,
+                receipt: Some(receipt),
             }
         }
         Err(err) => {
             let message = err.to_string();
-            let stack_len = interp.get_stack().len();
-            let mut diagnosis = trace
-                .iter()
-                .rev()
-                .find_map(|event| event.diagnosis.clone())
-                .unwrap_or_else(|| DebugDiagnosis::from_error(&err, None, stack_len, stack_len));
-            // A NIL that flowed downstream fails at the Word that *received* it,
-            // so the top-level diagnosis names that Word and not the cause. Give
-            // the top level a link back to the producing node rather than
-            // leaving the cause reachable only by walking `errorFlowTrace`.
-            link_upstream_nil(&mut diagnosis, &trace);
+            let diagnosis = failed_run_diagnosis(interp, &err, &trace);
             let category = ErrorCategory::from_error(&err);
             error_report(
                 interp,
                 &diagnosis,
-                Some(&category),
+                category.as_ref(),
                 message,
                 output,
                 trace,
@@ -88,4 +78,26 @@ pub(crate) fn completed_run_report(
             )
         }
     }
+}
+
+/// The top-level diagnosis of a run that ended in `err`: the last one the
+/// trace carries, else one built from the error itself. Shared with the WASM
+/// boundary, so the GUI's `aiDiagnostic` names the failure the CLI's does.
+pub(crate) fn failed_run_diagnosis(
+    interp: &Interpreter,
+    err: &crate::error::AjisaiError,
+    trace: &[ErrorFlowEvent],
+) -> DebugDiagnosis {
+    let stack_len = interp.get_stack().len();
+    let mut diagnosis = trace
+        .iter()
+        .rev()
+        .find_map(|event| event.diagnosis.clone())
+        .unwrap_or_else(|| DebugDiagnosis::from_error(err, None, stack_len, stack_len));
+    // A NIL that flowed downstream fails at the Word that *received* it, so
+    // the top-level diagnosis names that Word and not the cause. Give the top
+    // level a link back to the producing node rather than leaving the cause
+    // reachable only by walking `errorFlowTrace`.
+    link_upstream_nil(&mut diagnosis, trace);
+    diagnosis
 }

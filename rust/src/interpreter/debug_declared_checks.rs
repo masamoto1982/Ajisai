@@ -34,30 +34,18 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         "nonVector"
         | "nonNumeric"
         | "nonText"
-        | "nonTextVector"
-        | "nonTextElement"
-        | "nonTextSeparator"
         | "nonTruthValue"
-        | "nonTruthGuard"
-        | "nonInteger"
-        | "nonComparableElement"
         | "notExecutable"
         | "notASymbol"
-        | "unsupportedComparison"
         | "invalidShape"
-        | "invalidClauseShape"
-        | "invalidCount"
+        | "invalidInteger"
         | "unsortedInput"
         | "nonRecord"
+        | "nonContainer"
         | "duplicateKey"
-        | "negativeCount"
-        | "invalidRange"
         | "invalidName"
         | "invalidDefinitionBody" => CauseClass::ValueShape,
-        // A position outside the operand.
-        "indexOutOfBounds" | "invalidIndex" => CauseClass::Index,
         "shapeMismatch" => CauseClass::ShapeMismatch,
-        "vectorLengthMismatch" => CauseClass::VectorLength,
         "stackUnderflow" => CauseClass::StackShape,
         // A rule about names, definitions, or what a block promised to leave
         // behind — broken by the program rather than by any one value.
@@ -65,28 +53,12 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "protectedWord"
         | "definitionConflict"
         | "selfReferentialDefinition"
-        | "nameIsAWord" => CauseClass::ContractViolation,
+        | "nameConflict" => CauseClass::ContractViolation,
         "wordNotFound" => CauseClass::TypoOrUnknownName,
-        // The source is missing a required following unit, not a value the
-        // wrong shape — same family as a malformed delimiter.
-        "missingFollowingSourceUnit" => CauseClass::SourceForm,
         // The program raised it itself with FAIL: its own logic decided a
         // call was wrong, and the repair is in the caller's logic.
         "declaredFailure" => CauseClass::UserLogic,
         _ => CauseClass::Unknown,
-    }
-}
-
-/// Where a declared condition is repaired: in the operand it names, or in the
-/// program that broke the rule it names.
-pub(crate) fn repair_for_declared_condition(why: &CauseClass) -> &'static str {
-    match why {
-        CauseClass::ValueShape
-        | CauseClass::Index
-        | CauseClass::ShapeMismatch
-        | CauseClass::VectorLength
-        | CauseClass::Domain => "fixInput",
-        _ => "fixProgram",
     }
 }
 
@@ -106,7 +78,6 @@ fn arity_notation(declared: &GeneratedWord) -> String {
         match arity {
             Arity::Fixed(n) => n.to_string(),
             Arity::Variable => "variable".to_string(),
-            Arity::Control => "control".to_string(),
         }
     }
     format!(
@@ -224,8 +195,8 @@ pub(super) fn declared_checks(
 
     // A NIL the Word produced: the registry names the conditions it projects
     // under, so the diagnosis can say which rather than "unknown". A Word may
-    // declare several — `MOD` projects for a zero divisor and for an integer
-    // projection it cannot decide — and the reason the run actually reported
+    // declare several — `POW` projects for a zero base under a negative
+    // exponent and for an exponent outside the field — and the reason the run actually reported
     // is what tells them apart, so both are put in front of the reader.
     if let (Some(reason), false) = (nil_reason, declared.projection.is_empty()) {
         let when = declared.projection.join(", ");

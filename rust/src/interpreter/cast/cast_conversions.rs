@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::cast::cast_value_helpers::{
-    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr, is_boolean_value,
-    is_number_value,
+    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr, is_number_value,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
 use crate::interpreter::Interpreter;
@@ -50,15 +49,16 @@ fn convert_value_to_string(val: &Value) -> Result<Value> {
         }
     }
 
-    // No lexeme exists, so there is no text to answer with. `STR` projects the
-    // same reason `NUM` projects for text that denotes no number: the two are
-    // inverses, and this is the direction of the round trip that has no
-    // encoding. A program that wants a rational stand-in asks for one by name
-    // with `QUANTIZE`, where the denominator is the caller's choice and the
-    // approximation is visible in the source.
+    // No lexeme exists, so there is no text to answer with. The value is
+    // well-formed and outside what text can spell, so `STR` projects
+    // `domainMiss` — the reason `JSON-ENCODE` projects for a value with no JSON
+    // image; `invalidEncoding` belongs to the reading direction, text that
+    // spells nothing. A program that wants a rational stand-in writes one out —
+    // `10000 MUL ROUND 10000 DIV` — where the denominator is the caller's
+    // choice and the approximation is visible in the source.
     if has_no_exact_lexeme(val) {
         return Ok(Value::nil_with_reason(
-            NilReason::InvalidEncoding,
+            NilReason::DomainMiss,
             Recoverability::Recoverable,
         ));
     }
@@ -101,27 +101,36 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
         }
     }
 
-    if is_number_value(val) {
-        return Ok(val.clone());
-    }
-    if is_boolean_value(val) {
-        return Err(AjisaiError::declared(
-            "nonText",
-            "NUM: expected String, got Boolean",
-        ));
-    }
-    if val.is_nil() {
-        return Err(AjisaiError::declared(
-            "nonText",
-            "NUM: expected String, got Nil",
-        ));
-    }
+    // A number is not Text: NUM parses, it does not pass through. Accepting
+    // numbers here would make NUM's `nonText` contract false for exactly the
+    // operand kind a caller is most likely to pass by mistake.
     Err(AjisaiError::declared(
         "nonText",
-        "NUM: expected String input",
+        format!("expected a String, got {}", val.domain_name()),
     ))
 }
 
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
+    // The numeric-literal ceiling holds here as it does in source: the text
+    // is read by the same grammar, and `'1e99999999' NUM` would otherwise
+    // spend minutes building a hundred-million-digit integer from eleven
+    // characters. Declined like any materialization past a ceiling.
+    let limit = interp.runtime_limits.max_numeric_literal_digits;
+    let too_large = interp
+        .stack
+        .last()
+        .and_then(Value::as_text)
+        .filter(|text| crate::tokenizer::is_number_token_lexeme(text))
+        .map(crate::tokenizer::denoted_digit_count)
+        .filter(|&digits| digits > limit as u64);
+    if let Some(digits) = too_large {
+        interp.stack.pop();
+        interp.stack.push(
+            crate::interpreter::space_projection::numeric_literal_exhausted_nil(
+                "NUM", limit, digits,
+            ),
+        );
+        return Ok(());
+    }
     apply_unary_cast(interp, convert_value_to_number)
 }

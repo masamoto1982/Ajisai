@@ -12,8 +12,7 @@
   ],
   "scope": {
     "fs": [
-      "$APPDATA/ajisai-state.json",
-      "$APPDATA/ajisai-tables/*.json"
+      "$APPDATA/ajisai-state.json"
     ]
   }
 }

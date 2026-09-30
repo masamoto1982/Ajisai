@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { detectExecutionSurfaceChanges, type ExecutionStateView } from './execution-surface-changes';
+import {
+    checkRunLeftOwnNil,
+    detectExecutionSurfaceChanges,
+    type ExecutionStateView
+} from './execution-surface-changes';
 import type { ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
 
 const num = (n: number): Value => ({ type: 'number', value: { numerator: String(n), denominator: '1' } } as unknown as Value);
 
-const word = (name: string, definition: string): UserWord => ({ dictionary: 'USER', name, definition });
+const word = (name: string, definition: string): UserWord => ({ name, definition });
 
 const okResult = (overrides: Partial<ExecuteResult> = {}): ExecuteResult => ({
     status: 'OK',
@@ -29,36 +33,34 @@ describe('detectExecutionSurfaceChanges', () => {
         expect(changes.outputChanged).toBe(false);
     });
 
-    it('does NOT flag a dictionary change for `2 3 +` when unchanged user words exist', () => {
+    it('does NOT flag a dictionary change for `2 3 ADD` when unchanged user words exist', () => {
         // Regression: pre/post are read from different sources that can enumerate
         // the same words in different orders; the comparison must be order-insensitive
         // so a pure stack op never pulls the right column to the Words sheet.
         const before = view({
             stack: [],
-            userWords: [word('FOO', '1 2 +'), word('BAR', '3 4 +')]
+            userWords: [word('FOO', '1 2 ADD'), word('BAR', '3 4 ADD')]
         });
         const after = view({
             stack: [num(5)],
             // Same set, different enumeration order (a synced interpreter rebuilds
             // its dictionaries from scratch).
-            userWords: [word('BAR', '3 4 +'), word('FOO', '1 2 +')]
+            userWords: [word('BAR', '3 4 ADD'), word('FOO', '1 2 ADD')]
         });
 
         const changes = detectExecutionSurfaceChanges(before, after, okResult());
 
         expect(changes.stackChanged).toBe(true);
         expect(changes.dictionaryChanged).toBe(false);
-        expect(changes.dictionarySheetId).toBeUndefined();
     });
 
     it('flags a dictionary change and the user sheet when a word is defined', () => {
         const changes = detectExecutionSurfaceChanges(
             view({ userWords: [] }),
-            view({ userWords: [word('FOO', '1 2 +')] }),
+            view({ userWords: [word('FOO', '1 2 ADD')] }),
             okResult()
         );
         expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('user');
     });
 
     it('treats a failed run as an Output change even with no program output', () => {
@@ -70,21 +72,6 @@ describe('detectExecutionSurfaceChanges', () => {
         expect(changes.outputChanged).toBe(true);
     });
 
-    // `PI` alone: the run succeeds, prints nothing, and leaves the stack
-    // untouched because its result cannot be snapshotted. The host's account of
-    // that goes to Output, so Output is where the layout has to move; without
-    // this the run looked like it changed nothing and the explanation stayed on
-    // a surface the reader was not on.
-    it('treats a refused stack snapshot as an Output change', () => {
-        const changes = detectExecutionSurfaceChanges(
-            view(),
-            view(),
-            okResult({ stackSnapshotError: 'cannot persist a Tier-2 computable exact real' })
-        );
-        expect(changes.outputChanged).toBe(true);
-        expect(changes.stackChanged).toBe(false);
-    });
-
     it('treats real program output as an Output change', () => {
         const changes = detectExecutionSurfaceChanges(
             view(),
@@ -92,6 +79,18 @@ describe('detectExecutionSurfaceChanges', () => {
             okResult({ output: 'hello' })
         );
         expect(changes.outputChanged).toBe(true);
+    });
+
+    // `'' PRINT` is one emission — the host writes it as one empty line — and
+    // an emission is a change to Output whatever its characters are.
+    it('treats an empty or whitespace-only emission as an Output change', () => {
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult({ output: '\n' })).outputChanged).toBe(true);
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult({ output: '  \n' })).outputChanged).toBe(true);
+    });
+
+    it('does not flag Output for a run that emitted nothing', () => {
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult({ output: '' })).outputChanged).toBe(false);
+        expect(detectExecutionSurfaceChanges(view(), view(), okResult()).outputChanged).toBe(false);
     });
 
     // The stack comparison walks the values structurally instead of stringifying
@@ -144,5 +143,43 @@ describe('detectExecutionSurfaceChanges', () => {
     it('reports no stack change for two empty stacks', () => {
         const changes = detectExecutionSurfaceChanges(view(), view(), okResult());
         expect(changes.stackChanged).toBe(false);
+    });
+});
+
+// A "Why NIL" is about a NIL this run left on the stack. The trace also names
+// the Word that merely left an older NIL on top — `[ 2 MUL ] 'G' DEF` on a
+// stack already holding one — which is not this run's to explain.
+describe('checkRunLeftOwnNil', () => {
+    const nil = (reason: string): Value =>
+        ({ type: 'nil', value: null, semantics: { absence: { reason } } } as unknown as Value);
+    const vector = (...elements: Value[]): Value =>
+        ({ type: 'vector', value: elements } as unknown as Value);
+
+    it('sees a NIL the run pushed', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('divisionByZero')] }))).toBe(true);
+    });
+
+    it('sees a NIL the run left below another value', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('divisionByZero'), num(5)] }))).toBe(true);
+    });
+
+    it('sees a NIL lane in a Vector the run produced', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [vector(num(1), nil('divisionByZero'))] }))).toBe(true);
+    });
+
+    it('ignores a NIL the run was handed and left where it was', () => {
+        const before = view({ stack: [nil('divisionByZero')] });
+        const after = view({ stack: [nil('divisionByZero')], userWords: [word('G', '2 MUL')] });
+        expect(checkRunLeftOwnNil(before, after)).toBe(false);
+    });
+
+    it('sees a second NIL pushed on top of an earlier one', () => {
+        const before = view({ stack: [nil('divisionByZero')] });
+        const after = view({ stack: [nil('divisionByZero'), nil('divisionByZero')] });
+        expect(checkRunLeftOwnNil(before, after)).toBe(true);
+    });
+
+    it('reports nothing for a run that left no NIL', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [num(3)] }))).toBe(false);
     });
 });

@@ -3,31 +3,28 @@
 //!
 //! Arithmetic never rounds and `STR` refuses a number with no exact lexeme,
 //! so the language had no place a program could ask for `1/3` to three
-//! places without first rounding the *value* (`QUANTIZE`) and then spelling
+//! places without first rounding the *value* (`1000 MUL ROUND 1000 DIV`) and then spelling
 //! the rounded number. `FORMAT` is that place, and it is the only one: what
 //! leaves it is text, so the rounded quantity never re-enters arithmetic as
 //! if it were exact. The rule is fixed — a tie rounds away from zero, the
-//! one rule `ROUND` and `QUANTIZE` already apply — because a choice of
+//! one rule `ROUND` already applies — because a choice of
 //! rounding mode is a family of Words, and the language keeps one rule.
 //!
 //! The decision is exact at every tier. A rational scales and rounds
 //! outright. An algebraic irrational compares its scaled fraction part against
-//! one half through the field's total order, which never ties. A computable
-//! real refines under the default comparison water and, when the last digit
-//! does not settle, projects `undecidable` — the outcome its comparisons
-//! already reach when refinement runs out — rather than guess a digit.
+//! one half through the field's total order, which never ties. Every digit
+//! is therefore decided; none is guessed.
 
 use num_bigint::BigInt;
 use num_traits::{One, Signed};
 use std::cmp::Ordering;
 
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::semantic::Recoverability;
-use crate::types::exact::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};
+use crate::interpreter::Interpreter;
+use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// The most digits one `FORMAT` may ask for. Every digit is a decimal place
 /// of big-integer work, and the meter charges each one, so the cap only
@@ -36,10 +33,8 @@ use crate::types::{Interpretation, Value, ValueData};
 const MAX_DIGITS: u64 = 1 << 16;
 
 fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        for operand in operands {
-            interp.stack.push(operand);
-        }
+    for operand in operands {
+        interp.stack.push(operand);
     }
 }
 
@@ -60,40 +55,26 @@ fn digit_count(value: &Value) -> Option<u64> {
     (n <= BigInt::from(MAX_DIGITS)).then(|| n.to_string().parse().ok())?
 }
 
-/// What settling the last digit produced.
-enum Rounded {
-    Integer(BigInt),
-    Undecidable,
-}
-
 /// `x * 10^digits`, rounded to an integer with a tie away from zero.
-fn round_scaled(x: &ExactReal, digits: u64) -> Rounded {
+fn round_scaled(x: &ExactReal, digits: u64) -> BigInt {
     let scale = Fraction::new(BigInt::from(10).pow(digits as u32), BigInt::one());
     if let Some(f) = x.as_rational() {
-        let rounded = f.mul(&scale).round();
-        return Rounded::Integer(rounded.numerator());
+        return f.mul(&scale).round().numerator();
     }
     let scaled = x.mul(&ExactReal::from_fraction(scale));
-    let Some(floor) = scaled.floor() else {
-        return Rounded::Undecidable;
-    };
+    let floor = scaled.floor().expect("an algebraic value has a floor");
     let floor_int = floor
         .as_rational()
         .expect("a floor is an integer")
         .numerator();
     let fraction_part = scaled.sub(&floor);
     let half = ExactReal::from_fraction(Fraction::new(BigInt::one(), BigInt::from(2)));
-    match fraction_part.cmp_within(&half, DEFAULT_COMPARISON_WATER) {
-        ExactCmp::Decided(Ordering::Less) => Rounded::Integer(floor_int),
-        ExactCmp::Decided(Ordering::Greater) => Rounded::Integer(floor_int + 1),
+    match fraction_part.cmp_exact(&half) {
+        Some(Ordering::Less) => floor_int,
         // A tie cannot occur for an irrational, but the rule is stated all
         // the same: away from zero.
-        ExactCmp::Decided(Ordering::Equal) => Rounded::Integer(if floor_int.is_negative() {
-            floor_int
-        } else {
-            floor_int + 1
-        }),
-        ExactCmp::Starved { .. } | ExactCmp::Absent => Rounded::Undecidable,
+        Some(Ordering::Equal) if floor_int.is_negative() => floor_int,
+        _ => floor_int + 1,
     }
 }
 
@@ -123,17 +104,18 @@ fn spell(n: &BigInt, digits: u64) -> String {
 pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(x) = exact_real_of(&operands[0]) else {
+        let got = operands[0].domain_name();
         restore_all(interp, operands);
         return Err(AjisaiError::declared(
             "nonNumeric",
-            "FORMAT: expected an exact scalar as the value, got a non-numeric operand",
+            format!("expected a Scalar as the value, got {got}"),
         ));
     };
     let Some(digits) = digit_count(&operands[1]) else {
         restore_all(interp, operands);
         return Err(AjisaiError::declared(
-            "invalidCount",
-            "FORMAT: expected a non-negative integer digit count",
+            "invalidInteger",
+            "expected a non-negative integer digit count",
         ));
     };
     // Every digit is a decimal place of big-integer work.
@@ -141,15 +123,7 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
         restore_all(interp, operands);
         return Err(e);
     }
-    match round_scaled(&x, digits) {
-        Rounded::Integer(n) => interp.stack.push_with_role(
-            Value::from_string(&spell(&n, digits)),
-            Interpretation::Unassigned,
-        ),
-        Rounded::Undecidable => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-            Interpretation::Nil,
-        ),
-    }
+    let n = round_scaled(&x, digits);
+    interp.stack.push(Value::from_string(&spell(&n, digits)));
     Ok(())
 }

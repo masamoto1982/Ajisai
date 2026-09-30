@@ -4,7 +4,6 @@
 //! comparison, and the derived CF against known expansions.
 
 use crate::types::exact::algebraic::{Algebraic, AlgebraicResult};
-use crate::types::exact::observation::{Observation, Water};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::cmp::Ordering;
@@ -79,13 +78,13 @@ fn ring_axioms_hold_over_samples() {
     for a in &pool {
         for b in &pool {
             // Commutativity.
-            assert!(results_equal(&a.add(b), &b.add(a)), "a+b = b+a");
+            assert!(results_equal(&a.add(b), &b.add(a)), "a+b EQ b+a");
             assert!(results_equal(&a.mul(b), &b.mul(a)), "a·b = b·a");
             for c in &pool {
                 // Associativity.
                 let left = add_results(&a.add(b), &as_result(c));
                 let right = add_results(&as_result(a), &b.add(c));
-                assert!(results_equal(&left, &right), "(a+b)+c = a+(b+c)");
+                assert!(results_equal(&left, &right), "(a+b)+c EQ a+(b+c)");
                 let left = mul_results(&a.mul(b), &as_result(c));
                 let right = mul_results(&as_result(a), &b.mul(c));
                 assert!(results_equal(&left, &right), "(a·b)·c = a·(b·c)");
@@ -226,38 +225,6 @@ fn floor_ceil_round_are_exact() {
 }
 
 #[test]
-fn derived_cf_matches_known_expansions() {
-    // √2 = [1; 2, 2, 2, …].
-    let cf = sqrt_irr(2, 1).cf_prefix(8);
-    let expected: Vec<BigInt> = [1, 2, 2, 2, 2, 2, 2, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-    // √3 = [1; 1, 2, 1, 2, …].
-    let cf = sqrt_irr(3, 1).cf_prefix(7);
-    let expected: Vec<BigInt> = [1, 1, 2, 1, 2, 1, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-    // −√2 = [−2; 1, 1, 2, 2, 2, …] (floor convention).
-    let cf = sqrt_irr(2, 1).neg().cf_prefix(6);
-    let expected: Vec<BigInt> = [-2, 1, 1, 2, 2, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-    // √(1/2) = [0; 1, 2, 2, 2, …].
-    let cf = sqrt_irr(1, 2).cf_prefix(6);
-    let expected: Vec<BigInt> = [0, 1, 2, 2, 2, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-}
-
-#[test]
 fn best_rational_approximation_returns_principal_convergents() {
     let sqrt2 = sqrt_irr(2, 1);
     // Convergents of √2: 1, 3/2, 7/5, 17/12, 41/29, 99/70, …
@@ -277,26 +244,21 @@ fn best_rational_approximation_returns_principal_convergents() {
 }
 
 #[test]
-fn observation_adapter_narrows_monotonically() {
+fn enclosures_narrow_monotonically_around_the_value() {
     let sqrt2 = sqrt_irr(2, 1);
-    let mut obs = sqrt2.observe();
-    let first = obs.current_interval().expect("Tier 1 always encloses");
-    assert!(
-        first.lo.lt(&first.hi),
-        "irrational enclosure is not a point"
-    );
-    assert_eq!(obs.refine(Water(24)), crate::types::exact::Refine::Narrower);
-    let second = obs.current_interval().expect("still enclosed");
-    assert!(second.is_within(&first), "refinement is monotone");
-    assert!(second.width().lt(&first.width()), "refinement narrows");
+    let (lo1, hi1) = sqrt2.bounds(8);
+    assert!(lo1.lt(&hi1), "irrational enclosure is not a point");
+    let (lo2, hi2) = sqrt2.bounds(32);
+    assert!(lo1.le(&lo2) && hi2.le(&hi1), "deeper bounds nest");
+    assert!(hi2.sub(&lo2).lt(&hi1.sub(&lo1)), "deeper bounds narrow");
     // The enclosure straddles the true value: lo < √2 < hi ⇔ lo² < 2 < hi².
-    assert!(second.lo.mul(&second.lo).lt(&frac(2, 1)));
-    assert!(second.hi.mul(&second.hi).gt(&frac(2, 1)));
+    assert!(lo2.mul(&lo2).lt(&frac(2, 1)));
+    assert!(hi2.mul(&hi2).gt(&frac(2, 1)));
 }
 
 /// The normal form is the value, and `normal_form_terms` hands it out in the
 /// shape a host can draw in one line. This is what lets a Stack area show `√3`
-/// instead of choosing between a thirty-line continued fraction and a best
+/// instead of choosing between the source-form display and a best
 /// rational approximation that looks exactly like an exact rational.
 #[test]
 fn normal_form_terms_expose_the_stored_representation() {

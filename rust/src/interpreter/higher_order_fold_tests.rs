@@ -6,7 +6,7 @@ mod tests {
 
     fn top_scalar_i64(interp: &Interpreter) -> i64 {
         let top = interp.stack.last().expect("stack top");
-        // A Boolean predicate result (ANY/ALL) reads as 1/0.
+        // A Boolean result reads as 1/0.
         if let Some(b) = top.as_truth() {
             return if b { 1 } else { 0 };
         }
@@ -26,44 +26,18 @@ mod tests {
     #[tokio::test]
     async fn test_fold_basic() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 2 3 4 ] [ 0 ] [ + ] FOLD").await;
+        let result = interp.execute("[ 1 2 3 4 ] [ 0 ] [ ADD ] FOLD").await;
         assert!(result.is_ok(), "FOLD should succeed: {:?}", result);
         assert_eq!(top_scalar_i64(&interp), 10);
     }
 
     #[tokio::test]
-    async fn test_fold_nil_returns_initial() {
+    async fn test_fold_of_an_absent_vector_is_that_absence() {
+        // The Vector is data (LANG.FAILURE.PASSTHROUGH): an absent one is the
+        // result, not the initial accumulator standing in for an empty fold.
         let mut interp = Interpreter::new();
-        let result = interp.execute("NIL [ 42 ] [ + ] FOLD").await;
-        assert!(
-            result.is_ok(),
-            "FOLD on NIL should return initial: {:?}",
-            result
-        );
-        assert_eq!(top_scalar_i64(&interp), 42);
-    }
-    #[tokio::test]
-    async fn test_any_basic_and_nil_and_user_word() {
-        let mut interp = Interpreter::new();
-        let ok = interp
-            .execute("[ 1 3 5 8 ] [ [ 2 ] MOD [ 0 ] = ] ANY")
-            .await;
-        assert!(ok.is_ok(), "ANY basic failed: {:?}", ok);
-        assert_eq!(top_scalar_i64(&interp), 1);
-
-        let mut interp2 = Interpreter::new();
-        let ok2 = interp2.execute("NIL [ [ 2 ] MOD [ 0 ] = ] ANY").await;
-        assert!(ok2.is_ok(), "ANY NIL failed: {:?}", ok2);
-        assert_eq!(top_scalar_i64(&interp2), 0);
-
-        let mut interp3 = Interpreter::new();
-        interp3
-            .execute("[ X | X [ 2 ] MOD [ 0 ] = ] 'IS_EVEN' DEF")
-            .await
-            .unwrap();
-        let ok3 = interp3.execute("[ 1 3 6 ] [ IS_EVEN ] ANY").await;
-        assert!(ok3.is_ok(), "ANY user word failed: {:?}", ok3);
-        assert_eq!(top_scalar_i64(&interp3), 1);
+        interp.execute("NIL [ 42 ] [ ADD ] FOLD").await.unwrap();
+        assert!(interp.stack.last().is_some_and(|v| v.is_nil()));
     }
     /// `&` resolves to the same contract and executor as `AND`
     /// (LANG.SOURCE.NORMALIZE), including inside a predicate block.
@@ -87,7 +61,7 @@ mod tests {
             and_result
         );
 
-        // AND, OR and NOT carry no symbol: `&` is an ordinary name the
+        // AND and NOT carry no symbol: `&` is an ordinary name the
         // dictionary does not have, inside a block body like anywhere else.
         let mut alias_interp = Interpreter::new();
         let alias_result = alias_interp
@@ -105,7 +79,7 @@ mod tests {
     /// not TRUE and `0` is not FALSE (LANG.VALUES.DISJOINT).
     #[tokio::test]
     async fn test_logic_words_reject_scalar_operands() {
-        for source in ["1 1 AND", "0 1 OR", "5 NOT", "TRUE 1 AND"] {
+        for source in ["1 1 AND", "FALSE 0 AND", "5 NOT", "TRUE 1 AND"] {
             let mut interp = Interpreter::new();
             let result = interp.execute(source).await;
             assert!(
@@ -117,16 +91,12 @@ mod tests {
         }
     }
 
-    /// A predicate block must decide in the Boolean domain: a scalar, a NIL,
-    /// and a singleton Vector are each a nonconforming predicate result rather
-    /// than a truth value (LANG.VALUES.TRUTH).
+    /// A predicate block must decide in the truth domain: a scalar and a
+    /// singleton Vector are each a nonconforming predicate result rather than
+    /// a truth value (LANG.VALUES.TRUTH).
     #[tokio::test]
     async fn test_higher_order_predicates_reject_non_boolean() {
-        for source in [
-            "[ 1 2 3 ] [ 1 ] FILTER",
-            "[ 1 2 3 ] [ NIL ] ANY",
-            "[ 1 2 3 ] [ [ TRUE ] ] ALL",
-        ] {
+        for source in ["[ 1 2 3 ] [ 1 ] FILTER", "[ 1 2 3 ] [ [ TRUE ] ] FILTER"] {
             let mut interp = Interpreter::new();
             let result = interp.execute(source).await;
             assert!(
@@ -136,5 +106,23 @@ mod tests {
                 result
             );
         }
+    }
+
+    /// A NIL is UNKNOWN in truth position (LANG.VALUES.TRUTH), for FILTER's
+    /// predicate as for AND and SELECT: it is a truth value, so it raises
+    /// nothing, and only a predicate that holds keeps its element.
+    #[tokio::test]
+    async fn test_filter_drops_an_unknown_predicate() {
+        // `1 X DIV` is NIL(divisionByZero) for the 0 lane, so its comparison
+        // is UNKNOWN there and TRUE for the other two.
+        let mut interp = Interpreter::new();
+        interp
+            .execute("[ 1 0 2 ] [ 'X' BIND 1 X DIV 1/3 GT ] FILTER")
+            .await
+            .expect("an UNKNOWN predicate is a truth value, not an ERROR");
+        assert_eq!(
+            crate::types::display::render_stack(interp.get_stack()),
+            vec!["[ 1/1 2/1 ]".to_string()]
+        );
     }
 }

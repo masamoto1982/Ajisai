@@ -165,11 +165,12 @@ fn the_grammar_declares_no_rejected_character() {
 
 /// The characters that per-character rule used to refuse now lex as ordinary
 /// names wherever they sit in a word — the delimiter rule is the only rule.
-/// `{` and `}` were freed with these three and then allocated as a delimiter
-/// pair, so the law that holds them is `a_delimiter_stands_alone` below.
+/// `{` and `}` were freed with these three, allocated as the Record literal's
+/// delimiter pair for a while, and freed again when that literal was retired;
+/// the grammar's one pair, `[` and `]`, is held by `a_delimiter_stands_alone`.
 #[test]
 fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
-    for ch in ["(", ")", "|"] {
+    for ch in ["(", ")", "|", "{", "}"] {
         for source in [
             ch.to_string(),
             format!("a{ch}"),
@@ -189,7 +190,7 @@ fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
 /// Each pair the grammar declares lexes to the two tokens it names, and only
 /// as a whole lexeme: glued to anything, a delimiter is the source error that
 /// asks for the space. This is the law the per-character rule's removal left
-/// to carry `[`, `]`, `{` and `}` — the whole-lexeme rule is the only rule
+/// to carry `[` and `]` — the whole-lexeme rule is the only rule
 /// standing between a name and a delimiter.
 #[test]
 fn a_delimiter_stands_alone() {
@@ -239,8 +240,9 @@ fn a_delimiter_stands_alone() {
 }
 
 /// A line terminator must also be whitespace. The scan rules read the two
-/// classes independently, so a terminator outside the whitespace class would
-/// never be reached by the rule that emits LineBreak.
+/// classes independently — only the comment rule cares about a terminator —
+/// so a terminator outside the whitespace class would glue into a name
+/// instead of ending the comment's line and separating the tokens around it.
 #[test]
 fn line_terminators_are_whitespace() {
     let g = grammar();
@@ -323,4 +325,52 @@ fn lexeme_classification_is_total() {
             other => panic!("{name:?} should be one Symbol, got {other:?}"),
         }
     }
+}
+
+/// The delimiter check reads the tokens the scan produced, so a `#` or a quote
+/// glued inside a name is part of that name there too. A text-level pass that
+/// ran first read `[ C# ] LENGTH` as a comment swallowing the `]` and refused a
+/// balanced program.
+#[test]
+fn a_glued_comment_or_quote_character_does_not_unbalance_delimiters() {
+    for source in ["[ C# ] LENGTH", "[ a'b ] LENGTH", "[ x#y z' ]"] {
+        let tokens = tokenize(source).unwrap_or_else(|e| panic!("{source:?}: {e}"));
+        assert!(
+            tokens.contains(&Token::VectorEnd),
+            "{source:?} must close its vector"
+        );
+    }
+}
+
+/// `n/0` is refused as source, before anything runs — not when the literal is
+/// reached, after the program has already printed.
+#[test]
+fn a_zero_denominator_is_a_source_error() {
+    for source in ["1/0", "-3/000", "[ 1 PRINT 1/0 ]"] {
+        let error = tokenize(source).expect_err(source);
+        assert!(error.contains("zero denominator"), "{source:?}: {error}");
+    }
+    assert!(
+        tokenize("1/01").is_ok(),
+        "a leading zero is not a zero denominator"
+    );
+}
+
+/// The numeric-literal ceiling counts the digits a literal denotes, exponent
+/// included, which is what decides how large an integer the parse builds.
+#[test]
+fn a_literal_denotes_its_written_digits_plus_its_exponent() {
+    use crate::tokenizer::denoted_digit_count;
+    assert_eq!(denoted_digit_count("123"), 3);
+    assert_eq!(denoted_digit_count("-1/2"), 2);
+    assert_eq!(denoted_digit_count("1.5e3"), 5);
+    assert_eq!(denoted_digit_count("1e-5000"), 5001);
+    assert_eq!(denoted_digit_count("1e99999999999999999999999"), u64::MAX);
+}
+
+#[test]
+fn zero_at_any_scale_denotes_only_its_written_digits() {
+    use crate::tokenizer::denoted_digit_count;
+    assert_eq!(denoted_digit_count("0e99999999"), 1);
+    assert_eq!(denoted_digit_count("-0.00e999"), 3);
 }

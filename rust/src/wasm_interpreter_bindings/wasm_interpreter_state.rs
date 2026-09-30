@@ -1,76 +1,16 @@
 use super::wasm_value_conversion::{value_to_js, UserWordData};
-use super::{set_js_prop, AjisaiInterpreter};
+use super::AjisaiInterpreter;
 use crate::builtins;
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
-
-fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
-    let obj = js_sys::Object::new();
-
-    set_js_prop(&obj, "when", &(diagnosis.when.as_protocol_str().into()));
-    set_js_prop(&obj, "why", &(diagnosis.why.as_protocol_str().into()));
-    set_js_prop(&obj, "summary", &(diagnosis.summary.clone().into()));
-
-    let where_obj = js_sys::Object::new();
-    set_js_prop(
-        &where_obj,
-        "kind",
-        &(diagnosis.where_.kind.as_protocol_str().into()),
-    );
-    if let Some(word) = &diagnosis.where_.word {
-        set_js_prop(&where_obj, "word", &(word.clone().into()));
-    }
-    if let Some(dictionary) = &diagnosis.where_.dictionary {
-        set_js_prop(&where_obj, "dictionary", &(dictionary.clone().into()));
-    }
-    set_js_prop(&obj, "where", &where_obj.into());
-
-    let evidence_arr = js_sys::Array::new();
-    for item in &diagnosis.evidence {
-        evidence_arr.push(&JsValue::from_str(item));
-    }
-    set_js_prop(&obj, "evidence", &evidence_arr.into());
-
-    let checks_arr = js_sys::Array::new();
-    for c in &diagnosis.next_checks {
-        let check_obj = js_sys::Object::new();
-        set_js_prop(&check_obj, "code", &JsValue::from_str(c.code));
-        set_js_prop(&check_obj, "title", &localized_to_js(&c.title));
-        set_js_prop(&check_obj, "detail", &localized_to_js(&c.detail));
-        checks_arr.push(&check_obj);
-    }
-    set_js_prop(&obj, "nextChecks", &checks_arr.into());
-
-    let candidates_arr = js_sys::Array::new();
-    for candidate in &diagnosis.candidates {
-        candidates_arr.push(&JsValue::from_str(candidate));
-    }
-    set_js_prop(&obj, "candidates", &candidates_arr.into());
-
-    obj.into()
-}
-
-/// One locale-keyed display string, shared by every diagnosis surface.
-fn localized_to_js(text: &crate::interpreter::debug_diagnosis::LocalizedText) -> JsValue {
-    let obj = js_sys::Object::new();
-    set_js_prop(&obj, "en", &JsValue::from_str(&text.en));
-    set_js_prop(&obj, "ja", &JsValue::from_str(&text.ja));
-    obj.into()
-}
 
 #[wasm_bindgen]
 impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        // Keep the WASM boundary on the Phase 4 `(value, role)` façade rather
-        // than independently indexing the legacy value and role vectors.
-        // The `Stack` owns each value with its role in lockstep, so iterating
-        // its slots yields aligned `(value, role)` observations by construction
-        // — no snapshot type and no alignment assertion are needed.
-        for (value, role) in self.interpreter.get_stack().iter_slots() {
-            js_array.push(&value_to_js(value, Some(role)));
+        for value in self.interpreter.get_stack().iter() {
+            js_array.push(&value_to_js(value));
         }
         js_array.into()
     }
@@ -82,18 +22,17 @@ impl AjisaiInterpreter {
         let mut names: Vec<&String> = self.interpreter.user_words.keys().collect();
         names.sort();
         for name in names {
-            let is_protected = self
+            // Another User Word calls this one, so DEL refuses it until that
+            // caller is gone; the host colours it apart.
+            let has_dependents = self
                 .interpreter
                 .dependents
                 .get(name)
                 .is_some_and(|deps| !deps.is_empty());
 
             let item = js_sys::Array::new();
-            // The dictionary slot stays in the shape for the host, which reads
-            // a fixed triple; there is one User tier, so it is constant.
-            item.push(&"USER".into());
             item.push(&name.clone().into());
-            item.push(&is_protected.into());
+            item.push(&has_dependents.into());
 
             js_array.push(&item);
         }
@@ -101,9 +40,9 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    /// Content identity (Section 8.6) of each user word, as `[fqName, id]`
-    /// pairs. The host uses these to deduplicate identical definitions on
-    /// import and to key shared word groups by content rather than by name.
+    /// Content identity of each user word, as `[name, id]` pairs. The host
+    /// uses these to deduplicate identical definitions on import and to key
+    /// shared word groups by content rather than by name.
     #[wasm_bindgen]
     pub fn collect_word_identities(&self) -> JsValue {
         let js_array = js_sys::Array::new();
@@ -126,9 +65,6 @@ impl AjisaiInterpreter {
         let words_info: Vec<UserWordData> = names
             .into_iter()
             .map(|name| UserWordData {
-                // Kept in the serialized shape for older snapshots to decode
-                // against; there is one User tier, so it no longer selects.
-                dictionary: None,
                 definition: self.interpreter.lookup_word_definition_tokens(&name),
                 description: self.interpreter.lookup_word_description(&name),
                 name,
@@ -140,31 +76,6 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_core_words_info(&self) -> JsValue {
         to_value(&builtins::collect_core_builtin_definitions()).unwrap_or(JsValue::NULL)
-    }
-
-    /// Returns the canonical Core-listed words.
-    ///
-    /// Tuple shape: `(name, description, syntax)` — same as
-    /// `collect_core_words_info` so the GUI can render either list with the
-    /// same code path.
-    #[wasm_bindgen]
-    pub fn collect_core_listed_words_info(&self) -> JsValue {
-        let entries: Vec<(String, String, String)> = builtins::collect_core_builtin_definitions()
-            .into_iter()
-            .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
-            .collect();
-
-        to_value(&entries).unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen]
-    pub fn collect_core_word_aliases_info(&self) -> JsValue {
-        to_value(&crate::core_word_aliases::collect_core_word_aliases()).unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen]
-    pub fn collect_input_helper_words_info(&self) -> JsValue {
-        to_value(&crate::core_word_aliases::collect_input_helper_words()).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
@@ -215,14 +126,6 @@ impl AjisaiInterpreter {
         obj.into()
     }
 
-    #[wasm_bindgen]
-    pub fn remove_word(&mut self, name: &str) {
-        let upper_name = name.to_uppercase();
-        if self.interpreter.user_words.remove(&upper_name).is_some() {
-            let _ = self.interpreter.rebuild_dependencies();
-        }
-    }
-
     /// Discard every value on the stack, leaving the dictionary, the output
     /// and every other piece of session state untouched.
     ///
@@ -234,8 +137,7 @@ impl AjisaiInterpreter {
     /// person at the keyboard is the one asking.
     #[wasm_bindgen]
     pub fn clear_stack(&mut self) {
-        self.interpreter
-            .update_stack_with_hints(Vec::new(), Vec::new());
+        self.interpreter.update_stack(crate::types::Stack::new());
     }
 
     /// The one stack format persistence accepts (LANG.OBSERVATION.FIREWALL). Unlike
@@ -248,17 +150,16 @@ impl AjisaiInterpreter {
     /// values. The payload is an opaque JSON string produced by
     /// `crate::types::value_persist`.
     #[wasm_bindgen]
-    pub fn snapshot_stack(&self) -> Result<String, String> {
-        crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter_slots())
+    pub fn snapshot_stack(&self) -> String {
+        crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter())
     }
 
     /// Restore a stack from a `snapshot_stack` payload, reinstating exact
-    /// values (CodeBlock, ExactScalar, …) and their stack-position roles.
+    /// values (CodeBlock, ExactScalar, …).
     #[wasm_bindgen]
     pub fn restore_stack_snapshot(&mut self, snapshot_json: &str) -> Result<(), String> {
-        let slots = crate::types::value_persist::decode_stack(snapshot_json)?;
-        let (stack, hints): (Vec<_>, Vec<_>) = slots.into_iter().unzip();
-        self.interpreter.update_stack_with_hints(stack, hints);
+        let stack = crate::types::value_persist::decode_stack(snapshot_json)?;
+        self.interpreter.update_stack(stack);
         Ok(())
     }
 
@@ -281,14 +182,27 @@ impl AjisaiInterpreter {
         }
     }
 
+    /// Restore saved User Words, and name the entries that could not be
+    /// restored as `[name, reason]` pairs.
+    ///
+    /// Restoring skips an unreadable entry rather than raising, which is what
+    /// keeps the rest of a dictionary (`restore_user_word_definitions`); the
+    /// skipped entries come back here instead of being thrown, since a throw
+    /// would abort the host's own post-restore work and leave the session
+    /// holding a half-restored dictionary. The host used to learn only the
+    /// *names* that did not arrive, by comparing what it asked for against
+    /// the dictionary afterwards — which could not see a refused
+    /// redefinition (the old body is still there, so the name is present) and
+    /// could not say why anything was left out. The `Err` case is a list that
+    /// does not deserialize at all.
     #[wasm_bindgen]
-    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<(), String> {
+    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<JsValue, String> {
         let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
-        // A restored word's saved `dictionary` label is legacy state: the
-        // dictionary has two tiers and User is one of them, so every restored
-        // definition lands in the same place.
+        // A saved entry from before the dictionary became two tiers may still
+        // carry a `dictionary` label; it is ignored like any unknown field, and
+        // the definition lands among the User Words with every other.
         let entries = words.into_iter().map(|word| {
             (
                 word.name,
@@ -297,21 +211,21 @@ impl AjisaiInterpreter {
             )
         });
 
-        // Skipping an unreadable entry rather than raising is what keeps the
-        // rest of a dictionary: see `restore_user_word_definitions`. The
-        // skipped names are not raised here either — throwing would abort the
-        // host's own post-restore reconciliation and leave the session holding
-        // a half-restored dictionary, which is the outcome this avoids. The
-        // host reports them by comparing what it asked for against
-        // `collect_user_words_info`.
-        let _skipped = self
+        let skipped = self
             .interpreter
             .restore_user_word_definitions(entries)
             .map_err(|e| e.to_string())?;
 
         let _ = self.interpreter.collect_output();
 
-        Ok(())
+        let js_array = js_sys::Array::new();
+        for entry in skipped {
+            let item = js_sys::Array::new();
+            item.push(&entry.name.into());
+            item.push(&entry.reason.into());
+            js_array.push(&item);
+        }
+        Ok(js_array.into())
     }
 }
 
@@ -319,52 +233,29 @@ impl AjisaiInterpreter {
 /// result envelope (`errorFlowTrace`), so no host calls this directly.
 impl AjisaiInterpreter {
     pub(crate) fn collect_error_flow_trace(&mut self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for event in self.interpreter.drain_error_flow_trace() {
-            let obj = js_sys::Object::new();
-            set_js_prop(&obj, "kind", &(event.kind.as_protocol_str().into()));
-            if let Some(word) = event.word {
-                set_js_prop(&obj, "word", &(word.into()));
-            }
-            if let Some(absence) = event.absence {
-                let absence_obj = js_sys::Object::new();
-                if let Some(reason) = &absence.reason {
-                    set_js_prop(&absence_obj, "reason", &(reason.as_protocol_str().into()));
-                }
-                if let Some(detail) = &absence.detail {
-                    set_js_prop(&absence_obj, "detail", &(detail.as_str().into()));
-                }
-                set_js_prop(
-                    &absence_obj,
-                    "origin",
-                    &(absence.origin.as_protocol_str().into()),
-                );
-                set_js_prop(
-                    &absence_obj,
-                    "recoverability",
-                    &(absence.recoverability.as_protocol_str().into()),
-                );
-                if let Some(diagnosis) = &absence.diagnosis {
-                    set_js_prop(&absence_obj, "diagnosis", &diagnosis_to_js(diagnosis));
-                }
-                set_js_prop(&obj, "absence", &absence_obj.into());
-            }
-            set_js_prop(
-                &obj,
-                "stackLenBefore",
-                &((event.stack_len_before as u32).into()),
-            );
-            set_js_prop(
-                &obj,
-                "stackLenAfter",
-                &((event.stack_len_after as u32).into()),
-            );
-            set_js_prop(&obj, "message", &(event.message.into()));
-            if let Some(diagnosis) = event.diagnosis {
-                set_js_prop(&obj, "diagnosis", &diagnosis_to_js(&diagnosis));
-            }
-            arr.push(&obj);
-        }
-        arr.into()
+        let events = self.interpreter.drain_error_flow_trace();
+        error_flow_trace_to_js(&events)
     }
+}
+
+// Rendered by the CLI's own serializer and converted, so the trace a GUI
+// reads is the one an agent reads. A hand-built copy here was the third
+// spelling of a diagnosis (beside the CLI's and the value node's), and it had
+// already dropped a resource limit's `progress`.
+pub(crate) fn error_flow_trace_to_js(
+    events: &[crate::interpreter::error_flow_trace::ErrorFlowEvent],
+) -> JsValue {
+    json_to_js(serde_json::Value::Array(
+        events
+            .iter()
+            .map(crate::agent::report::error_flow_event_json)
+            .collect(),
+    ))
+}
+
+pub(crate) fn json_to_js(value: serde_json::Value) -> JsValue {
+    use serde::Serialize as _;
+    value
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .expect("a serde_json value always converts to a JS value")
 }

@@ -34,21 +34,21 @@
     "wallTimeMs": {
       "coverage": "hostGate",
       "declared": 5000,
-      "note": "Enforced by the adapter around execution (`backend/native-cli.js` spawn timeout, `backend/wasm-worker.js` worker deadline) and exercised through it in selftest.js, which drives a backend built with a 1 ms deadline against a program that cannot finish in one. It stopped being reachable through a source program when the collection meter landed, and that is the point rather than a regression: the over case used to be `[ 0 99999 ] RANGE UNIQUE LENGTH`, 48 seconds of quadratic scanning that no ceiling counted, and it is now refused by `collectionWork` in 164 ms. With every path named, the slowest program the other ceilings admit runs about 1.4 s -- `numericWork` buys ~0.7 s at its slowest charged path and `collectionWork` ~0.65 s at its own -- so 5,000 ms is a backstop on their sum, which is what a wall clock should be. Do not go looking for a source-program boundary pair for it; finding one would mean a ceiling had gone quiet again."
+      "note": "Enforced by the adapter around execution (`backend/native-cli.js` spawn timeout, `backend/wasm-worker.js` worker deadline) and exercised through it in selftest.js, which drives a backend built with a 1 ms deadline against a program that cannot finish in one. It stopped being reachable through a source program when the collection meter landed, and that is the point rather than a regression: the over case used to be `0 99999 RANGE UNIQUE LENGTH`, 48 seconds of quadratic scanning that no ceiling counted, and it is now refused by `collectionWork` in 164 ms. With every path named, the slowest program the other ceilings admit runs about 1.4 s -- `numericWork` buys ~0.7 s at its slowest charged path and `collectionWork` ~0.65 s at its own -- so 5,000 ms is a backstop on their sum, which is what a wall clock should be. Do not go looking for a source-program boundary pair for it; finding one would mean a ceiling had gone quiet again."
     },
     "responseBytes": {
       "coverage": "boundary",
       "declared": 1048576,
       "under": {
         "kind": "source",
-        "source": "[ 0 1000 ] RANGE",
+        "source": "0 1000 RANGE",
         "expect": {
           "/status": "ok"
         }
       },
       "over": {
         "kind": "source",
-        "source": "[ 0 10000 ] RANGE",
+        "source": "0 20000 RANGE",
         "expect": {
           "/status": "hostError",
           "/error/code": "responseTooLarge",
@@ -56,25 +56,25 @@
           "/error/retryable": false
         }
       },
-      "note": "Both backends measure the same thing: UTF-8 bytes of the schema-1 envelope text. `backend/parity-test.js` runs this pair against both, which is what the native-only `maxBuffer` implementation could never have shown."
+      "note": "Both backends refuse early on the same measure — UTF-8 bytes of the one result copy they produce — and `backend/parity-test.js` runs this pair against both, which is what the native-only `maxBuffer` implementation could never have shown. The declared ceiling itself is applied by the adapter to the whole response as sent (structured result, its serialized text mirror and provenance); `selftest.js` pins the gap between the two measures."
     },
     "executionSteps": {
       "coverage": "boundary",
       "declared": 100000,
       "under": {
         "kind": "source",
-        "source": "[ 1 20 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+        "source": "1 20 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
         "expect": {
           "/status": "ok"
         }
       },
       "over": {
         "kind": "source",
-        "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+        "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "executionLimitExceeded",
+          "/aiDiagnostic/category": "executionLimitExceeded",
           "/diagnosis/resourceLimit/resource": "executionSteps",
           "/diagnosis/resourceLimit/limit": 100000
         }
@@ -90,7 +90,7 @@
       "declared": 100000,
       "under": {
         "kind": "source",
-        "source": "[ 0 99999 ] RANGE LENGTH",
+        "source": "0 99999 RANGE LENGTH",
         "expect": {
           "/status": "ok",
           "/stackDisplay/0": "100000/1"
@@ -98,7 +98,7 @@
       },
       "over": {
         "kind": "source",
-        "source": "[ 0 100001 ] RANGE",
+        "source": "0 100001 RANGE",
         "expect": {
           "/status": "ok",
           "/stackDisplay/0": "NIL",
@@ -126,7 +126,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "numericLiteralDigits",
           "/diagnosis/resourceLimit/limit": 4096,
           "/diagnosis/resourceLimit/observed": 4097
@@ -153,10 +153,10 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "numericWork",
           "/diagnosis/resourceLimit/limit": 10000000,
-          "/diagnosis/resourceLimit/observed": 10194944
+          "/diagnosis/resourceLimit/observed": 10200112
         }
       },
       "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units, addition included -- Ajisai's `+` is rational addition, three multiplications and a gcd, not anything linear. The pair applies one 256-term cascade eighteen times against nineteen: work accumulates while no single value grows, which is the shape only a *cumulative* ceiling can catch, and keeps this pair from testing `algebraicTerms` or `bigintBits` by accident. It was `injectedLimit` for three rounds and three different reasons -- arithmetic outside the scalar path was not charged at all, then the refusal's 27MB envelope became `responseTooLarge`, then the cascade that reaches it could not be built because *rendering* 32 terms took 147s."
@@ -166,7 +166,7 @@
       "declared": 20000000,
       "under": {
         "kind": "source",
-        "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH",
+        "source": "0 99998 RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH",
         "expect": {
           "/status": "ok",
           "/stackDisplay/0": "99999/1"
@@ -174,11 +174,11 @@
       },
       "over": {
         "kind": "source",
-        "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH",
+        "source": "0 99998 RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH",
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "collectionWork",
           "/diagnosis/resourceLimit/limit": 20000000,
           "/diagnosis/resourceLimit/observed": 20000007,
@@ -186,7 +186,7 @@
           "/diagnosis/resourceLimit/progress/total": 99999
         }
       },
-      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. This pair used to be `[ 0 6290 ] RANGE UNIQUE LENGTH` / `[ 0 6291 ] RANGE UNIQUE LENGTH`: `UNIQUE` scanned the distinct values found so far for each element (n x distinct), so a boundary was reachable in one pass over plain rational scalars. The de-quadraticization follow-up (`Value: Hash`) turned that scan into an O(n)-average `HashMap` lookup, so one pass over 100,000 all-distinct machine words -- the most `materializedElements` permits -- now costs about 5.1M of the 20M budget, nowhere near this ceiling. Repeating `UNIQUE` on the same all-distinct 99,999-element vector reaches it in cheap, uniform passes instead: each repeat re-scans the same elements (still all distinct, so every pass is the same shape) and the sixth crosses on its 38,240th element. This was deliberately chosen over a single expensive-per-element pass (an algebraic or wide-BigInt vector, which can also reach the ceiling in one pass): those pay real per-element cost in `Algebraic::hash`'s interval refinement or BigInt limb-walking that is dramatically more expensive unoptimized than optimized, and an unoptimized `ajisai` binary is exactly what exercises this golden file (`npm run test:mcp` builds without `--release`) -- a single-pass algebraic witness here once took 16s against a 5,000ms `wallTimeMs`. What is charged per element is still operations x the measured cost of one element -- leaves per element, limbs per leaf, 512 units for an algebraic one -- plus a fixed `COLLECTION_HASH_UNITS` for the table lookup itself, re-measured at scale because a flat per-leaf charge alone undercounted a `HashMap`'s own growth and cache cost. `LENGTH` is on both sides to keep the response small. Derived in docs/dev/collection-word-billing-2026-08-13.md and re-derived in docs/dev/collection-word-dequadraticization-2026-08-14.md. The refusal also reports how far it got: a meter charged as it goes stops the instant the budget is crossed, so `observed` sits a hair over `limit` however far over the request was. `diagnosis.resourceLimit.progress` carries the size that fits instead, and the `checkHowFarItGot` next-check says to use it."
+      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. This pair used to be `0 6290 RANGE UNIQUE LENGTH` / `0 6291 RANGE UNIQUE LENGTH`: `UNIQUE` scanned the distinct values found so far for each element (n x distinct), so a boundary was reachable in one pass over plain rational scalars. The de-quadraticization follow-up (`Value: Hash`) turned that scan into an O(n)-average `HashMap` lookup, so one pass over 100,000 all-distinct machine words -- the most `materializedElements` permits -- now costs about 5.1M of the 20M budget, nowhere near this ceiling. Repeating `UNIQUE` on the same all-distinct 99,999-element vector reaches it in cheap, uniform passes instead: each repeat re-scans the same elements (still all distinct, so every pass is the same shape) and the sixth crosses on its 38,240th element. This was deliberately chosen over a single expensive-per-element pass (an algebraic or wide-BigInt vector, which can also reach the ceiling in one pass): those pay real per-element cost in `Algebraic::hash`'s interval refinement or BigInt limb-walking that is dramatically more expensive unoptimized than optimized, and an unoptimized `ajisai` binary is exactly what exercises this golden file (`npm run test:mcp` builds without `--release`) -- a single-pass algebraic witness here once took 16s against a 5,000ms `wallTimeMs`. What is charged per element is still operations x the measured cost of one element -- leaves per element, limbs per leaf, 512 units for an algebraic one -- plus a fixed `COLLECTION_HASH_UNITS` for the table lookup itself, re-measured at scale because a flat per-leaf charge alone undercounted a `HashMap`'s own growth and cache cost. `LENGTH` is on both sides to keep the response small. Derived in docs/dev/collection-word-billing-2026-08-13.md and re-derived in docs/dev/collection-word-dequadraticization-2026-08-14.md. The refusal also reports how far it got: a meter charged as it goes stops the instant the budget is crossed, so `observed` sits a hair over `limit` however far over the request was. `diagnosis.resourceLimit.progress` carries the size that fits instead, and the `checkHowFarItGot` next-check says to use it."
     },
     "bigintBits": {
       "coverage": "boundary",
@@ -208,7 +208,7 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "bigintBits",
           "/diagnosis/resourceLimit/limit": 262144,
           "/diagnosis/resourceLimit/observed": 272133
@@ -234,13 +234,38 @@
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
-          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "algebraicTerms",
           "/diagnosis/resourceLimit/limit": 512,
           "/diagnosis/resourceLimit/observed": 1024
         }
       },
       "note": "Nine two-radical factors reach 512 terms and succeed; the tenth doubling reaches 1,024 and is refused by name, in about 13ms. The declared value was 4,096 and had never fired in its life: the doubling that would first exceed it charges 16,799,744 units against a 10,000,000 work budget, so `numericWork` always answered first. Lowering it rather than raising the work budget keeps the hierarchy right -- a size ceiling bounds one value *inside* a run the work ceiling bounds -- and 512 is derived rather than rounded: `exactTerms` for 512 terms is 31,745 bytes, 3.0% of `responseBytes`, where 4,096 terms was 278,110 bytes and 26.5%, a quarter of the whole response for one number that renders as `[ … ]` and that no computation wants. `rust/src/agent/profile_liveness_tests.rs` now fails the build if any size ceiling is declared past what the work budget can pay for."
+    },
+    "nestingDepth": {
+      "coverage": "boundary",
+      "declared": 256,
+      "under": {
+        "kind": "source",
+        "source": "0 254 RANGE [ ] [ 2 COLLECT 1 TAKE ] FOLD DEPTH",
+        "expect": {
+          "/status": "ok",
+          "/stackDisplay/0": "256/1"
+        }
+      },
+      "over": {
+        "kind": "source",
+        "source": "0 255 RANGE [ ] [ 2 COLLECT 1 TAKE ] FOLD DEPTH",
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "resourceLimit",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
+          "/diagnosis/resourceLimit/resource": "nestingDepth",
+          "/diagnosis/resourceLimit/limit": 256,
+          "/diagnosis/resourceLimit/observed": 257
+        }
+      },
+      "note": "Each FOLD step wraps the accumulator one level deeper, so 255 steps over `[ ]` reach 256 and succeed and the 256th reaches 257 and is refused by name. Every walk over a value descends one native frame per level, so before this ceiling a program that nested a value a few thousand deep aborted the process instead of failing. A literal written that deep is refused the same way; a generative Word asked for a result that deep (FILL or RESHAPE with that many axes, JSON-DECODE of text nested that deep) declines it as NIL(spaceExhausted) instead, as it does a count past `materializedElements`."
     }
   }
 }

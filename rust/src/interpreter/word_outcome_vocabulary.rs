@@ -20,7 +20,7 @@
 //! resolves to a *registered id*, and whether every registered id is observed
 //! *somewhere* — both registry-level, neither per-word. The difference was
 //! load-bearing rather than pedantic. `MIN` and `MAX` raised
-//! `vectorLengthMismatch` while their contracts named `shapeMismatch`, and
+//! a length-mismatch category their contracts did not name, and
 //! this module's soundness argument rested on a property nothing checked and
 //! that the vocabulary itself violated; only the structural ceiling below
 //! kept the prediction sound in practice. Composing a
@@ -40,7 +40,7 @@
 //! right for arity/space/cost, where an unexecuted literal is one opaque
 //! push. It is the wrong question for reachability: a block can be pushed
 //! by one Word and executed by another, arbitrarily far away.
-//! `[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC` runs that `ADD` and answers
+//! `[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC` runs that `ADD` and answers
 //! `nonNumeric`, but the classifier calls the inner block `Data` at every
 //! point this walk sees it, so skipping `Data` dropped `nonNumeric` from
 //! the prediction — an under-approximation, measured, not hypothetical.
@@ -67,21 +67,15 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// `as_protocol_str()` so this can never drift from the wire spelling.
 /// `DivisionByZero` is excluded: it is not a registered outcome category at
 /// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
-/// diagnostic-trace-only, Phase 2 of this work order).
-fn structural_error_categories() -> [ErrorCategory; 12] {
+/// diagnostic-trace-only).
+fn structural_error_categories() -> [ErrorCategory; 6] {
     [
         ErrorCategory::StackUnderflow,
-        ErrorCategory::StructureError,
         ErrorCategory::UnknownWord,
-        ErrorCategory::VectorLengthMismatch,
-        ErrorCategory::ShapeMismatch,
         ErrorCategory::MalformedSource,
-        ErrorCategory::NameConflict,
         ErrorCategory::ExecutionLimitExceeded,
         ErrorCategory::ResourceLimitExceeded,
         ErrorCategory::RecursionLimitExceeded,
-        ErrorCategory::BuiltinProtection,
-        ErrorCategory::SelfReferentialDefinition,
     ]
 }
 
@@ -182,8 +176,8 @@ const NIL_WORD: &str = "NIL";
 /// back reasonless, and a reasonless NIL reads back as `literal`:
 ///
 /// ```text
-/// [ 1 2 ] [ 1 0 ] DIV [ 1 ] GET NIL-REASON            -> 'divisionByZero'
-/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET NIL-REASON -> 'literal'
+/// [ 1 2 ] [ 1 0 ] DIV 1 GET NIL-REASON            -> 'divisionByZero'
+/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET NIL-REASON -> 'literal'
 /// ```
 ///
 /// The second program contains no `NIL` token, so "a NIL literal is written
@@ -260,35 +254,7 @@ impl Reachability {
         self.names.insert(name.to_uppercase());
         self.calls_user_word |= !is_builtin;
     }
-
-    fn reaches_any(&self, words: &[&str]) -> bool {
-        self.unresolved || words.iter().any(|w| self.names.contains(*w))
-    }
 }
-
-/// Structural categories that only one class of Word can raise, and what has
-/// to be reachable before one is possible. Each pairing is the complete set of
-/// raise sites for that category in the engine, read off the source rather
-/// than inferred from the name:
-///
-/// - `nameConflict`, `selfReferentialDefinition` — `interpreter::execute_def`
-///   only.
-/// - `builtinProtection` — `execute_def` and `execute_del`.
-///
-/// `recursionLimitExceeded` is gated too but on a different predicate (any
-/// User-Word activation, since `execute_builtin` raises it on `call_depth`),
-/// so it is handled separately rather than forced into this table.
-///
-/// Everything not listed stays unconditional. `structureError` and
-/// `vectorLengthMismatch` are spread across the arithmetic and collection
-/// modules, and narrowing them would mean modelling which of those a program
-/// reaches — a different and much larger claim than "this program contains no
-/// `DEF`".
-const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 3] = [
-    ("error:nameConflict", &["DEF"]),
-    ("error:selfReferentialDefinition", &["DEF"]),
-    ("error:builtinProtection", &["DEF", "DEL"]),
-];
 
 /// Every structural error category (see `structural_error_categories`),
 /// except `stackUnderflow` (given a precise, flow-sensitive answer by
@@ -301,11 +267,7 @@ const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 3] = [
 /// vocabulary union can never include on its own, and so would otherwise
 /// under-approximate for any non-trivial program. Included whenever the
 /// program is non-empty (`predict_program_outcomes` decides that), not
-/// narrowed further in V1 — see that module's doc for why, and for the one
-/// declared exception (`OR-NIL`'s `missingFollowingSourceUnit`) that needs
-/// its own handling instead, since it is tied to a specific Word's own
-/// vocabulary but that Word tokenizes to `Token::NilCoalesce`, never a
-/// `Token::Symbol("OR-NIL")` a normal body walk would see.
+/// narrowed further in V1 — see that module's doc for why.
 pub(crate) fn structural_ceiling_ids(reach: &Reachability) -> BTreeSet<String> {
     structural_error_categories()
         .into_iter()
@@ -318,10 +280,7 @@ pub(crate) fn structural_ceiling_ids(reach: &Reachability) -> BTreeSet<String> {
             if id == "error:recursionLimitExceeded" {
                 return reach.unresolved || reach.calls_user_word;
             }
-            match GATED_STRUCTURAL_IDS.iter().find(|(gated, _)| gated == id) {
-                Some((_, triggers)) => reach.reaches_any(triggers),
-                None => true,
-            }
+            true
         })
         .collect()
 }
@@ -348,39 +307,35 @@ pub(crate) fn outcome_vocabulary_for_word(
         return conservative_outcomes();
     }
     let mut outcomes = BTreeSet::new();
-    for line in def.lines.iter() {
-        for token in line.body_tokens.iter() {
-            match token {
-                Token::Symbol(symbol) => {
-                    outcomes.extend(resolve_and_collect(interp, symbol, visiting, reach));
-                }
-                // A String still names a Word for `DEF`, `DEL` and `BIND`, and
-                // this walk does not tell an operand position from a code one,
-                // so it keeps the resolved Word's vocabulary. That
-                // over-approximates — a data string spelling a Word name pulls
-                // its vocabulary in for nothing — which is the allowed
-                // direction.
-                //
-                // What a String can no longer do is make a Word *run*. The
-                // higher-order Words used to take `'NAME'` as their code
-                // operand (`[ 1 2 3 ] 'DBL' MAP`), which is why this branch
-                // first existed; that spelling is gone (see
-                // `higher_order::common::extract_executable_code`), because a
-                // name computed at run time defeated the DEF-time acyclicity
-                // check LANG.DICTIONARY.ACYCLIC's termination argument rests
-                // on. Every reachable Word is now named by a `Token::Symbol`
-                // somewhere, so the arm above carries the whole call graph.
-                Token::String(text)
-                    if interp
-                        .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
-                            text,
-                        ))
-                        .is_some() =>
-                {
-                    outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
-                }
-                _ => {}
+    for token in def.body.iter() {
+        match token {
+            Token::Symbol(symbol) => {
+                outcomes.extend(resolve_and_collect(interp, symbol, visiting, reach));
             }
+            // A String still names a Word for `DEF`, `DEL` and `BIND`, and
+            // this walk does not tell an operand position from a code one,
+            // so it keeps the resolved Word's vocabulary. That
+            // over-approximates — a data string spelling a Word name pulls
+            // its vocabulary in for nothing — which is the allowed
+            // direction.
+            //
+            // What a String can no longer do is make a Word *run*. The
+            // higher-order Words used to take `'NAME'` as their code
+            // operand (`[ 1 2 3 ] 'DBL' MAP`), which is why this branch
+            // first existed; that spelling is gone (see
+            // `higher_order::common::extract_executable_code`), because a
+            // name computed at run time defeated the DEF-time acyclicity
+            // check LANG.DICTIONARY.ACYCLIC's termination argument rests
+            // on. Every reachable Word is now named by a `Token::Symbol`
+            // somewhere, so the arm above carries the whole call graph.
+            Token::String(text)
+                if interp
+                    .resolve_word_entry(&crate::word_name::canonical_word_name(text))
+                    .is_some() =>
+            {
+                outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
+            }
+            _ => {}
         }
     }
     visiting.remove(name);
@@ -399,7 +354,7 @@ pub(crate) fn resolve_and_collect(
     visiting: &mut HashSet<String>,
     reach: &mut Reachability,
 ) -> BTreeSet<String> {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
+    let canonical = crate::word_name::canonical_word_name(symbol);
     match interp.resolve_word_entry(&canonical) {
         Some((dep_name, dep_def)) => {
             outcome_vocabulary_for_word(interp, &dep_name, &dep_def, visiting, reach)

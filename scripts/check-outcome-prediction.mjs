@@ -77,8 +77,9 @@ function predict(ajisaiBin, scratchDir, counter, source) {
   writeFileSync(file, `${source}\n`);
   // `agent outcomes` always exits 0 (predicting always succeeds, even for a
   // program that cannot itself run) — execFileSync is safe here, unlike the
-  // bijection gate's `run`.
-  const stdout = execFileSync(ajisaiBin, ['agent', 'outcomes', file, '--json'], { encoding: 'utf8' });
+  // bijection gate's `agent compute`.
+  // The trusted profile, the one the bijection gate runs the program under.
+  const stdout = execFileSync(ajisaiBin, ['agent', 'outcomes', file, '--limits', 'trusted'], { encoding: 'utf8' });
   return JSON.parse(stdout);
 }
 
@@ -87,7 +88,7 @@ function predict(ajisaiBin, scratchDir, counter, source) {
 // comment gives (importing the table generator would rebuild the table).
 function classifyOutcome(json) {
   if (json.status === 'error') {
-    const kind = json.aiDiagnostic?.kind ?? json.diagnosis?.why;
+    const kind = json.aiDiagnostic?.category ?? json.diagnosis?.why;
     if (typeof kind !== 'string' || kind === '') {
       throw new Error(`error report names no category: ${JSON.stringify(json)}`);
     }
@@ -106,7 +107,7 @@ function run(ajisaiBin, scratchDir, counter, source) {
   writeFileSync(file, `${source}\n`);
   // A language ERROR exits 1 with the JSON diagnosis on stdout, so this
   // cannot use execFileSync (which would throw on it).
-  const result = spawnSync(ajisaiBin, ['run', file, '--json'], { encoding: 'utf8' });
+  const result = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
   if (result.error) throw result.error;
   if (result.status !== 0 && result.status !== 1) {
     throw new Error(`exit ${result.status}: ${result.stderr}`);
@@ -134,15 +135,15 @@ const ADVERSARIAL = [
   // A block can be pushed by one Word and executed by another, so a literal
   // that is inert *where it is written* still runs later. Prediction used to
   // skip anything a data literal contained.
-  "[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC",
-  "[ | [ 1 0 DIV ] ] 'G' DEF G EXEC",
+  "[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC",
+  "[ [ 1 0 DIV ] ] 'G' DEF G EXEC",
   '[ 1 ADD ] EXEC',
   '[ 1 2 ADD ] 1 GET EXEC',
   // A String is not a code operand, so neither of these runs `DEL`: both
   // answer `notExecutable`. They used to be the witnesses for the opposite —
   // the higher-order Words took `'NAME'` as their code operand, so a Word
   // could run with no `Token::Symbol` for it anywhere in the source, and
-  // these really raised `builtinProtection` and `wordNotFound` that way. That
+  // these really raised `protectedWord` and `wordNotFound` that way. That
   // spelling is gone: a computed name appeared in no token for the DEF-time
   // acyclicity check to read, which left LANG.DICTIONARY.ACYCLIC's termination
   // argument resting on a runtime ceiling (spec/termination.json). Kept as the
@@ -153,13 +154,13 @@ const ADVERSARIAL = [
   // whole universe would still pass the two classes above, and should not.
   '1 2 ADD',
   '[ 1 2 3 ] [ 2 MUL ] MAP',
-  "[ X | X 1 ADD ] 'INC' DEF 5 INC",
-  '9 1 0 DIV NIL? SELECT',
+  "[ 1 ADD ] 'INC' DEF 5 INC",
+  "1 0 DIV 'S' BIND 9 S S NIL? SELECT",
   // Reason loss: a lane holds an absence but not the reason for it, so a
   // computed NIL that crosses one twice comes back reasonless and reads as
   // `nil:literal` — with no NIL written anywhere in the source. Prediction
   // must admit that (word_outcome_vocabulary::close_over_nil_reason_loss).
-  '[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET',
+  '[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET',
   'NIL 1 ADD',
 ];
 
@@ -186,8 +187,8 @@ const SWEEP_OPERANDS = [
   '[ NIL 1 ]',
   '[ 1 [ 2 3 ] ]',
 ];
-const SWEEP_BINARY = ['ADD', 'DIV', 'MOD', 'EQ', 'AND', 'CONCAT', 'GET', 'MAP'];
-const SWEEP_UNARY = ['NEG', 'SQRT', 'NOT', 'LENGTH', 'SORT', 'JOIN', 'NIL-REASON', 'EXEC'];
+const SWEEP_BINARY = ['ADD', 'DIV', 'SUB', 'EQ', 'AND', 'CONCAT', 'GET', 'MAP'];
+const SWEEP_UNARY = ['FLOOR', 'SQRT', 'NOT', 'LENGTH', 'SORT', 'JOIN', 'NIL-REASON', 'EXEC'];
 
 function sweepPrograms() {
   const programs = new Set();

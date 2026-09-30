@@ -17,9 +17,10 @@
 //! the tool has. It is folded into the ordinary walk instead: reachable, so
 //! it joins the set, without displacing whatever could fail before it.
 
+use super::api::ComputeOptions;
 use super::contract_decl::build_definitions_interpreter;
 use super::execution_receipt::limit_profile_json;
-use super::{check_structure, resolve_words};
+use super::resolve_words;
 use crate::interpreter::Interpreter;
 
 pub(crate) struct OutcomeReport {
@@ -36,16 +37,35 @@ fn exact(outcome: &str, interp: &Interpreter) -> OutcomeReport {
     }
 }
 
+/// The interpreter a prediction reasons about: the same ceilings a
+/// `compute` under `options` would run under, so `limitProfile` names what
+/// the prediction actually assumed.
+fn interpreter_under(options: &ComputeOptions) -> Interpreter {
+    let mut interp = Interpreter::new();
+    if let Some(limits) = options.runtime_limits {
+        interp.set_runtime_limits(limits);
+    }
+    if let Some(limit) = options.step_limit {
+        interp.set_max_execution_steps(limit);
+    }
+    interp
+}
+
 /// Predict `source`'s outcome set without executing it.
-pub(crate) fn predict_outcomes(source: &str) -> OutcomeReport {
-    let probe = Interpreter::new();
+pub(crate) fn predict_outcomes(source: &str, options: &ComputeOptions) -> OutcomeReport {
+    let probe = interpreter_under(options);
+    // `tokenize` already ran the structural phase, so an unbalanced bracket
+    // is refused here with every other source error.
     let Ok(tokens) = crate::tokenizer::tokenize(source) else {
         return exact("error:malformedSource", &probe);
     };
-    if check_structure(&tokens).is_err() {
-        return exact("error:structureError", &probe);
-    }
     let (mut interp, _names) = build_definitions_interpreter(source);
+    if let Some(limits) = options.runtime_limits {
+        interp.set_runtime_limits(limits);
+    }
+    if let Some(limit) = options.step_limit {
+        interp.set_max_execution_steps(limit);
+    }
     let mut prediction = interp.predict_program_outcomes(&tokens);
     // A name nothing defines raises `unknownWord` when execution reaches it.
     // The walk already covers the reaching part (every Word that could fail

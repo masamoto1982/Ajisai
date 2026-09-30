@@ -22,10 +22,6 @@ function vec(...elements: Value[]): Value {
     return { type: 'vector', value: elements };
 }
 
-function tensor(shape: number[], data: unknown[], displayHint?: string): Value {
-    return { type: 'tensor', value: { shape, data, displayHint } };
-}
-
 describe('fractionToLatex', () => {
     test('integer collapses the denominator', () => {
         expect(fractionToLatex(frac(3))).toBe('3');
@@ -144,47 +140,11 @@ describe('valueToLatex: vectors', () => {
     });
 });
 
-describe('valueToLatex: tensors', () => {
-    test('rank-1 tensor renders as a one-row matrix', () => {
-        expect(valueToLatex(tensor([2], [frac(1, 2), frac(3)]))).toBe(
-            '\\begin{bmatrix} \\frac{1}{2} & 3 \\end{bmatrix}'
-        );
-    });
-
-    test('rank-2 tensor renders rows split by shape', () => {
-        expect(valueToLatex(tensor([2, 2], [frac(1), frac(2), frac(3), frac(4)]))).toBe(
-            '\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}'
-        );
-    });
-
-    test('invalid lane renders as NIL occupancy', () => {
-        expect(valueToLatex(tensor([2], [frac(1), null]))).toBe(
-            '\\begin{bmatrix} 1 & \\mathrm{NIL} \\end{bmatrix}'
-        );
-    });
-
-    test('rank-0 tensor renders its single lane', () => {
-        expect(valueToLatex(tensor([], [frac(5, 6)]))).toBe('\\frac{5}{6}');
-    });
-
-    test('rank-3 tensor is refused', () => {
-        expect(valueToLatex(tensor([1, 1, 2], [frac(1), frac(2)]))).toBeNull();
-    });
-
-    test('text-hinted byte tensor is refused (it is a string)', () => {
-        expect(valueToLatex(tensor([2], [frac(72), frac(105)], 'text'))).toBeNull();
-    });
-
-    test('shape/data mismatch for rank-2 is refused', () => {
-        expect(valueToLatex(tensor([2, 2], [frac(1), frac(2), frac(3)]))).toBeNull();
-    });
-});
-
-// Adversarial robustness (fuzzing regression): the math view must never throw.
-// A number value whose denominator is zero is malformed / NIL occupancy (it
-// never arises from a canonical number, but can reach the renderer via restored
-// or injected state). `scientificLatex` used to divide by zero on a >=10-digit
-// zero denominator, throwing a RangeError out of the live Stack render.
+// Adversarial robustness: the math view must never throw. A number value whose
+// denominator is zero is malformed / NIL occupancy (it never arises from a
+// canonical number, but can reach the renderer via restored or injected
+// state), and `scientificLatex` must not divide by zero on a >=10-digit zero
+// denominator, which would throw a RangeError out of the live Stack render.
 describe('valueToLatex zero-denominator robustness', () => {
     for (const denom of ['0', '-0', '00', '0000000000', '-0000000000']) {
         for (const numer of ['1', '1234567890', '12345678901', '99999999999999999999']) {

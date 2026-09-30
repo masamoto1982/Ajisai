@@ -7,43 +7,32 @@
 // classifies. Everything the two hosts share — the runtime seam, the empty
 // execution config — is built once here rather than copied per host.
 
-import type { UserWord, Value } from '../wasm-interpreter-types';
+import type { UserWord } from '../wasm-interpreter-types';
 import { TauriFileIO, TauriPersistence } from './tauri';
 import { WEB_PERSISTENCE, WebFileIO } from './web';
 
+// The persisted session document. `stateVersion` and the version rule are
+// gui/interpreter-state-persistence.ts's (`STATE_FORMAT_VERSION`); this is
+// the one shape both stores write and read.
 export interface InterpreterStateSnapshot {
-    // Format identifier of the persisted document; see STATE_FORMAT_VERSION and
-    // InterpreterState in gui/interpreter-state-persistence.ts.
     readonly stateVersion: number;
-    // The observation-format stack, persisted for display only.
-    readonly stack: Value[];
     // The lossless stack snapshot (opaque string) restore reads (LANG.OBSERVATION.FIREWALL).
     readonly stackSnapshot: string;
     readonly userWords: UserWord[];
     readonly activeDictionarySheet?: string;
 }
 
-export interface TablePayload {
-    readonly schema: unknown;
-    readonly records: unknown;
-}
-
-export interface ExportData {
-    tables: Array<{
-        readonly name: string;
-        readonly schema: unknown;
-        readonly records: unknown;
-        readonly updatedAt: string;
-    }>;
-    interpreterState: {
-        readonly key: string;
-        readonly stateVersion?: unknown;
-        readonly stack: unknown;
-        readonly stackSnapshot?: unknown;
-        readonly userWords: unknown;
-        readonly activeDictionarySheet?: string;
-        readonly updatedAt: string;
-    } | null;
+// The record as a store holds it: the snapshot under its key, dated. Read
+// back as untrusted — a hand edit or an older build can have left any field
+// in any shape — so the fields a reader looks at are typed loosely and
+// checked where they are read.
+export interface StoredInterpreterState {
+    readonly key: string;
+    readonly stateVersion?: unknown;
+    readonly stackSnapshot?: unknown;
+    readonly userWords: unknown;
+    readonly activeDictionarySheet?: string;
+    readonly updatedAt: string;
 }
 
 export interface OpenResult {
@@ -59,13 +48,9 @@ export interface Persistence {
     open(): Promise<void>;
     saveInterpreterState(state: InterpreterStateSnapshot): Promise<void>;
     loadInterpreterState(): Promise<InterpreterStateSnapshot | null>;
-    saveTable(name: string, schema: unknown, records: unknown): Promise<void>;
-    loadTable(name: string): Promise<TablePayload | null>;
-    collectTableNames(): Promise<string[]>;
-    deleteTable(name: string): Promise<void>;
     clearAll(): Promise<void>;
-    exportAll(): Promise<ExportData>;
-    importAll(data: ExportData): Promise<void>;
+    /** The stored record as it is, for one store to hand another (the Tauri migration). */
+    exportInterpreterState(): Promise<StoredInterpreterState | null>;
 }
 
 export interface FileIO {

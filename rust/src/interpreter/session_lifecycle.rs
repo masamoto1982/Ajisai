@@ -1,7 +1,9 @@
 //! Session lifecycle.
 //!
 //! `execute_reset` returns the interpreter to a clean state: stack,
-//! dictionary, output, and epochs. Compiling a word body is an unobservable
+//! dictionary and output. The epochs keep counting, so nothing compiled
+//! before the reset can match a dictionary made after it. Compiling a word
+//! body is an unobservable
 //! implementation detail (LANG.AUTHORITY.FREEDOM), so nothing here changes what
 //! a program produces.
 
@@ -10,7 +12,7 @@ use std::sync::Arc;
 use crate::error::Result;
 use crate::types::WordDefinition;
 
-use super::compiled_plan::{arc_plan, compile_word_definition, plan_is_all_fallback, CompiledPlan};
+use super::compiled_plan::{arc_plan, compile_word_definition, CompiledPlan};
 use super::interpreter_core::RuntimeMetrics;
 use super::Interpreter;
 
@@ -49,9 +51,8 @@ impl Interpreter {
     /// — which it could only honour for entries malformed structurally enough
     /// to spot without the lexer.
     ///
-    /// The `Err` case is reserved for a failure of the restore itself rather
-    /// than of one entry: the dependency rebuild below sees the whole
-    /// dictionary, so nothing partial can be salvaged from it.
+    /// An entry with an empty definition is passed over without a report:
+    /// there is nothing to restore and nothing went wrong.
     pub fn restore_user_word_definitions<I>(&mut self, words: I) -> Result<Vec<SkippedRestore>>
     where
         I: IntoIterator<Item = (String, String, Option<String>)>,
@@ -101,9 +102,9 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear();
         self.host_effects.clear();
-        self.reset_execution_modes();
         self.pending_tokens = None;
         self.pending_token_index = 0;
+        self.pending_def_body_tokens = None;
         self.pending_word_descriptions.clear();
         self.runtime_scratch.clear();
         self.call_stack.clear();
@@ -111,52 +112,31 @@ impl Interpreter {
         self.source_spans.clear();
         self.section_depth = 0;
         self.current_source_span = None;
-        self.current_source_word = None;
-        // `cond_dispatch_enabled` is a configuration flag, not run state, so it
-        // is intentionally not reset here.
         self.word_identities.clear();
         self.body_store.clear();
-        // A reset is documented as clearing every trace of the previous program,
-        // and a resolved-name cache is such a trace. Every *other* way the
-        // dictionary changes goes through `bump_dictionary_epoch`, which clears
-        // this cache as it moves the epoch; a reset moves neither, so its
-        // entries were the one kind that outlived the dictionary they described
-        // and still answered at a matching epoch. Nothing observable depended on
-        // it — `resolve_word_entry` re-checks the live vocabulary on every hit,
-        // and a name whose word the reset cleared falls through to a fresh
-        // resolution — but that re-check was the only thing standing between a
-        // stale entry and a wrong answer, which is a load none of the other
-        // clears here are asked to carry.
-
         self.defer_identity_recompute = false;
         self.next_registration_order = 1;
-        // Top-level roles live on the stack now and were cleared with it above
-        // (`self.stack.clear()`); the registry keeps only value-id-keyed flow
-        // state, which session reset leaves untouched, as before.
         self.monitor_notifications.clear();
         self.next_supervisor_id = 1;
         self.runtime_metrics = RuntimeMetrics::default();
         self.error_flow_trace_log.clear();
-        // Provenance recording flag persists across a reset; only its data is
-        // cleared (Phase 6).
         crate::builtins::register_builtins(&mut self.core_vocabulary);
     }
 
-    /// Compile a word body into a `CompiledPlan`, or decline when the compiled
-    /// form would be all-fallback. Compilation is unobservable: a run produces
-    /// the same result whether it went through a plan or the plain path.
-    pub(crate) fn build_or_reuse_compiled_plan(
-        &mut self,
-        _resolved_name: &str,
-        def: &Arc<WordDefinition>,
-    ) -> Option<Arc<CompiledPlan>> {
+    /// Compile a word body into a `CompiledPlan`. Compilation is unobservable:
+    /// a run produces the same result whether it went through a plan or the
+    /// plain path.
+    ///
+    /// Every body gets a plan, including one the compiler could lower none
+    /// of. Such a plan runs its source tokens through the interpreter, exactly
+    /// as a body with no plan would — `execute_compiled_plan` re-interprets
+    /// any line holding a fallback token whole — so declining it bought
+    /// nothing, and cost a recompile and a copy of the definition on every
+    /// call, since nothing remembered that the body had been declined.
+    pub(crate) fn build_compiled_plan(&mut self, def: &Arc<WordDefinition>) -> Arc<CompiledPlan> {
         let compiled = compile_word_definition(def, self);
-        if plan_is_all_fallback(&compiled) {
-            return None;
-        }
-
         self.bump_execution_epoch();
         self.runtime_metrics.compiled_plan_build_count += 1;
-        Some(arc_plan(compiled))
+        arc_plan(compiled)
     }
 }

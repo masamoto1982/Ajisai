@@ -3,6 +3,7 @@ pub mod arithmetic;
 pub(crate) mod arithmetic_division;
 pub(crate) mod arithmetic_meter;
 pub(crate) mod bindings;
+mod body_symbols;
 pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;
@@ -15,12 +16,17 @@ mod debug_declared_checks;
 pub mod debug_diagnosis;
 mod debug_limit_checks;
 mod debug_next_checks;
+mod declared_lift;
 pub(crate) mod declared_nil_contract;
 mod declared_outcomes;
 #[cfg(test)]
 mod declared_outcomes_tests;
 pub mod epoch;
 pub mod error_flow_trace;
+#[cfg(test)]
+mod error_message_format_tests;
+#[cfg(test)]
+mod error_operand_restore_tests;
 pub mod execute_def;
 pub mod execute_del;
 #[cfg(test)]
@@ -42,13 +48,14 @@ pub(crate) mod naming_convention_checker;
 mod ordering_ops;
 #[cfg(test)]
 mod ordering_ops_tests;
+pub(crate) mod outcome_repair;
 mod power_ops;
 #[cfg(test)]
 mod power_words_tests;
 pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
-mod quantize_ops;
+mod radicand_budget;
 mod record_lift;
 mod record_ops;
 #[cfg(test)]
@@ -73,7 +80,6 @@ mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
-mod transcendental_ops;
 pub mod upstream_nil_link;
 #[cfg(test)]
 mod upstream_nil_link_tests;
@@ -82,8 +88,8 @@ pub mod vector_ops;
 mod word_candidates;
 pub mod word_contract;
 mod word_contract_code_operand;
+mod word_contract_facets;
 mod word_contract_flow;
-mod word_contract_lattice;
 mod word_contract_probe;
 #[cfg(test)]
 mod word_contract_tests;
@@ -116,15 +122,14 @@ mod resolve_word;
 
 mod execution_loop;
 #[cfg(test)]
-mod execution_loop_tests;
-#[cfg(test)]
 mod execution_step_parity_tests;
-mod record_literal;
+mod nil_trace;
+#[cfg(test)]
+mod nil_trace_tests;
 mod value_as_code;
 pub(crate) mod vector_literal;
 
 mod execute_builtin;
-mod word_call;
 
 pub(crate) mod nil_diagnostics;
 
@@ -147,6 +152,8 @@ mod debug_next_checks_tests;
 mod declared_condition_tests;
 #[cfg(test)]
 mod definable_name_tests;
+#[cfg(test)]
+mod definition_source_tests;
 #[cfg(test)]
 mod dependents_index_tests;
 #[cfg(test)]
@@ -185,10 +192,6 @@ mod nil_contract_conformance_tests;
 mod nil_diagnostics_tests;
 #[cfg(test)]
 mod nil_reason_tests;
-#[cfg(test)]
-mod param_header_tests;
-#[cfg(test)]
-mod tier2_undecidable_conformance_tests;
 
 pub use interpreter_core::*;
 pub use runtime_limits::RuntimeLimits;

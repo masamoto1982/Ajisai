@@ -15,7 +15,7 @@
 //! longer be read off which character opened the group. It is still
 //! answerable, from the fixed-position-operand convention the higher-order
 //! Words share: a `[ ... ]` immediately followed by one of
-//! `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL` (or `EXEC`/`CONTRACT`) *is* that Word's
+//! `MAP`/`FILTER`/`FOLD`/`SCAN` (or `EXEC`/`CONTRACT`) *is* that Word's
 //! code operand, and that Word will run it. Any other `[ ... ]` is
 //! inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]`, PRINT never
 //! resolves or runs, so widening the accumulator with it would be a false
@@ -84,19 +84,36 @@ impl LiteralContext {
 fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     matches!(
         canonical_name,
-        "MAP" | "FILTER" | "FOLD" | "SCAN" | "ANY" | "ALL" | "RANK" | "EXEC" | "CONTRACT"
+        "MAP" | "FILTER" | "FOLD" | "SCAN" | "EXEC" | "CONTRACT"
     )
 }
 
-/// The first Symbol at or after `from`, skipping `LineBreak`s — `None` if the
+/// Whether the Symbol at `idx`, named `canonical_name`, runs code this walk
+/// never read: a Word that runs its operand as code (not `CONTRACT`, which
+/// only reads it) whose operand is anything but the `[ ... ]` literal written
+/// immediately before it. A Vector taken out of data (`[ [ [ 42 PRINT ] ] ]
+/// 0 GET EXEC`), a bound name, or a dependency's result are all code the walk
+/// saw only as inert data, so it cannot say what running them does.
+pub(super) fn runs_unread_code(
+    tokens: &[Token],
+    contexts: &[LiteralContext],
+    idx: usize,
+    canonical_name: &str,
+) -> bool {
+    if !consumes_preceding_as_code(canonical_name) || canonical_name == "CONTRACT" {
+        return false;
+    }
+    let read_literal = idx.checked_sub(1).is_some_and(|prev| {
+        tokens[prev] == Token::VectorEnd && contexts[prev] == LiteralContext::Code
+    });
+    !read_literal
+}
+
+/// The Symbol at `from` — `None` if the
 /// body ends first or a non-Symbol token comes first (a code-consuming Word
 /// is always named directly; nothing else can be "what follows").
 fn next_symbol_from(tokens: &[Token], from: usize) -> Option<&str> {
-    let mut i = from;
-    while let Some(Token::LineBreak) = tokens.get(i) {
-        i += 1;
-    }
-    match tokens.get(i) {
+    match tokens.get(from) {
         Some(Token::Symbol(s)) => Some(s),
         _ => None,
     }
@@ -119,8 +136,8 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
     let mut open_stack: Vec<usize> = Vec::new();
     for (i, t) in tokens.iter().enumerate() {
         match t {
-            Token::VectorStart | Token::RecordStart => open_stack.push(i),
-            Token::VectorEnd | Token::RecordEnd => {
+            Token::VectorStart => open_stack.push(i),
+            Token::VectorEnd => {
                 if let Some(open) = open_stack.pop() {
                     close_of[open] = Some(i);
                 }
@@ -144,7 +161,7 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
                     match close_of[i].and_then(|close| next_symbol_from(tokens, close + 1)) {
                         Some(name)
                             if consumes_preceding_as_code(
-                                &crate::core_word_aliases::canonicalize_core_word_name(name),
+                                &crate::word_name::canonical_word_name(name),
                             ) =>
                         {
                             LiteralContext::Code
@@ -155,13 +172,7 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
                 contexts[i] = enclosing;
                 level_stack.push(this_level);
             }
-            // A Record is never executed, so its interior is `Data` whatever
-            // follows its close — the one group whose context needs no lookahead.
-            Token::RecordStart => {
-                contexts[i] = enclosing;
-                level_stack.push(LiteralContext::Data);
-            }
-            Token::VectorEnd | Token::RecordEnd => {
+            Token::VectorEnd => {
                 contexts[i] = level_stack.pop().unwrap_or(LiteralContext::TopLevel);
             }
             _ => {

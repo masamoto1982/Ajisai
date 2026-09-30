@@ -31,10 +31,10 @@ impl Interpreter {
         acc: &mut AccumulatedContract,
         complete: &mut bool,
     ) {
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
+        let canonical = crate::word_name::canonical_word_name(symbol);
         let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
             *complete = false;
-            acc.gaps.push(GapCode::UnresolvedWord);
+            acc.note_unresolved_word();
             return;
         };
         let dep_contract = if dep_def.is_builtin {
@@ -57,5 +57,23 @@ impl Interpreter {
             }
         };
         acc.widen_with(&dep_contract);
+    }
+
+    /// Widen `acc` for a code operand this walk never read
+    /// (`word_contract_widen::runs_unread_code`): nothing is known about what
+    /// it does, so the widening is the conservative contract's, and the
+    /// inference is incomplete for a reason of its own.
+    pub(crate) fn widen_with_unread_code_operand(
+        &self,
+        acc: &mut AccumulatedContract,
+        complete: &mut bool,
+    ) {
+        *complete = false;
+        let mut unknown = WordContract::conservative(super::word_contract::leaf_cache_key(
+            "unread-code-operand".to_string(),
+        ));
+        unknown.gaps.clear();
+        acc.widen_with(&unknown);
+        acc.gaps.push(GapCode::UnmodelledControlFlow);
     }
 }

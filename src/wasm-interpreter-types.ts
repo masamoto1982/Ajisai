@@ -3,8 +3,27 @@ export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
+/**
+ * One entry of `collect_user_words_info`: a User Word's name, and whether
+ * another User Word calls it (DEL refuses it until that caller is gone).
+ */
+export type UserWordInfo = [name: string, hasDependents: boolean];
+
+/**
+ * One entry of `collect_core_words_info`. `hoverSummary` is the button title
+ * ("WORD — short verb phrase"); `hoverSyntax` is the shortest useful
+ * invocation, operands included. See docs/dev/three-layer-documentation-model.md §4.
+ */
+export type CoreWordInfo = [name: string, hoverSummary: string, hoverSyntax: string];
+
+/** One term c·√r of an irrational's exact normal form (LANG.VALUES.EXACT). */
+export interface ExactTerm {
+    readonly numerator: string;
+    readonly denominator: string;
+    readonly radicand: string;
+}
+
 export interface UserWord {
-    dictionary?: string | null;
     name: string;
     definition: string | null;
     // The `#:contract NAME ...` directive text `DEF` captured for this word
@@ -22,26 +41,13 @@ export interface AjisaiInterpreter {
      * is what it enforces.
      */
     host_profile(): string;
-    execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
-    // Session reset: reinitializes session state but keeps the cross-reset
-    // compiled-artifact cache alive so an unchanged user word's compiled plan
-    // is reused instead of recompiled.
-    reset_session(): ExecuteResult;
     collect_stack(): Value[];
-    // Tuple shape: [dictionary, name, isProtected].
-    collect_user_words_info(): Array<[string, string, boolean]>;
-    // Content identity per user word (LANG.AUTHORITY.FREEDOM).
-    // Tuple shape: [fullyQualifiedName, contentId].
-    collect_word_identities(): Array<[string, string]>;
-    // Tuple shape: [name, hover_summary, hover_syntax].
-    // hover_summary is the native button title ("WORD — short verb phrase");
-    // hover_syntax is the inline word-info preview (shortest useful invocation,
-    // operands included). See docs/dev/three-layer-documentation-model.md §4.
-    collect_core_words_info(): Array<[string, string, string]>;
-    collect_core_listed_words_info(): Array<[string, string, string]>;
-    collect_core_word_aliases_info(): Array<[string, string, string, string]>;
-    collect_input_helper_words_info(): Array<[string, string]>;
+    collect_user_words_info(): UserWordInfo[];
+    // Content identity per user word (LANG.AUTHORITY.FREEDOM), as
+    // `[name, id]` pairs.
+    collect_word_identities(): Array<[name: string, id: string]>;
+    collect_core_words_info(): CoreWordInfo[];
     lookup_word_definition(name: string): string | null;
     // See `UserWord.description`.
     lookup_word_description(name: string): string | null;
@@ -53,10 +59,11 @@ export interface AjisaiInterpreter {
      * the result that no evaluation rule ever read. Asking here touches no
      * stack, no dictionary and no output.
      *
-     * `documentation` is a Core Word's reference text, which is read, so it
-     * belongs in the output area. `definition` is a User Word's reconstructed
-     * `DEF`, which is edited, so it belongs in the editor — that is the point of
-     * looking one up. `null` means the dictionary does not hold the name.
+     * `documentation` is a Core Word's reference text and `definition` a User
+     * Word's reconstructed `DEF` source. Both are prose to read and go to the
+     * Output surface (spec/gui-semantics.md, Lookup): the cursor can be
+     * anywhere in a program still being written, so a lookup never writes
+     * into the editor. `null` means the dictionary does not hold the name.
      */
     resolve_host_lookup(
         name: string
@@ -71,50 +78,22 @@ export interface AjisaiInterpreter {
     // the session untouched. Clearing values is a host action, not a language
     // one — no Word does it — so it lives here rather than in the vocabulary.
     clear_stack(): void;
-    // Throws on a malformed word list: the Rust side returns
-    // `Result<(), String>`, which wasm-bindgen compiles to a synchronous call
-    // that throws the `Err` — a Promise comes only from an `async fn`. Not
-    // `Promise<void>`, which would invite a `.catch` that dies on `undefined`
-    // and an `await` reading as a suspension point where there is none:
-    // `applyInterpreterSnapshot` calls this synchronously and needs the words
-    // in the dictionary when it returns.
-    restore_user_words(words: UserWord[]): void;
-    remove_word(name: string): void;
+    // Restores every word it can and answers with the entries it could not,
+    // as `[name, reason]` pairs: a body that does not read under today's
+    // rules, a Core name, a redefinition of a word another word still calls.
+    // A definition-less entry is passed over without a report. Throws only on
+    // a list that does not deserialize at all: the Rust side returns
+    // `Result<JsValue, String>`, which wasm-bindgen compiles to a synchronous
+    // call that throws the `Err` — a Promise comes only from an `async fn`.
+    // Synchronous on purpose: `applyInterpreterSnapshot` needs the words in
+    // the dictionary when it returns.
+    restore_user_words(words: UserWord[]): Array<[name: string, reason: string]>;
     // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and falls back to its own
     // `DEFAULT_MAX_EXECUTION_STEPS`.
     set_max_execution_steps(steps: number): void;
-    // Cost-model counters (LANG.AUTHORITY.FREEDOM): observational only,
-    // session-cumulative, reset with the interpreter.
-    collect_runtime_metrics(): RuntimeMetricsSnapshot;
 
-}
-
-/**
- * Cost-model counters as exposed by `collect_runtime_metrics()`
- * (LANG.AUTHORITY.FREEDOM). These are the machine-channel names; the GUI
- * renders them in the Reference cost-model vocabulary (fast lane, dense
- * vectors, comparison depth) and never shows these identifiers to users.
- * Counters are diagnostics: reading them changes no result.
- */
-export interface RuntimeMetricsSnapshot {
-    scalarFastpathCount: number;
-    bulkKernelUseCount: number;
-    simdKernelUseCount: number;
-    tensorFlattenCount: number;
-    tensorRebuildCount: number;
-    sparseCandidateCount: number;
-    compareWithinCount: number;
-    compareWithinLazyCount: number;
-    compareWithinUnknownCount: number;
-    compareWithinBudgetTermsConsumed: number;
-    // Cross-reset artifact cache: compiled plans reused across a GUI session
-    // reset instead of being rebuilt.
-    artifactCacheBuildCount: number;
-    artifactCacheHitCount: number;
-    artifactCacheMissCount: number;
-    artifactCacheEvictionCount: number;
 }
 
 /**
@@ -145,15 +124,45 @@ export interface ProtocolDebugCheck {
     detail: LocalizedText;
 }
 
+/**
+ * The diagnosis vocabularies, as the engine spells them on the wire
+ * (rust/src/interpreter/debug_diagnosis.rs, each enum's `as_protocol_str`).
+ * The engine owns these lists; this file mirrors the values it emits so a
+ * misspelt comparison fails to compile rather than silently never matching.
+ * `hostGuard` and `hostEnvironment` are the playground's own: the wall-clock
+ * stop is decided by the page, not by a Word, and no engine diagnosis carries
+ * them (gui/interpreter-execution-utils.ts).
+ */
+export type DiagnosisPhase =
+    | 'tokenize'
+    | 'parseStructure'
+    | 'resolveWord'
+    | 'executeWord'
+    | 'hostGuard';
+
+export type DiagnosisLocusKind = 'coreWord' | 'userWord' | 'unknown' | 'hostEnvironment';
+
+export type DiagnosisCauseClass =
+    | 'typoOrUnknownName'
+    | 'stackShape'
+    | 'valueShape'
+    | 'domain'
+    | 'index'
+    | 'shapeMismatch'
+    | 'nilFlow'
+    | 'userLogic'
+    | 'resourceLimit'
+    | 'sourceForm'
+    | 'contractViolation'
+    | 'unknown';
+
 export interface ProtocolDiagnosis {
-    when: string;
+    when: DiagnosisPhase;
     where: {
-        kind: string;
+        kind: DiagnosisLocusKind;
         word?: string;
-        module?: string;
-        dictionary?: string;
     };
-    why: string;
+    why: DiagnosisCauseClass;
     summary: string;
     evidence: string[];
     nextChecks: ProtocolDebugCheck[];
@@ -166,86 +175,97 @@ export interface ProtocolDiagnosis {
      * Which declared ceiling a resource-limit failure crossed. `resource`
      * names an entry of the host's limit profile, so a reader can tell an
      * exhausted step budget from an oversized value without parsing a
-     * message. Absent for every other cause class.
+     * message. `null` for every other cause class.
      */
     resourceLimit?: {
         resource: string;
         limit: number;
-        observed?: number;
-    };
-    /**
-     * CF-comparison agreed-prefix length (LANG.VALUES.NIL / LANG.VALUES.EXACT): the number
-     * of leading partial quotients that matched before the partial-quotient
-     * budget was exhausted on an `Unknown` (U) comparison result. Present
-     * only on diagnoses produced by an undecidable continued-fraction
-     * comparison (e.g. `COMPARE-WITHIN`). Machine-readable.
-     */
-    agreedPrefix?: number;
+        observed: number | null;
+        /** How far a cumulative meter had got; present only for one. */
+        progress?: { completed: number; total: number; unit: string };
+    } | null;
 }
 
 /**
- * The absence envelope the current protocol carries: the reason, plus the
- * diagnosis when the runtime produced one. An absence's origin and
- * recoverability are diagnostic state, not wire fields.
+ * The absence envelope: the same one the CLI emits, since both hosts render
+ * it with one serializer (spec/host-protocol.schema.json). `reason` is the
+ * NIL's observable content (LANG.VALUES.NIL); `detail` is the text a
+ * `userDeclared` reason carries; `origin` and `recoverability` are diagnostic
+ * state beyond the reason.
  */
 export interface ProtocolAbsence {
     reason?: string;
+    detail?: string;
+    origin?: string;
+    recoverability?: string;
     diagnosis?: ProtocolDiagnosis;
 }
 
 export interface ProtocolValueSemantics {
     /**
-     * Three-valued logic surface (LANG.OBSERVATION.FIREWALL, LANG.VALUES.TRUTH). Present only on
-     * truth-valued values; `'true'` / `'false'` / `'unknown'`. This is the
-     * only observable surface for the third value — do not infer it from
-     * the value's `type` or the internal NIL representation.
+     * Truth axis (LANG.VALUES.TRUTH): present only on a Boolean. UNKNOWN is a
+     * NIL read in truth position and is observed as a NIL (`type: 'nil'`,
+     * with its `absence`), never on this axis.
      */
-    truthValue?: 'true' | 'false' | 'unknown';
+    truthValue?: 'true' | 'false';
     absence?: ProtocolAbsence;
     /**
      * Present and `true` only when this node's numeric `value` is a *best
-     * rational approximation* of an exact irrational (`ExactScalar`) rendered
-     * under a lossy role (e.g. `rawNumber`), rather than an exact rational
-     * (LANG.OBSERVATION.FIREWALL). The exact source is available via the node's `semantics`.
-     * Lossless `continuedFraction` rendering carries no `semantics` block and
-     * never sets this. The GUI may use it to prefix an `≈`; consumers that
-     * ignore it are unaffected (additive, optional).
+     * rational approximation* of an exact irrational (`ExactScalar`) rather
+     * than an exact rational (LANG.OBSERVATION.FIREWALL). The GUI may use it
+     * to prefix an `≈`.
      */
     approximate?: boolean;
     /**
      * The exact value of an algebraic irrational, as the multiquadratic normal
      * form Σ c·√r it is stored in (LANG.VALUES.EXACT): one entry per term, ascending by
      * radicand, with radicand `'1'` keying the rational part. These pairs *are*
-     * the number, so a host that draws them shows the exact value in a line —
-     * `√3`, `1/2 + 1/3√5` — instead of choosing between a thirty-line continued
+     * the number, so a host that writes them shows the exact value in a line —
+     * `sqrt(3)`, `1/2+1/3*sqrt(5)` — instead of choosing between a thirty-line continued
      * fraction and the approximation `approximate` marks. Absent on rationals
      * and on every non-scalar node. Additive and optional.
      */
-    exactTerms?: ReadonlyArray<{
-        readonly numerator: string;
-        readonly denominator: string;
-        readonly radicand: string;
-    }>;
+    exactTerms?: ReadonlyArray<ExactTerm>;
 }
 
 export interface ErrorFlowTraceEvent {
-    kind: string;
+    /**
+     * `wordError` for a Word that failed; `nilProduced` for a Word that
+     * *produced* a reasoned NIL — the Word whose contract projected it, not
+     * the Words it then passed through (LANG.FAILURE.PASSTHROUGH). A Word
+     * inside which it was produced is named in the event's diagnosis
+     * evidence (`insideWords=`), innermost first.
+     */
+    kind: 'wordError' | 'nilProduced';
     word?: string;
     absence?: ProtocolAbsence;
     stackLenBefore: number;
     stackLenAfter: number;
     message: string;
+    // Only on a `nilProduced` event: an ERROR's diagnosis is the result's
+    // top-level `diagnosis`, which the error event does not repeat.
     diagnosis?: ProtocolDiagnosis;
 }
 
 export interface ExecuteResult {
     status: 'OK' | 'ERROR';
     output?: string;
-    debugOutput?: string;
     message?: string;
     error?: boolean;
-    hasMore?: boolean;
-    inputHelper?: string;
+    /**
+     * On an ERROR result, the same `aiDiagnostic` the CLI reports: `category`
+     * is the failure's spec/outcomes.json error category, the machine-readable
+     * name a host branches on instead of the display text in `message`;
+     * `repair` is `'program'` exactly when the registry says so.
+     */
+    aiDiagnostic?: {
+        category: string | null;
+        repair?: 'program';
+        word: string | null;
+        family: string | null;
+    } | null;
+    /** On an ERROR result, its diagnosis — the one copy the report carries. */
+    diagnosis?: ProtocolDiagnosis;
 
     // The observation-format stack, for display only.
     stack?: Value[];
@@ -255,18 +275,6 @@ export interface ExecuteResult {
     // ExactScalar) survive the round-trip instead of being flattened to nil or
     // a rational approximation. See LANG.OBSERVATION.FIREWALL.
     stackSnapshot?: string;
-    /**
-     * Why the lossless snapshot could not be taken, when the run itself
-     * succeeded. Some values the interpreter computes cannot be persisted —
-     * `PI` and anything built from it is a Tier-2 computable real, which the
-     * snapshot codec refuses rather than encode lossily — and taking the
-     * snapshot happens *after* the run, so its failure used to be reported as
-     * if the program had failed: `PI` answered "cannot persist a Tier-2
-     * computable exact real" and looked like a Word that does not work.
-     * The run's own outcome is `status` above; this says only that its result
-     * cannot be carried into the session.
-     */
-    stackSnapshotError?: string;
     userWords?: UserWord[];
     /**
      * On an ERROR result, the Words the failed run defined or deleted before it
@@ -280,10 +288,6 @@ export interface ExecuteResult {
     discardedDictionaryChanges?: string[];
     errorFlowTrace?: ErrorFlowTraceEvent[];
 
-    // Per-run cost-model activity: the counter delta across this execution,
-    // attached by the execution worker. Diagnostics only (LANG.AUTHORITY.FREEDOM); the
-    // GUI renders it in cost-model vocabulary, collapsed by default.
-    runtimeMetricsDelta?: RuntimeMetricsSnapshot;
 }
 
 export interface Fraction {
@@ -292,24 +296,12 @@ export interface Fraction {
 }
 
 /**
- * Semantic interpretation role attached to a value. This is the meaning
- * the runtime assigned, not a formatting switch — rendering is derived
- * from (data, role). `unassigned` means no role was assigned and the
- * value is shown structurally with no heuristic guessing.
+ * One observed stack value (LANG.OBSERVATION.PROTOCOL). Every field is derived
+ * from the value itself: `type` is its domain.
  */
-export type Interpretation =
-    | 'unassigned'
-    | 'rawNumber'
-    | 'interval'
-    | 'text'
-    | 'truthValue'
-    | 'timestamp'
-    | 'nil';
-
 export interface Value {
     type: string;
     value: any | Fraction | Value[];
-    displayHint?: Interpretation;
     semantics?: ProtocolValueSemantics;
 }
 

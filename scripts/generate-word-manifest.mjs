@@ -162,7 +162,7 @@ function extractCoreWords() {
   const sourcePath = 'spec/words.json';
   const parsed = JSON.parse(readRepo(sourcePath)).entries.map((word) => ({
     name: word.name,
-    category: word.category,
+    family: word.family,
     vocabularyTier: word.vocabularyTier,
   }));
   if (parsed.length === 0) fail('no core words extracted');
@@ -172,39 +172,15 @@ function extractCoreWords() {
     const base = slug(name);
     baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
   }
-  return parsed.map(({ name, category, vocabularyTier }) => {
+  return parsed.map(({ name, family, vocabularyTier }) => {
     const base = slug(name);
     const dropped = name.replace(/[a-zA-Z0-9]+/g, '');
     let id = `core.${base}`;
     if (baseCounts.get(base) > 1 && dropped) {
       id = `core.${base}${dropped.includes('?') ? '-p' : `-${slug(dropped) || 'x'}`}`;
     }
-    return { id, kind: 'coreword', surface: name, category, vocabularyTier, source: sourcePath };
+    return { id, kind: 'coreword', surface: name, family, vocabularyTier, source: sourcePath };
   });
-}
-
-function extractAliases() {
-  const sourcePath = 'rust/src/core_word_aliases.rs';
-  const body = constArrayBody(readRepo(sourcePath), 'CORE_WORD_ALIASES');
-  const entries = [];
-  const pattern = /CoreWordAlias\s*{([\s\S]*?)(?=\n\s*CoreWordAlias\s*{|\n\s*\];)/g;
-  for (const match of body.matchAll(pattern)) {
-    const item = match[1];
-    const alias = item.match(/\balias:\s*"([^"]+)"/)?.[1];
-    const canonicalMatch = item.match(/\bcanonical:\s*(Some\("([^"]+)"\)|None)/);
-    const kind = item.match(/\bkind:\s*CoreWordAliasKind::([A-Za-z0-9_]+)/)?.[1];
-    if (!alias || !canonicalMatch || !kind) continue;
-    entries.push({
-      id: `alias.${symbolSlug(alias)}`,
-      kind: rustEnumVariantToSnake(kind),
-      surface: alias,
-      canonical: canonicalMatch[2] ?? null,
-      source: sourcePath,
-    });
-  }
-  if (entries.length === 0) fail('no aliases extracted');
-  assertExtractedEveryEntry(body, 'CoreWordAlias', entries.length, sourcePath);
-  return entries;
 }
 
 function extractSurfaceForms() {
@@ -235,7 +211,6 @@ function extractSurfaceForms() {
 
 const entries = [
   ...extractCoreWords(),
-  ...extractAliases(),
   ...extractSurfaceForms(),
 ];
 
@@ -267,7 +242,6 @@ const manifest = {
   schemaVersion: 2,
   generatedFrom: [
     'spec/words.json',
-    'rust/src/core_word_aliases.rs',
     'rust/src/surface_forms.rs',
   ],
   implementationCatalogValidatedAgainst: [
@@ -280,19 +254,10 @@ const manifest = {
     semanticKernelWords: contracts.entries.filter((entry) => entry.vocabularyTier === 'kernel').length,
     standardWords: contracts.entries.filter((entry) => entry.vocabularyTier === 'standard').length,
     corewords: entries.filter((entry) => entry.kind === 'coreword').length,
-    // The alias count is the number of *symbolic aliases* the specification
-    // claims (LANG.AUTHORITY.IDENTITY): a spelling that resolves to a canonical
-    // Word. An input helper carries no canonical Word — it is an editor
-    // affordance — so counting it here would inflate the alias total by one and
-    // contradict the Specification.
-    aliases: entries.filter(
-      (entry) => ['symbol_alias', 'syntax_sugar'].includes(entry.kind) && entry.canonical,
-    ).length,
-    inputHelpers: entries.filter((entry) => entry.kind === 'input_helper').length,
-    surface_forms: entries.filter((entry) => !['coreword', 'symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
-    // Deliberately no grand total: an alias and a surface form are spellings of
-    // a canonical Word, so summing them with `canonicalWords` would publish a
-    // vocabulary size the language does not have. `manifestEntries` counts rows
+    surface_forms: entries.filter((entry) => entry.kind !== 'coreword').length,
+    // Deliberately no grand total: a surface form is not a Word, so summing
+    // it with `canonicalWords` would publish a vocabulary size the language
+    // does not have. `manifestEntries` counts rows
     // in this file and is named so it cannot be read as a Word count.
     manifestEntries: entries.length,
   },

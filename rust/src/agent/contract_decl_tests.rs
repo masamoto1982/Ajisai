@@ -36,12 +36,12 @@ mod contract_decl_tests {
     #[test]
     fn a_correct_declaration_over_literals_is_verified_not_violated() {
         for (body, decl) in [
-            ("| [ 1 2 ]", "( 0 -- 1 )"),
-            ("X | X [ 10 20 ] ADD", "( 1 -- 1 )"),
-            ("X | X [ 2 MUL ] MAP", "( 1 -- 1 )"),
-            ("| [ [ 1 ] [ 2 ] ]", "( 0 -- 1 )"),
-            ("| [ [ 1 2 ] ]", "( 0 -- 1 )"),
-            ("| [ [ 1 ] ]", "( 0 -- 1 )"),
+            ("[ 1 2 ]", "inputs=0 outputs=1"),
+            ("[ 10 20 ] ADD", "inputs=1 outputs=1"),
+            ("[ 2 MUL ] MAP", "inputs=1 outputs=1"),
+            ("[ [ 1 ] [ 2 ] ]", "inputs=0 outputs=1"),
+            ("[ [ 1 2 ] ]", "inputs=0 outputs=1"),
+            ("[ [ 1 ] ]", "inputs=0 outputs=1"),
         ] {
             let source = format!("[ {body} ] 'W' DEF\n#:contract W {decl}");
             let decls = contract_decls(&source);
@@ -59,7 +59,7 @@ mod contract_decl_tests {
     fn a_wrong_declaration_over_literals_is_still_violated() {
         // The counterpart of the test above: the fix must not buy its way out
         // of false errors by giving up on real ones.
-        let source = "[ | [ 1 2 ] ] 'W' DEF\n#:contract W ( 0 -- 2 )";
+        let source = "[ [ 1 2 ] ] 'W' DEF\n#:contract W inputs=0 outputs=2";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert_eq!(findings.len(), 1);
@@ -68,22 +68,31 @@ mod contract_decl_tests {
         assert_eq!(exit_code(source), 1);
     }
 
-    // `gap.unmodelledControlFlow` fired when a body's stack height could not
-    // be walked linearly — which needed a token that selects between paths of
-    // differing height. There were exactly two: `COND`'s `|` clause separator
-    // and `OR-NIL`'s lazy fallback unit. Both Words are gone, and every other
-    // way to unbalance a body is refused at tokenize time (`Unclosed '['`,
-    // `Unexpected ']'`), so no source reaches the flag any more. As with
-    // `gap.recursiveDependency` above, the code is kept — unreachable — for
-    // protocol stability, and `FlowSim`'s guard is kept because it is a
-    // soundness guard rather than a feature.
+    #[test]
+    fn unread_code_operand_reports_unmodelled_control_flow_gap() {
+        // EXEC runs a Vector taken out of data, which the walk read only as
+        // inert data: the PRINT inside it is invisible, so `purity=pure`
+        // cannot be verified. Before the gap existed this inferred `pure`
+        // with complete confidence — a false verification.
+        let source =
+            "[ [ [ 42 PRINT ] ] 0 GET EXEC ] 'W' DEF\n#:contract W inputs=0 outputs=0 purity=pure";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(!findings.is_empty(), "expected at least one finding");
+        for finding in findings {
+            assert_eq!(finding["severity"], "note");
+            assert_eq!(finding["code"], "gap.unmodelledControlFlow");
+        }
+        assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
+        assert_eq!(decls["gapSummary"]["verified"], 0);
+    }
 
     #[test]
     fn unresolved_word_reports_unresolved_gap() {
         // INNER is defined by a nested (non-top-level) DEF, so the
         // definitions pass that builds the check environment never
         // registers it — CALLER's own inference cannot resolve it.
-        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ | INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty(), "expected at least one finding");
@@ -92,14 +101,15 @@ mod contract_decl_tests {
             assert_eq!(finding["code"], "gap.unresolvedWord");
         }
         assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
-        assert_eq!(decls["gapSummary"]["byGap"]["gap.unresolvedWord"], 1);
+        // `inputs` and `outputs` are two declared keys, each unverifiable.
+        assert_eq!(decls["gapSummary"]["byGap"]["gap.unresolvedWord"], 2);
     }
 
     #[test]
     fn violated_declaration_has_no_gap_code() {
         // Inference is complete here (no recursion, no unresolved symbol), so
         // a mismatch is a proven violation, not a gap.
-        let source = "[ | 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty(), "expected at least one finding");
@@ -114,13 +124,13 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_counts_add_up() {
-        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
-[ | INNER ] 'CALLER' DEF
-[ | 1 PRINT ] 'BAD' DEF
-[ X | X 1 SUB ] 'GOOD' DEF
-#:contract CALLER ( 0 -- 1 ) pure nil-free
-#:contract BAD ( 1 -- 0 ) pure
-#:contract GOOD ( 1 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
+[ INNER ] 'CALLER' DEF
+[ 1 PRINT ] 'BAD' DEF
+[ 1 SUB ] 'GOOD' DEF
+#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial
+#:contract BAD inputs=1 outputs=0 purity=pure
+#:contract GOOD inputs=1 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         let summary = &decls["gapSummary"];
         let checked = summary["declarationsChecked"].as_i64().unwrap();
@@ -136,9 +146,11 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_key_order_is_stable() {
-        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
-[ | INNER ] 'CALLER' DEF
-#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
+[ INNER ] 'CALLER' DEF
+[ [ [ 42 PRINT ] ] 0 GET EXEC ] 'DYN' DEF
+#:contract DYN inputs=0 outputs=0 purity=pure
+#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let first = serde_json::to_string(&contract_decls(source)).unwrap();
         let second = serde_json::to_string(&contract_decls(source)).unwrap();
         assert_eq!(
@@ -146,24 +158,26 @@ mod contract_decl_tests {
             "two runs over identical source must render identically"
         );
 
-        // The ordering half of this test needed two reachable gap kinds, and
-        // `gap.unmodelledControlFlow` — the other one — went unreachable with
-        // `OR-NIL` (see the note above `unresolved_word_reports_unresolved_gap`).
-        // What remains is the claim that still has a witness: the summary is a
-        // `BTreeMap`, so its keys render in one order, and two runs over the
-        // same source are byte-identical.
+        // `DYN` is declared first and fires the later-sorting gap, so the
+        // keys can only come out sorted if the summary sorts them.
         let by_gap_start = first.find("\"byGap\":{").expect("byGap object present");
         let by_gap_end = by_gap_start + first[by_gap_start..].find('}').unwrap();
         let by_gap = &first[by_gap_start..by_gap_end];
+        let control = by_gap
+            .find("gap.unmodelledControlFlow")
+            .expect("byGap names the unread-code gap");
+        let unresolved = by_gap
+            .find("gap.unresolvedWord")
+            .expect("byGap names the unresolved-word gap");
         assert!(
-            by_gap.contains("gap.unresolvedWord"),
-            "byGap must name the gap that fired: {by_gap}"
+            control < unresolved,
+            "byGap keys must render in sorted order: {by_gap}"
         );
     }
 
     #[test]
     fn verified_declaration_is_a_value() {
-        let source = "[ X | X 1 SUB ] 'GOOD' DEF\n#:contract GOOD ( 1 -- 1 ) pure nil-free";
+        let source = "[ 1 SUB ] 'GOOD' DEF\n#:contract GOOD inputs=1 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "value");
         assert_eq!(decls["declarations"][0]["word"], "GOOD");
@@ -174,7 +188,7 @@ mod contract_decl_tests {
 
     #[test]
     fn unverifiable_declaration_is_a_nil_with_a_reason() {
-        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ | INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
         assert_eq!(decls["declarations"][0]["word"], "CALLER");
@@ -184,7 +198,7 @@ mod contract_decl_tests {
 
     #[test]
     fn violated_declaration_is_an_error() {
-        let source = "[ | 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "error");
         assert_eq!(decls["declarations"][0]["word"], "F");
@@ -195,10 +209,10 @@ mod contract_decl_tests {
     #[test]
     fn error_dominates_nil_in_the_fold() {
         // REC is unverifiable (nil); F is a proven violation (error).
-        let source = "[ X | X 1 SUB REC ] 'REC' DEF
-[ | 1 PRINT ] 'F' DEF
-#:contract REC ( 1 -- 1 ) pure nil-free
-#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 SUB REC ] 'REC' DEF
+[ 1 PRINT ] 'F' DEF
+#:contract REC inputs=1 outputs=1 purity=pure partiality=partial
+#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "error");
     }
@@ -206,18 +220,18 @@ mod contract_decl_tests {
     #[test]
     fn nil_dominates_value_in_the_fold() {
         // CALLER is unverifiable (nil); GOOD verifies cleanly (value).
-        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
-[ | INNER ] 'CALLER' DEF
-[ X | X 1 SUB ] 'GOOD' DEF
-#:contract CALLER ( 0 -- 1 ) pure nil-free
-#:contract GOOD ( 1 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
+[ INNER ] 'CALLER' DEF
+[ 1 SUB ] 'GOOD' DEF
+#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial
+#:contract GOOD inputs=1 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
     }
 
     #[test]
     fn empty_declarations_fold_to_value() {
-        let source = "[ X | X 1 SUB ] 'GOOD' DEF";
+        let source = "[ 1 SUB ] 'GOOD' DEF";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "value");
         assert_eq!(decls["declarations"].as_array().unwrap().len(), 0);
@@ -228,10 +242,10 @@ mod contract_decl_tests {
     /// that — only a proven `error` does.
     #[test]
     fn outcome_does_not_change_the_exit_code() {
-        let nil_only = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ | INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let nil_only = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         assert_eq!(exit_code(nil_only), 0, "cannot-verify must not fail check");
 
-        let with_error = "[ | 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let with_error = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         assert_eq!(
             exit_code(with_error),
             1,
@@ -244,7 +258,7 @@ mod contract_decl_tests {
     #[test]
     fn const_word_verifies_const_cost() {
         let source =
-            "[ | 1 2 ADD ] 'S' DEF\n#:contract S cost steps=const numeric=linear collection=const";
+            "[ 1 2 ADD ] 'S' DEF\n#:contract S cost steps=const numeric=linear collection=const";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "value");
         assert_eq!(decls["findings"].as_array().unwrap().len(), 0);
@@ -255,7 +269,7 @@ mod contract_decl_tests {
         // A bare RANGE materializes a length set by its operand's *value*, so
         // against a genuine word input it provably exceeds any size-bounded
         // class: declaring `collection=linear` is a proven violation.
-        let source = "[ X | X RANGE ] 'MK' DEF\n#:contract MK cost collection=linear";
+        let source = "[ RANGE ] 'MK' DEF\n#:contract MK cost collection=linear";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert_eq!(findings.len(), 1);
@@ -271,18 +285,18 @@ mod contract_decl_tests {
     #[test]
     fn a_true_cost_declaration_is_never_reported_as_violated() {
         // Consumes nothing, charges a fixed constant.
-        let literal_add = "[ | 1 2 ADD ] 'S' DEF\n#:contract S cost numeric=const";
+        let literal_add = "[ 1 2 ADD ] 'S' DEF\n#:contract S cost numeric=const";
         let decls = contract_decls(literal_add);
         assert_eq!(decls["outcome"], "value");
         assert_eq!(decls["findings"].as_array().unwrap().len(), 0);
         assert_eq!(exit_code(literal_add), 0);
 
         // A literal-driven range materializes a compile-time-fixed length.
-        let literal_range = "[ | [ 0 10 ] RANGE ] 'K' DEF\n#:contract K cost collection=const";
+        let literal_range = "[ 0 10 RANGE ] 'K' DEF\n#:contract K cost collection=const";
         assert_eq!(contract_decls(literal_range)["outcome"], "value");
 
         // And a genuinely size-driven word still verifies at `linear`.
-        let sorted = "[ X | X SORT ] 'T' DEF\n#:contract T cost collection=linear";
+        let sorted = "[ SORT ] 'T' DEF\n#:contract T cost collection=linear";
         assert_eq!(contract_decls(sorted)["outcome"], "value");
     }
 
@@ -291,7 +305,7 @@ mod contract_decl_tests {
         // MAP's steps axis is a sound but unproven `unbounded` upper bound
         // (the body could be trivial), so a tighter declaration is only ever
         // unverifiable, never a false error.
-        let source = "[ X | X [ 1 ] MAP ] 'M' DEF\n#:contract M cost steps=const";
+        let source = "[ [ 1 ] MAP ] 'M' DEF\n#:contract M cost steps=const";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert_eq!(findings.len(), 1);
@@ -303,7 +317,7 @@ mod contract_decl_tests {
     fn omitted_cost_axis_is_not_checked() {
         // Only `steps` is declared; MAP's numeric and collection axes are
         // also mismatched against a tighter class but must not be checked.
-        let source = "[ X | X [ 1 ] MAP ] 'M' DEF\n#:contract M cost steps=const";
+        let source = "[ [ 1 ] MAP ] 'M' DEF\n#:contract M cost steps=const";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert_eq!(findings.len(), 1, "only the declared axis is checked");
@@ -312,9 +326,9 @@ mod contract_decl_tests {
 
     #[test]
     fn unknown_cost_class_is_a_parse_error() {
-        let source = "[ | 1 2 ADD ] 'S' DEF\n#:contract S cost numeric=quadratic";
+        let source = "[ 1 2 ADD ] 'S' DEF\n#:contract S cost numeric=quadratic";
         let decls = contract_decls(source);
-        assert_eq!(decls["violated"], true);
+        assert_eq!(decls["outcome"], "error");
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(findings.iter().any(|f| f["message"]
             .as_str()
@@ -324,9 +338,9 @@ mod contract_decl_tests {
 
     #[test]
     fn unknown_cost_axis_is_a_parse_error() {
-        let source = "[ | 1 2 ADD ] 'S' DEF\n#:contract S cost bogus=const";
+        let source = "[ 1 2 ADD ] 'S' DEF\n#:contract S cost bogus=const";
         let decls = contract_decls(source);
-        assert_eq!(decls["violated"], true);
+        assert_eq!(decls["outcome"], "error");
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(findings
             .iter()
@@ -335,9 +349,9 @@ mod contract_decl_tests {
 
     #[test]
     fn legacy_fields_still_present() {
-        let source = "[ | 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
-        assert_eq!(decls["violated"], true);
+        assert_eq!(decls["outcome"], "error");
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty());
         for finding in findings {
@@ -356,11 +370,11 @@ mod contract_decl_tests {
     #[test]
     fn a_pure_declaration_over_vector_literal_symbols_is_verified() {
         for body in [
-            "| [ 'a' PRINT 'b' ]",
-            "| [ [ PRINT ] ]",
-            "| [ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
+            "[ 'a' PRINT 'b' ]",
+            "[ [ PRINT ] ]",
+            "[ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
         ] {
-            let source = format!("[ {body} ] 'W' DEF\n#:contract W pure");
+            let source = format!("[ {body} ] 'W' DEF\n#:contract W purity=pure");
             let decls = contract_decls(&source);
             assert_eq!(
                 decls["findings"].as_array().expect("findings array").len(),

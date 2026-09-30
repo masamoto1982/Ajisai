@@ -37,6 +37,14 @@ export class ExecutionTimeoutError extends Error {
     }
 }
 
+/** A run stopped from outside (Escape), before the interpreter could answer. */
+export class ExecutionAbortedError extends Error {
+    constructor() {
+        super('Execution aborted');
+        this.name = 'ExecutionAbortedError';
+    }
+}
+
 export interface InterpreterSnapshot {
     // The observation-format stack, carried for display on the main thread.
     readonly stack: Value[];
@@ -63,7 +71,7 @@ export const applyInterpreterSnapshot = (
     // compiled-artifact cache, so an unchanged user word's compiled plan is
     // reused across runs instead of recompiled. Reuse is content-identity keyed
     // and observationally transparent.
-    interpreter.reset_session();
+    interpreter.reset();
     if (!snapshot) return;
 
     // The lossless snapshot is the only accepted stack format, so exact values

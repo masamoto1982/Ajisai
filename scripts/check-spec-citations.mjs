@@ -64,7 +64,6 @@ const NAMES_ITS_DOCUMENT =
 // context window the bare check uses, because the disclaimer and the sections
 // it disclaims routinely land on different lines of one wrapped comment.
 const DISCUSSES_RATHER_THAN_CITES = new Map([
-  ['docs/dev/semantic-spine-migration-plan.md', /削減前|pre-reduction/],
   // This file's own header enumerates the phantom subsections as evidence.
   ['scripts/check-spec-citations.mjs', /never existed/],
 ]);

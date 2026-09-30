@@ -10,7 +10,7 @@
 //! a protocol field, so a fact reaches every host that already renders a
 //! diagnosis, and a host that does not read the key is unaffected.
 
-use super::debug_diagnosis::{CauseClass, DebugDiagnosis};
+use super::debug_diagnosis::{CauseClass, DebugDiagnosis, ErrorLocusKind};
 use super::debug_next_checks::spelling_check;
 use super::word_candidates::suggest_words;
 
@@ -30,38 +30,6 @@ impl DebugDiagnosis {
         }
         self.evidence.push(format!("sourceLine={}", span.line));
         self.evidence.push(format!("sourceColumn={}", span.column));
-        self
-    }
-
-    /// Record the alias the program actually wrote, when the Word it resolved
-    /// to is the one that failed.
-    ///
-    /// `1 + 2` reported `where: ADD`, and the only hint that `+` had anything
-    /// to do with it was a generic "check alias canonicalization" line. The
-    /// canonical name has to stay the answer to "which Word failed" — the
-    /// diagnosis classifies its semantic area and algebraic family by it — so
-    /// the spelling is recorded beside it, in the same `key=value` evidence
-    /// channel the source position uses, rather than replacing it.
-    ///
-    /// Only a spelling the alias table maps to this very Word is kept. A name
-    /// that merely differs in case is not an alias and says nothing worth a
-    /// line, and a reverse lookup from the canonical name is never attempted:
-    /// the table is one-directional, and claiming the reader wrote `+` when
-    /// they wrote `ADD` would be the opposite of a diagnosis.
-    pub fn with_source_word(mut self, surface: Option<&str>) -> Self {
-        let (Some(surface), Some(word)) = (surface, self.where_.word.as_deref()) else {
-            return self;
-        };
-        let Some(alias) = crate::core_word_aliases::lookup_core_word_alias(surface) else {
-            return self;
-        };
-        if alias.canonical != Some(word) {
-            return self;
-        }
-        if self.evidence.iter().any(|e| e.starts_with("sourceWord=")) {
-            return self;
-        }
-        self.evidence.push(format!("sourceWord={}", surface));
         self
     }
 
@@ -96,13 +64,31 @@ impl DebugDiagnosis {
     /// misspelled *user* Word is only knowable at the failure site, which is
     /// the one place that holds the dictionary.
     pub fn with_user_vocabulary<'a>(&mut self, names: impl Iterator<Item = &'a str>) {
+        let names: Vec<&str> = names.collect();
+        let Some(word) = self.where_.word.clone() else {
+            return;
+        };
+        // The locus a registry lookup could not name: a Word the live
+        // dictionary holds is a User Word.
+        if self.where_.kind == ErrorLocusKind::Unknown {
+            let canonical = crate::word_name::canonical_word_name(&word);
+            if names.iter().any(|name| *name == canonical.as_ref()) {
+                self.where_.kind = ErrorLocusKind::UserWord;
+            }
+        }
         if !matches!(self.why, CauseClass::TypoOrUnknownName) {
             return;
         }
-        let Some(word) = self.where_.word.as_deref() else {
-            return;
+        // Only a locus that resolved to nothing is a misspelling to correct.
+        // A Core or User Word in the locus is spelled right — it resolved —
+        // and the unresolved name is inside it, or is its operand
+        // (`wordNotFound` is `DEL`'s condition, and spelling `DEL` against
+        // the vocabulary offered "DEF").
+        self.candidates = if self.where_.kind == ErrorLocusKind::Unknown {
+            suggest_words(&word, names.into_iter())
+        } else {
+            Vec::new()
         };
-        self.candidates = suggest_words(word, names);
         // The spelling check names the candidates, so it has to be rebuilt
         // against the list that won: a user Word found here can turn an empty
         // list into a suggestion, and the check would otherwise still say

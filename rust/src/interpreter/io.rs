@@ -1,24 +1,12 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, HostEffect, Interpreter};
+use crate::interpreter::{HostEffect, Interpreter};
 use crate::types::Value;
 use std::fmt::Write;
 
-fn extract_value_for_print(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> {
-    if keep_mode {
-        return interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow);
-    }
-    interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
-}
-
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
     interp.run_effect_schema(|interp| {
-        let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-        let val = extract_value_for_print(interp, is_keep_mode)?;
-        // PRINT is an output boundary: a Text-role value is emitted as its raw
+        let val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+        // PRINT is an output boundary: a String is emitted as its raw
         // character content, without the `'...'` quotes the Stack projection
         // uses to mark it as a string (LANG.EFFECTS.OUTPUT).
         let payload = crate::types::display::format_for_output(&val);
@@ -32,17 +20,9 @@ pub fn op_print(interp: &mut Interpreter) -> Result<()> {
         // all to produce multi-line output. The native CLI has always rendered
         // one payload per line; this brings the buffer that the browser host
         // reads in line with it.
-        // Writing to an in-memory String buffer only fails on allocation
-        // failure, which nothing in this codebase's error vocabulary names
-        // (PRINT's own errorWhen is empty — it is the one hosted-effect Word).
-        // `StructureError` is the closest existing bucket for a failure this
-        // unreachable in practice.
-        writeln!(&mut interp.output_buffer, "{}", payload).map_err(|e| {
-            AjisaiError::create_structure_error(
-                "the output buffer to accept the write",
-                &e.to_string(),
-            )
-        })?;
+        // `fmt::Write` for a String is infallible; the Result is the trait's.
+        writeln!(&mut interp.output_buffer, "{}", payload)
+            .expect("writing to a String cannot fail");
         Ok(HostEffect::Print(payload))
     })
 }
@@ -72,6 +52,29 @@ mod tests {
         assert_eq!(output.trim(), "T'ES'T", "unexpected output: {:?}", output);
     }
 
+    /// A host that reads the text buffer run by run drains the structured
+    /// effect log with it: the second run's log holds the second run's
+    /// emissions only, and nothing of the first run's stays behind.
+    #[tokio::test]
+    async fn test_take_host_effects_drains_the_log_per_run() {
+        use crate::interpreter::HostEffect;
+        let mut interp = Interpreter::new();
+        interp.execute("1 PRINT").await.unwrap();
+        let _ = interp.collect_output();
+        assert_eq!(
+            interp.take_host_effects(),
+            vec![HostEffect::Print("1/1".to_string())]
+        );
+        assert!(interp.host_effects().is_empty());
+
+        interp.execute("2 PRINT").await.unwrap();
+        assert_eq!(interp.collect_output(), "2/1\n");
+        assert_eq!(
+            interp.take_host_effects(),
+            vec![HostEffect::Print("2/1".to_string())]
+        );
+    }
+
     /// Non-text values print exactly as they render on the stack.
     #[tokio::test]
     async fn test_print_numbers_and_booleans_unchanged() {
@@ -81,18 +84,6 @@ mod tests {
 
         interp.execute("TRUE PRINT").await.unwrap();
         assert_eq!(interp.collect_output().trim(), "TRUE");
-    }
-
-    /// PRINT consumes only the top value; KEEP (`,,`) prints the raw text and
-    /// leaves the quoted string on the stack.
-    #[tokio::test]
-    async fn test_print_keep_mode_leaves_string_on_stack() {
-        let mut interp = Interpreter::new();
-        interp.execute("'TEST' KEEP PRINT").await.unwrap();
-        assert_eq!(interp.collect_output().trim(), "TEST");
-        assert_eq!(interp.stack.len(), 1);
-        // The value still renders with its Stack-projection quotes.
-        assert_eq!(interp.stack.last().unwrap().to_string(), "'TEST'");
     }
 
     /// A string nested inside a collection stays a string: printing a vector
@@ -105,14 +96,12 @@ mod tests {
         assert_eq!(interp.collect_output().trim(), "[ 'AB' 'CD' ]");
     }
 
-    /// A mixed collection renders each element in its own role: strings
+    /// A mixed collection renders each element by its domain: strings
     /// quoted, numbers as fractions.
     #[tokio::test]
-    async fn test_print_mixed_vector_renders_each_role() {
+    async fn test_print_mixed_vector_renders_each_domain() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'mix' 42 ] KEEP PRINT").await.unwrap();
+        interp.execute("[ 'mix' 42 ] PRINT").await.unwrap();
         assert_eq!(interp.collect_output().trim(), "[ 'mix' 42/1 ]");
-        // The Stack projection shows the same structure.
-        assert_eq!(interp.stack.last().unwrap().to_string(), "[ 'mix' 42/1 ]");
     }
 }

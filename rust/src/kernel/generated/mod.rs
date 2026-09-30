@@ -8,16 +8,15 @@
 //! Coreword registry takes stack arity, purity and determinism from here, so
 //! `spec/words.json` is the only place those facts are written down.
 //!
-//! What is still hand-written on `BuiltinSpec` is prose and runtime-local
-//! classification — documentation text, `category`, `partiality`,
-//! `safety_level`, `safe_preview` — none of which the specification declares.
-//! No canonical fact is written down twice.
+//! What `BuiltinSpec` adds is prose and what follows from the contract —
+//! documentation text, `safety_level`, `safe_preview`. No canonical fact is
+//! written down twice.
 
 mod word_registry;
 
 pub use word_registry::{
-    AcceptedDomain, Arity, Consumption, CostAxis, CostClass, Determinism, Family, GeneratedWord,
-    NilPolicy, Partiality, Purity, VocabularyTier, WordCost, WordId, GENERATED_WORDS,
+    Arity, CostAxis, CostClass, Determinism, Family, GeneratedWord, NilPolicy, OperandRole,
+    Partiality, Purity, VocabularyTier, WordCost, WordId, GENERATED_WORDS,
 };
 
 /// The declared contract for a Word, by canonical name.
@@ -56,9 +55,7 @@ macro_rules! serialize_as_spec_str {
 }
 
 serialize_as_spec_str!(
-    AcceptedDomain,
     Family,
-    Consumption,
     NilPolicy,
     Partiality,
     Purity,
@@ -71,7 +68,6 @@ serialize_as_spec_str!(
 mod tests {
     use super::{generated_word, GENERATED_WORDS};
     use crate::builtins::builtin_specs;
-    use crate::core_word_aliases::canonicalize_core_word_name;
     use std::collections::BTreeSet;
 
     #[test]
@@ -79,23 +75,6 @@ mod tests {
         let generated: BTreeSet<&str> = GENERATED_WORDS.iter().map(|word| word.name).collect();
         let runtime: BTreeSet<&str> = builtin_specs().iter().map(|spec| spec.name).collect();
         assert_eq!(generated, runtime);
-    }
-
-    #[test]
-    fn generated_aliases_resolve_to_their_canonical_word() {
-        let mut alias_count = 0;
-        for word in GENERATED_WORDS {
-            for &alias in word.aliases {
-                alias_count += 1;
-                assert_eq!(
-                    canonicalize_core_word_name(alias).as_ref(),
-                    word.name,
-                    "alias {alias} should canonicalize to {}",
-                    word.name
-                );
-            }
-        }
-        assert_eq!(alias_count, 10, "spec/words.json declares 10 aliases");
     }
 
     /// The executor-key equivalence test this module used to carry is gone: it

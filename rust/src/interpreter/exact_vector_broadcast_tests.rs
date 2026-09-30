@@ -37,7 +37,7 @@ fn is_exact_real_lane(value: &Value) -> bool {
 /// never collapsing to a tensor-conversion error.
 #[tokio::test]
 async fn irrational_vector_plus_irrational_vector_is_exact() {
-    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 2 3 ] [ SQRT ] MAP +").await;
+    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 2 3 ] [ SQRT ] MAP ADD").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
     assert_eq!(children.len(), 2, "result must keep both lanes");
@@ -52,7 +52,7 @@ async fn irrational_vector_plus_irrational_vector_is_exact() {
 /// exact lane per element instead of erroring.
 #[tokio::test]
 async fn irrational_scalar_broadcasts_across_rational_vector() {
-    let stack = run_ok("[ 1 2 3 ] 2 SQRT *").await;
+    let stack = run_ok("[ 1 2 3 ] 2 SQRT MUL").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
     assert_eq!(
@@ -74,7 +74,7 @@ async fn irrational_scalar_broadcasts_across_rational_vector() {
 async fn irrational_vector_length_mismatch_errors() {
     let mut interp = Interpreter::new();
     let result = interp
-        .execute("[ 2 3 ] [ SQRT ] MAP [ 2 3 4 ] [ SQRT ] MAP +")
+        .execute("[ 2 3 ] [ SQRT ] MAP [ 2 3 4 ] [ SQRT ] MAP ADD")
         .await;
     assert!(
         result.is_err(),
@@ -88,7 +88,7 @@ async fn irrational_vector_length_mismatch_errors() {
 /// aborting the vector.
 #[tokio::test]
 async fn irrational_vector_div_by_zero_lane_projects_to_nil() {
-    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] /").await;
+    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
     assert_eq!(children.len(), 2);
@@ -110,7 +110,7 @@ async fn irrational_vector_div_by_zero_lane_projects_to_nil() {
 /// compare against the literal value rather than assuming a `Vector`).
 #[tokio::test]
 async fn rational_vector_addition_unchanged() {
-    let stack = run_ok("[ 1 2 3 ] [ 10 20 30 ] +").await;
+    let stack = run_ok("[ 1 2 3 ] [ 10 20 30 ] ADD").await;
     assert_eq!(stack.len(), 1);
     let expected = run_ok("[ 11 22 33 ]").await;
     assert_eq!(
@@ -131,7 +131,13 @@ async fn rational_vector_addition_unchanged() {
 #[tokio::test]
 async fn a_one_element_axis_broadcast_over_an_empty_one_stays_empty() {
     let empty = run_ok("[ ]").await;
-    for code in ["[ ] 1 +", "[ 1 ] [ ] +", "[ ] [ ] +", "[ ] 1 /", "[ ] 0 /"] {
+    for code in [
+        "[ ] 1 ADD",
+        "[ 1 ] [ ] ADD",
+        "[ ] [ ] ADD",
+        "[ ] 1 DIV",
+        "[ ] 0 DIV",
+    ] {
         let stack = run_ok(code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave one value");
         assert_eq!(
@@ -148,16 +154,18 @@ async fn a_one_element_axis_broadcast_over_an_empty_one_stays_empty() {
 async fn an_empty_axis_against_a_longer_one_still_mismatches() {
     let mut interp = Interpreter::new();
     let error = interp
-        .execute("[ 1 2 ] [ ] +")
+        .execute("[ 1 2 ] [ ] ADD")
         .await
         .expect_err("shapes [2] and [0] do not broadcast");
     assert_eq!(
-        crate::error::ErrorCategory::from_error(&error).as_protocol_str(),
+        crate::error::ErrorCategory::from_error(&error)
+            .expect("a program ERROR has a category")
+            .as_protocol_str(),
         "shapeMismatch",
         "got {error}"
     );
 
-    let stack = run_ok("[ 1 ] [ 2 3 ] +").await;
+    let stack = run_ok("[ 1 ] [ 2 3 ] ADD").await;
     assert_eq!(stack[0], run_ok("[ 3 4 ]").await[0]);
 }
 
@@ -166,16 +174,16 @@ async fn an_empty_axis_against_a_longer_one_still_mismatches() {
 /// The exact lift read a lane through `ExactReal::from_fraction(Fraction::
 /// nil())` — a *number* whose denominator happens to be zero — so the law
 /// computed with it and answered an observable `0/0` scalar. The lane stopped
-/// being an absence at all: `NIL-REASON` on it reported `notAvailable`, the
-/// answer for a value that carries no reason, because by then it was a value.
+/// being an absence at all: `NIL-REASON` on it projected, the answer for a
+/// value that is not a NIL, because by then it was a value.
 /// Losing the reason is one bug; losing the NIL is a value escaping
 /// LANG.FAILURE.TRICHOTOMY.
 #[tokio::test]
 async fn an_absent_lane_survives_the_exact_real_broadcast() {
     for code in [
-        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] +",
-        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] *",
-        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / 2 +",
+        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV [ 1 1 ] ADD",
+        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV [ 1 1 ] MUL",
+        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV 2 ADD",
     ] {
         let stack = run_ok(code).await;
         let lane = stack[0]
@@ -190,39 +198,4 @@ async fn an_absent_lane_survives_the_exact_real_broadcast() {
         // The exact lane beside it is untouched.
         assert!(is_exact_real_lane(&stack[0].child(0).unwrap()));
     }
-}
-
-/// **`MOD` over a vector of irrationals computes, rather than crashing.**
-///
-/// `MOD` had a scalar exact-real arm and no vector one, so a vector of
-/// continued fractions fell through to the rational kernel, which flattened
-/// them into a lane buffer it then indexed off the end. That was a panic — no
-/// value, no NIL, no ERROR, so no outcome under LANG.FAILURE.TRICHOTOMY at
-/// all. `arithmetic_division`'s header already says `DIV` and `MOD` share the
-/// division underneath; they now share the schema that carries it.
-#[tokio::test]
-async fn modulo_over_an_irrational_vector_stays_exact() {
-    // √2 mod 1 = √2 - 1, √3 mod 1 = √3 - 1: both irrational, both exact.
-    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 1 ] %").await;
-    let children = vector_children(&stack[0]);
-    assert_eq!(children.len(), 2);
-    for lane in children {
-        assert!(
-            is_exact_real_lane(lane) && !lane.is_nil(),
-            "each lane must stay an exact real, got {lane:?}"
-        );
-    }
-    assert_eq!(stack[0], run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 1 ] % ").await[0]);
-
-    // A zero divisor projects per lane here exactly as it does for `DIV`.
-    let zero = run_ok("[ 2 3 ] [ SQRT ] MAP [ 0 0 ] %").await;
-    for lane in vector_children(&zero[0]) {
-        assert_eq!(lane.nil_reason().cloned(), Some(NilReason::DivisionByZero));
-    }
-
-    // And an already-absent lane passes through `MOD` with its reason, the
-    // same as through every other element-wise Word.
-    let mixed = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] %").await;
-    let lane = mixed[0].child(1).expect("two-lane vector");
-    assert_eq!(lane.nil_reason().cloned(), Some(NilReason::DivisionByZero));
 }

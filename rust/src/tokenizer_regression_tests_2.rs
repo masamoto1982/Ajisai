@@ -256,29 +256,22 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_def_with_vector_code() {
-        let result = tokenize("[ X | X [ 2 ] * ] 'DOUBLE' DEF").unwrap();
+        let result = tokenize("[ [ 2 ] * ] 'DOUBLE' DEF").unwrap();
 
-        assert_eq!(result.len(), 11);
-        assert!(matches!(&result[9], Token::String(s) if s.as_ref() == "DOUBLE"));
-        assert!(matches!(&result[10], Token::Symbol(s) if s.as_ref() == "DEF"));
+        assert_eq!(result.len(), 8);
+        assert!(matches!(&result[6], Token::String(s) if s.as_ref() == "DOUBLE"));
+        assert!(matches!(&result[7], Token::Symbol(s) if s.as_ref() == "DEF"));
     }
 
     #[test]
-    fn test_brace_delimits_a_record_literal() {
-        // `{` and `}` are the Record literal's delimiters
-        // (LANG.RECORDS.STRUCTURE), so the retired block syntax lexes as one
-        // — a Record of one pair. What stops the old form working is that a
-        // Record is not a definition body: see
-        // `retired_brace_block_syntax_still_does_not_define_a_word`.
-        let result = tokenize("{ [ 2 ] * }").unwrap();
-        assert_eq!(result.first(), Some(&Token::RecordStart));
-        assert_eq!(result.last(), Some(&Token::RecordEnd));
-    }
-
-    #[test]
-    fn test_record_literal_in_def_position_still_lexes() {
-        let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF").unwrap();
-        assert_eq!(result.first(), Some(&Token::RecordStart));
+    fn test_brace_is_an_ordinary_name_character() {
+        // Only `[` and `]` delimit (LANG.SOURCE.TEXT). A brace is a name
+        // character like any other punctuation, so it lexes as a Symbol, alone
+        // or glued to other characters.
+        let result = tokenize("{ [ 2 ] * } a{b}").unwrap();
+        assert_eq!(result.first(), Some(&Token::Symbol("{".into())));
+        assert_eq!(result[5], Token::Symbol("}".into()));
+        assert_eq!(result.last(), Some(&Token::Symbol("a{b}".into())));
     }
 
     #[test]
@@ -288,7 +281,7 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_greater_than_tokenizes_as_gt_alias() {
+    fn test_greater_than_tokenizes_as_an_ordinary_symbol() {
         let result = tokenize("5 3 >").unwrap();
         assert_eq!(
             result,
@@ -301,8 +294,8 @@ mod tokenizer_regression_tests_2 {
     }
 
     /// Every symbol is exactly one character, so a two-character spelling is one
-    /// ordinary name token rather than a comparison. `GTE` and `NEQ` are reached
-    /// by name.
+    /// ordinary name token rather than a comparison. None of these names a Word:
+    /// the relations are spelled `a b LT NOT`, `a b GT NOT` and `a b EQ NOT`.
     #[test]
     fn test_two_character_comparisons_are_plain_names() {
         for lexeme in [">=", "<>", "<="] {
@@ -316,15 +309,12 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_multiline_vector_body_allowed() {
-        // A `[ ]` body may span multiple lines, with each internal line break
-        // preserved as a statement separator inside it.
-        let input = "[ KEEP [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF";
-        let result = tokenize(input);
-        assert!(result.is_ok(), "multi-line vector body should tokenize");
-        assert!(
-            result.unwrap().contains(&crate::types::Token::LineBreak),
-            "internal line break must be preserved as a statement separator"
-        );
+        // A `[ ]` body may span multiple lines; the breaks are whitespace and
+        // the body is the same token stream as the one-line spelling.
+        let multi = tokenize("[ LENGTH [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF");
+        let flat = tokenize("[ LENGTH [ 1 ] = [ 10 ] ] 'CHECK_ONE' DEF");
+        assert!(multi.is_ok(), "multi-line vector body should tokenize");
+        assert_eq!(multi, flat);
     }
 
     #[test]

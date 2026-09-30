@@ -5,7 +5,7 @@
 
 use super::fraction::Fraction;
 use super::value_densify::try_collect_dense;
-use super::{DenseTensor, Interpretation, Value, ValueData};
+use super::{DenseTensor, Value, ValueData};
 use crate::semantic::AbsenceMetadata;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -38,19 +38,17 @@ impl Value {
     /// without materializing per-element `Value`s or `Fraction`s. This is the
     /// output constructor for the integer SIMD lane: it keeps the result in
     /// the same dense column representation as its inputs instead of degrading
-    /// to an AoS `Vector` (handoff 手1). The `hint` matches `from_tensor` /
-    /// `from_children` (`Unassigned`) so downstream interpretation is unchanged.
+    /// to an AoS `Vector` (handoff 手1).
     pub fn from_int_tensor(numerators: Vec<i64>) -> Self {
         let len = numerators.len();
         let tensor = DenseTensor::from_integers(numerators);
-        Self {
-            data: ValueData::Tensor {
+        Self::new(
+            ValueData::Tensor {
                 data: Arc::new(tensor),
                 shape: Arc::new(vec![len]),
             },
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+            None,
+        )
     }
 
     /// Wrap an already-assembled dense tensor, keeping its columns as they are.
@@ -59,22 +57,20 @@ impl Value {
     /// recomputing them — a reversal, a permutation. Going through
     /// [`Value::from_tensor`] would mean handing it `Fraction`s rebuilt from
     /// columns the caller already holds, which is the round-trip the dense
-    /// representation exists to avoid. `hint` matches every other tensor
-    /// constructor (`Unassigned`).
+    /// representation exists to avoid.
     pub fn from_dense_tensor(data: DenseTensor, shape: Vec<usize>) -> Self {
         let resolved_shape = if shape.is_empty() {
             vec![data.len()]
         } else {
             shape
         };
-        Self {
-            data: ValueData::Tensor {
+        Self::new(
+            ValueData::Tensor {
                 data: Arc::new(data),
                 shape: Arc::new(resolved_shape),
             },
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+            None,
+        )
     }
 
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
@@ -100,55 +96,41 @@ impl Value {
             resolved_shape.clone(),
             absences.clone(),
         ) else {
-            return Self::from_vector_with_hint(
-                tensor_fractions_to_nested_values(&data, &resolved_shape, &absences),
-                Interpretation::Unassigned,
-            );
+            return Self::from_vector(tensor_fractions_to_nested_values(
+                &data,
+                &resolved_shape,
+                &absences,
+            ));
         };
-        Self {
-            data: ValueData::Tensor {
+        Self::new(
+            ValueData::Tensor {
                 data: Arc::new(tensor),
                 shape: Arc::new(resolved_shape),
             },
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+            None,
+        )
     }
 
-    /// Like [`from_vector_with_hint`] but promotes the value to a dense
-    /// `Tensor` when every leaf is a Fraction scalar and the shape is
-    /// rectangular. Otherwise the nested form is preserved.
-    ///
-    /// The `String` display hint suppresses promotion at every level so that
-    /// codepoint-based strings retain their nested representation.
-    pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
+    /// Build a Vector value, promoted to a dense `Tensor` when every leaf is
+    /// a Fraction scalar and the shape is rectangular. Otherwise the nested
+    /// form is preserved.
+    pub fn from_vector_promoted(values: Vec<Value>) -> Self {
         if let Some(collected) = try_collect_dense(&values) {
             if let Some(tensor) = DenseTensor::from_fractions_with_absences(
                 collected.data,
                 collected.shape.clone(),
                 collected.absences,
             ) {
-                return Self {
-                    data: ValueData::Tensor {
+                return Self::new(
+                    ValueData::Tensor {
                         data: Arc::new(tensor),
                         shape: Arc::new(collected.shape),
                     },
-                    hint,
-                    absence: None,
-                };
+                    None,
+                );
             }
         }
-        Self {
-            data: ValueData::Vector(Arc::new(values)),
-            hint,
-            absence: None,
-        }
-    }
-
-    /// Convenience wrapper around [`from_vector_promoted_with_hint`] using
-    /// `Interpretation::Unassigned`.
-    pub fn from_vector_promoted(values: Vec<Value>) -> Self {
-        Self::from_vector_promoted_with_hint(values, Interpretation::Unassigned)
+        Self::from_vector(values)
     }
 }
 
@@ -372,6 +354,30 @@ mod tensor_boundary_tests {
         );
     }
 
+    /// `from_exact_real` with `Rational(nil)` — what the nil-propagating
+    /// exact arithmetic answers for an absent operand — is a NIL, not a
+    /// `Scalar` around the `0/0` sentinel that displayed as `NIL` while
+    /// answering `NIL?` with FALSE and naming its domain `Scalar`.
+    #[test]
+    fn from_exact_real_translates_the_nil_sentinel_like_from_fraction() {
+        use crate::types::exact::ExactReal;
+
+        let value = Value::from_exact_real(ExactReal::Rational(Fraction::nil()));
+        assert!(value.is_nil(), "got {:?}", value.data);
+        assert_eq!(value, Value::from_fraction(Fraction::nil()));
+        assert_eq!(value.domain_name(), "NIL");
+
+        // A present rational still takes the Scalar fast path, and an
+        // irrational still keeps its exact form.
+        let three = Value::from_exact_real(ExactReal::from_integer(3));
+        assert_eq!(three, Value::from_int(3));
+        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::from(2)).expect("√2");
+        assert!(matches!(
+            Value::from_exact_real(sqrt2).data,
+            ValueData::ExactScalar(_)
+        ));
+    }
+
     #[test]
     fn big_fraction_tensor_falls_back_without_losing_shape() {
         use num_bigint::BigInt;
@@ -440,19 +446,18 @@ mod tensor_boundary_tests {
     }
 
     #[test]
-    fn ensure_hydrated_converts_tensor_into_vector_preserving_hint() {
+    fn ensure_hydrated_converts_tensor_into_equal_vector() {
         use std::borrow::Cow;
 
-        let mut dense = Value::from_tensor(
+        let dense = Value::from_tensor(
             vec![Fraction::from(1), Fraction::from(2), Fraction::from(3)],
             vec![3],
         );
-        dense.hint = Interpretation::RawNumber;
         let hydrated = dense.ensure_hydrated();
         match hydrated {
             Cow::Owned(v) => {
                 assert!(matches!(v.data, ValueData::Vector(_)));
-                assert_eq!(v.hint, Interpretation::RawNumber);
+                assert_eq!(v, dense);
                 assert_eq!(v.len(), 3);
             }
             Cow::Borrowed(_) => panic!("Tensor should hydrate into an owned Vector"),

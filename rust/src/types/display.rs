@@ -1,166 +1,22 @@
 use super::exact::ExactReal;
 use super::fraction::Fraction;
-use super::{DenseTensor, Interpretation, Stack, Value, ValueData};
+use super::{DenseTensor, Stack, Value, ValueData};
 use num_bigint::BigInt;
+use num_traits::Signed;
 use std::fmt;
 
-/// Render every stack slot as its observable `(value, role)` string (LANG.OBSERVATION.PROTOCOL).
+/// Render every stack slot as its display string (LANG.OBSERVATION.PROTOCOL).
 ///
 /// This is the single stack rendering shared by all observation surfaces — the
 /// CLI stack display, the REPL, the in-process conformance runner, and the JSON
-/// report — so that an interpretation role such as a timestamp can never
-/// render one way on one surface and another way on another. It renders each
-/// slot with the *slot's* role rather than the value's construction-time hint,
-/// which is what makes it differ from `Value`'s own `Display`.
+/// report. Each slot renders from its value alone (LANG.VALUES.DENOTATION).
 pub fn render_stack(stack: &Stack) -> Vec<String> {
-    stack
-        .iter_slots()
-        .map(|(value, role)| format_with_hint(value, role))
-        .collect()
+    stack.iter().map(Value::to_string).collect()
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format_with_hint(self, self.hint))
-    }
-}
-
-pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
-    // An operational NIL (a value carrying absence metadata) always renders
-    // as `NIL`, regardless of the effective hint. A positional hint can carry
-    // a word's declared output role (e.g. CHR is declared to yield TEXT),
-    // which must not mask an absence into a bogus `''`/`FALSE`/datetime
-    // rendering — the canonical `Display` (which uses the value's own `Nil`
-    // hint) already shows `NIL` here, so this keeps hint-driven callers
-    // consistent with it. The empty string `''` is itself a NIL with reason
-    // `EmptySequence` (see `Value::from_string`), so it likewise renders as
-    // `NIL`, matching its canonical form (LANG.VALUES.NIL; LANG.OBSERVATION.PROTOCOL).
-    if matches!(value.data, ValueData::Nil) && value.absence_metadata().is_some() {
-        return "NIL".to_string();
-    }
-    match hint {
-        Interpretation::Nil => {
-            if matches!(value.data, ValueData::Nil) {
-                "NIL".to_string()
-            } else {
-                format_value_recursive(&value.data, 0)
-            }
-        }
-        // Unassigned renders the value in its raw structural form. The
-        // runtime never re-guesses a richer meaning (e.g. "string-like")
-        // at render time; interpretation is decided once, at construction.
-        Interpretation::Unassigned => format_value_recursive(&value.data, 0),
-        Interpretation::RawNumber => format_value_recursive(&value.data, 0),
-        Interpretation::Interval => format_as_interval(value),
-        Interpretation::TruthValue => format_as_boolean(value),
-        Interpretation::Timestamp => format_as_datetime(&value.data),
-        Interpretation::ContinuedFraction => format_as_continued_fraction(value),
-    }
-}
-
-/// Display budget for lazy continued fractions (LANG.VALUES.EXACT:
-/// "implementation-defined display budget").
-const CF_DISPLAY_BUDGET: usize = 32;
-
-/// Render a numeric scalar value as the canonical flat continued-fraction
-/// form (LANG.VALUES.EXACT): `[ a0; a1, a2 ]`, matching the classical
-/// `[a0; a1, a2, …]` notation directly — `[` `]` is the sole bracket in
-/// Ajisai, so the CF display uses it as-is rather than standing in for it.
-/// Lazy irrationals truncate at CF_DISPLAY_BUDGET terms with a trailing `…`
-/// marker.
-pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
-    // Obtain the partial-quotient sequence and whether it is truncated.
-    let (terms, truncated): (Vec<BigInt>, bool) = match &value.data {
-        ValueData::Scalar(f) => {
-            // Rational: finite canonical CF.
-            match ExactReal::from_fraction(f.clone()).partial_quotients() {
-                Some(qs) => (qs, false),
-                None => (Vec::new(), false), // nil fraction
-            }
-        }
-        ValueData::ExactScalar(er) => match er.partial_quotients() {
-            Some(qs) => (qs, false), // collapsed to rational
-            None => {
-                // Reaching this arm means the value did not collapse to a
-                // rational, so its expansion does not terminate and what comes
-                // back is always a prefix — however short. Reading truncation
-                // off the length was right only while the budget was a term
-                // count; now that it is a work budget, a value too expensive to
-                // expand returns fewer quotients and would otherwise have been
-                // rendered as if complete.
-                (er.partial_quotients_bounded(CF_DISPLAY_BUDGET), true)
-            }
-        },
-        // Non-scalar values fall back to the structural rendering.
-        _ => return format_value_recursive(&value.data, 0),
-    };
-    render_cf_flat(&terms, truncated)
-}
-
-/// Build the flat CF string from partial quotients, in the classical
-/// `[a0; a1, a2, …]` convention (LANG.VALUES.EXACT):
-/// finite   [a0]         -> "[ a0 ]"          (no tail, no `;`)
-/// finite   [a0,a1,a2]   -> "[ a0; a1, a2 ]"
-/// truncated [a0,a1,a2]  -> "[ a0; a1, a2, … ]"
-/// truncated [a0]        -> "[ a0; … ]"
-/// truncated []          -> "[ … ]"
-///
-/// The `;` marks the one real distinction the notation carries: `a0` is
-/// any integer, while the tail terms are each a positive integer — the
-/// partial quotients of a value that is itself always ≥ 1 (the "complete
-/// quotient" one level down). The truncation marker is the Unicode
-/// ellipsis `…` rather than ASCII `...`: Ajisai numbers never render with
-/// a `.` (fractions always print `n/d`), so a literal `.` next to a digit
-/// would be the one place a display string could look like a malformed
-/// decimal; `…` is a different code point entirely, so no such reading is
-/// possible even by accident.
-fn render_cf_flat(terms: &[BigInt], truncated: bool) -> String {
-    if terms.is_empty() {
-        return if truncated {
-            "[ … ]".to_string()
-        } else {
-            "[ ]".to_string()
-        };
-    }
-    let mut s = String::from("[ ");
-    s.push_str(&terms[0].to_string());
-    if terms.len() > 1 || truncated {
-        s.push_str("; ");
-        let tail: Vec<String> = terms[1..].iter().map(BigInt::to_string).collect();
-        s.push_str(&tail.join(", "));
-        if truncated {
-            if terms.len() > 1 {
-                s.push_str(", …");
-            } else {
-                s.push('…');
-            }
-        }
-    }
-    s.push_str(" ]");
-    s
-}
-
-fn format_as_interval(value: &Value) -> String {
-    match &value.data {
-        ValueData::Vector(v) if v.len() == 2 => {
-            let lo = match &v[0].data {
-                ValueData::Scalar(f) => format_fraction(f),
-                _ => format_value_recursive(&v[0].data, 0),
-            };
-            let hi = match &v[1].data {
-                ValueData::Scalar(f) => format_fraction(f),
-                _ => format_value_recursive(&v[1].data, 0),
-            };
-            format!("[{}, {}]", lo, hi)
-        }
-        ValueData::Tensor { data, shape } if shape.as_slice() == [2] && data.len() == 2 => {
-            format!(
-                "[{}, {}]",
-                format_fraction(&data.fraction_or_nil(0)),
-                format_fraction(&data.fraction_or_nil(1))
-            )
-        }
-        _ => format_value_recursive(&value.data, 0),
+        f.write_str(&format_value_recursive(&self.data, 0))
     }
 }
 
@@ -234,45 +90,70 @@ pub(super) fn format_fraction(f: &Fraction) -> String {
     format!("{}/{}", f.numerator(), f.denominator())
 }
 
-/// Display an `ExactReal`. Rational variants use the canonical
-/// `numerator/denominator` form. Irrational variants (`AlgebraicSqrt`,
-/// `Gosper`) render in the canonical flat continued-fraction form of
-/// LANG.VALUES.EXACT — `[ a0; a1, a2 ]` — truncated at the display budget with
-/// a trailing `…` for lazy CFs. This keeps the default numeric surface
-/// exact and AI-readable: arithmetic on irrationals is computed exactly
-/// on the CF representation (Gosper, LANG.VALUES.EXACT), so the display must not
-/// collapse it to an approximate rational.
+/// Display an `ExactReal`. A rational writes as `numerator/denominator`;
+/// an algebraic irrational writes its normal form as one token —
+/// `sqrt(2)`, `1/2*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)`, rendering the
+/// same terms the host protocol's `exactTerms` carries. It is a display, not
+/// source: no literal denotes an irrational, and a Vector literal would read
+/// `2 SQRT` as a number and a Symbol. Written without spaces so that inside a
+/// Vector it still reads as one element. Nothing is truncated or
+/// approximated: the normal form *is* the value, and its rendering is finite.
 pub(super) fn format_exact_real(er: &ExactReal) -> String {
     match er {
         ExactReal::Rational(f) => format_fraction(f),
-        _ => match er.partial_quotients() {
-            // Collapsed to a finite (rational) CF: render the exact flat form.
-            Some(qs) => render_cf_flat(&qs, false),
-            // Lazy irrational: emit partial quotients up to the display budget.
-            None => {
-                let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
-                if qs.is_empty() {
-                    // Not even `a0` was affordable: either a rare Gosper
-                    // transform the streaming algorithm does not resolve, or a
-                    // value carrying so many algebraic terms that one
-                    // floor-and-reciprocate step exceeds the whole expansion
-                    // budget. Render the undetermined-CF marker rather than an
-                    // empty `[ ]` or an approximate `~` rational — `exactTerms`
-                    // beside it still carries the value exactly.
-                    "[ … ]".to_string()
-                } else {
-                    // Always a prefix: this arm is only reached for a value
-                    // whose expansion does not terminate.
-                    render_cf_flat(&qs, true)
-                }
+        ExactReal::Algebraic(a) => render_algebraic_terms(&a.normal_form_terms()),
+    }
+}
+
+/// The normal form `Σ cᵢ√mᵢ` as one token, terms in the normal form's own
+/// ascending radicand order (the rational term, radicand 1, first). The
+/// coefficient keeps Ajisai's own `numerator/denominator` rendering rather
+/// than collapsing `2/1` to `2`: every other number the language displays is
+/// written that way. A unit coefficient is left unwritten.
+pub(crate) fn render_algebraic_terms(terms: &[(Fraction, BigInt)]) -> String {
+    // An algebraic irrational always has at least one term (a term-free normal
+    // form would have demoted to a rational). Writing the zero rather than an
+    // empty string keeps the display readable if that invariant ever moves.
+    if terms.is_empty() {
+        return "0/1".to_string();
+    }
+    let mut out = String::new();
+    for (index, (coefficient, radicand)) in terms.iter().enumerate() {
+        let negative = !coefficient.is_positive() && !coefficient.is_zero();
+        if index == 0 {
+            if negative {
+                out.push('-');
             }
-        },
+        } else {
+            out.push(if negative { '-' } else { '+' });
+        }
+        let magnitude = Fraction::new(coefficient.numerator().abs(), coefficient.denominator());
+        // The monomial `1` keys the rational part of the normal form: there is
+        // no radical to write, only the coefficient.
+        if radicand == &BigInt::from(1) {
+            out.push_str(&format_fraction(&magnitude));
+        } else if magnitude.is_integer() && magnitude.numerator() == BigInt::from(1) {
+            out.push_str(&format!("sqrt({radicand})"));
+        } else {
+            out.push_str(&format!("{}*sqrt({radicand})", format_fraction(&magnitude)));
+        }
+    }
+    out
+}
+
+/// What an error message says it got: a Scalar by its value, because for a
+/// count or an index the wrong number is the whole fault (`got 1/2`), and
+/// every other operand by its domain (`got String`).
+pub fn describe_operand(value: &Value) -> String {
+    match &value.data {
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) => value.to_string(),
+        _ => value.domain_name().to_string(),
     }
 }
 
 /// Render a value for an **output** boundary (`PRINT`, LANG.EFFECTS.OUTPUT).
 ///
-/// The stack projection shows a Text-role value wrapped in `'...'` so the
+/// The stack projection shows a String wrapped in `'...'` so the
 /// reader can see that it is a string and not a bare numeric vector. Those
 /// quotes are a display affordance of the Stack surface only: at an output
 /// boundary the surrounding quotes are dropped and the raw character content
@@ -283,198 +164,41 @@ pub fn format_for_output(value: &Value) -> String {
     if let ValueData::Text(s) = &value.data {
         return s.to_string();
     }
-    format_with_hint(value, value.hint)
-}
-
-/// Boolean label for a single element of a truth-valued vector/tensor. An
-/// operational NIL renders as `NIL`; the logical Unknown (U, LANG.VALUES.TRUTH) —
-/// `Nil` data carrying the `TruthValue` hint, no dedicated variant — takes
-/// the same arm below and renders as `NIL` too.
-fn boolean_element_label(child: &Value) -> &'static str {
-    match &child.data {
-        ValueData::Nil => "NIL",
-        // A String is not a truth value, so it has no boolean label; it can
-        // only reach here inside a `TruthValue`-role vector, where rendering
-        // it as `NIL` matches the other non-numeric arms.
-        ValueData::Text(_) | ValueData::Record(_) => "NIL",
-        ValueData::Boolean(b) => {
-            if *b {
-                "TRUE"
-            } else {
-                "FALSE"
-            }
-        }
-        ValueData::Scalar(f) => {
-            if f.is_nil() {
-                "NIL"
-            } else if f.is_zero() {
-                "FALSE"
-            } else {
-                "TRUE"
-            }
-        }
-        ValueData::Vector(v) => {
-            if v.is_empty() {
-                "FALSE"
-            } else {
-                "TRUE"
-            }
-        }
-        ValueData::Tensor { data, .. } => {
-            if data.is_empty() {
-                "FALSE"
-            } else {
-                "TRUE"
-            }
-        }
-        ValueData::ExactScalar(_) => "TRUE",
-        ValueData::Symbol(_) => "TRUE",
-    }
-}
-
-fn format_as_boolean(value: &Value) -> String {
-    match &value.data {
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint,
-        // no dedicated variant) takes this same arm and renders as `NIL`,
-        // same as an operational NIL.
-        ValueData::Nil => "NIL".to_string(),
-        ValueData::Text(_) | ValueData::Record(_) => format_value_recursive(&value.data, 0),
-        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
-        // ExactScalar values are always non-zero positive irrationals → TRUE
-        ValueData::ExactScalar(_) => "TRUE".to_string(),
-        ValueData::Scalar(f) => {
-            if f.is_nil() {
-                "NIL".to_string()
-            } else if f.is_zero() {
-                "FALSE".to_string()
-            } else {
-                "TRUE".to_string()
-            }
-        }
-        // A TruthValue-hinted Vector renders with `[ ]`, the one spelling
-        // every Vector-domain value uses (one pair per domain: `{ }` spells a
-        // Record and nothing else — LANG.VALUES.DISJOINT never had two
-        // renderings for one value, and no longer has one spelling for two
-        // domains either). Each element still renders as its truth-role label
-        // (TRUE/FALSE/NIL), independent of that outer bracket choice.
-        ValueData::Vector(v) => {
-            if v.is_empty() {
-                return "[ ]".to_string();
-            }
-
-            let inner: Vec<&str> = v.iter().map(boolean_element_label).collect();
-            format!("[ {} ]", inner.join(" "))
-        }
-        ValueData::Tensor { data, .. } => {
-            if data.is_empty() {
-                return "[ ]".to_string();
-            }
-            let inner: Vec<&str> = data
-                .iter()
-                .map(|f| {
-                    if f.is_nil() {
-                        "NIL"
-                    } else if f.is_zero() {
-                        "FALSE"
-                    } else {
-                        "TRUE"
-                    }
-                })
-                .collect();
-            format!("[ {} ]", inner.join(" "))
-        }
-        ValueData::Symbol(name) => name.to_string(),
-    }
-}
-
-fn format_as_datetime(data: &ValueData) -> String {
-    match data {
-        ValueData::Nil => format_value_recursive(data, 0),
-        ValueData::Text(_)
-        | ValueData::Boolean(_)
-        | ValueData::Symbol(_)
-        | ValueData::Record(_) => format_value_recursive(data, 0),
-        ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
-        ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
-        ValueData::Vector(_) | ValueData::Tensor { .. } => format_value_recursive(data, 0),
-    }
+    value.to_string()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::render_cf_flat;
+    use super::format_exact_real;
+    use crate::types::exact::ExactReal;
+    use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
-    fn bi(n: i64) -> BigInt {
-        BigInt::from(n)
+    fn sqrt_of(n: i64, d: i64) -> ExactReal {
+        ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
+            .expect("a valid sqrt")
     }
 
+    /// The display of an irrational is its normal form as one token: exact,
+    /// finite, spaceless, and in the normal form's own term order.
     #[test]
-    fn render_cf_flat_exact_forms() {
-        assert_eq!(render_cf_flat(&[bi(1)], false), "[ 1 ]");
-        assert_eq!(render_cf_flat(&[bi(1), bi(2)], false), "[ 1; 2 ]");
-        assert_eq!(render_cf_flat(&[bi(1), bi(2), bi(2)], false), "[ 1; 2, 2 ]");
+    fn irrational_renders_its_normal_form_as_one_token() {
+        assert_eq!(format_exact_real(&sqrt_of(2, 1)), "sqrt(2)");
+        assert_eq!(format_exact_real(&sqrt_of(1, 2)), "1/2*sqrt(2)");
+        let sqrt2 = sqrt_of(2, 1);
+        let one = ExactReal::Rational(Fraction::new(BigInt::from(1), BigInt::from(1)));
+        assert_eq!(format_exact_real(&one.add(&sqrt2)), "1/1+sqrt(2)");
+        assert_eq!(format_exact_real(&one.sub(&sqrt2)), "1/1-sqrt(2)");
         assert_eq!(
-            render_cf_flat(&[bi(1), bi(2), bi(2)], true),
-            "[ 1; 2, 2, … ]"
+            format_exact_real(&sqrt2.sub(&sqrt_of(3, 1))),
+            "sqrt(2)-sqrt(3)"
         );
-        assert_eq!(render_cf_flat(&[bi(1)], true), "[ 1; … ]");
-        assert_eq!(render_cf_flat(&[], false), "[ ]");
-        assert_eq!(render_cf_flat(&[], true), "[ … ]");
-    }
-
-    #[test]
-    fn irrational_renders_as_flat_cf_not_approximation() {
-        use super::format_exact_real;
-        use crate::types::exact::ExactReal;
-        use crate::types::fraction::Fraction;
-        use num_bigint::BigInt;
-
-        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical flat
-        // CF form (LANG.VALUES.EXACT), never `sqrt(...)` or a `~`-approximation.
-        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
-            .expect("√2 is a valid algebraic sqrt");
-        let s = format_exact_real(&sqrt2);
-        assert!(s.starts_with("[ 1; 2, 2, "), "expected flat CF, got {s:?}");
-        assert!(
-            s.ends_with(", … ]"),
-            "lazy CF must carry the trailing `…` truncation marker, got {s:?}"
-        );
-        assert!(
-            !s.contains("sqrt"),
-            "must not use sqrt() display, got {s:?}"
-        );
-        assert!(
-            !s.contains('~'),
-            "must not use ~approximation display, got {s:?}"
-        );
-        assert!(
-            !s.contains('.'),
-            "CF display must never contain a literal '.', got {s:?}"
-        );
-        let opens = s.matches('[').count();
-        let closes = s.matches(']').count();
-        assert_eq!(opens, closes, "unbalanced brackets in {s:?}");
-
+        assert_eq!(format_exact_real(&sqrt2.neg()), "-sqrt(2)");
+        assert_eq!(format_exact_real(&sqrt2.add(&sqrt2)), "2/1*sqrt(2)");
+        // One value, one display (LANG.VALUES.DENOTATION): √8 is 2√2 however
+        // it was built, so it renders exactly as √2 + √2 does.
+        assert_eq!(format_exact_real(&sqrt_of(8, 1)), "2/1*sqrt(2)");
         // A perfect square collapses to the exact rational form.
-        let sqrt4 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(4), BigInt::from(1)))
-            .expect("√4 is a valid sqrt");
-        assert_eq!(format_exact_real(&sqrt4), "2/1");
-    }
-
-    #[test]
-    fn render_cf_flat_balanced_brackets() {
-        for terms in [
-            vec![bi(1)],
-            vec![bi(1), bi(2)],
-            vec![bi(2), bi(2), bi(2), bi(2)],
-        ] {
-            for truncated in [false, true] {
-                let s = render_cf_flat(&terms, truncated);
-                let opens = s.matches('[').count();
-                let closes = s.matches(']').count();
-                assert_eq!(opens, closes, "unbalanced brackets in {s:?}");
-            }
-        }
+        assert_eq!(format_exact_real(&sqrt_of(4, 1)), "2/1");
     }
 }

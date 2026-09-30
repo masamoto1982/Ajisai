@@ -4,7 +4,7 @@
 //! A collection Word loops inside Rust. `executionSteps` prices word count and
 //! charges it one step; the work meter prices arithmetic and it performs none;
 //! `materializedElements` bounds how big its operand may be but says nothing
-//! about what is done to it. So `[ 0 99999 ] RANGE UNIQUE` spent 45 seconds as
+//! about what is done to it. So `0 99999 RANGE UNIQUE` spent 45 seconds as
 //! one step of a hundred-thousand-step budget, and every declared ceiling
 //! stayed silent.
 //!
@@ -148,7 +148,7 @@ pub(crate) fn charge_stacktop_copy(
 
 /// Charge for materializing `count` fresh elements of unit width.
 ///
-/// The generative Words (`RANGE`, `FILL`, `RANDOM`) have no operand to measure
+/// The generative Words (`RANGE`, `FILL`) have no operand to measure
 /// — the elements do not exist yet — but they allocate the same boxed values a
 /// copy does, and a program can ask for them repeatedly. Priced as a copy of
 /// `count` machine-word scalars, which is what they are.
@@ -189,7 +189,7 @@ pub(crate) fn charge_comparison_sort_of(interp: &mut Interpreter, value: &Value)
 /// The one place in either meter that does not charge everything at the
 /// entry, and the reason is a property of the operation rather than an
 /// exception made for it. Arithmetic can pre-charge because the cost of
-/// `a * b` is a function of the operands' *shape*, known before it runs. A
+/// `a MUL b` is a function of the operands' *shape*, known before it runs. A
 /// hash-keyed scan's per-element cost is also a function of shape — hashing
 /// one element visits its leaves once, the same width [`ElementCost::probe`]
 /// already prices for a comparison — but the *count* of elements it will

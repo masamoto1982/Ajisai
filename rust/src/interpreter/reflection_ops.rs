@@ -1,4 +1,4 @@
-//! The reflection Words: `DEFINED?`, `DIGEST`, `CONTRACT`
+//! The reflection Words: `DIGEST`, `CONTRACT`
 //! (LANG.DICTIONARY.RESOLUTION, LANG.DICTIONARY.MUTATION, LANG.CONTRACT.REGISTRY,
 //! LANG.CONTRACT.CHECK).
 //!
@@ -18,14 +18,14 @@
 use super::ordering_ops::{restore, take_operand};
 use crate::agent::observation_digest::value_digest;
 use crate::builtins::lookup_builtin_spec;
-use crate::core_word_aliases::canonicalize_core_word_name;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::contract_record::{inferred_contract_record, registered_contract_record};
 use crate::interpreter::word_identity::content_digest;
 use crate::interpreter::Interpreter;
 use crate::kernel::generated::generated_word;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
+use crate::word_name::canonical_word_name;
 
 /// Version tag for a sealed Core Word's identity. Core Words have no body to
 /// normalize, so their identity is the digest of the canonical name under a
@@ -40,25 +40,13 @@ fn not_a_symbol(word: &str, got: &str) -> AjisaiError {
     };
     AjisaiError::declared(
         "notASymbol",
-        format!("{word}: expected {accepted}, got {got}; a String is text, not a name"),
+        format!("expected {accepted}, got {got}; a String is text, not a name"),
     )
 }
 
-fn describe(value: &Value) -> &'static str {
-    match &value.data {
-        ValueData::Text(_) => "a String",
-        ValueData::Nil => "NIL",
-        ValueData::Boolean(_) => "a Boolean",
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) => "a number",
-        ValueData::Vector(_) | ValueData::Tensor { .. } => "a Vector",
-        ValueData::Record(_) => "a Record",
-        ValueData::Symbol(_) => "a Symbol",
-    }
-}
-
-/// The name a Symbol resolves under: aliases folded, case folded.
+/// The name a Symbol resolves under: case folded.
 fn canonical_name(symbol: &str) -> String {
-    canonicalize_core_word_name(symbol).into_owned()
+    canonical_word_name(symbol).into_owned()
 }
 
 /// Which tier a canonical name lives in, if any.
@@ -75,21 +63,6 @@ fn resolve(interp: &Interpreter, canonical: &str) -> Option<Resolved> {
     } else {
         None
     }
-}
-
-/// `DEFINED? ( [ symbol ] -> [ TRUE | FALSE ] )`.
-pub(crate) fn op_defined(interp: &mut Interpreter) -> Result<()> {
-    let operand = take_operand(interp)?;
-    let Some(name) = symbol_name(&operand) else {
-        let got = describe(&operand);
-        restore(interp, operand);
-        return Err(not_a_symbol("DEFINED?", got));
-    };
-    let defined = resolve(interp, &canonical_name(&name)).is_some();
-    interp
-        .stack
-        .push_with_role(Value::from_bool(defined), Interpretation::TruthValue);
-    Ok(())
 }
 
 fn symbol_name(value: &Value) -> Option<String> {
@@ -114,24 +87,14 @@ pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
             Resolved::User => interp.word_identity(&canonical).cloned(),
         }
     });
-    let digest = word_identity.or_else(|| value_digest(&operand));
-    match digest {
-        Some(digest) => interp
-            .stack
-            .push_with_role(Value::from_string(&digest), Interpretation::Unassigned),
-        // A computable real has no finite canonical form to digest: the
-        // same outcome its comparison reaches when refinement runs out.
-        None => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-            Interpretation::Nil,
-        ),
-    }
+    let digest = word_identity.unwrap_or_else(|| value_digest(&operand));
+    interp.stack.push(Value::from_string(&digest));
     Ok(())
 }
 
 /// `CONTRACT ( [ symbol | code ] -> [ record ] )`: the registered contract of
 /// a Core Word, the inferred contract of a User Word or of a block (never
-/// evaluated); `missingField` for a Symbol naming neither.
+/// evaluated); `notFound` for a Symbol naming neither.
 pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     if let Some(elements) = operand.as_vector_view() {
@@ -145,14 +108,11 @@ pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
             }
         };
         let contract = interp.infer_contract_for_block(&tokens);
-        interp.stack.push_with_role(
-            inferred_contract_record(&contract),
-            Interpretation::Unassigned,
-        );
+        interp.stack.push(inferred_contract_record(&contract));
         return Ok(());
     }
     let Some(name) = symbol_name(&operand) else {
-        let got = describe(&operand);
+        let got = crate::types::Value::domain_name(&operand);
         restore(interp, operand);
         return Err(not_a_symbol("CONTRACT", got));
     };
@@ -165,13 +125,11 @@ pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
         None => None,
     };
     match answer {
-        Some(record) => interp
-            .stack
-            .push_with_role(record, Interpretation::Unassigned),
-        None => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable),
-            Interpretation::Nil,
-        ),
+        Some(record) => interp.stack.push(record),
+        None => interp.stack.push(Value::nil_with_reason(
+            NilReason::NotFound,
+            Recoverability::Recoverable,
+        )),
     }
     Ok(())
 }

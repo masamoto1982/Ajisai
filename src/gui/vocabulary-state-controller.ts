@@ -1,5 +1,4 @@
-
-
+import type { AjisaiInterpreter, CoreWordInfo, UserWordInfo } from '../wasm-interpreter-types';
 import {
     checkWordMatchesFilter,
     compareWordName,
@@ -8,15 +7,11 @@ import {
     createWordButtonElement,
     registerBackgroundClickListeners,
 } from './dictionary-element-builders';
-import { isCanonicalCoreWordName } from './core-word-name';
-
-export interface WordInfo {
-    readonly name: string;
-    readonly protected?: boolean;
-}
+import { isFailure } from './interpreter-execution-utils';
+import { toError } from './to-error';
 
 export interface VocabularyElements {
-    readonly builtInWordsDisplay: HTMLElement;
+    readonly coreWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
 }
 
@@ -27,88 +22,37 @@ export interface VocabularyCallbacks {
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (text: string, append: boolean) => void;
+    readonly showError?: (error: Error) => void;
 }
 
 export interface VocabularyManager {
-    readonly renderBuiltInWords: () => void;
-    readonly updateUserWords: (userWordsInfo: Array<[string, string, boolean]>) => void;
+    readonly renderCoreWords: () => void;
+    readonly updateUserWords: (userWordsInfo: UserWordInfo[]) => void;
     readonly updateSearchFilter: (filter: string) => void;
 }
 
-export const formatDictionaryTabName = (pathName: string): string => {
-    const displayName = pathName
-        .toLowerCase()
-        .split(/[-_\s]+/)
-        .filter(Boolean)
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-    return displayName.endsWith(' Words') ? displayName : `${displayName} Words`;
-};
+// The tooltip text for a User Word: what its author wrote for a reader
+// (`#:contract`), or its source when nothing was written. Empty when the
+// interpreter has neither.
+const lookupUserWordTooltip = (interpreter: AjisaiInterpreter, name: string): string =>
+    interpreter.lookup_word_description(name)
+    ?? interpreter.lookup_word_definition(name)
+    ?? '';
 
-const createWordInfoFromTuple = (wordData: [string, string, boolean]): WordInfo => ({
-    name: wordData[1],
-    protected: wordData[2] || false
-});
+// DEL's refusal of a Word other Words still reference (spec/outcomes.json).
+// Matched by category, never by the message, which is display text.
+const DEPENDENCY_DELETE_CATEGORY = 'definitionConflict';
 
-
-const clearElement = (element: HTMLElement): void => {
-    element.innerHTML = '';
-};
-
-/// The tooltip text for a User Word: what its author wrote for a reader, or
-/// its source when nothing was written. Empty when the interpreter has neither,
-/// which leaves the button with no `title` rather than one that says nothing.
-const lookupUserWordTooltip = (name: string): string => {
-    const description = window.ajisaiInterpreter?.lookup_word_description(name) ?? '';
-    if (description) return description;
-    return window.ajisaiInterpreter?.lookup_word_definition(name) ?? '';
-};
-
-// See core-word-name.ts: the predicate lives beside its spec-driven test so a
-// canonical Word can never be filtered out of the Core sheet again.
-
-const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
-
-const createDeleteContextMenuElement = (
-    onDelete: () => void
-): HTMLDivElement => {
+// A native popover (top-layer placement, light-dismiss on outside click or
+// Escape), positioned at the cursor by `renderDeleteContextMenu`.
+const createDeleteContextMenuElement = (onDelete: () => void): HTMLDivElement => {
     const menu = document.createElement('div');
-    // Native popover: top-layer placement and light-dismiss (outside click /
-    // Escape) are handled by the browser, so no document-level listeners or
-    // z-index management are needed. `inset: auto; margin: 0` lets the explicit
-    // left/top below position it at the cursor (overriding the popover UA
-    // centering).
+    menu.className = 'context-menu';
     menu.popover = 'auto';
-    Object.assign(menu.style, {
-        position: 'fixed',
-        inset: 'auto',
-        margin: '0',
-        minWidth: '7rem',
-        padding: '0.125rem',
-        backgroundColor: '#ffffff',
-        border: '1px solid #c0c0c0',
-        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
-    } satisfies Partial<CSSStyleDeclaration>);
 
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.textContent = 'Delete';
-    Object.assign(deleteButton.style, {
-        display: 'block',
-        width: '100%',
-        padding: '0.375rem 0.75rem',
-        backgroundColor: 'transparent',
-        color: '#000000',
-        border: 'none',
-        textAlign: 'left',
-        cursor: 'pointer'
-    } satisfies Partial<CSSStyleDeclaration>);
-    deleteButton.addEventListener('mouseenter', () => {
-        deleteButton.style.backgroundColor = '#e8e8e8';
-    });
-    deleteButton.addEventListener('mouseleave', () => {
-        deleteButton.style.backgroundColor = 'transparent';
-    });
     deleteButton.addEventListener('click', (event) => {
         event.stopPropagation();
         onDelete();
@@ -116,25 +60,23 @@ const createDeleteContextMenuElement = (
 
     menu.appendChild(deleteButton);
     document.body.appendChild(menu);
-
     return menu;
 };
 
 export const createVocabularyManager = (
+    interpreter: AjisaiInterpreter,
     elements: VocabularyElements,
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
-    const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
-    const deleteContextMenu = createDeleteContextMenuElement(() => {
-        if (!activeContextWordName) {
-            return;
-        }
+    const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo, showError } = callbacks;
+    let activeContextWordName: string | null = null;
 
+    const deleteContextMenu = createDeleteContextMenuElement(() => {
+        if (!activeContextWordName) return;
         const selectedWordName = activeContextWordName;
         hideDeleteContextMenu();
-        void confirmAndDeleteWord(selectedWordName);
+        void deleteWord(selectedWordName);
     });
-    let activeContextWordName: string | null = null;
 
     const hideDeleteContextMenu = (): void => {
         if (deleteContextMenu.matches(':popover-open')) deleteContextMenu.hidePopover();
@@ -157,61 +99,33 @@ export const createVocabularyManager = (
         }
     });
 
-    [elements.builtInWordsDisplay, elements.userWordsDisplay].forEach(container => {
+    for (const container of [elements.coreWordsDisplay, elements.userWordsDisplay]) {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
-    });
-
-
+    }
 
     let searchFilter = '';
-    let cachedUserWords: Array<[string, string, boolean]> = [];
-    // Core words are fixed once WASM is loaded; fetching + canonical-filtering +
-    // sorting them on every search keystroke was pure waste.
-    let sortedCoreWordsCache: unknown[][] | null = null;
+    let cachedUserWords: UserWordInfo[] = [];
+    // Core words are fixed once WASM is loaded, so they are sorted once.
+    let sortedCoreWordsCache: CoreWordInfo[] | null = null;
 
-    const getSortedCoreWords = (): unknown[][] => {
-        if (sortedCoreWordsCache) return sortedCoreWordsCache;
-
-        const coreWords = window.ajisaiInterpreter.collect_core_listed_words_info();
-        const filtered = coreWords.filter(
-            wd =>
-                Array.isArray(wd)
-                && typeof wd[0] === 'string'
-                && isCanonicalCoreWordName(wd[0])
-        );
-
-        const droppedCount = coreWords.length - filtered.length;
-        if (droppedCount > 0) {
-            console.info(`[Vocabulary] Filtered out ${droppedCount} non-canonical core word entries from WASM payload.`);
-        }
-
-        sortedCoreWordsCache = [...filtered].sort((a, b) =>
-            compareWordName(a[0] as string, b[0] as string)
-        );
+    const getSortedCoreWords = (): CoreWordInfo[] => {
+        sortedCoreWordsCache ??= [...interpreter.collect_core_words_info()]
+            .sort((a, b) => compareWordName(a[0], b[0]));
         return sortedCoreWordsCache;
     };
 
-    // The dictionary has one exportable (User) tier, so every cached word
-    // belongs on this list; no per-dictionary filter is needed.
-    const selectDictionaryWords = (): WordInfo[] =>
-        cachedUserWords.map(createWordInfoFromTuple);
-
     // A referenced word is not deletable, and there is no way to override that:
-    // no Word in the vocabulary forces the delete, so the refusal is final and
-    // the only route is to delete the dependents first. This used to offer a
-    // force delete that re-ran the deletion as `! 'NAME' DEL`; `!` was one of
-    // the symbols retired when every symbol became one character, so accepting
-    // that prompt could only ever report "Unknown word: !". The interpreter
-    // already names the referencing words in its message, so surface it as-is.
+    // the only route is to delete the dependents first. The interpreter names
+    // the referencing words in its message, so it is surfaced as-is.
     const deleteWord = async (wordName: string): Promise<boolean> => {
         try {
-            const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
-            if (result.status === 'ERROR') {
+            const result = await interpreter.execute(`'${wordName}' DEL`);
+            if (isFailure(result)) {
                 const message = result.message || 'Unknown error';
-                if (message.includes(DEPENDENCY_DELETE_ERROR)) {
+                if (result.aiDiagnostic?.category === DEPENDENCY_DELETE_CATEGORY) {
                     showInfo?.(message, true);
                 } else {
-                    alert(`Failed to delete word: ${message}`);
+                    showError?.(new Error(`Failed to delete word: ${message}`));
                 }
                 return false;
             }
@@ -221,46 +135,30 @@ export const createVocabularyManager = (
             showInfo?.(`Word '${wordName}' deleted`, true);
             return true;
         } catch (error) {
-            alert(`Error deleting word: ${error}`);
+            showError?.(toError(error));
             return false;
         }
     };
 
-    const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
-        await deleteWord(wordName);
-    };
-
-    const renderBuiltInWordsSorted = (
-        container: HTMLElement
-    ): void => {
-        clearElement(container);
+    const renderCoreWordsSorted = (container: HTMLElement): void => {
+        container.replaceChildren();
         container.classList.remove('is-empty');
 
-        const matched = getSortedCoreWords().filter(wd =>
-            checkWordMatchesFilter(wd[0] as string, searchFilter)
+        const matched = getSortedCoreWords().filter(([name]) =>
+            checkWordMatchesFilter(name, searchFilter)
         );
 
         const fragment = document.createDocumentFragment();
-        matched.forEach(wordData => {
-            const name = wordData[0] as string;
-            // The payload is `(name, hover summary, example)` and only the
-            // example was ever read, so hovering `SIN` answered `1 SIN 5
-            // FORMAT` and left what the Word *is* to a separate lookup the
-            // reader had to know about (Ctrl+Alt+L). The summary is one
-            // authored line per Word, from the same generated docs that
-            // lookup prints, and it was already here.
-            const summary = (wordData[1] as string) || '';
-            const syntaxExample = (wordData[2] as string) || '';
+        for (const [name, summary, syntaxExample] of matched) {
+            // One authored line on what the Word is, then how it is called.
             const hoverText = [summary, syntaxExample].filter(Boolean).join('\n');
-            const button = createWordButtonElement(
+            fragment.appendChild(createWordButtonElement(
                 name,
-                `word-button core`,
+                'word-button core',
                 () => onWordClick(name),
                 hoverText
-            );
-
-            fragment.appendChild(button);
-        });
+            ));
+        }
         container.appendChild(fragment);
 
         if (searchFilter && matched.length === 0) {
@@ -269,59 +167,39 @@ export const createVocabularyManager = (
         }
     };
 
-    const renderUserWordButtons = (
-        container: HTMLElement,
-        words: WordInfo[]
-    ): void => {
-        clearElement(container);
+    const renderUserWordButtons = (container: HTMLElement, words: UserWordInfo[]): void => {
+        container.replaceChildren();
 
-
-        const filteredWords = words.filter(wordInfo =>
-            checkWordMatchesFilter(wordInfo.name, searchFilter)
+        const filteredWords = words.filter(([name]) =>
+            checkWordMatchesFilter(name, searchFilter)
         );
-
-
-        const sortedFiltered = [...filteredWords].sort((a, b) =>
-            compareWordName(a.name, b.name)
+        const sortedFiltered = [...filteredWords].sort(([a], [b]) =>
+            compareWordName(a, b)
         );
 
         const fragment = document.createDocumentFragment();
-        sortedFiltered.forEach(wordInfo => {
-            const className = wordInfo.protected
+        for (const [name, hasDependents] of sortedFiltered) {
+            // Another User Word calls it, so DEL refuses it until that caller
+            // is gone; it is coloured apart.
+            const className = hasDependents
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
-
-            const button = createWordButtonElement(
-                wordInfo.name,
+            fragment.appendChild(createWordButtonElement(
+                name,
                 className,
-                // A word is addressed by its bare name: the dictionary has two
-                // tiers and User is one of them, so a `DICT@NAME` prefix
-                // selects nothing and no longer resolves — inserting it wrote
-                // uncallable code into the editor, and looking a word up under
-                // it showed no definition.
-                () => onWordClick(wordInfo.name),
-                // A `#:contract` description is what the word's author wrote
-                // for a reader (SPEC: host affordance, not language semantics)
-                // — prefer it over echoing the body back, the way a Core
-                // Word's tooltip shows a summary rather than its own source.
-                // Fall back to the raw definition when there is none, so a
-                // word with no description reads as it always has.
-                //
-                // Read here rather than on hover, which is where it used to
-                // sit: a tooltip has to carry its text before the pointer
-                // arrives. That is two interpreter lookups per User Word per
-                // render — the Core sheet pays nothing, its text arrives in
-                // the same payload as the name.
-                lookupUserWordTooltip(wordInfo.name),
-                (event) => renderDeleteContextMenu(event, wordInfo.name)
-            );
-
-            fragment.appendChild(button);
-        });
+                () => onWordClick(name),
+                // Read at render rather than on hover: a tooltip has to carry
+                // its text before the pointer arrives.
+                lookupUserWordTooltip(interpreter, name),
+                (event) => renderDeleteContextMenu(event, name)
+            ));
+        }
         container.appendChild(fragment);
 
-
-        if (searchFilter && words.length > 0 && filteredWords.length === 0) {
+        // A filter that matches nothing says so, whether or not there are
+        // words to match: an empty User sheet under a filter used to show
+        // neither message.
+        if (searchFilter && filteredWords.length === 0) {
             container.classList.add('is-empty');
             container.appendChild(createNoResultsElement());
             return;
@@ -333,35 +211,34 @@ export const createVocabularyManager = (
             return;
         }
 
-        container.classList.toggle('is-empty', sortedFiltered.length === 0);
+        container.classList.remove('is-empty');
     };
 
-    const renderBuiltInWords = (): void => {
-        if (!window.ajisaiInterpreter) return;
-
+    const renderCoreWords = (): void => {
         try {
-            renderBuiltInWordsSorted(elements.builtInWordsDisplay);
+            renderCoreWordsSorted(elements.coreWordsDisplay);
         } catch (error) {
             console.error('Failed to render core words:', error);
         }
     };
 
-    const updateUserWords = (
-        userWordsInfo: Array<[string, string, boolean]>
-    ): void => {
-        cachedUserWords = userWordsInfo || [];
-        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
+    const renderUserWords = (): void => {
+        renderUserWordButtons(elements.userWordsDisplay, cachedUserWords);
+    };
+
+    const updateUserWords = (userWordsInfo: UserWordInfo[]): void => {
+        cachedUserWords = userWordsInfo;
+        renderUserWords();
     };
 
     const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
-
-        renderBuiltInWords();
-        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
+        renderCoreWords();
+        renderUserWords();
     };
 
     return {
-        renderBuiltInWords,
+        renderCoreWords,
         updateUserWords,
         updateSearchFilter
     };

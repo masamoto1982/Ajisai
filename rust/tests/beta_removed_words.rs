@@ -2,35 +2,44 @@ use ajisai_core::interpreter::host_lookup::resolve_host_lookup;
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::AjisaiError;
 
-/// The alpha Words the beta vocabulary freeze retired.
-///
-/// `UNIQUE` is not among them any more. It was cut as one of several
-/// overlapping collection Words; it has since come back on its own terms —
-/// a contract in `spec/words.json`, a law witness, a conformance case — so
-/// asserting it is unknown would assert the opposite of what the language now
-/// says. A retired name returning is a vocabulary decision, and this list
-/// records the decision rather than freezing the first one made. `CEIL` came
-/// back the same way in the vocabulary-100 work order's Phase 1
-/// (docs/dev/vocabulary-100-work-order-2026-09.md §7): the closure of the
-/// rounding family, with a contract, a Kernel-only witness and conformance
-/// cases of its own. `REPLACE` came back in Phase 3, as INDEX-OF's
-/// substitution counterpart for Text, retained natively for cost.
-const REMOVED_WORDS: &[&str] = &[
-    "SIGN",
-    "INSERT",
-    "REMOVE",
-    "SPLIT",
-    "REORDER",
-    "CONTAINS",
-    "STARTS-WITH?",
-    "ENDS-WITH?",
-    "CHR",
-    "EAT",
-];
+/// The names that were once Words and must stay unknown, read from
+/// `spec/retired-words.json` — the one representation this suite and
+/// `scripts/check-minimal-core.mjs` share. That gate asserts none of them is
+/// canonical in `spec/words.json`; this suite asserts the runtime, the
+/// compiled path and the host lookup do not resolve them either. The reasons
+/// each name went, and the names that came back, are recorded there.
+fn removed_words() -> Vec<String> {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/retired-words.json");
+    let text = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("cannot read the retired-word list at {path}: {e}"));
+    let spec: serde_json::Value =
+        serde_json::from_str(&text).expect("spec/retired-words.json is valid JSON");
+    let names: Vec<String> = spec["groups"]
+        .as_array()
+        .expect("spec/retired-words.json has a groups array")
+        .iter()
+        .flat_map(|group| {
+            group["names"]
+                .as_array()
+                .expect("each retired-word group has a names array")
+                .iter()
+                .map(|name| {
+                    name.as_str()
+                        .expect("each retired name is a string")
+                        .to_string()
+                })
+        })
+        .collect();
+    assert!(
+        !names.is_empty(),
+        "spec/retired-words.json names no retired Word"
+    );
+    names
+}
 
 #[tokio::test]
 async fn removed_beta_words_are_unknown_at_runtime() {
-    for word in REMOVED_WORDS {
+    for word in &removed_words() {
         let mut interpreter = Interpreter::new();
         let error = match interpreter.execute(word).await {
             Ok(()) => panic!("removed Word {word} unexpectedly executed"),
@@ -52,7 +61,7 @@ async fn removed_beta_words_are_unknown_at_runtime() {
 /// any Vector is executable now, so there is no separate boundary to test).
 #[tokio::test]
 async fn removed_beta_words_are_unknown_through_a_constructed_vector() {
-    for word in REMOVED_WORDS {
+    for word in &removed_words() {
         let mut interpreter = Interpreter::new();
         let source = format!("[ {word} ] EXEC");
         let error = match interpreter.execute(&source).await {
@@ -71,9 +80,9 @@ async fn removed_beta_words_are_unknown_through_a_constructed_vector() {
 /// calling it fails as an Unknown Word rather than dispatching a stale arm.
 #[tokio::test]
 async fn removed_beta_words_are_unknown_in_a_compiled_user_word() {
-    for word in REMOVED_WORDS {
+    for word in &removed_words() {
         let mut interpreter = Interpreter::new();
-        let source = format!("[ | 1 {word} ] 'CALL-REMOVED' DEF CALL-REMOVED");
+        let source = format!("[ 1 {word} ] 'CALL-REMOVED' DEF CALL-REMOVED");
         let error = match interpreter.execute(&source).await {
             Ok(()) => panic!("removed Word {word} executed from a compiled body"),
             Err(error) => error,
@@ -89,7 +98,7 @@ async fn removed_beta_words_are_unknown_in_a_compiled_user_word() {
 /// describe a Word the inventory no longer has.
 #[tokio::test]
 async fn removed_beta_words_are_unknown_to_the_host_lookup() {
-    for word in REMOVED_WORDS {
+    for word in &removed_words() {
         let interpreter = Interpreter::new();
         let error = match resolve_host_lookup(&interpreter, word) {
             Ok(_) => panic!("the host lookup described removed Word {word}"),

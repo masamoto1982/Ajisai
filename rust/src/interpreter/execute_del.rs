@@ -1,48 +1,36 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{
-    extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
-};
+use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::Interpreter;
+use crate::types::Value;
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    // `KEEP` leaves the name on the stack; the Word is still deleted. See
-    // `keep_mode_operands`.
-    let kept = keep_mode_operands(interp, 1);
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
-    let name = extract_word_name_from_value(&val)?;
+    // A refusal puts the name back as it was written (the ERROR discipline of
+    // every Core Word, LANG.STACK.CONSUMPTION): the operand is consumed only
+    // once the Word is gone from the dictionary.
+    let outcome = delete_named(interp, &val);
+    if outcome.is_err() {
+        interp.stack.push(val);
+    }
+    outcome
+}
 
-    // Canonicalize first, so a surface alias reaches the same entry the
-    // Core seal protects (`'+' DEL` is a delete of `ADD`, reported by name).
-    let upper_name =
-        crate::core_word_aliases::canonicalize_core_word_name(&name.to_uppercase()).into_owned();
+fn delete_named(interp: &mut Interpreter, val: &Value) -> Result<()> {
+    let name = extract_word_name_from_value(val)?;
 
-    let word_name = upper_name.clone();
+    let word_name = name.to_uppercase();
 
     if interp.core_vocabulary.contains_key(&word_name) {
-        return Err(AjisaiError::BuiltinProtection {
-            word: word_name,
-            operation: "delete".into(),
-        });
+        return Err(AjisaiError::declared(
+            "protectedWord",
+            format!("Cannot delete Core Word '{}'", word_name),
+        ));
     }
 
-    // A reserved alias or syntax token that names no Core Word entry at all —
-    // canonicalization above leaves it unchanged, so it reached here rather
-    // than the `BuiltinProtection` branch — is still not a name `DEL` may
-    // target: the input helper `'` and the tokenizer-level `|` have no
-    // dictionary entry to delete, but they are not undefined either. Checked
-    // against the un-canonicalized `name`, the same gap `DEF`'s identical
-    // check closes (`op_def_inner`).
-    if let Some(message) =
-        crate::interpreter::naming_convention_checker::check_reserved_word_name(&name, "delete")
-    {
-        return Err(AjisaiError::declared("protectedWord", message));
-    }
-
-    // A name that no User Word holds is `wordNotFound`. DEL used to reach this
-    // through a dictionary-owner search that also accepted `DICT@WORD`; with
-    // two tiers the name is the whole address, so the question is simply
-    // whether the User tier holds it.
+    // A name that no User Word holds is `wordNotFound`: with two tiers the
+    // name is the whole address, so the question is simply whether the User
+    // tier holds it.
     if !interp.user_words.contains_key(&word_name) {
         return Err(AjisaiError::declared(
             "wordNotFound",
@@ -50,43 +38,37 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    // DEL used to also delete a whole named dictionary when the name matched
-    // one. There are no named dictionaries to delete now.
-    // A word's own self-reference does not lock it: see
-    // `collect_external_dependents`.
-    let dependents = interp.collect_external_dependents(&word_name);
-
     // A referenced word is not deletable. There is no force modifier: the
     // vocabulary has no Word that overrides this, so the refusal is final and
-    // the caller's only route is to delete the dependents first.
+    // the caller's only route is to delete the dependents first. A word's own
+    // self-reference does not lock it: see `collect_external_dependents`.
+    let dependents = interp.collect_external_dependents(&word_name);
     if !dependents.is_empty() {
-        // Not in DEL's own `errorWhen` (`invalidName`/`wordNotFound`/
-        // `protectedWord`) even though DEF's identical check under the same
-        // dependency-graph rule is declared `definitionConflict` — a
-        // spec/words.json gap, not a new condition; `StructureError` is the
-        // honest fallback until DEL's contract is corrected to match.
-        let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
-        return Err(AjisaiError::create_structure_error(
-            "a Word with no remaining dependents",
-            &format!(
+        // The same dependency-graph rule DEF declares as `definitionConflict`:
+        // the dictionary's existing bindings refuse this change.
+        return Err(AjisaiError::declared(
+            "definitionConflict",
+            format!(
                 "Cannot delete '{}': referenced by {}. Delete those words first.",
-                word_name, dep_list
+                word_name,
+                super::execute_def::sorted_names(&dependents)
             ),
         ));
     }
 
-    let removed_def = interp.user_words.remove(&word_name);
-
-    if let Some(removed_def) = removed_def {
+    // The index holds exactly the edges the definitions hold (`DEF` records
+    // both directions, a forward reference included once its target is
+    // defined), so the word's own edges are the ones to drop. Its dependents
+    // entry is empty by the check above; the words that still *name* it keep
+    // the name in `text_references` and will depend on it again if it is
+    // defined again.
+    if let Some(removed_def) = interp.user_words.remove(&word_name) {
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
-                deps.remove(&upper_name);
+                deps.remove(&word_name);
             }
         }
-        interp.dependents.remove(&upper_name);
-        for deps in interp.dependents.values_mut() {
-            deps.remove(&upper_name);
-        }
+        interp.dependents.remove(&word_name);
     }
 
     interp
@@ -99,6 +81,5 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     interp.recompute_word_identities();
     interp.gc_body_store();
     interp.bump_dictionary_epoch();
-    restore_keep_mode_operands(interp, kept);
     Ok(())
 }

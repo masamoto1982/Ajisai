@@ -16,32 +16,16 @@ export class AjisaiInterpreter {
      * person at the keyboard is the one asking.
      */
     clear_stack(): void;
-    /**
-     * Returns the canonical Core-listed words.
-     *
-     * Tuple shape: `(name, description, syntax)` — same as
-     * `collect_core_words_info` so the GUI can render either list with the
-     * same code path.
-     */
-    collect_core_listed_words_info(): any;
-    collect_core_word_aliases_info(): any;
     collect_core_words_info(): any;
-    collect_input_helper_words_info(): any;
-    /**
-     * Runtime counters for the Playground. Counts are session-cumulative and
-     * reset with the interpreter. Observational only.
-     */
-    collect_runtime_metrics(): any;
     collect_stack(): any;
     collect_user_words_info(): any;
     /**
-     * Content identity (Section 8.6) of each user word, as `[fqName, id]`
-     * pairs. The host uses these to deduplicate identical definitions on
-     * import and to key shared word groups by content rather than by name.
+     * Content identity of each user word, as `[name, id]` pairs. The host
+     * uses these to deduplicate identical definitions on import and to key
+     * shared word groups by content rather than by name.
      */
     collect_word_identities(): any;
     execute(code: string): Promise<any>;
-    execute_step(code: string): any;
     /**
      * The resource ceilings this interpreter is actually running under, as
      * JSON, under the same names every other Ajisai host publishes them by —
@@ -66,12 +50,7 @@ export class AjisaiInterpreter {
      */
     lookup_word_description(name: string): any;
     constructor();
-    remove_word(name: string): void;
     reset(): any;
-    /**
-     * Compatibility alias for [`Self::reset`].
-     */
-    reset_session(): any;
     /**
      * Answer the host's lookup of `name` against the current dictionary.
      *
@@ -88,10 +67,25 @@ export class AjisaiInterpreter {
     resolve_host_lookup(name: string): any;
     /**
      * Restore a stack from a `snapshot_stack` payload, reinstating exact
-     * values (CodeBlock, ExactScalar, …) and their stack-position roles.
+     * values (CodeBlock, ExactScalar, …).
      */
     restore_stack_snapshot(snapshot_json: string): void;
-    restore_user_words(words_js: any): void;
+    /**
+     * Restore saved User Words, and name the entries that could not be
+     * restored as `[name, reason]` pairs.
+     *
+     * Restoring skips an unreadable entry rather than raising, which is what
+     * keeps the rest of a dictionary (`restore_user_word_definitions`); the
+     * skipped entries come back here instead of being thrown, since a throw
+     * would abort the host's own post-restore work and leave the session
+     * holding a half-restored dictionary. The host used to learn only the
+     * *names* that did not arrive, by comparing what it asked for against
+     * the dictionary afterwards — which could not see a refused
+     * redefinition (the old body is still there, so the name is present) and
+     * could not say why anything was left out. The `Err` case is a list that
+     * does not deserialize at all.
+     */
+    restore_user_words(words_js: any): any;
     /**
      * Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
      * subsequent executions. A runtime safety control, not a language
@@ -143,9 +137,11 @@ export function agent_infer_contracts(source: string): string;
 
 /**
  * Predict the finite set of outcome ids `source` could produce without
- * executing it, matching `ajisai agent outcomes`.
+ * executing it, under the same agent-profile ceilings `agent_compute`
+ * applies, matching `ajisai agent outcomes`. `step_limit` as for
+ * `agent_compute`.
  */
-export function agent_predict_outcomes(source: string): string;
+export function agent_predict_outcomes(source: string, step_limit?: number | null): string;
 
 /**
  * Install console_error_panic_hook so any panic on the WASM side

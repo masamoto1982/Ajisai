@@ -15,19 +15,21 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::Interpreter;
 
-/// What a host should do with the text a lookup produced.
+/// The text a lookup produced.
 ///
-/// The two destinations are opposite, which is why they are separate variants
-/// rather than one string. Reference text is *read*, so it belongs in the output
-/// area, where reading it costs the reader nothing. A reconstructed definition
-/// is *edited*, so it belongs in the editor — that is the whole point of looking
-/// a User Word up. Collapsing them meant `'ADD' ?` replaced a half-written
-/// program with several screens of prose.
+/// Both variants are prose to *read*, and a host shows them the same way, in
+/// its output area (spec/gui-semantics.md, Lookup): the cursor can be anywhere
+/// in a program still being written, so nothing about a lookup may overwrite
+/// the editor — an earlier design loaded a definition back into it, and a
+/// lookup then replaced a half-written program. They stay two variants because
+/// they are two different texts, a reference entry and a reconstructed source,
+/// and a host may present the source as source rather than as a reference page.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostLookup {
     /// A Core Word's reference entry, to display.
     Documentation(String),
-    /// A User Word's reconstructed `DEF` source, to load into the editor.
+    /// A User Word's reconstructed `DEF` source, to display as read-only
+    /// reference.
     Definition(String),
 }
 
@@ -37,7 +39,7 @@ pub enum HostLookup {
 /// that the same way it reports any other unknown name, so a typo at the
 /// lookup prompt reads like a typo in a program.
 pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLookup> {
-    let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+    let canonical_name = crate::word_name::canonical_word_name(name);
 
     let Some(def) = interp.resolve_word(&canonical_name) else {
         return Err(AjisaiError::UnknownWord(name.to_string()));
@@ -47,10 +49,6 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
         return Ok(HostLookup::Documentation(
             crate::builtins::lookup_builtin_detail(name),
         ));
-    }
-
-    if let Some(original_source) = &def.original_source {
-        return Ok(HostLookup::Definition(original_source.clone()));
     }
 
     let definition = interp
@@ -64,8 +62,8 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
 }
 
 /// Reconstruct the `DEF` source of a User Word so that running it again defines
-/// the same word — the point of looking one up being to load an existing
-/// definition, edit it, and define it once more.
+/// the same word — the point of looking one up being to see an existing
+/// definition as the program that would define it once more.
 ///
 /// The body is wrapped in `[ ]`, the only bracket a program's code is written
 /// in (`docs/dev/type-unification-work-order-2026-08.md`): `DEF` takes any

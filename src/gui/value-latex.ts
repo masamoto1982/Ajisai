@@ -8,7 +8,7 @@
 // Values without a faithful math reading return `null`, and the caller
 // falls back to the canonical text rendering.
 
-import type { Value, Fraction } from '../wasm-interpreter-types';
+import type { Value, Fraction, ExactTerm } from '../wasm-interpreter-types';
 
 // Beyond this many numeric lanes a matrix stops being readable and the
 // bracket text form is the better surface.
@@ -131,43 +131,9 @@ export const fractionToLatex = (frac: Fraction): string => {
     return negative ? `-${body}` : body;
 };
 
-const laneToLatex = (lane: unknown): string => {
-    const frac = checkFractionShape(lane);
-    // An invalid dense lane is NIL occupancy (LANG.VALUES.VECTOR).
-    return frac === null ? '\\mathrm{NIL}' : fractionToLatex(frac);
-};
-
 const rowsToMatrixLatex = (rows: string[][]): string => {
     const body = rows.map(row => row.join(' & ')).join(' \\\\ ');
     return `\\begin{bmatrix} ${body} \\end{bmatrix}`;
-};
-
-const tensorToLatex = (value: unknown): string | null => {
-    if (!value || typeof value !== 'object') return null;
-    const tensor = value as { shape?: unknown; data?: unknown; displayHint?: unknown };
-    if (!Array.isArray(tensor.shape) || !Array.isArray(tensor.data)) return null;
-    // Text-hinted byte tensors are strings, not mathematics.
-    if (String(tensor.displayHint ?? '').toLowerCase() === 'text') return null;
-
-    const shape = tensor.shape as number[];
-    const data = tensor.data as unknown[];
-    if (data.length === 0 || data.length > MAX_MATH_LANES) return null;
-
-    if (shape.length === 0) return laneToLatex(data[0]);
-    if (shape.length === 1) {
-        return rowsToMatrixLatex([data.map(laneToLatex)]);
-    }
-    if (shape.length === 2) {
-        const [rowCount, colCount] = [shape[0] ?? 0, shape[1] ?? 0];
-        if (rowCount * colCount !== data.length || colCount === 0) return null;
-        const rows: string[][] = [];
-        for (let r = 0; r < rowCount; r++) {
-            rows.push(data.slice(r * colCount, (r + 1) * colCount).map(laneToLatex));
-        }
-        return rowsToMatrixLatex(rows);
-    }
-    // Rank >= 3 has no flat matrix reading.
-    return null;
 };
 
 const numberElementToLatex = (item: Value): string | null => {
@@ -200,17 +166,10 @@ const vectorToLatex = (elements: Value[]): string | null => {
     return rowsToMatrixLatex(rows);
 };
 
-// The LaTeX reading of a stack value, or `null` when the canonical text
-interface ExactTerm {
-    readonly numerator: string;
-    readonly denominator: string;
-    readonly radicand: string;
-}
-
 // Σ c·√r as typeset mathematics. A coefficient of one is left implicit, the
 // rational term (radicand 1) is drawn as an ordinary fraction, and a negative
 // term joins with a minus rather than `+ -`.
-export const normalFormToLatex = (
+const normalFormToLatex = (
     terms: ReadonlyArray<ExactTerm> | undefined
 ): string | null => {
     if (!terms || terms.length === 0) return null;
@@ -232,15 +191,14 @@ export const normalFormToLatex = (
     return out;
 };
 
+// The LaTeX reading of a stack value, or `null` when the canonical text
 // rendering is the only faithful surface.
 export const valueToLatex = (item: Value): string | null => {
     if (!item || !item.type) return null;
 
     switch (item.type) {
         case 'number': {
-            const semantics = item.semantics as
-                | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
-                | undefined;
+            const semantics = item.semantics;
             // An algebraic irrational carries its exact normal form, and that
             // is what mathematics notation is for: `\sqrt{3}` says the whole
             // value, where the approximation below can only gesture at it.
@@ -255,8 +213,6 @@ export const valueToLatex = (item: Value): string | null => {
             const approximate = semantics?.approximate === true;
             return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;
         }
-        case 'tensor':
-            return tensorToLatex(item.value);
         case 'vector':
             return Array.isArray(item.value) ? vectorToLatex(item.value as Value[]) : null;
         default:

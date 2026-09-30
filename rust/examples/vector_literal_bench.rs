@@ -27,7 +27,7 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
 
 // Element-wise add/sub/mul over 8-element literal vectors.
 const DEF: &str =
-    "{ [ 1 2 3 4 5 6 7 8 ] [ 8 7 6 5 4 3 2 1 ] + [ 2 2 2 2 2 2 2 2 ] * [ 1 1 1 1 1 1 1 1 ] - } 'VWORK' DEF";
+    "{ [ 1 2 3 4 5 6 7 8 ] [ 8 7 6 5 4 3 2 1 ] ADD [ 2 2 2 2 2 2 2 2 ] MUL [ 1 1 1 1 1 1 1 1 ] SUB } 'VWORK' DEF";
 
 fn time(vector_literal: bool, reps: u32) -> std::time::Duration {
     let mut interp = Interpreter::new();

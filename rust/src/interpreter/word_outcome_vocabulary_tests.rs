@@ -14,9 +14,10 @@ fn builtin_outcomes_include_value_and_declared_errors() {
 
 #[test]
 fn builtin_outcomes_include_declared_nil_projections() {
-    let outcomes = builtin_outcomes_for("MOD");
+    let outcomes = builtin_outcomes_for("DIV");
     assert!(outcomes.contains("nil:divisionByZero"));
-    assert!(outcomes.contains("nil:undecidable"));
+    let outcomes = builtin_outcomes_for("POW");
+    assert!(outcomes.contains("nil:domainMiss"));
 }
 
 #[test]
@@ -25,7 +26,7 @@ fn conservative_outcomes_cover_the_whole_registry() {
     assert!(outcomes.contains("value"));
     assert!(outcomes.contains("error:stackUnderflow"));
     assert!(outcomes.contains("nil:spaceExhausted"));
-    assert!(outcomes.len() > 40);
+    assert!(outcomes.len() > 35, "{}", outcomes.len());
 }
 
 /// `NIL` answers with a reasonless NIL, which is `nil:literal` — the one

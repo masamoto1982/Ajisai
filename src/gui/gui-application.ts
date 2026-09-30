@@ -1,43 +1,32 @@
-import { createDisplay, Display } from './output-display-renderer';
-import { createVocabularyManager, formatDictionaryTabName, VocabularyManager } from './vocabulary-state-controller';
-import { createEditor, Editor } from './code-input-editor';
-import { createMobileHandler, MobileHandler } from './mobile-view-switcher';
-import { createDictionarySheetSelector } from './dictionary-sheet-selector';
-import { createPersistence, Persistence } from './interpreter-state-persistence';
-import { createExecutionController, ExecutionController } from './execution-controller';
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
+import { createDisplay } from './output-display-renderer';
+import { createVocabularyManager } from './vocabulary-state-controller';
+import { createEditor } from './code-input-editor';
+import { createMobileHandler } from './mobile-view-switcher';
+import { createPersistence } from './interpreter-state-persistence';
+import { createExecutionController } from './execution-controller';
+import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import {
-    GUIElements,
     cacheElements,
     extractDisplayElements,
     extractVocabularyElements,
     extractMobileElements
 } from './gui-dom-cache';
 import {
-    updateHighlights,
-    updateEditorPlaceholder,
     applyExecutionAreaState,
-    LayoutState,
-    ApplyAreaStateDeps
+    createLayoutController,
+    createLayoutState,
+    isDictionarySheetId,
+    updateEditorPlaceholder,
+    type ApplyAreaStateDeps,
+    type DictionarySheetId
 } from './gui-layout-state';
-import { switchDictionarySheet } from './gui-dictionary-sheet';
 import { bindGuiEvents } from './gui-event-bindings';
-import { createGuiLayoutState } from './layout/layout-model';
-import { createLayoutController, LayoutController } from './layout/layout-controller';
-import { createInterpreterClient } from './interpreter/interpreter-client';
-
-declare global {
-    interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
-
-const INTERPRETER_CLIENT = createInterpreterClient();
+import { trimSource } from './source-atoms';
 
 /**
  * How the Reference's 「Playgroundで開く」 links hand a sample over:
- * `<playground-url>#code=<encodeURIComponent したソース>`.
+ * `<playground-url>#code=<encodeURIComponent-encoded source>`.
  *
  * Exported because the splash screen also keys off it — arriving this way says
  * the visitor already knows what they came to do (entry-common.ts
@@ -45,208 +34,135 @@ const INTERPRETER_CLIENT = createInterpreterClient();
  */
 export const PLAYGROUND_CODE_HASH_MARKER = '#code=';
 
-const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
-    '+', '-', '*', '/', '=', '<', '>',
-    '[', ']', '{', '}', '(', ')',
-    '.', ',', "'", '"',
-]);
+const RUN_STATUS_DELAY_MS = 300;
 
 export interface GUI {
     readonly init: () => Promise<void>;
-    readonly updateAllDisplays: () => void;
-    readonly extractElements: () => GUIElements;
-    readonly extractDisplay: () => Display;
-    readonly extractEditor: () => Editor;
-    readonly extractVocabulary: () => VocabularyManager;
-    readonly extractMobile: () => MobileHandler;
-    readonly extractPersistence: () => Persistence;
-    readonly extractExecutionController: () => ExecutionController;
 }
 
-// The full word list only changes when the vocabulary changes (after an
-// execution). Without this cache the whole set — including a WASM round-trip
-// per query — was rebuilt on every keystroke.
-let autocompleteWordsCache: string[] | null = null;
+export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
+    // The full word list only changes when the vocabulary changes (after an
+    // execution). Without this cache the whole set — including a WASM
+    // round-trip per query — would be rebuilt on every keystroke.
+    let autocompleteWordsCache: string[] | null = null;
 
-const invalidateAutocompleteCache = (): void => {
-    autocompleteWordsCache = null;
-};
-
-const collectAutocompleteWords = (): string[] => {
-    if (autocompleteWordsCache) return autocompleteWordsCache;
-
-    const interpreter = INTERPRETER_CLIENT.getOptional();
-    if (!interpreter) return [];
-
-    const coreWordsInfo = INTERPRETER_CLIENT.collectCoreWordsInfo();
-    const coreWords: string[] = coreWordsInfo
-        .map(word => word[0])
-        .filter((w): w is string => w !== undefined && !HIDDEN_AUTOCOMPLETE_ALIASES.has(w));
-
-    const userWordsInfo = INTERPRETER_CLIENT.collectUserWordsInfo();
-    // Bare names only: a `DICT@NAME` completion no longer resolves to anything,
-    // so suggesting one only offered code that fails to run.
-    const userWords: string[] = userWordsInfo.map(word => word[1]);
-
-    const allWords: Set<string> = new Set([...coreWords, ...userWords]);
-    autocompleteWordsCache = Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
-    return autocompleteWordsCache;
-};
-
-export const createGUI = (): GUI => {
-    let elements: GUIElements;
-    let display: Display;
-    let editor: Editor;
-    let vocabulary: VocabularyManager;
-    let mobile: MobileHandler;
-    let persistence: Persistence;
-    let executionController: ExecutionController;
-    let layoutState: LayoutState;
-    let layoutController: LayoutController;
-
-    const doSwitchDictionarySheet = (sheetId: string): void => {
-        switchDictionarySheet(elements.dictionaryArea, sheetId);
-    };
-
-    const buildApplyAreaStateDeps = (): ApplyAreaStateDeps => ({
-        elements,
-        state: layoutState,
-        mobile,
-        switchDictionarySheet: doSwitchDictionarySheet,
-    });
-
-
-    const updateAllDisplays = (): void => {
-        if (!INTERPRETER_CLIENT.getOptional()) return;
-
-        invalidateAutocompleteCache();
-
-        try {
-            display.renderStack(INTERPRETER_CLIENT.collectStack());
-            vocabulary.updateUserWords(INTERPRETER_CLIENT.collectUserWordsInfo());
-
-            updateHighlights(elements, elements.codeInput.value);
-        } catch (error) {
-            console.error('Failed to update display:', error);
-            display.renderError(new Error('Failed to update display.'));
-        }
-    };
-
-    // Clearing the stack keeps the dictionary — that is the whole point of
-    // having it apart from Reset — so it is the interpreter's `clear_stack` and
-    // nothing else, followed by a redraw and a save. One definition for all
-    // three routes to it: the Stack area's `×`, `Ctrl+Alt+S`, and the
-    // `STACK-CLEAR` host command typed in the editor.
-    const clearStack = (): void => {
-        const interpreter = INTERPRETER_CLIENT.getOptional();
-        if (!interpreter) return;
-        interpreter.clear_stack();
-        updateAllDisplays();
-        display.renderInfo('Stack cleared', false);
-        void persistence.saveCurrentState();
-    };
-
-    // Reference ページの用例から渡されたコードをエディタへ流し込む。
-    // 受け渡し形式: <playground-url>#code=<encodeURIComponent したソース>
-    // Ruby 公式トップのように、用例をそのまま試せる動線を実現するための入口。
-    const applyPlaygroundCodeFromUrl = (): void => {
-        const marker = PLAYGROUND_CODE_HASH_MARKER;
-        const hash = window.location.hash;
-        if (!hash.startsWith(marker)) return;
-
-        try {
-            const code = decodeURIComponent(hash.slice(marker.length));
-            if (code.trim().length === 0) return;
-            // updateValue は入力モードへの切り替えも兼ねる。
-            editor.updateValue(code);
-            // 一度流し込んだら URL を綺麗にし、リロード時の再投入を防ぐ。
-            window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        } catch (error) {
-            console.warn('[GUI] Failed to apply playground code from URL:', error);
-        }
-    };
-
-    const initializeWorkers = async (): Promise<void> => {
-        try {
-            display.renderInfo('Initializing...', false);
-            await WORKER_MANAGER.init();
-            display.renderInfo('Ready', true);
-        } catch (error) {
-            console.error('[GUI] Failed to initialize workers:', error);
-            display.renderError(new Error(`Failed to initialize parallel execution: ${error}`));
-        }
+    const collectAutocompleteWords = (): string[] => {
+        if (autocompleteWordsCache) return autocompleteWordsCache;
+        // Canonical names only: the Core list carries no alias, and a User
+        // Word is addressed by its bare name.
+        const coreWords = interpreter.collect_core_words_info().map(([name]) => name);
+        const userWords = interpreter.collect_user_words_info().map(([name]) => name);
+        autocompleteWordsCache = [...new Set([...coreWords, ...userWords])].sort((a, b) => a.localeCompare(b));
+        return autocompleteWordsCache;
     };
 
     const init = async (): Promise<void> => {
         console.log('[GUI] Initializing GUI...');
 
-        elements = cacheElements();
-        layoutState = createGuiLayoutState();
-        mobile = createMobileHandler(extractMobileElements(elements), {
-            onModeChange: (mode) => layoutController.setArea(mode)
-        });
-        display = createDisplay(extractDisplayElements(elements));
+        const elements = cacheElements();
+        const layoutState = createLayoutState();
+        const display = createDisplay(extractDisplayElements(elements));
         display.init();
-        updateEditorPlaceholder(elements, mobile);
 
         // The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), so the
-        // sheet list is fixed: Core and User.
-        const dictionarySheetSelector = createDictionarySheetSelector(elements.dictionarySheetSelect);
-        dictionarySheetSelector.setEntries([
-            { sheetId: 'core', label: formatDictionaryTabName('CORE'), kind: 'core' },
-            { sheetId: 'user', label: formatDictionaryTabName('USER'), kind: 'user' },
-        ]);
-
-
-        layoutController = createLayoutController({
-            state: layoutState,
-            elements,
-            mobile,
-            buildApplyAreaStateDeps
+        // sheet list is fixed — Core and User — and is a plain <select>, like
+        // the two area selectors beside it.
+        const sheetSelect = elements.dictionarySheetSelect;
+        const showDictionarySheet = (sheetId: DictionarySheetId): void => {
+            sheetSelect.value = sheetId;
+            elements.dictionaryCoreSheet.hidden = sheetId !== 'core';
+            elements.dictionaryUserSheet.hidden = sheetId !== 'user';
+        };
+        sheetSelect.addEventListener('change', () => {
+            if (isDictionarySheetId(sheetSelect.value)) showDictionarySheet(sheetSelect.value);
+            void persistence.saveCurrentState();
         });
 
-        persistence = createPersistence({
+        const mobile = createMobileHandler(extractMobileElements(elements), {
+            currentMode: () => layoutState.currentMode,
+            onModeChange: (mode) => layoutController.setArea(mode)
+        });
+        updateEditorPlaceholder(elements, mobile);
+
+        const layoutDeps: ApplyAreaStateDeps = { elements, state: layoutState, mobile, showDictionarySheet };
+        const layoutController = createLayoutController(layoutDeps);
+
+        const updateAllDisplays = (): void => {
+            autocompleteWordsCache = null;
+            try {
+                display.renderStack(interpreter.collect_stack());
+                vocabulary.updateUserWords(interpreter.collect_user_words_info());
+            } catch (error) {
+                console.error('Failed to update display:', error);
+                display.renderError(new Error('Failed to update display.'));
+            }
+        };
+
+        const persistence = createPersistence(interpreter, {
             showError: (error) => display.renderError(error),
             updateDisplays: updateAllDisplays,
-            showInfo: (text, append) => display.renderInfo(text, append)
+            showInfo: (text, append) => display.renderInfo(text, append),
+            readActiveDictionarySheet: () => sheetSelect.value
         });
         await persistence.init();
 
-        editor = createEditor(elements.codeInput, {
-            onContentChange: (content) => updateHighlights(elements, content),
+        const editor = createEditor(elements.codeInput, {
             onSwitchToInputMode: () => layoutController.setArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
 
-        vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
-            // One behaviour in both presentations. These three used to be
-            // withheld on mobile, on the reading that a Dictionary tap there is
-            // only ever a lookup: you cannot see the editor from the Dictionary
-            // surface, so inserting into it is not much use. True, but not a
-            // reason to branch — it makes the tap useless, not harmful, and the
-            // guard bought a mode-specific rule in exchange for nothing. The
-            // mobile placeholder has advertised `tap a Dictionary word too`
-            // since it was written.
+        const vocabulary = createVocabularyManager(interpreter, extractVocabularyElements(elements), {
+            // One behaviour in both presentations, as the mobile placeholder
+            // advertises (`tap a Dictionary word too`).
             onWordClick: (word) => editor.insertWord(word),
             onBackgroundClick: () => editor.insertWord(' '),
             onBackgroundDoubleClick: () => editor.removeLastWord(),
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text, append) => display.renderInfo(text, append)
+            showInfo: (text, append) => display.renderInfo(text, append),
+            showError: (error) => display.renderError(error)
         });
 
-        executionController = createExecutionController(INTERPRETER_CLIENT.getRequired(), {
+        // Clearing the stack keeps the dictionary — that is what separates it
+        // from Reset — so it is the interpreter's `clear_stack` and nothing
+        // else, followed by a redraw and a save. One definition for both
+        // routes to it: the Stack area's `×` and `Ctrl+Alt+S`. It has no typed
+        // spelling (spec/gui-semantics.md, "Operations without a typed spelling").
+        const clearStack = (): void => {
+            interpreter.clear_stack();
+            updateAllDisplays();
+            display.renderInfo('Stack cleared', false);
+            void persistence.saveCurrentState();
+        };
+
+        // Shown only once a run has taken long enough to be noticed, so the
+        // everyday run that answers at once does not flash a line over the
+        // editor.
+        let runStatusTimer: ReturnType<typeof setTimeout> | null = null;
+        const showRunStatus = (text: string | null): void => {
+            if (runStatusTimer !== null) clearTimeout(runStatusTimer);
+            runStatusTimer = null;
+            if (text === null) {
+                elements.runStatus.hidden = true;
+                return;
+            }
+            runStatusTimer = setTimeout(() => {
+                elements.runStatus.textContent = text;
+                elements.runStatus.hidden = false;
+            }, RUN_STATUS_DELAY_MS);
+        };
+
+        const executionController = createExecutionController(interpreter, {
             // Step mode (the sole consumer of this callback) splits the
             // extracted source on whitespace and feeds each piece to the
             // interpreter on its own — the same whitespace-only split the
-            // tokenizer itself now requires around `[` and `]` (SPEC
+            // tokenizer itself requires around `[` and `]` (SPEC
             // LANG.SOURCE.TEXT). Formatting first, exactly like `runEditorCode`
-            // already does for a normal run, guarantees every piece is one the
+            // does for a normal run, guarantees every piece is one the
             // tokenizer accepts even when the author wrote brackets glued to
             // other text.
             extractEditorValue: () => { editor.format(); return editor.extractValue(); },
             clearEditor: (switchView) => { editor.clear(switchView); },
-            insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
             showFoldedInfo: (label, text) => display.renderFoldedInfo(label, text),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
@@ -257,58 +173,63 @@ export const createGUI = (): GUI => {
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
             updateView: (mode) => layoutController.setArea(mode),
-            updateAfterExecution: (changes) => {
-                applyExecutionAreaState(buildApplyAreaStateDeps(), changes);
-            }
+            updateAfterExecution: (changes) => applyExecutionAreaState(layoutDeps, changes),
+            showRunStatus
         });
 
         bindGuiEvents({
             elements,
             mobile,
             layoutState,
+            layoutController,
             vocabulary,
             display,
             editor,
             executionController,
             persistence,
-            switchArea: (mode) => layoutController.setArea(mode),
-            updateAllDisplays,
-            clearStack,
-            doSwitchDictionarySheet,
-            layoutController
+            clearStack
         });
-        vocabulary.renderBuiltInWords();
+        vocabulary.renderCoreWords();
         updateAllDisplays();
 
         const restored = await persistence.loadDatabaseData();
         updateAllDisplays();
-
-        if (restored.activeDictionarySheet) {
-            const targetSheetEl = document.getElementById(`dictionary-sheet-${restored.activeDictionarySheet}`);
-            if (targetSheetEl) {
-                elements.dictionarySheetSelect.value = restored.activeDictionarySheet;
-                doSwitchDictionarySheet(restored.activeDictionarySheet);
-            }
+        // A saved id that names no sheet leaves the current one showing.
+        if (isDictionarySheetId(restored.activeDictionarySheet)) {
+            showDictionarySheet(restored.activeDictionarySheet);
         }
 
-        await initializeWorkers();
+        // Appended, not written over: restoring the session above may already
+        // have said something the reader needs — the Example Words a first
+        // visit loads, or saved Words that could not be restored — and a status
+        // line that cleared Output erased it before it could be read.
+        try {
+            display.renderInfo('Initializing...', true);
+            await WORKER_MANAGER.init();
+            display.renderInfo('Ready', true);
+        } catch (error) {
+            console.error('[GUI] Failed to initialize workers:', error);
+            display.renderError(new Error(`Failed to initialize parallel execution: ${error}`));
+        }
 
-        applyPlaygroundCodeFromUrl();
+        // A sample handed over by a Reference 「Playgroundで開く」 link, loaded
+        // into the editor once; the fragment is stripped so a reload does not
+        // load it again.
+        const hash = window.location.hash;
+        if (hash.startsWith(PLAYGROUND_CODE_HASH_MARKER)) {
+            try {
+                const code = decodeURIComponent(hash.slice(PLAYGROUND_CODE_HASH_MARKER.length));
+                if (trimSource(code) !== '') {
+                    editor.updateValue(code);
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+            } catch (error) {
+                console.warn('[GUI] Failed to apply playground code from URL:', error);
+            }
+        }
 
         console.log('[GUI] GUI initialization completed');
     };
 
-    return {
-        init,
-        updateAllDisplays,
-        extractElements: () => elements,
-        extractDisplay: () => display,
-        extractEditor: () => editor,
-        extractVocabulary: () => vocabulary,
-        extractMobile: () => mobile,
-        extractPersistence: () => persistence,
-        extractExecutionController: () => executionController
-    };
+    return { init };
 };
-
-export const GUI_INSTANCE = createGUI();

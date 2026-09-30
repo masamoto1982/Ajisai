@@ -8,7 +8,7 @@ mod tests {
     async fn test_simple_addition() {
         let mut interp = Interpreter::new();
 
-        let code = "[ 2 ] [ 3 ] +";
+        let code = "[ 2 ] [ 3 ] ADD";
 
         let result = interp.execute(code).await;
         assert!(
@@ -25,7 +25,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ | [ 2 ] [ 3 ] + ] 'ADDTEST' DEF
+[ [ 2 ] [ 3 ] ADD ] 'ADDTEST' DEF
 ADDTEST
 "#;
 
@@ -41,7 +41,7 @@ ADDTEST
     async fn test_default_line_without_colon() {
         let mut interp = Interpreter::new();
 
-        let code = "[ 5 ] [ 3 ] +";
+        let code = "[ 5 ] [ 3 ] ADD";
 
         let result = interp.execute(code).await;
         assert!(
@@ -72,7 +72,7 @@ ADDTEST
     async fn test_def_with_new_syntax() {
         let mut interp = Interpreter::new();
 
-        let code = "[ | [ 42 ] ] 'ANSWER' DEF";
+        let code = "[ [ 42 ] ] 'ANSWER' DEF";
 
         let result = interp.execute(code).await;
         assert!(
@@ -96,8 +96,8 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ 1 ] [ 2 ] +
-[ 3 ] *
+[ 1 ] [ 2 ] ADD
+[ 3 ] MUL
 "#;
 
         let result = interp.execute(code).await;
@@ -130,8 +130,8 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ 10 ] [ 20 ] +
-[ 5 ] *
+[ 10 ] [ 20 ] ADD
+[ 5 ] MUL
 "#;
 
         let result = interp.execute(code).await;
@@ -162,24 +162,22 @@ ADDTEST
 
 #[tokio::test]
 async fn numbers_render_as_canonical_fractions_on_stack() {
-    use crate::types::display::format_with_hint;
-    use crate::types::Interpretation;
     // Every number renders as a reduced numerator/denominator, integers
-    // included. Surface literal style is not retained; `0.6 0.8 *` and any
+    // included. Surface literal style is not retained; `0.6 0.8 MUL` and any
     // mixed-style arithmetic therefore display uniformly.
     let cases = [
         ("1", "1/1"),
         ("0.5", "1/2"),
         ("2/1", "2/1"),
         ("4/2", "2/1"),
-        ("0.6 0.8 *", "12/25"),
-        ("3 4 +", "7/1"),
+        ("0.6 0.8 MUL", "12/25"),
+        ("3 4 ADD", "7/1"),
     ];
     for (program, expected) in cases {
         let mut interp = crate::interpreter::Interpreter::new();
         interp.execute(program).await.unwrap();
         assert_eq!(interp.stack.len(), 1, "program: {program}");
-        let rendered = format_with_hint(&interp.stack[0], Interpretation::RawNumber);
+        let rendered = interp.stack[0].to_string();
         assert_eq!(
             rendered, expected,
             "`{program}` must render as canonical `{expected}`",
@@ -191,7 +189,7 @@ async fn numbers_render_as_canonical_fractions_on_stack() {
 async fn comparison_words_return_scalar_booleans() {
     let cases = [
         ("1 2 LT", true),
-        ("2 2 LTE", true),
+        ("2 1 GT", true),
         ("2 1 LT", false),
         ("1 1 EQ", true),
         ("1 2 EQ", false),

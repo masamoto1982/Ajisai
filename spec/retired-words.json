@@ -1,0 +1,26 @@
+{
+  "$comment": "The names that were once Words and must stay unknown. A retired name returning is a vocabulary decision, and this file records the decision rather than freezing the first one made: UNIQUE was cut in the phase-1 freeze as one of several overlapping collection Words and came back on its own terms (a contract, a law witness, a conformance case); REPLACE came back in the vocabulary-100 work order's Phase 3 as INDEX-OF's substitution counterpart for Text; CEIL came back in Phase 1 as the closure of the rounding family and went again in the minimal-core cut. Two gates read this file: scripts/check-minimal-core.mjs asserts no name here is canonical in spec/words.json, and rust/tests/beta_removed_words.rs asserts the runtime, the compiled path and the host lookup all report each name as an Unknown Word.",
+  "schemaVersion": 1,
+  "groups": [
+    {
+      "reason": "The alpha Words the phase-1 vocabulary freeze retired.",
+      "names": ["SIGN", "INSERT", "REMOVE", "SPLIT", "REORDER", "CONTAINS", "STARTS-WITH?", "ENDS-WITH?", "CHR", "EAT"]
+    },
+    {
+      "reason": "Retired after the vocabulary-100 work order's review (docs/dev/vocabulary-100-work-order-2026-09.md §7.2): NEQ is `EQ NOT` at the same cost, and PROBE was CONTRACT over a block. The two slots went to UPPER and LOWER, the top of the waiting list.",
+      "names": ["NEQ", "PROBE"]
+    },
+    {
+      "reason": "The minimal-core cut: each a phrase over what remains rather than a capability. NEG is `-1 MUL`, DEFINED? is `CONTRACT NIL? NOT`, RANK is nested MAPs (and MAP took its Kernel seat), ANY/ALL are MAP then a FOLD of the truth values, `a b LTE` is `a b GT NOT`, OR is De Morgan over AND/NOT, RANDOM a user-written generator; OR LTE GTE CEIL QUANTIZE ABS MOD were the derivable Standards no program in the lexicon pilot (tools/lexicon-emergence/runs/pilot-2026-09-23) wrote once.",
+      "names": ["DEFINED?", "NEG", "RANDOM", "RANK", "ANY", "ALL", "OR", "LTE", "GTE", "CEIL", "QUANTIZE", "ABS", "MOD"]
+    },
+    {
+      "reason": "Went with the computable-real tier they alone built: each answered a value no comparison could always decide, so the numeric domain is now the exact field SQRT builds and comparison is total.",
+      "names": ["PI", "EXP", "LN", "SIN", "COS", "ATAN"]
+    },
+    {
+      "reason": "Folded into GET and PUT: reading and writing a Record by key is what reading and writing a Vector by index is, so one pair of Words covers both containers, and PUT took WITH's Kernel seat.",
+      "names": ["AT", "WITH"]
+    }
+  ]
+}

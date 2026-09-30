@@ -4,12 +4,12 @@
     {
       "id": "divisionByZero",
       "projectable": true,
-      "documentation": "A divisor equal to zero, or indistinguishable from zero within the comparison budget."
+      "documentation": "A divisor equal to zero."
     },
     {
       "id": "domainMiss",
       "projectable": true,
-      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational."
+      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational; NIL-REASON asked of a value that is not a NIL is another."
     },
     {
       "id": "indexOutOfBounds",
@@ -19,7 +19,7 @@
     {
       "id": "invalidEncoding",
       "projectable": true,
-      "documentation": "Text that does not denote a value in the operation's target encoding — NUM applied to text outside the sealed numeric grammar, or STR applied to a value with no exact lexeme."
+      "documentation": "Text that does not denote a value in the operation's target encoding — NUM applied to text outside the sealed numeric grammar, or JSON-DECODE applied to text that is not one JSON value."
     },
     {
       "id": "literal",
@@ -27,24 +27,14 @@
       "documentation": "A NIL the program wrote rather than computed: the NIL Word, or NIL inside a vector literal. Not produced by any Word's projection."
     },
     {
-      "id": "missingField",
+      "id": "notFound",
       "projectable": true,
-      "documentation": "A diagnostic or structural accessor found no field to report at the position it was asked about."
-    },
-    {
-      "id": "notAvailable",
-      "projectable": true,
-      "documentation": "A diagnostic accessor was asked for something the value does not carry — NIL-REASON applied to a value that carries no reason."
+      "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (GET, WITHOUT), a value a Vector does not contain (INDEX-OF, BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
     },
     {
       "id": "spaceExhausted",
       "projectable": true,
-      "documentation": "A well-formed generative operation (RANGE, FILL) whose materialized result would exceed the space water level. The only reason that projects rather than raises even for a request that could never fit."
-    },
-    {
-      "id": "undecidable",
-      "projectable": true,
-      "documentation": "Comparison-budget exhaustion: two lazy continued-fraction streams agreed on every emitted partial quotient up to the budget without resolving the order of the two operands."
+      "documentation": "A well-formed generative operation (RANGE, FILL, RESHAPE) whose materialized result would exceed the space water level. The only reason that projects rather than raises even for a request that could never fit."
     },
     {
       "id": "userDeclared",
@@ -57,23 +47,20 @@
     {
       "id": "blockContractViolation",
       "kind": "declared",
-      "documentation": "A higher-order Word's block operand did not return the shape its contract requires — MAP/FILTER/FOLD/ANY's block returned other than one value per contract."
-    },
-    {
-      "id": "builtinProtection",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "An operation tried to redefine or delete a Core Word."
+      "repair": "program",
+      "documentation": "A higher-order Word's block operand did not return the shape its contract requires — MAP/FILTER/FOLD/SCAN's block returned other than one value per contract."
     },
     {
       "id": "declaredFailure",
       "kind": "declared",
+      "repair": "program",
       "documentation": "An ERROR the program raised itself with FAIL: a user Word saying that a call to it is wrong, with the program's own text as the message. The category is this one id; the text is a message, and like every message it is not a machine-readable surface."
     },
     {
       "id": "definitionConflict",
       "kind": "declared",
-      "documentation": "DEF named a word the dictionary already binds in a way this definition cannot resolve."
+      "repair": "program",
+      "documentation": "DEF or DEL asked for a dictionary change the words that call the named word refuse: DEF redefined, or DEL deleted, a User Word that other User Words still reference. Those words have to go first; there is no override."
     },
     {
       "id": "duplicateKey",
@@ -87,111 +74,72 @@
       "documentation": "The total execution-step budget was exhausted before the program finished."
     },
     {
-      "id": "invalidCount",
+      "id": "invalidInteger",
       "kind": "declared",
-      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from negativeCount, and from a well-formed count past the end, which TAKE projects as indexOutOfBounds); FORMAT given a digit count that is not a non-negative integer."
+      "documentation": "An operand that must be a whole number is not one: an index (GET, PUT), a count (TAKE, DROP, COLLECT, FORMAT's digits — a count that cannot be negative is also refused below zero), or a RANGE bound."
     },
     {
       "id": "invalidDefinitionBody",
       "kind": "declared",
-      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or a Vector with no statements."
-    },
-    {
-      "id": "invalidIndex",
-      "kind": "declared",
-      "documentation": "GET received an index operand that is not itself a well-formed index (non-integer, wrong shape) — distinct from indexOutOfBounds, which is a well-formed index outside bounds."
+      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, an empty one, or one carrying a NIL that has a reason — a definition is kept as its source, and no source text denotes such a NIL (the NIL name denotes the literal NIL); produce it inside the body instead."
     },
     {
       "id": "invalidName",
       "kind": "declared",
-      "documentation": "DEF or DEL was given a name that cannot be a Word name at all (empty, wrong lexical shape)."
-    },
-    {
-      "id": "invalidRange",
-      "kind": "declared",
-      "documentation": "RANGE's bounds do not describe a well-formed range (e.g. a non-finite span)."
+      "documentation": "DEF or BIND was given a name that cannot be a name at all (empty, wrong lexical shape). DEL takes any name, so a word saved under a rule that has since changed stays removable."
     },
     {
       "id": "invalidShape",
       "kind": "declared",
-      "documentation": "FILL's shape operand is not a well-formed shape vector."
+      "documentation": "A shape operand (FILL, RESHAPE) is not a shape — a Vector of non-negative integers, the image of SHAPE — or, for RESHAPE, is one whose product is not the leaf count."
     },
     {
       "id": "malformedSource",
       "kind": "structural",
       "attribution": "machine",
+      "repair": "program",
       "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
     },
     {
       "id": "nameConflict",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "DEF was asked to define a name a live binding already holds — a name was asked to mean two things at once."
-    },
-    {
-      "id": "nameIsAWord",
       "kind": "declared",
-      "documentation": "BIND was asked to bind a name that is already a Word name."
-    },
-    {
-      "id": "negativeCount",
-      "kind": "declared",
-      "documentation": "RANDOM (or another count-taking Word) received a negative count."
+      "repair": "program",
+      "documentation": "A binding and a Word were asked to share a name: BIND to a name a Word holds, or DEF to a name a live binding holds. The two name spaces are disjoint by rule (LANG.DICTIONARY.RESOLUTION), so this is one condition from either side."
     },
     {
       "id": "nonRecord",
       "kind": "declared",
-      "documentation": "A Record Word (KEYS, VALUES, AT, WITH, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
+      "documentation": "A Record Word (KEYS, VALUES, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
     },
     {
-      "id": "nonComparableElement",
+      "id": "nonContainer",
       "kind": "declared",
-      "documentation": "SORT or ORDER met an element its comparison law cannot order."
-    },
-    {
-      "id": "nonInteger",
-      "kind": "declared",
-      "documentation": "An operand that must be a whole number carried a non-integer scalar — RANDOM's bound, PUT's index."
+      "documentation": "An operand the Word reads as a container — GET and PUT, which read and write a Vector at an index or a Record at a key — is neither a Vector nor a Record."
     },
     {
       "id": "nonNumeric",
       "kind": "declared",
-      "documentation": "An arithmetic Word (ADD/SUB/MUL/DIV), or FORMAT, met an operand that is not a number."
+      "documentation": "An operand the Word reads as a Scalar is not one: arithmetic on a non-number, or an order asked of something the exact order is not defined on (LT/GT, MIN/MAX, SORT/ORDER/BSEARCH)."
     },
     {
       "id": "nonText",
       "kind": "declared",
-      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/UPPER/LOWER/NUM/JSON-DECODE), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
-    },
-    {
-      "id": "nonTextElement",
-      "kind": "declared",
-      "documentation": "JOIN met a vector element that cannot serve as text content — not Text, and not a number that decodes to a character code."
-    },
-    {
-      "id": "nonTextSeparator",
-      "kind": "declared",
-      "documentation": "TOKENIZE's separator operand is not Text."
-    },
-    {
-      "id": "nonTextVector",
-      "kind": "declared",
-      "documentation": "JOIN's operand is not a Vector at all (the top-level shape check, despite the name — distinct from nonTextElement's per-element check)."
+      "documentation": "An operand the Word reads as a String is not one, including an element of JOIN's Vector and TOKENIZE's separator."
     },
     {
       "id": "nonTruthValue",
       "kind": "declared",
-      "documentation": "AND, OR, NOT, or a FILTER/ANY/ALL predicate block, met a value that is not a truth value or Unknown."
+      "documentation": "AND, NOT, SELECT's mask, or a FILTER predicate block met a value that is not a truth value or Unknown."
     },
     {
       "id": "nonVector",
       "kind": "declared",
-      "documentation": "A collection Word (GET/LENGTH/TAKE/CONCAT) met an operand that is not a Vector."
+      "documentation": "An operand the Word reads as a Vector is not one."
     },
     {
       "id": "notASymbol",
       "kind": "declared",
-      "documentation": "DEFINED? or CONTRACT was given something other than a Symbol (for CONTRACT, other than a Symbol or a block). A name is a Symbol, never a String: no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so a String asking about a Word is malformed use rather than a lookup that failed."
+      "documentation": "CONTRACT was given something other than a Symbol or a block. A name is a Symbol, never a String: no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so a String asking about a Word is malformed use rather than a lookup that failed."
     },
     {
       "id": "notExecutable",
@@ -201,7 +149,8 @@
     {
       "id": "protectedWord",
       "kind": "declared",
-      "documentation": "DEF or DEL targeted a Core Word name, which the dictionary protects."
+      "repair": "program",
+      "documentation": "DEF or DEL targeted a Core Word, which the dictionary protects."
     },
     {
       "id": "recursionLimitExceeded",
@@ -213,31 +162,25 @@
       "id": "resourceLimitExceeded",
       "kind": "structural",
       "attribution": "machine",
-      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, a numeric literal's digit count, or a program's byte length."
+      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, nestingDepth, a numeric literal's digit count, or a program's byte length."
     },
     {
       "id": "selfReferentialDefinition",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "DEF was refused because the body names itself, directly or through other User words — the DEF-time acyclicity check."
+      "kind": "declared",
+      "repair": "program",
+      "documentation": "DEF or BIND was refused because what it names would reach itself: a body naming the Word being defined, directly or through other User words, or a bound value naming its own binding, directly or through other bindings — the acyclicity check of LANG.DICTIONARY.ACYCLIC, made when the name is given."
     },
     {
       "id": "shapeMismatch",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "Two operands of an element-wise Word have shapes that do not broadcast on some axis."
+      "kind": "declared",
+      "documentation": "Operands a Word aligns position by position do not align: lifted operands whose shapes neither match nor broadcast (LANG.COLLECTIONS.LIFT), keys and values of different lengths (RECORD, GROUP), rows of different lengths (ZIP), or names that cannot destructure a value (BIND)."
     },
     {
       "id": "stackUnderflow",
       "kind": "structural",
       "attribution": "machine",
+      "repair": "program",
       "documentation": "A Word was applied with fewer operands than its declared arity."
-    },
-    {
-      "id": "structureError",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "A value's structure did not match what the operation expected, outside the more specific shape/vector-length categories."
     },
     {
       "id": "unsortedInput",
@@ -248,23 +191,14 @@
       "id": "unknownWord",
       "kind": "structural",
       "attribution": "machine",
+      "repair": "program",
       "documentation": "A name in program text did not resolve to any Word in the compiled-in vocabulary or the live dictionary."
-    },
-    {
-      "id": "unsupportedComparison",
-      "kind": "declared",
-      "documentation": "EQ/LT/LTE met a pair of operands whose types have no defined comparison law."
-    },
-    {
-      "id": "vectorLengthMismatch",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "Two one-dimensional operands have different lengths where the operation requires them equal — the one-dimensional case of shapeMismatch."
     },
     {
       "id": "wordNotFound",
       "kind": "declared",
-      "documentation": "DEL (or another dictionary Word) was asked to act on a name that names no Word."
+      "repair": "program",
+      "documentation": "DEL was given a name no User Word holds. The name is DEL's own operand, so this is DEL's condition to declare; a name written in program text that resolves to nothing is unknownWord, which the machine raises before any Word runs."
     }
   ]
 }

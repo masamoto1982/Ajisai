@@ -20,12 +20,12 @@ mod tests {
     use crate::interpreter::Interpreter;
     use crate::kernel::generated::GENERATED_WORDS;
 
-    /// The stack as a program can see it: each value rendered, with its role.
+    /// The stack as a program can see it: each value rendered.
     fn rendered(interp: &Interpreter) -> Vec<String> {
         interp
             .get_stack()
-            .iter_slots()
-            .map(|(value, role)| format!("{value}:{role:?}"))
+            .iter()
+            .map(|value| value.to_string())
             .collect()
     }
 
@@ -50,7 +50,7 @@ mod tests {
             );
             assert_eq!(carried.id, word.id, "`{}` carries a foreign id", word.name);
             assert!(
-                def.lines.is_empty(),
+                def.body.is_empty(),
                 "a Core Word has no body, which is what selects this route"
             );
         }
@@ -63,7 +63,7 @@ mod tests {
     async fn a_user_word_carries_no_registry_entry() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ X | X 1 ADD ] 'INC' DEF")
+            .execute("[ 1 ADD ] 'INC' DEF")
             .await
             .expect("INC defines");
         let (_, def) = interp.resolve_word_entry("INC").expect("INC resolves");
@@ -75,8 +75,7 @@ mod tests {
 
     /// The two routes into a primitive must be the same step. Compared at the
     /// point where they actually differ — the carried entry versus the registry
-    /// scan — rather than through a whole dispatch, because a full dispatch also
-    /// applies the word hint, which neither of these does. Both a value operand
+    /// scan — rather than through a whole dispatch. Both a value operand
     /// and a NIL one, since the declared-NIL contract is applied inside the
     /// shared step and a route that skipped it would answer differently for the
     /// same program.
@@ -105,14 +104,8 @@ mod tests {
                     "`{operand} {}` must report the same outcome by either route",
                     word.name
                 );
-                // Rendered, not structural. `Stack`'s `PartialEq` reaches
-                // `Computable`'s, which is *pointer identity* — equality of two
-                // computable reals being undecidable — so two independently
-                // built `PI`s compare unequal while printing the same. That is
-                // construction history, which LANG.VALUES.DENOTATION makes
-                // unreadable from a value and LANG.AUTHORITY.FREEDOM lists among
-                // the things no program may observe. Comparing what a program
-                // can see is the comparison this gate is about.
+                // Rendered, not structural: what a program can see is the
+                // comparison this gate is about (LANG.VALUES.DENOTATION).
                 assert_eq!(
                     rendered(&by_entry),
                     rendered(&by_name),

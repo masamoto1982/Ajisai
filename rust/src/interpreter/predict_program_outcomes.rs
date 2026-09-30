@@ -18,9 +18,9 @@
 //! its own. Two witnesses in `spec/outcome-witnesses.json` proved this the
 //! hard way during development: `resourceLimitExceeded` fires on a numeric
 //! literal alone (`999...9`), with no Word call anywhere to attribute it
-//! to, and `builtinProtection`/`nameConflict`/`structureError` all fire on
-//! programs whose every individual Word call (`DEF`, `DEF` again,
-//! `DEF`+`DEL`) has a perfectly ordinary declared vocabulary that simply
+//! to, and `definitionConflict` fires on
+//! programs whose every individual Word call (`DEF`, `DEF` again)
+//! has a perfectly ordinary declared vocabulary that simply
 //! does not list them. Modeling exactly
 //! when each is reachable (the real profile's numeric-literal-digit ceiling
 //! against the literal's actual digit count, for instance) is a sound
@@ -89,7 +89,7 @@ impl Interpreter {
                 // `Token::String` arm for why that is not hypothetical.
                 Token::String(text) => {
                     flow.feed_literal();
-                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(text);
+                    let canonical = crate::word_name::canonical_word_name(text);
                     if self.resolve_word_entry(&canonical).is_some() {
                         outcomes.extend(resolve_and_collect(self, text, &mut visiting, &mut reach));
                     }
@@ -102,10 +102,9 @@ impl Interpreter {
                     if contexts[idx].in_vector_literal() {
                         flow.feed_literal();
                     } else {
-                        let canonical =
-                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                        let canonical = crate::word_name::canonical_word_name(symbol);
                         match self.infer_word_contract(&canonical) {
-                            Some(contract) => flow.feed_word(&canonical, &contract.flow),
+                            Some(contract) => flow.feed_word(&contract.flow),
                             None => flow.go_dynamic(),
                         }
                     }
@@ -114,22 +113,8 @@ impl Interpreter {
                     // `word_outcome_vocabulary`'s module doc.
                     outcomes.extend(resolve_and_collect(self, symbol, &mut visiting, &mut reach));
                 }
-                Token::VectorStart | Token::VectorEnd | Token::LineBreak => {
-                    flow.feed_structural(token)
-                }
-                // A Record literal is a constant, so whether it fails is
-                // decided here rather than approximated: building it answers
-                // exactly, and a literal that builds cannot fail at run time.
-                Token::RecordStart => {
-                    flow.feed_structural(token);
-                    if let Err(err) = Self::collect_record_literal(tokens, idx, 1) {
-                        outcomes.insert(format!(
-                            "error:{}",
-                            crate::error::ErrorCategory::from_error(&err).as_protocol_str()
-                        ));
-                    }
-                }
-                Token::RecordEnd => flow.feed_structural(token),
+                Token::VectorStart | Token::VectorEnd => flow.feed_structural(token),
+                Token::Value(_) => flow.feed_literal(),
             }
         }
 

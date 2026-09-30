@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::arithmetic_division::{
     apply_division_schema, build_scalar_fast_projection, division_by_zero_projection,
 };
@@ -12,12 +12,10 @@ use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::kernel::arithmetic as kernel_arithmetic;
-use crate::kernel::{KernelValue, Scalar as KernelScalar};
+use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
+use crate::types::{DenseTensor, SparseTensor, Value, ValueData};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -26,12 +24,6 @@ pub(crate) enum ExactArithmeticSchema {
     Sub,
     Mul,
     Div,
-    /// `MOD` shares `DIV`'s division, so it shares its schema: `a MOD b` is
-    /// `a - b * floor(a/b)`, and a zero divisor is the same undefined
-    /// operation underneath (`arithmetic_division`'s module header). It joined
-    /// the schema when a vector of irrationals reached `MOD` with no exact
-    /// route to take and panicked in the rational kernel.
-    Mod,
 }
 
 impl ExactArithmeticSchema {
@@ -47,13 +39,6 @@ impl ExactArithmeticSchema {
                     Ok(a.div(b))
                 }
             }
-            ExactArithmeticSchema::Mod => {
-                if b.is_zero() {
-                    Err(AjisaiError::DivisionByZero)
-                } else {
-                    Ok(a.modulo(b))
-                }
-            }
         }
     }
 
@@ -63,22 +48,13 @@ impl ExactArithmeticSchema {
             ExactArithmeticSchema::Sub => Some(a.sub(b)),
             ExactArithmeticSchema::Mul => Some(a.mul(b)),
             ExactArithmeticSchema::Div => a.div(b),
-            // `a - b * floor(a/b)`, the definition `op_mod`'s scalar arm
-            // already computes. `None` folds a zero divisor together with
-            // continued-fraction budget exhaustion, exactly as `Div` does.
-            ExactArithmeticSchema::Mod => a
-                .div(b)
-                .and_then(|quotient| quotient.floor())
-                .map(|floor| a.sub(&b.mul(&floor))),
         }
     }
 }
 
 fn consume_stacktop_binary(interp: &mut Interpreter) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
@@ -96,9 +72,8 @@ fn simd_schema_candidate(
         ExactArithmeticSchema::Mul => simd_ops::apply_simd_mul(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_mul(a, b))
             .or_else(|| simd_ops::apply_simd_scalar_mul(b, a)),
-        // No SIMD kernel inverts or divides a lane, so neither of the two
-        // Words built on division takes this route.
-        ExactArithmeticSchema::Div | ExactArithmeticSchema::Mod => None,
+        // No SIMD kernel inverts or divides a lane.
+        ExactArithmeticSchema::Div => None,
     }
 }
 
@@ -213,14 +188,13 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
         ScalarFastWrap::Scalar => Value::from_fraction(result),
         ScalarFastWrap::Tensor(shape) => {
             if let Some(data) = DenseTensor::from_fractions(vec![result.clone()], shape.clone()) {
-                Value {
-                    data: ValueData::Tensor {
+                Value::new(
+                    ValueData::Tensor {
                         data: Arc::new(data),
                         shape: Arc::new(shape.clone()),
                     },
-                    hint: Interpretation::Unassigned,
-                    absence: None,
-                }
+                    None,
+                )
             } else {
                 Value::from_tensor(vec![result], shape.clone())
             }
@@ -228,33 +202,16 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
     }
 }
 
-/// `schema(a, b)` via the Semantic Spine (migration plan §12 Phase 4, §10.12).
-/// The caller already charged, checks the result size, and gave us rationals.
-fn schema_via_kernel(
-    schema: ExactArithmeticSchema,
-    a: &Fraction,
-    b: &Fraction,
-) -> Result<Fraction> {
-    let operands = [
-        KernelValue::Scalar(KernelScalar::from_fraction(a.clone())),
-        KernelValue::Scalar(KernelScalar::from_fraction(b.clone())),
-    ];
-    let primitive: fn(&[KernelValue]) -> Vec<KernelValue> = match schema {
-        ExactArithmeticSchema::Add => kernel_arithmetic::add,
-        ExactArithmeticSchema::Sub => kernel_arithmetic::sub,
-        ExactArithmeticSchema::Mul => kernel_arithmetic::mul,
-        ExactArithmeticSchema::Div => kernel_arithmetic::div,
-        // The Spine has no modulo primitive, and `MOD` does not take the
-        // scalar fast path that reaches this. Answering by the schema's own
-        // rational law keeps that a fact about routing rather than a panic
-        // waiting for the caller that stops being true.
-        ExactArithmeticSchema::Mod => return schema.fraction(a, b),
-    };
-    match &primitive(&operands)[0] {
-        KernelValue::Scalar(result) => Ok(result.as_fraction().cloned().expect("rational")),
-        KernelValue::Nil(Some(NilReason::DivisionByZero)) => Err(AjisaiError::DivisionByZero),
-        other => unreachable!("kernel arithmetic returned {other:?} for two Scalar operands"),
-    }
+/// `schema(a, b)` over two rationals. The caller already charged, checks the
+/// result size, and gave us rationals; division by zero is the one refusal.
+fn rational_schema(schema: ExactArithmeticSchema, a: &Fraction, b: &Fraction) -> Result<Fraction> {
+    Ok(match schema {
+        ExactArithmeticSchema::Add => a.add(b),
+        ExactArithmeticSchema::Sub => a.sub(b),
+        ExactArithmeticSchema::Mul => a.mul(b),
+        ExactArithmeticSchema::Div if b.is_zero() => return Err(AjisaiError::DivisionByZero),
+        ExactArithmeticSchema::Div => a.div(b),
+    })
 }
 
 fn push_scalar_fastpath_result(
@@ -278,7 +235,7 @@ fn push_scalar_fastpath_result(
 
     // The work of this operation was charged at the dispatch entry, before any
     // route was chosen — see `charge_binary_schema`.
-    let result = match schema_via_kernel(schema, &a.fraction, &b.fraction) {
+    let result = match rational_schema(schema, &a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
         Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.wrap),
         Err(error) => return Err(error),
@@ -287,10 +244,8 @@ fn push_scalar_fastpath_result(
     // sane size. Without this the chain above grows without any ceiling naming
     // itself.
     check_result_size(interp, &result)?;
-    if interp.consumption_mode == ConsumptionMode::Consume {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
     push_result(interp, result);
     interp.runtime_metrics.scalar_fastpath_count = interp
         .runtime_metrics
@@ -316,7 +271,7 @@ fn apply_exact_arithmetic_schema(
     // Charged once, here, before a route is chosen. Which route runs is an
     // optimization decision and unobservable by LANG.AUTHORITY.FREEDOM; a
     // safety control priced per route made it observable, as the difference
-    // between `2 3 *` and `[ 2 ] 3 *`.
+    // between `2 3 MUL` and `[ 2 ] 3 MUL`.
     if interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let (left, right) = {
@@ -434,11 +389,18 @@ fn apply_exact_real_recursive_broadcast(
                 return Ok(nil);
             }
             let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
-                // Reached only through ADD/SUB/MUL/DIV/MOD/QUANTIZE's own
+                // Reached only through ADD/SUB/MUL/DIV's own
                 // binary dispatch, which all declare `nonNumeric` uniformly.
                 return Err(AjisaiError::declared(
                     "nonNumeric",
-                    "expected a number or vector, got a non-numeric value",
+                    format!(
+                        "expected a Scalar or a Vector, got {}",
+                        if exact_broadcast_leaf(a).is_none() {
+                            a.domain_name()
+                        } else {
+                            b.domain_name()
+                        }
+                    ),
                 ));
             };
             Ok(match schema.exact_real(&ea, &eb) {
@@ -462,10 +424,10 @@ fn apply_exact_real_recursive_broadcast(
         }
         (Some(a_children), Some(b_children)) => {
             if a_children.len() != b_children.len() {
-                return Err(AjisaiError::VectorLengthMismatch {
-                    len1: a_children.len(),
-                    len2: b_children.len(),
-                });
+                return Err(AjisaiError::length_mismatch(
+                    a_children.len(),
+                    b_children.len(),
+                ));
             }
             let out = a_children
                 .iter()
@@ -526,8 +488,8 @@ fn exact_flat_leaf_lanes(a: &Value, b: &Value) -> Option<(Vec<ExactReal>, Vec<Ex
 
 /// Structural broadcast for operands containing irrational `ExactScalar`
 /// lanes. Returns `Ok(false)` (leaving the stack untouched) for the cases the
-/// caller still routes elsewhere — Stack target mode and top-level NIL — so the
-/// existing NIL-passthrough and reduction paths keep their behavior.
+/// caller still routes elsewhere — a top-level NIL — so the existing
+/// NIL-passthrough and reduction paths keep their behavior.
 pub(crate) fn push_exact_real_broadcast_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
@@ -634,8 +596,6 @@ fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     let operands = extract_operands(interp, 2)?;
     let a_val = &operands[0];
     let b_val = &operands[1];
@@ -649,10 +609,8 @@ where
     let result = match computed {
         Ok(r) => r,
         Err(e) => {
-            if !is_keep_mode {
-                for val in operands {
-                    interp.stack.push(val);
-                }
+            for val in operands {
+                interp.stack.push(val);
             }
             return Err(e);
         }

@@ -1,22 +1,21 @@
 use crate::error::{AjisaiError, Result};
 use crate::kernel::generated::{generated_word, WordId};
-use crate::types::{Interpretation, Token, Value};
+use crate::types::{Token, Value};
 
-use super::compiled_plan::is_plan_valid;
+use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
     execute_del, format_ops, higher_order, higher_order_fold, io, json_decode, json_encode, logic,
-    math_ops, nil_diagnostics, ordering_ops, power_ops, quantize_ops, record_ops, reflection_ops,
-    search_ops, shape_ops, shape_words, sort, tensor_cmds, transcendental_ops, vector_ops,
-    Interpreter,
+    math_ops, nil_diagnostics, ordering_ops, power_ops, record_ops, reflection_ops, search_ops,
+    shape_ops, shape_words, sort, tensor_cmds, vector_ops, Interpreter,
 };
 
 impl Interpreter {
     /// Core word-execution logic (greedy, always): the single entry point
     /// every dispatch route reaches a Word through.
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let canonical_name = crate::word_name::canonical_word_name(name);
         let name = canonical_name.as_ref();
 
         // A local binding is read before the dictionary. Nothing can be in both
@@ -25,16 +24,15 @@ impl Interpreter {
         // cheaper lookup and the more local fact.
         //
         // `name` is already uppercase, so no `to_uppercase()` here or below.
-        // `canonicalize_core_word_name` returns one of three things: an alias's
-        // canonical name (every one in the table is uppercase), the input
+        // `canonical_word_name` returns one of two things: the input
         // unchanged when it is ASCII with no lowercase byte (uppercasing that is
         // the identity), or an owned `to_uppercase()`. `bind_local` keys a scope
         // by `name.to_uppercase()`, so this asks for the key the binding was
         // stored under either way — the uppercase that used to be here could
         // only ever rebuild a string already in hand, once per word dispatch,
         // which is the hottest path the interpreter has.
-        if let Some((value, role)) = self.lookup_binding(name) {
-            self.stack.push_with_role(value, role);
+        if let Some(value) = self.lookup_binding(name) {
+            self.stack.push(value);
             return Ok(());
         }
 
@@ -43,20 +41,13 @@ impl Interpreter {
         // meant allocating a copy of the one in hand — a `String` from
         // `to_uppercase` and an `Arc<str>` built from it — on every dispatch.
         let def = self.definition_of(name).ok_or_else(|| {
-            let ambiguous = self.check_ambiguity(name);
-            // All three arms are the same resolution failure — the name did
-            // not resolve to a usable Word — with progressively more specific
-            // messages about why. `UnknownWord` is the one structural
-            // category LANG.DICTIONARY.RESOLUTION's failure has; ambiguity
-            // and out-of-scope binding are refinements of it, not conditions
-            // any Word's own contract could declare.
-            if !ambiguous.is_empty() {
-                AjisaiError::UnknownWord(format!(
-                    "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
-                    name,
-                    ambiguous.join(", ")
-                ))
-            } else if self.binding_exists_beyond_barrier(name) {
+            // Both arms are the same resolution failure — the name did not
+            // resolve to a usable Word — with a more specific message where
+            // there is one. `UnknownWord` is the one structural category
+            // LANG.DICTIONARY.RESOLUTION's failure has; an out-of-scope
+            // binding is a refinement of it, not a condition any Word's own
+            // contract could declare.
+            if self.binding_exists_beyond_barrier(name) {
                 // The reader can see the name in their own source, so the bare
                 // "unknown word" is the least useful true thing to say. What
                 // went wrong is the scope, and naming it is the difference
@@ -77,7 +68,7 @@ impl Interpreter {
 
         self.charge_execution_step()?;
 
-        if def.lines.is_empty() && def.params.is_none() {
+        if def.body.is_empty() {
             // Dispatch the Word resolution already found, rather than finding it
             // again. `execute_builtin` re-canonicalized the name — a third fold
             // of a name folded once above — and then `generated_word` scanned the
@@ -91,7 +82,8 @@ impl Interpreter {
             return match def.generated {
                 Some(word) => self.execute_generated_word(word),
                 None => self.execute_builtin(name),
-            };
+            }
+            .and_then(|()| self.check_fresh_nesting());
         }
 
         // Call-depth guard: catches blown Rust stack before WASM traps. Guards
@@ -114,31 +106,35 @@ impl Interpreter {
 
         self.call_stack.push(name.to_string());
 
-        // `KEEP` modifies the call, never a Word inside the body — see
-        // `word_call.rs` for how the call settles it.
-        let params = def.params.as_deref().unwrap_or_default();
-        let result = self.run_word_call(params, compiled_plan.as_ref(), &def);
+        // A Word call is a barrier frame: its body names its own locals and
+        // reads none of the caller's, so what a Word means depends on its
+        // operands and its dictionary and nothing else.
+        self.open_binding_scope(true);
+
+        // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
+        // produces the same result whether it went through the compiled plan
+        // or the plain token route.
+        let result = match compiled_plan.as_ref() {
+            Some(compiled) => execute_compiled_plan(self, compiled),
+            None => self.execute_section_core(&def.body, 0).map(|_| ()),
+        };
+
+        self.close_binding_scope();
 
         self.call_stack.pop();
         self.call_depth -= 1;
 
-        // A User Word call is where attribution stops. Its body is its own
-        // business: from the caller's side the Word is what failed, and that
-        // has to read the same whether the body ran compiled or interpreted —
-        // the compiled route records nothing from inside a body, so without
-        // this the two routes would name different Words for the same failure
-        // (LANG.AUTHORITY.FREEDOM: compiling a body is unobservable). Any
-        // record the interpreted route already made stays in the trace as
-        // detail; this one is the answer.
+        // Attribution stops at a User Word — see `record_user_word_failure`
+        // for what that means and the one failure it does not cover.
         if let Err(err) = &result {
-            self.record_word_failure(name, err, stack_len_at_call);
+            self.record_user_word_failure(name, err, stack_len_at_call);
         }
 
         result
     }
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let canonical = crate::word_name::canonical_word_name(name);
         self.execute_builtin_direct(canonical.as_ref())
     }
 
@@ -161,10 +157,14 @@ impl Interpreter {
         &mut self,
         word: &'static crate::kernel::generated::GeneratedWord,
     ) -> Result<()> {
-        if let Some(decided) = self.apply_declared_nil_contract(word) {
-            return decided;
-        }
-        self.execute_builtin_by_id(word.id)
+        let result = match self.apply_declared_nil_contract(word) {
+            Some(decided) => decided,
+            None => match self.apply_declared_lift(word) {
+                Some(lifted) => lifted,
+                None => self.execute_builtin_by_id(word.id),
+            },
+        };
+        result.map_err(|err| err.attributed_to(word.name))
     }
 
     /// Run the primitive for a Word's canonical identity.
@@ -181,40 +181,31 @@ impl Interpreter {
             WordId::Div => arithmetic::op_div(self),
             WordId::Eq => comparison::op_eq(self),
             WordId::Lt => comparison::op_lt(self),
-            WordId::Le => comparison::op_le(self),
             WordId::Gt => comparison::op_gt(self),
-            WordId::Gte => comparison::op_gte(self),
             WordId::Map => higher_order::op_map(self),
             WordId::Filter => higher_order::op_filter(self),
             WordId::Fold => higher_order_fold::op_fold(self),
             WordId::Scan => higher_order_fold::op_scan(self),
-            WordId::Any => higher_order::op_any(self),
-            WordId::All => higher_order::op_all(self),
-            WordId::Rank => higher_order::op_rank(self),
             WordId::Get => vector_ops::op_get(self),
             WordId::Length => vector_ops::op_length(self),
             WordId::Concat => vector_ops::op_concat(self),
             WordId::And => logic::op_and(self),
-            WordId::Or => logic::op_or(self),
             WordId::Not => logic::op_not(self),
             WordId::Select => logic::op_select(self),
             WordId::True => {
-                self.stack
-                    .push_with_role(Value::from_bool(true), Interpretation::TruthValue);
+                self.stack.push(Value::from_bool(true));
                 Ok(())
             }
             WordId::False => {
-                self.stack
-                    .push_with_role(Value::from_bool(false), Interpretation::TruthValue);
+                self.stack.push(Value::from_bool(false));
                 Ok(())
             }
             WordId::Nil => {
-                self.stack.push_with_role(Value::nil(), Interpretation::Nil);
+                self.stack.push(Value::nil());
                 Ok(())
             }
             WordId::Exec => control::op_exec(self),
             WordId::Contract => reflection_ops::op_contract(self),
-            WordId::Defined => reflection_ops::op_defined(self),
             WordId::Digest => reflection_ops::op_digest(self),
             WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),
@@ -231,10 +222,7 @@ impl Interpreter {
             WordId::Collect => vector_ops::op_collect(self),
             WordId::Fill => tensor_cmds::op_fill(self),
             WordId::Floor => tensor_cmds::op_floor(self),
-            WordId::Ceil => tensor_cmds::op_ceil(self),
             WordId::Round => tensor_cmds::op_round(self),
-            WordId::Quantize => quantize_ops::op_quantize(self),
-            WordId::Mod => tensor_cmds::op_mod(self),
             WordId::Str => cast::op_str(self),
             WordId::Num => cast::op_num(self),
             WordId::Format => format_ops::op_format(self),
@@ -250,20 +238,12 @@ impl Interpreter {
             WordId::Replace => cast::op_replace(self),
             WordId::NilCheck => nil_diagnostics::op_nil_check(self),
             WordId::NilReason => nil_diagnostics::op_nil_reason(self),
-            WordId::Abs => math_ops::op_abs(self),
-            WordId::Neg => math_ops::op_neg(self),
             WordId::Min => math_ops::op_min(self),
             WordId::Max => math_ops::op_max(self),
             WordId::Sqrt => math_ops::op_sqrt(self),
             WordId::Pow => power_ops::op_pow(self),
             WordId::Gcd => power_ops::op_gcd(self),
             WordId::Ratio => power_ops::op_ratio(self),
-            WordId::Exp => transcendental_ops::op_exp(self),
-            WordId::Ln => transcendental_ops::op_ln(self),
-            WordId::Sin => transcendental_ops::op_sin(self),
-            WordId::Cos => transcendental_ops::op_cos(self),
-            WordId::Atan => transcendental_ops::op_atan(self),
-            WordId::Pi => math_ops::op_pi(self),
             WordId::Sort => sort::op_sort(self),
             WordId::Order => ordering_ops::op_order(self),
             WordId::Unique => ordering_ops::op_unique(self),
@@ -271,7 +251,6 @@ impl Interpreter {
             WordId::Group => ordering_ops::op_group(self),
             WordId::Zip => shape_ops::op_zip(self),
             WordId::Put => shape_ops::op_put(self),
-            WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
             WordId::Absent => declared_outcomes::op_absent(self),
             WordId::Fail => declared_outcomes::op_fail(self),
@@ -280,30 +259,10 @@ impl Interpreter {
             WordId::Record => record_ops::op_record(self),
             WordId::Keys => record_ops::op_keys(self),
             WordId::Values => record_ops::op_values(self),
-            WordId::At => record_ops::op_at(self),
-            WordId::With => record_ops::op_with(self),
             WordId::Without => record_ops::op_without(self),
             WordId::Has => record_ops::op_has(self),
             WordId::Merge => record_ops::op_merge(self),
-            // The one modifier (LANG.MODIFIERS.CONSUMPTION). The execution
-            // loop interprets it against the source stream — it sets the
-            // non-default consumption mode for the Word that follows — so it
-            // is never dispatched by name and has no primitive. Reaching it
-            // here means a caller bypassed the loop, which is exactly the
-            // unknown-word answer the old `executor_key: None` path gave.
-            WordId::SetConsumptionKeep => {
-                Err(AjisaiError::UnknownWord(self.word_name_for(id).to_string()))
-            }
         }
-    }
-
-    /// The canonical name of a Word, for a diagnostic that only holds its id.
-    fn word_name_for(&self, id: WordId) -> &'static str {
-        crate::kernel::generated::GENERATED_WORDS
-            .iter()
-            .find(|word| word.id == id)
-            .map(|word| word.name)
-            .unwrap_or("")
     }
 
     /// The compiled plan for a User Word's body, built on first call and
@@ -313,7 +272,7 @@ impl Interpreter {
         resolved_name: &str,
         def: &std::sync::Arc<crate::types::WordDefinition>,
     ) -> Option<std::sync::Arc<super::compiled_plan::CompiledPlan>> {
-        if def.lines.is_empty() {
+        if def.body.is_empty() {
             return None;
         }
 
@@ -326,19 +285,22 @@ impl Interpreter {
 
         self.runtime_metrics.compiled_plan_cache_miss_count += 1;
 
-        let plan = self.build_or_reuse_compiled_plan(resolved_name, def);
+        let plan = self.build_compiled_plan(def);
         self.store_compiled_plan_for_word(resolved_name, plan.clone());
-        plan
+        Some(plan)
     }
 
+    /// Keep the plan on the definition, so the next call finds it. The
+    /// definition is copied once per build — once per Word per dictionary
+    /// epoch, since a stored plan stays valid until the dictionary changes.
     fn store_compiled_plan_for_word(
         &mut self,
         resolved_name: &str,
-        plan: Option<std::sync::Arc<super::compiled_plan::CompiledPlan>>,
+        plan: std::sync::Arc<super::compiled_plan::CompiledPlan>,
     ) {
         if let Some(old_def) = self.user_words.get(resolved_name).cloned() {
             let mut updated = (*old_def).clone();
-            updated.compiled_plan = plan;
+            updated.compiled_plan = Some(plan);
             self.user_words
                 .insert(resolved_name.to_string(), std::sync::Arc::new(updated));
         }
@@ -351,38 +313,22 @@ impl Interpreter {
             Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::RecordStart => "{".to_string(),
-            Token::RecordEnd => "}".to_string(),
-            Token::LineBreak => "\n".to_string(),
+            Token::Value(value) => value.to_string(),
         }
     }
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
         let (_, def) = self.resolve_word_entry(name)?;
-        if def.is_builtin || (def.lines.is_empty() && def.params.is_none()) {
+        if def.is_builtin || def.body.is_empty() {
             return None;
         }
 
-        // The header is part of what was defined: rendering it is what lets a
-        // saved dictionary be restored through `DEF` with the same arity.
-        let mut result = String::new();
-        if let Some(params) = &def.params {
-            for param in params.iter() {
-                result.push_str(param);
-                result.push(' ');
-            }
-            result.push_str("| ");
-        }
-        for (i, line) in def.lines.iter().enumerate() {
-            if i > 0 {
-                result.push('\n');
-            }
-            for token in line.body_tokens.iter() {
-                result.push_str(&self.format_token_to_string(token));
-                result.push(' ');
-            }
-        }
-        Some(result.trim().to_string())
+        let words: Vec<String> = def
+            .body
+            .iter()
+            .map(|token| self.format_token_to_string(token))
+            .collect();
+        Some(words.join(" "))
     }
 
     /// A User Word's `description` (SPEC: host affordance only, not a

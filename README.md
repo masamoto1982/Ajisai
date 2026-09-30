@@ -38,7 +38,7 @@ As it happens, a flower takes its scientific name from the Greek for "water vess
 
 Ajisai is built from ten concepts and nothing else.
 
-1. Exact real arithmetic with no rounding: an algebraic field closed under square roots and rational powers of it, and beyond it computable reals — π, exponentials, logarithms, trigonometry — compared under a budget.
+1. Exact real arithmetic with no rounding: an algebraic field closed under square roots, in which every comparison decides.
 2. Three outcomes: a value, a reasoned absence, or an error — with three-valued truth, and a program may declare either failing outcome itself.
 3. A stack of values, and vectors of values, text included.
 4. Shape and rank: element-wise lifting follows a vector's shape, which a program can read and rewrite.
@@ -55,8 +55,9 @@ Ajisai is built from ten concepts and nothing else.
 |---|---|---|
 | Specification | Builders and porters | [SPECIFICATION.html](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html) |
 | Reference (Japanese) | Ajisai users | [docs/ja/index.html](https://masamoto1982.github.io/Ajisai/docs/ja/index.html) |
-| Reference (English) | Ajisai users | Not yet published — regenerating from the Japanese edition, see [`docs/dev/reference-ja-restructure-handoff.md`](docs/dev/reference-ja-restructure-handoff.md) §3.4/§6.3 |
-| Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Reference button links to the Japanese edition in the meantime |
+| Word Reference (English) | Ajisai users | [docs/en/words.html](https://masamoto1982.github.io/Ajisai/docs/en/words.html) — every Word, generated from `spec/words.json` |
+| Reference (English) | Ajisai users | Not yet published — the Japanese edition is the current full Reference; the English Word Reference above covers the vocabulary |
+| Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Word Reference button links to the English Word Reference |
 
 ## Build and run
 

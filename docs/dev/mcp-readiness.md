@@ -204,9 +204,11 @@ Completed:
   corpus and engine, so that gate is exact rather than machine-dependent.
   Diagnosis-observation and diagnosis-driven repair rates were re-scored after
   the change and are unmoved.
-- **An algebraic value can be read without decoding anything.**
-  `semantics.exactDisplay` writes the multiquadratic normal form as one short
-  string — `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)` —
+- **An algebraic value can be read without decoding anything.** *(Superseded:
+  once `stackDisplay` itself rendered the normal form as one exact token,
+  `exactDisplay` duplicated it and was removed; the record below is kept as
+  history.)* `semantics.exactDisplay` wrote the multiquadratic normal form as one short
+  string — `sqrt(2)`, `2/1*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` —
   beside the `exactTerms` it renders. Both derive from a single extraction in
   `value_protocol.rs`, both host serializers emit them together, and
   `result.schema.json` states the pairing as `dependentRequired`, so the wire
@@ -311,7 +313,7 @@ points it at shrinking output when the fix is to compute less.
 An error report's answer is its diagnosis; the stack is residual state, and
 `agent::error_stack` is where that distinction is spent. On `status: "error"`
 only, slots whose values do not fit a 64 KiB budget are replaced in place —
-`value` becomes `null`, `type`/`displayHint`/`semantics` still say what the
+`value` becomes `null`, `type`/`semantics` still say what the
 value was, and an `elided` record says what was dropped, repeated at the
 envelope level as `stackElided`. The fold answers in 7,470 bytes with
 `diagnosis.resourceLimit.resource: "numericWork"` intact. Values give way,
@@ -427,10 +429,10 @@ the ceiling compared against, so an agent can subtract:
 appear — `bigintBits` and `algebraicTerms` are checked per result and never
 accumulated, so there is no peak to report, and none is invented, which is the
 same discipline that made the phantom field a defect rather than a feature.
-`runtimeMetrics.executionSteps` stays as a compatibility alias carrying the
-same reading, because removing a field is what a schema version is for; that it
-lived in the optimizer object beside cache-hit counters is how nobody noticed
-it was constant.
+`runtimeMetrics.executionSteps` was kept for a while as a compatibility alias
+carrying the same reading; envelope schema version 2 removed it, so the budget
+is reported once. That it lived in the optimizer object beside cache-hit
+counters is how nobody noticed it was constant.
 
 **What replaced the `wallTimeMs` over-case was itself a finding, and it has now
 been acted on.** That case was the four-factor product, and it stopped timing

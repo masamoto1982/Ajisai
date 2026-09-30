@@ -2,32 +2,23 @@
     /* --- Families --------------------------------------------------------- */
     --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
     --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
-    --font-sans: var(--font-stack-primary);
-    --font-mono: var(--font-stack-mono);
 
     /* --- Type scale (rem) ------------------------------------------------- */
     --text-2xs: 0.75rem;
     --text-xs: 0.8rem;
     --text-sm: 0.875rem;
     --text-base: 0.95rem;
-    --text-md: 1.05rem;
-    --text-lg: 1.4rem;
     --text-xl: 1.5rem;
 
     /* --- Weights ---------------------------------------------------------- */
     --weight-regular: 400;
     --weight-medium: 500;
-    --weight-semibold: 600;
     --weight-bold: 700;
 
     /* --- Line heights ----------------------------------------------------- */
     --leading-tight: 1.2;
     --leading-snug: 1.5;
     --leading-body: 1.6;
-    --leading-prose: 1.7;
-
-    /* --- Tracking --------------------------------------------------------- */
-    --tracking-caps: 0.05em;
 
     /* --- Spacing scale (rem) --------------------------------------------- */
     --space-3xs: 0.125rem;
@@ -37,27 +28,21 @@
     --space-md: 1rem;
     --space-lg: 1.5rem;
     --space-xl: 2rem;
-    --space-2xl: 3rem;
 
     /* --- Radii ------------------------------------------------------------ */
     --radius-main: 2px;
     --radius-button: 6px;
     --radius-word-button: 4px;
-    --radius-code: 3px;
     --radius-panel: 8px;
 
     /* --- Layout ----------------------------------------------------------- */
     --col-left-flex: 1;
     --col-right-flex: 1;
-    --ref-nav-width: 30%;
     --golden: 1.618;
-    --breakpoint-mobile: 768px;
-    --breakpoint-tablet: 1024px;
 
     /* --- Brand / accent --------------------------------------------------- */
     /* Muted hydrangea purple: the single brand accent (links, focus rings). */
     --color-primary:   oklch(51.1% 0.091 295.7);
-    --color-secondary: oklch(73.9% 0.012 297.5);
 
     /* --- Ink / text ------------------------------------------------------- */
     --color-text:       oklch(24.7% 0.002 247.9);   /* near-black warm ink    */
@@ -70,68 +55,72 @@
 
     /* --- Border ----------------------------------------------------------- */
     --color-border: oklch(73.2% 0.014 251.6);
-    --border-width: 1px;
     --border-main: solid 1px var(--color-border);
 
     /* Code-entry surface: a recessed "well" — faint cool gray, slightly
        darker than the page white so the input reads as a depression. */
-    --color-symbol:       oklch(97.5% 0.03 100);
-    --color-symbol-focus: oklch(97.5% 0.03 100);
+    --color-symbol: oklch(97.5% 0.03 100);
 
     /* Ink for inputs on the light symbol surface. */
     --input-text:        var(--color-text);
+    /* Placeholder text in the editor and the Dictionary search box: faint on
+       purpose — present enough to read when looked at, never competing with
+       what is typed. A deliberate exception to 4.5:1, recorded with its floor
+       in scripts/check-contrast.mjs. */
     --input-placeholder: oklch(80% 0.07 55);
 
-    /* --- Word-category semantics ----------------------------------------- */
-    /* Precise OKLCH equivalents of the original CVD-safe hex palette.       */
-    --color-core:           oklch(63.1% 0.197 40.3);    /* #e65100 orange  */
-    --color-dependency:     oklch(73.4% 0.158 71.0);    /* #e69500 amber   */
-    --color-non-dependency: oklch(60.9% 0.135 161.2);   /* #009b68 green   */
-    --color-stack:          oklch(47.9% 0.220 328.4);   /* #990099 magenta */
+    /* --- Word-category semantics (CVD-safe) ------------------------------ */
+    /* Chip text on white (scripts/check-contrast.mjs). Dependency is a light
+       amber, well above Core's orange-red in lightness, which is what tells
+       the two warm colours apart at a glance; it is a recorded exception to
+       4.5:1 rather than darkened toward Core. */
+    --color-core:           oklch(57% 0.197 40.3);      /* orange  */
+    --color-dependency:     oklch(73.4% 0.158 71.0);    /* amber   */
+    --color-non-dependency: oklch(52.5% 0.135 161.2);   /* green   */
+    --color-stack:          oklch(47.9% 0.220 328.4);   /* magenta */
 
-    /* --- Stack operand-highlight backgrounds ----------------------------- */
-    /* The Stack fills operand nodes with a background whose
-       color carries the consumption axis (LANG.MODIFIERS.CONSUMPTION): EAT a very pale warm red
-       (operands are removed after the operation), KEEP a very pale teal-green
-       (operands are retained). A background fill — rather than a text-color
-       change — leaves the bracket depth-colors that show Vector nesting intact.
-       The tints are kept faint so the magenta Stack ink stays legible, and are
-       separated in lightness as well as hue so they read apart under
-       color-vision deficiency, in keeping with the CVD-safe palette above. */
-    --color-consume-eat:  oklch(94% 0.035 25);    /* very pale warm red   */
-    --color-consume-keep: oklch(96% 0.030 165);   /* very pale teal-green */
+    /* --- Vector bracket depth colours (after Tol's muted palette) ------- */
+    /* Brackets are text, and the top of the stack sits on its fill, so each
+       depth reads at 4.5:1 on white and on --color-stack-top.
+       Darkening the light members of Tol's palette brought them to one
+       lightness, so neighbouring depths are told apart by hue: 6 moved from
+       Tol's sand to ochre, away from 5's olive. */
+    --bracket-depth-1: oklch(34.7% 0.159 281.8);
+    --bracket-depth-2: oklch(51% 0.084 230.8);
+    --bracket-depth-3: oklch(50% 0.098 180.4);
+    --bracket-depth-4: oklch(49.9% 0.135 148.6);
+    --bracket-depth-5: oklch(51% 0.123 109.3);
+    --bracket-depth-6: oklch(52% 0.12 65);
+    --bracket-depth-7: oklch(53% 0.130 11.0);
+    --bracket-depth-8: oklch(43.2% 0.145 354.5);
+    --bracket-depth-9: oklch(53.5% 0.167 334.6);
 
-    /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
-    --hue-blue-purple: oklch(90% 0.085 265);
-    --hue-violet:      oklch(90% 0.085 300);
-    --hue-red-purple:  oklch(90% 0.085 325);
-    --hue-aqua:        oklch(90% 0.07  205);
-    --hue-pale-green:  oklch(91% 0.06  155);
+    /* --- Output text ------------------------------------------------------ */
+    --color-output-debug:   oklch(32.1% 0 0);
+    /* What the program printed, in blue — dark enough to read (4.5:1). */
+    --color-output-program: oklch(53.5% 0.134 234.0); /* blue */
+    --color-output-error:   oklch(57.5% 0.202 21.2);   /* red */
+    --color-output-info:    oklch(51% 0 0);
+
+    /* --- Stack top background -------------------------------------------- */
+    /* A Word consumes its operands (LANG.STACK.CONSUMPTION): the top item is
+       filled with a very pale warm red. A fill rather than a text colour leaves
+       the bracket depth-colours that show Vector nesting intact. The top is
+       also the last item in reading order and set in bold, so the fill is not
+       the only thing that marks it. (Once named `--color-consume-eat`, after a
+       consume/keep mode pair the language no longer has.) */
+    --color-stack-top: oklch(94% 0.035 25);
 
     /* --- Effects ---------------------------------------------------------- */
     --shadow-popover: 0 2px 6px oklch(0% 0 0 / 0.15);
     --transition-fast: 0.15s ease;
-
-    /* --- Semantic aliases ------------------------------------------------- */
-    --text-body: var(--color-text);
-    --text-muted: var(--color-text-light);
-    --text-link: var(--color-primary);
-    --text-on-symbol: var(--input-text);
-
-    --surface-page:   var(--color-white);
-    --surface-card:   var(--color-white);
-    --surface-subtle: var(--color-light);
-    --surface-fill:   var(--color-medium);
-    --surface-code:   var(--color-symbol);
-
-    --border-color: var(--color-border);
-    --focus-ring:   var(--color-primary);
 }
-
-* {
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
 html,
@@ -140,62 +129,26 @@ body {
     overflow-x: hidden;
 }
 
-
 body {
     font-family: var(--font-stack-primary);
-    background: #fff;
+    background: var(--color-white);
     color: var(--color-text);
-    line-height: 1.6;
+    line-height: var(--leading-body);
+}
+
+[hidden] {
+    display: none !important;
 }
 
 a {
     color: var(--color-primary);
     text-decoration: none;
 
+    /* Hover marks the link with a line rather than a lighter colour, which
+       fell to 2.3:1. */
     &:hover {
-        color: var(--color-secondary);
+        text-decoration: underline;
     }
-}
-
-
-/* Visually hidden until focused: clip to a 1px box rather than translating a
- * painted black box off-screen, which left a sub-pixel sliver at the top-left. */
-.skip-link {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
-    background: #000;
-    color: #fff;
-    padding: 8px 16px;
-    z-index: 1000;
-    text-decoration: none;
-
-    &:focus {
-        width: auto;
-        height: auto;
-        overflow: visible;
-        clip: auto;
-        clip-path: none;
-        white-space: normal;
-        outline: 2px solid var(--color-secondary);
-        outline-offset: 2px;
-    }
-}
-
-
-:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-    outline: none;
 }
 
 :focus-visible {
@@ -203,30 +156,67 @@ a {
     outline-offset: 2px;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
+/* Visually hidden until focused. */
+.skip-link {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    background: var(--color-text);
+    color: var(--color-white);
+    padding: var(--space-xs) var(--space-md);
+    z-index: 1000;
+
+    &:focus {
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip-path: none;
+        white-space: normal;
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+}
 
 .container {
     min-height: 100%;
     display: flex;
     flex-direction: column;
+
+    @media (width <= 768px) {
+        height: 100dvh;
+        min-height: 0;
+    }
+}
+
+@media (width <= 768px) {
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
 }
 
 
 /* ── 移ろい — header / footer ───────────────────────────────────────────────
- * A slow OKLCH gradient cycling through all four hydrangea-image hues:
+ * A slow OKLCH gradient cycling through the four hydrangea hues:
  *   青紫 (blue-purple ~265) · 赤紫 (red-purple ~325)
  *   淡水色 (pale aqua ~205) · 淡緑 (pale green ~155)
  * Both endpoints animate as a matched pair; nearby hues at every keyframe
  * prevent the interpolation from cutting through warm orange. The 100%
- * keyframe exactly repeats 0% to keep the infinite loop seamless. */
+ * keyframe repeats 0% to keep the infinite loop seamless. */
 @property --mv-h-a {
     syntax: "<number>";
     inherits: false;
@@ -316,33 +306,42 @@ footer,
         mv-hydrangea-hues 260s ease-in-out infinite,
         mv-chroma 210s ease-in-out infinite,
         mv-light 170s ease-in-out infinite;
-}
 
-
-@media (prefers-reduced-motion: reduce) {
-    header,
-    footer,
-    .utsuroi {
+    @media (prefers-reduced-motion: reduce) {
         animation: none;
     }
 }
 
+
 header {
     border-bottom: var(--border-main);
-    padding: 1rem 2rem;
+    padding: var(--space-md) var(--space-xl);
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     flex-shrink: 0;
     color: var(--color-text);
+
+    & h1 {
+        font-size: var(--text-xl);
+        font-weight: var(--weight-medium);
+        color: var(--color-text);
+    }
+
+    /* The header's badge carries the build and resource-limit detail in its
+       tooltip (setPlaygroundBadgeTooltip() in src/entry/entry-common.ts); the
+       splash copy has that detail written out beside it. */
+    & .version {
+        cursor: help;
+    }
 }
 
 .app-header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-md);
     width: 100%;
 }
 
@@ -350,14 +349,13 @@ header {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    text-decoration: none;
     color: inherit;
 }
 
 .app-brand-meta {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
 }
 
 .logo {
@@ -366,44 +364,29 @@ header {
     object-fit: contain;
 }
 
-header h1 {
-    font-size: 1.5rem;
-    color: var(--color-text);
-    font-weight: 500;
-    margin: 0;
-}
-
-header h1 a {
-    color: var(--color-text);
-}
-
 .version {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: var(--text-2xs);
+    line-height: var(--leading-snug);
     color: var(--color-white);
     background: var(--color-primary);
     border: 1px solid var(--color-primary);
     border-radius: var(--radius-button);
-    padding: 0.125rem 0.5rem;
-    line-height: 1.5;
+    padding: var(--space-3xs) var(--space-xs);
 }
 
-/* In the header this badge is also the handle for the build and resource-limit
-   detail, which it carries in its tooltip (setPlaygroundBadgeTooltip() in
-   src/entry/entry-common.ts) rather than in badges of its own beside it. The
-   splash copy has that same detail written out beside it, so only the header's
-   invites the hover. */
-header .version {
-    cursor: help;
+.header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-xs);
 }
 
 
 /* First-visit walkthrough — see initSplashScreen() in src/entry/entry-common.ts.
    Reuses the header's moving hydrangea gradient (.utsuroi) so the splash reads
-   as the same surface, not a separate dialog bolted on. Sits above the
-   skip-link's z-index so it is unambiguously on top while active; once
-   dismissed it fades to transparent and stops intercepting pointer events
-   immediately, well before it is removed from the DOM. */
+   as the same surface. Sits above the skip-link's z-index; once dismissed it
+   fades out and stops intercepting pointer events before it is removed. */
 .splash-screen {
     position: fixed;
     inset: 0;
@@ -415,11 +398,22 @@ header .version {
     color: var(--color-text);
     opacity: 1;
     transition: opacity 0.35s ease;
-}
 
-.splash-screen.splash-dismissing {
-    opacity: 0;
-    pointer-events: none;
+    &.splash-dismissing {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* The technical detail is revealed by a timer (splash-detail-visible); the
+       hint below it never waits on that timer. */
+    &.splash-detail-visible :is(.splash-version-line, .splash-note, .splash-limits-heading, .splash-limits) {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
 }
 
 .splash-content {
@@ -440,10 +434,8 @@ header .version {
     animation: splash-logo-in 0.5s ease forwards;
 }
 
-/* The title and its "Playground" badge read as one identity, side by side —
-   matching how the header itself pairs <h1>Ajisai</h1> with the same badge
-   (see .app-brand-meta) — so both fade in together with the logo, ahead of
-   the technical-detail group below. */
+/* The title and its "Playground" badge read as one identity, side by side,
+   the way the header pairs <h1>Ajisai</h1> with the same badge. */
 .splash-heading {
     display: flex;
     flex-wrap: wrap;
@@ -459,14 +451,8 @@ header .version {
     font-weight: var(--weight-medium);
 }
 
-/* Hidden until the JS-driven auto-transition reveals them (splash-detail-visible),
-   matching the "logo/title first, then technical detail" sequence — but the
-   hint below is never gated on that timer, so skipping straight through
-   never means waiting out an animation first. The technical detail itself —
-   the version/build line and the resource-limit ceiling table in particular
-   — is written out here as plain text, not tucked into a badge or a `title`
-   hover: a touch device has no hover to read it from, which was the entire
-   point of putting it on the splash. */
+/* Written out as plain text rather than a hover title: a touch device has no
+   hover to read it from. */
 .splash-version-line,
 .splash-note,
 .splash-limits-heading,
@@ -474,14 +460,6 @@ header .version {
     opacity: 0;
     transform: translateY(4px);
     transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.splash-screen.splash-detail-visible .splash-version-line,
-.splash-screen.splash-detail-visible .splash-note,
-.splash-screen.splash-detail-visible .splash-limits-heading,
-.splash-screen.splash-detail-visible .splash-limits {
-    opacity: 1;
-    transform: translateY(0);
 }
 
 .splash-version-line {
@@ -502,9 +480,8 @@ header .version {
     font-weight: var(--weight-medium);
 }
 
-/* The ceiling table, which the header can only offer on hover. Monospace so
-   the name/value pairs line up, and left-aligned within a centered splash so
-   a list of several lines reads naturally. */
+/* The ceiling table: monospace so the name/value pairs line up, left-aligned
+   within the centred splash. */
 .splash-limits {
     list-style: none;
     display: flex;
@@ -532,16 +509,8 @@ header .version {
     to { opacity: 1; }
 }
 
-/* Every splash rule above carries the same specificity as these, so this block
-   has to sit after them to win the cascade — the same reason the header's own
-   override sits directly below the rules it cancels. With the motion gone the
-   splash still says everything it would have said, just all at once: nothing
-   here is only reachable through an animation. */
+/* With the motion gone the splash says everything at once. */
 @media (prefers-reduced-motion: reduce) {
-    .splash-screen {
-        transition: none;
-    }
-
     .splash-logo,
     .splash-heading {
         animation: none;
@@ -562,48 +531,45 @@ header .version {
 
 footer {
     border-top: var(--border-main);
-    padding: 0.75rem 2rem;
+    padding: var(--space-sm) var(--space-xl);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
+    gap: var(--space-xl);
     flex-shrink: 0;
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     text-align: center;
-}
 
-footer a {
-    color: var(--color-text-light);
-    text-decoration: none;
+    & a {
+        color: var(--color-text-light);
 
-    &:hover {
-        color: var(--color-text);
+        &:hover {
+            color: var(--color-text);
+        }
     }
 }
 
 
-/* Single source of truth for every non-word button (header, output, dictionary
- * actions, and the dynamically generated JSON download link). Edit here to
- * restyle all of them at once. */
+/* Every non-word button: header, output, dictionary actions, and the
+   generated JSON download link. */
 .btn {
     display: inline-flex;
     align-items: center;
     align-self: flex-end;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     min-height: 2.125rem;
-    padding: 0.5rem 1rem;
+    padding: var(--space-xs) var(--space-md);
     font-family: var(--font-stack-primary);
-    font-size: 0.875rem;
-    font-weight: 500;
-    line-height: 1.2;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
     border: var(--border-main);
     border-radius: var(--radius-button);
     cursor: pointer;
-    text-decoration: none;
     color: var(--color-text);
-    background: #fff;
+    background: var(--color-white);
 
     &:hover {
         background: var(--color-light);
@@ -611,274 +577,93 @@ footer a {
     }
 }
 
-.header-actions {
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-}
 
-
+/* The three content boxes: Output, Stack, and the word lists. */
 .display-area,
 .state-display,
 .words-display {
     min-height: 0;
     overflow-y: auto;
+    padding: var(--space-sm);
+    border: var(--border-main);
+    background: var(--color-white);
     font-family: var(--font-stack-mono);
     font-size: 0.9rem;
-}
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-medium) var(--color-light);
 
-.display-area,
-.state-display,
-.words-display {
-    background-color: #fff;
-    padding: 0.75rem;
-    border: var(--border-main);
-}
-
-
-.display-area::-webkit-scrollbar,
-.state-display::-webkit-scrollbar,
-.words-display::-webkit-scrollbar {
-    width: 10px;
-}
-
-.display-area::-webkit-scrollbar-track,
-.state-display::-webkit-scrollbar-track,
-.words-display::-webkit-scrollbar-track {
-    background: var(--color-light);
-}
-
-.display-area::-webkit-scrollbar-thumb,
-.state-display::-webkit-scrollbar-thumb,
-.words-display::-webkit-scrollbar-thumb {
-    background: var(--color-medium);
-    border-radius: 5px;
-}
-
-.display-area::-webkit-scrollbar-thumb:hover,
-.state-display::-webkit-scrollbar-thumb:hover,
-.words-display::-webkit-scrollbar-thumb:hover {
-    background: var(--color-secondary);
-}
-
-
-
-@media (max-width: 768px) {
-    html,
-    body {
-        height: auto;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .container {
-        min-height: 100vh;
-        height: auto;
-        width: 100%;
-    }
-
-
-    header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
+    @media (width <= 768px) {
+        min-height: 80px;
     }
 }
-/* Layout layer placeholder.
- * Existing layout rules remain in components.css for safe migration.
- * Incrementally move layout selectors here in follow-up phases.
- */
-.main-layout .output-area,
-.main-layout .input-area,
-.main-layout .stack-area,
-.main-layout .dictionary-area,
-.main-layout .dictionary-sheet {
-    justify-content: flex-start;
-    align-content: flex-start;
-}
-
+/* ── Layout: two columns on desktop, one surface at a time on mobile ─────── */
 
 .main-layout {
     display: flex;
     flex: 1;
-    gap: 0;
-    padding: 0;
     min-height: 0;
-    background: #fff;
-}
+    background: var(--color-white);
 
-
-.area-selector {
-    padding: 0;
-    flex-shrink: 0;
-}
-
-.area-selector select,
-.dictionary-sheet-select,
-.sheet-selector-native-trigger {
-    /* Chrome OS's monospace metrics render slightly high in compact controls.
-       Use shared asymmetric block padding so selector labels sit optically centered. */
-    --control-text-y-adjust: 0.0625rem;
-    font-family: var(--font-stack-mono);
-    font-size: 0.8rem;
-    line-height: 1.2;
-    padding: calc(0.25rem + var(--control-text-y-adjust)) 0.5rem calc(0.25rem - var(--control-text-y-adjust));
-    border: var(--border-main);
-    border-radius: var(--radius-main);
-    background: #fff;
-    color: var(--color-text);
-    width: 100%;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-.area-selector select:focus,
-.dictionary-sheet-select:focus,
-.dictionary-sheet-select:focus-within,
-.sheet-selector:focus-within .sheet-selector-native-trigger {
-    outline: none;
-    background: var(--color-light);
-}
-
-.dictionary-sheet-select.sheet-selector {
-    border: 0;
-    background: transparent;
-    transition: none;
-}
-
-
-/* The two selectors that can host Dictionary mode — the desktop right column's
-   and the mobile one — are the same control in the same arrangement: the mode
-   select and the word search side by side, the select taking the larger share.
-   One rule lays out both, over identical markup, because only *which of the two
-   is shown* differs between the modes (the media queries below). Nothing here
-   sizes them either: the base rule above is the single place a selector's
-   height is decided, on every viewport. */
-.area-selector-right,
-.area-selector-mobile {
-    align-items: center;
-    gap: 0.5rem;
-
-    /* The mode select takes the golden share of the row and the word search the
-       rest. The select is the flex item itself in both modes — it used to be
-       wrapped in a div on desktop and bare on mobile, which is why the two rows
-       divided their width slightly differently: a zero flex-basis on a
-       border-box control floors at that control's own padding and border, and a
-       wrapper div has neither. Sharing the markup shares the proportion. */
-    & select {
-        flex: 1.618 1 0%;
-    }
-
-    & .search-wrapper {
-        flex: 1 1 0%;
-        min-width: 0;
-    }
-
-    & .vocabulary-search-input {
-        width: 100%;
-        max-width: none;
-        /* The 120px floor the base rule gives this field is wider than the
-           share it gets in a 300px-class selector row, and the row cannot grow
-           to take it: the page would overflow by the difference, silently (the
-           body clips), with the field's clear button half off the screen. */
-        min-width: 0;
-    }
-
-    /* Container query: when the column is too narrow to seat the mode selector
-       and the word search side by side, stack them. Keyed on the panel
-       container (not the viewport) so a slim desktop column reflows on its own,
-       without inventing another global breakpoint. The mobile selector sits
-       *above* the panel rather than inside it, so it has no panel container to
-       answer and keeps its single row. */
-    @container panel (max-width: 18rem) {
-        flex-wrap: wrap;
-
-        & select,
-        & .search-wrapper {
-            flex-basis: 100%;
-        }
+    @media (width <= 768px) {
+        flex-direction: column;
+        overflow: hidden;
     }
 }
-
-.area-selector-right {
-    display: flex;
-}
-
-/* Desktop reaches its surfaces through the two in-panel selectors; the mobile
-   block below swaps in the single one. */
-.area-selector-mobile {
-    display: none;
-}
-
-
-/* Dictionary word-search visibility, driven declaratively from the native
-   <select> state with :has() instead of an imperative .hidden toggle in TS.
-   Each selector answers for its own select, so one rule covers both modes; the
-   left selector has no search box to gate, never hosting Dictionary mode. */
-.area-selector .search-wrapper {
-    display: none;
-}
-
-.area-selector:has(option[value="dictionary"]:checked) .search-wrapper {
-    display: flex;
-}
-
-
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-[hidden] {
-    display: none !important;
-}
-
 
 #editor-panel,
 #state-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     min-height: 0;
-    padding: 0.75rem;
+    padding: var(--space-sm);
     overflow: hidden;
-    background: #fff;
+    background: var(--color-white);
     position: relative;
 
-    /* Establish a query container so panel-internal components can adapt to the
-       panel's own width rather than the viewport. This keeps the desktop /
-       mobile *mode* switching (driven by the viewport media queries below) while
-       letting controls reflow when a column is merely narrow — e.g. a slim
-       desktop column behaves like the mobile layout without a second breakpoint. */
+    /* A query container, so controls inside a column reflow when the column
+       is merely narrow, independently of the desktop/mobile mode switch. */
     container: panel / inline-size;
-}
 
+    /* Between the columns the seam is balanced by halving the inner padding. */
+    @media (769px <= width <= 1024px) {
+        padding-inline: var(--space-sm) calc(var(--space-sm) / 2);
+    }
+
+    @media (width <= 768px) {
+        flex: 1 1 auto;
+        width: 100%;
+        gap: 0;
+        /* On mobile the panel selector is a sibling above the panel, not a
+           child, so the seam below it is this padding-top: the 0.5rem that
+           separates two stacked things, not the 0.75rem page gutter. */
+        padding: var(--space-xs) var(--space-sm) var(--space-sm);
+    }
+}
 
 #editor-panel {
     flex: var(--col-left-flex);
     border-right: var(--border-main);
+
+    @media (width <= 768px) {
+        border-right: none;
+    }
 }
-#state-panel  { flex: var(--col-right-flex); }
 
+#state-panel {
+    flex: var(--col-right-flex);
 
-#editor-panel,
-#state-panel,
-.input-area,
-.output-area,
-.stack-area,
-.dictionary-area,
-.words-display,
-.state-display,
-.display-area {
-    min-height: 0;
+    @media (769px <= width <= 1024px) {
+        padding-inline: calc(var(--space-sm) / 2) var(--space-sm);
+    }
+}
+
+/* Mobile shows one surface: the column that does not hold it is gone. */
+@media (width <= 768px) {
+    body:is([data-active-area="input"], [data-active-area="output"]) #state-panel,
+    body:is([data-active-area="stack"], [data-active-area="dictionary"]) #editor-panel {
+        display: none;
+    }
 }
 
 .input-area,
@@ -888,45 +673,127 @@ footer a {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     min-height: 0;
     position: relative;
 }
 
-
-@media (min-width: 769px) {
+@media (width >= 769px) {
     body[data-active-area] .main-layout section {
-        margin-bottom: 0;
         flex: 1;
         min-height: 0;
     }
 }
 
-@media (max-width: 768px) {
-    body[data-active-area="input"] #state-panel,
-    body[data-active-area="output"] #state-panel,
-    body[data-active-area="stack"] #editor-panel,
-    body[data-active-area="dictionary"] #editor-panel {
+
+/* ── Surface selectors ───────────────────────────────────────────────────── */
+
+.area-selector {
+    flex-shrink: 0;
+}
+
+.area-selector select,
+.dictionary-toolbar select {
+    /* Monospace metrics render slightly high in compact controls; asymmetric
+       block padding sits the label optically centred. */
+    --control-text-y-adjust: 0.0625rem;
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    padding: calc(var(--space-2xs) + var(--control-text-y-adjust)) var(--space-xs) calc(var(--space-2xs) - var(--control-text-y-adjust));
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    background: var(--color-white);
+    color: var(--color-text);
+    width: 100%;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.area-selector select:focus,
+.dictionary-toolbar select:focus {
+    outline: none;
+    background: var(--color-light);
+}
+
+/* The Dictionary area's own toolbar: the Core/User select and the word search
+   side by side, the select taking the larger share. One of it, inside the
+   area, so the search is there whichever area selector brought the Dictionary
+   up — desktop's right column or mobile's single selector. */
+.dictionary-toolbar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--space-xs);
+
+    & select {
+        flex: var(--golden) 1 0%;
+    }
+
+    & .search-wrapper {
+        flex: 1 1 0%;
+        min-width: 0;
+    }
+
+    & .vocabulary-search-input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* Too narrow to seat the select and the word search side by side: stack
+       them. Keyed on the panel container, not the viewport, so a slim desktop
+       column reflows on its own. */
+    @container panel (width <= 18rem) {
+        flex-wrap: wrap;
+
+        & select,
+        & .search-wrapper {
+            flex-basis: 100%;
+        }
+    }
+}
+
+.area-selector-left {
+    @media (width <= 768px) {
         display: none;
     }
 }
 
+.area-selector-right {
+    @media (width <= 768px) {
+        display: none;
+    }
+}
+
+.area-selector-mobile {
+    display: none;
+
+    /* Outside the panel, so it carries the page gutter and surface colour
+       the panel gives its own children. */
+    @media (width <= 768px) {
+        display: flex;
+        padding: var(--space-sm) var(--space-sm) 0;
+        background: var(--color-white);
+    }
+}
+
+
+
+/* ── Input ───────────────────────────────────────────────────────────────── */
 
 #code-input {
     width: 100%;
     min-height: 0;
-    /* The editor counts taps of its own (triple-tap to Run), and the browser's
-       double-tap-to-zoom sits inside that count: without this the first two
-       taps of a Run could zoom the page instead. `manipulation` keeps pinch
-       zoom and scrolling — only the double-tap shortcut is given up. */
+    /* The editor counts taps of its own (triple-tap to Run); `manipulation`
+       gives up only the browser's double-tap zoom, keeping pinch and scroll. */
     touch-action: manipulation;
-    padding: 0.75rem;
+    padding: var(--space-sm);
     border: var(--border-main);
     font-family: var(--font-stack-mono);
-    font-size: 0.95rem;
+    font-size: var(--text-base);
     resize: none;
     flex: 1;
-    line-height: 1.5;
+    line-height: var(--leading-snug);
     background-color: var(--color-symbol);
     color: var(--input-text);
     caret-color: var(--input-text);
@@ -940,15 +807,24 @@ footer a {
     &::placeholder {
         color: var(--input-placeholder);
     }
-}
 
+    /* iOS Safari zooms into a field under 16px and does not zoom back. */
+    @media (width <= 768px) {
+        font-size: 1rem;
+    }
+
+    /* The corner controls are not drawn while there is nothing to clear or
+       format. */
+    &:placeholder-shown ~ :is(#editor-clear-btn, #editor-format-btn) {
+        display: none;
+    }
+}
 
 .inline-clear-btn {
     position: absolute;
     width: 1.5rem;
     height: 1.5rem;
     touch-action: manipulation;
-    padding: 0;
     border: none;
     background: none;
     color: var(--input-text);
@@ -959,34 +835,61 @@ footer a {
     align-items: center;
     justify-content: center;
     opacity: 0.6;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-fast);
 
     &:hover {
         opacity: 1;
     }
 }
 
-
-#editor-clear-btn {
-    top: 0.5rem;
-    right: 0.5rem;
+/* The three corner buttons. On mobile the glyph keeps its drawn size and the
+   padding around it becomes a 44px target. */
+#editor-clear-btn,
+#editor-format-btn,
+#stack-clear-btn {
     z-index: 2;
-    color: var(--input-text);
+
+    @media (width <= 768px) {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+}
+
+#editor-clear-btn,
+#stack-clear-btn {
+    inset: var(--space-xs) var(--space-xs) auto auto;
+
+    @media (width <= 768px) {
+        inset: 0 0 auto auto;
+    }
 }
 
 #editor-format-btn {
-    bottom: 0.5rem;
-    right: 0.5rem;
-    z-index: 2;
-    color: var(--input-text);
+    inset: auto var(--space-xs) var(--space-xs) auto;
+
+    @media (width <= 768px) {
+        inset: auto 0 0 auto;
+    }
 }
 
-/* Discarding the stack is the same gesture as clearing the editor, so it is the
-   same control in the same corner: an `×` at the top right of its area. */
-#stack-clear-btn {
-    top: 0.5rem;
-    right: 0.5rem;
+/* A run in progress, stated over the editor's lower-left corner — the one
+   corner no control holds — so it is on screen wherever the run was started. */
+.run-status {
+    position: absolute;
+    inset: auto auto var(--space-xs) var(--space-xs);
     z-index: 2;
+    max-width: calc(100% - 4rem);
+    padding: var(--space-3xs) var(--space-xs);
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    background: var(--color-white);
+    color: var(--color-text-light);
+    font-size: var(--text-xs);
+    pointer-events: none;
+}
+
+/* Same gesture as clearing the editor, so the same control in the same corner. */
+#stack-clear-btn {
     color: var(--color-text-light);
 }
 
@@ -994,21 +897,14 @@ footer a {
     display: none;
 }
 
-#code-input:placeholder-shown ~ #editor-clear-btn,
-#code-input:placeholder-shown ~ #editor-format-btn {
-    display: none;
-}
-
-
 .editor-suggestions {
     position: absolute;
     touch-action: manipulation;
-
     min-width: 180px;
     max-width: calc(100% - 1rem);
     max-height: 220px;
     overflow-y: auto;
-    background: #fff;
+    background: var(--color-white);
     z-index: 20;
 }
 
@@ -1021,136 +917,223 @@ footer a {
     font-family: var(--font-stack-mono);
     font-size: 0.78rem;
     cursor: pointer;
+
+    /* The item Tab accepts, moved with the arrow keys. */
+    &:hover,
+    &.is-selected {
+        background: var(--color-light);
+    }
+
+    @media (width <= 768px) {
+        min-height: 2.75rem;
+        font-size: var(--text-base);
+    }
 }
 
-.editor-suggestions--symbols {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 2px;
-    padding: 4px;
-    min-width: 13rem;
-    max-width: calc(100% - 1rem);
-    max-height: none;
-    overflow-y: visible;
-}
 
-.editor-suggestions--symbols .editor-suggestion-item {
-    width: auto;
-    min-height: 2.25rem;
-    padding: 0.35rem 0;
-    text-align: center;
-    font-size: 1rem;
-    line-height: 1;
-}
+/* ── Output ──────────────────────────────────────────────────────────────── */
 
 #output-display {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
     white-space: pre-wrap;
 }
 
+.output-debug   { color: var(--color-output-debug); }
+.output-program { color: var(--color-output-program); }
+.output-info    { color: var(--color-output-info); }
 
-
-.stack-area {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+.output-error {
+    color: var(--color-output-error);
+    font-weight: var(--weight-bold);
 }
 
-/* LaTeX checkbox: opt-in KaTeX rendering of stack values; unchecked, the
-   canonical display strings (the conformance observation) render as-is.
-   Bottom-right of the Stack area: the panel's own padding keeps it off
-   the frame while it stays visually attached to the area. */
+/* A report kept out of the reader's way: a reasoned NIL is a value the
+   language promised, so its diagnosis is offered rather than announced. */
+.folded-info {
+    margin-top: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+
+    & summary {
+        cursor: pointer;
+        user-select: none;
+    }
+}
+
+.folded-info-body {
+    white-space: pre-wrap;
+    padding: var(--space-2xs) 0 0 var(--space-md);
+}
+
+.output-area,
+.stack-area {
+    /* Both count double-taps to move to the next surface — the gesture the
+       browser reads as zoom. */
+    @media (width <= 768px) {
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+}
+
+
+/* ── Stack ───────────────────────────────────────────────────────────────── */
+
+/* Opt-in KaTeX rendering of stack values; unchecked, the canonical display
+   strings (the conformance observation) render as-is. */
 .stack-latex-toggle {
     align-self: flex-end;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    margin: 0 0.125rem 0.125rem 0;
+    margin: 0 var(--space-3xs) var(--space-3xs) 0;
     font-family: var(--font-stack-primary);
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     color: var(--color-text-light);
     cursor: pointer;
     user-select: none;
+
+    & input {
+        cursor: pointer;
+        accent-color: var(--color-primary);
+        touch-action: manipulation;
+    }
+
+    @media (width <= 768px) {
+        min-height: 2.75rem;
+        padding-right: var(--space-2xs);
+        font-size: 0.9rem;
+
+        & input {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+    }
 }
 
-.stack-latex-toggle input {
-    margin: 0;
-    cursor: pointer;
-    accent-color: var(--color-primary);
-    touch-action: manipulation;
+#stack-display {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden auto;
+    /* Keeps the top-right corner free for the clear control drawn over it. */
+    padding-right: 1.75rem;
+
+    &.is-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Reading order — top to bottom, left to right, the top of the stack
+       last — so the value the next Word takes is never reconstructed from
+       where the rows broke. */
+    & .stack-content-flow {
+        align-items: center;
+    }
+
+    /* A Word takes its operands from the top of the stack and consumes them
+       (LANG.STACK.CONSUMPTION): the top item is filled, not recoloured, so the
+       bracket depth-colours stay intact. Even padding on all four sides, in
+       both the canonical and LaTeX renderings. */
+    & .stack-item:last-child .stack-node[data-depth="1"] {
+        padding: 0.35rem;
+        border-radius: 0;
+        background-color: var(--color-stack-top);
+    }
 }
 
-/* Cost summary: per-run cost-model activity (Reference: Cost Model),
-   collapsed by default at the bottom of the Output area. Rendered muted so
-   it reads as an optional diagnostic, never part of the program's output. */
-.cost-summary {
-    margin-top: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--color-text-light);
+.state-display {
+    color: var(--color-text);
+
+    &.is-empty {
+        color: var(--color-text-light);
+    }
 }
 
-.cost-summary summary {
-    cursor: pointer;
-    user-select: none;
+.area-content-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    width: 100%;
 }
 
-.cost-summary-body {
-    white-space: pre-wrap;
-    padding: 0.25rem 0 0 1rem;
+.stack-item {
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-2xs);
+    display: inline;
+    margin: 2px;
+    padding: 2px 4px;
+    border-radius: var(--radius-button);
+    color: var(--color-stack);
+    overflow-wrap: anywhere;
+
+    &:last-child {
+        font-weight: var(--weight-bold);
+    }
 }
 
-/* A report kept out of the reader's way, folded exactly as the cost summary
-   is. A reasoned NIL is a value the language promised, so its diagnosis is
-   offered rather than announced: ten lines of "[DIAGNOSIS]" under a correct
-   answer read as a failure report for something that did not fail. */
-.folded-info {
-    margin-top: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--color-text-light);
+.stack-node {
+    display: inline;
+    border-radius: var(--radius-button);
+    line-height: var(--leading-body);
 }
 
-.folded-info summary {
-    cursor: pointer;
-    user-select: none;
-}
-
-.folded-info-body {
-    white-space: pre-wrap;
-    padding: 0.25rem 0 0 1rem;
+.stack-node-vector {
+    display: inline;
+    color: var(--color-stack);
 }
 
 .stack-node-math {
     display: inline-block;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: auto hidden;
     vertical-align: middle;
-    /* Trailing breathing room so a wide rendering never touches the
-       Stack area's right edge. */
+    /* Trailing room so a wide rendering never touches the area's right edge. */
     padding: 0.1rem 0.6rem 0.1rem 0.15rem;
 }
 
-
-#stack-display {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Keep the top-right corner free for the clear control, which is drawn over
-       this area rather than beside it: without the reserve, a first row that
-       fills the width runs underneath the `×`. */
-    padding-right: 1.75rem;
+.stack-bracket {
+    font-weight: var(--weight-bold);
+    font-size: 1.1em;
+    line-height: 1;
+    /* Nesting depth cycles no further than nine; deeper brackets keep depth 1. */
+    color: var(--bracket-depth-1);
+    &[data-depth="2"] { color: var(--bracket-depth-2); }
+    &[data-depth="3"] { color: var(--bracket-depth-3); }
+    &[data-depth="4"] { color: var(--bracket-depth-4); }
+    &[data-depth="5"] { color: var(--bracket-depth-5); }
+    &[data-depth="6"] { color: var(--bracket-depth-6); }
+    &[data-depth="7"] { color: var(--bracket-depth-7); }
+    &[data-depth="8"] { color: var(--bracket-depth-8); }
+    &[data-depth="9"] { color: var(--bracket-depth-9); }
 }
 
-#stack-display.is-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* A NIL with its reason beside it (`NIL · divisionByZero`). The reason is
+   the NIL's content rather than commentary, so it stays in the value's line,
+   set in the secondary ink so `NIL` itself still reads as the value. */
+.stack-node-nil {
+    white-space: nowrap;
 }
 
+.stack-nil-reason {
+    color: var(--color-text-light);
+    font-weight: var(--weight-regular);
+}
+
+/* The undrawn tail of a large collection (src/gui/stack-render-budget.ts),
+   styled as commentary so it cannot be read as part of the value. */
+.stack-elision {
+    font-style: italic;
+    font-weight: var(--weight-regular);
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+
+/* ── Dictionary ──────────────────────────────────────────────────────────── */
 
 .search-wrapper {
     position: relative;
@@ -1159,7 +1142,7 @@ footer a {
 }
 
 .vocabulary-search-input {
-    padding: 0.25rem 1.75rem 0.25rem 0.5rem;
+    padding: var(--space-2xs) 1.75rem var(--space-2xs) var(--space-xs);
     border: var(--border-main);
     border-radius: 0;
     font-size: 0.85rem;
@@ -1167,8 +1150,6 @@ footer a {
     background-color: var(--color-symbol);
     color: var(--input-text);
     caret-color: var(--input-text);
-    min-width: 120px;
-    max-width: 200px;
     transition: background-color var(--transition-fast);
 
     &:focus {
@@ -1179,173 +1160,90 @@ footer a {
     &::placeholder {
         color: var(--input-placeholder);
     }
-}
 
-.vocabulary-search-clear-btn {
-    right: 0.25rem;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
-    color: var(--input-text);
-}
+    &:placeholder-shown ~ .vocabulary-search-clear-btn {
+        display: none;
+    }
 
-.vocabulary-search-input:placeholder-shown ~ .vocabulary-search-clear-btn {
-    display: none;
-}
-
-
-
-.context-menu {
-    /* Shown as a native popover (top layer): neutralize the UA popover defaults
-       (centering inset/margin and the default border) and position via the
-       cursor coordinates set in JS. */
-    position: fixed;
-    inset: auto;
-    margin: 0;
-    border: 0;
-    min-width: 12rem;
-    padding: 0.125rem;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-
-    & button {
-        display: block;
-        width: 100%;
-        padding: 0.375rem 0.75rem;
-        background: transparent;
-        color: var(--color-text);
-        border: none;
-        text-align: left;
-        cursor: pointer;
-
-        &:hover:not(:disabled) {
-            background: var(--color-light);
-        }
-
-        &:disabled {
-            color: var(--color-text-light);
-            cursor: not-allowed;
-        }
+    @media (width <= 768px) {
+        font-size: 1rem;
     }
 }
 
-.no-results-message {
-    width: 100%;
-    color: var(--color-text-light);
-    font-style: italic;
-    padding: 0.5rem;
-    text-align: center;
-}
-
-.vocabulary-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-}
-
-.words-display {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-items: flex-start;
-    align-content: flex-start;
-    overflow-y: auto;
-    /* The same 0.75rem the other three content boxes hold their contents at
-       (`#code-input`, `#output-display`, `#stack-display`). This was 4px, a
-       figure belonging to neither of the two spacings the layout keeps — the
-       0.75rem inside a box and around the page, and the 0.5rem between two
-       stacked boxes — so the word list sat its chips 6px from its frame while
-       every box beside it sat its content at 13px. The chips keep their own
-       1px margins: those are the spacing between chips, which is a denser
-       thing than the frame around all of them and is meant to look it. */
-    padding: 0.75rem;
-    border: var(--border-main);
-    border-radius: var(--radius-panel);
-    background: #fff;
-    cursor: pointer;
-}
-
-.words-display.is-empty {
-    align-items: center;
-    align-content: center;
-    justify-content: center;
-}
-
-.dictionary-sheet .words-display {
-    flex: 1;
-    min-height: 7rem;
-}
-
-.empty-words-message {
-    width: 100%;
-    padding: 0.75rem;
-    text-align: center;
-    color: var(--color-text-light);
-    font-style: italic;
-}
-
-
-.state-display {
-    color: var(--color-text);
-}
-
-.state-display.is-empty {
-    color: var(--color-text-light);
-}
-
-
-.area-content-flow {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-items: flex-start;
-    align-content: flex-start;
-    width: 100%;
-
-
-}
-
-
-/* The Stack area reads the way prose does: top to bottom, left to right, with
-   the top of the stack last.
-
-   It used to wrap-reverse, so that values appeared to pile upward. That reads
-   as a stack while everything fits on one line, and stops reading the moment it
-   wraps: the top of the stack becomes the right-hand end of the *top* row, and
-   working out which value a Word will take next means reconstructing where the
-   rows broke. Ordinary reading order costs the piling-up image and buys a
-   position that never has to be reconstructed. The top of the stack keeps its
-   own marks either way — it is the bold item, and the one the operand highlight
-   fills. */
-#stack-display .stack-content-flow {
-    flex-wrap: wrap;
-    align-content: flex-start;
-    align-items: center;
-}
-
-
-.dictionary-area > .dictionary-sheet-select {
-    flex: 0 0 auto;
+.vocabulary-search-clear-btn {
+    inset: 50% var(--space-2xs) auto auto;
+    transform: translateY(-50%);
+    z-index: 2;
 }
 
 .dictionary-sheet {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     min-height: 0;
     width: 100%;
     overflow: hidden;
+
+    & .words-display {
+        flex: 1;
+        min-height: 7rem;
+    }
 }
 
-.dictionary-sheet:not(.active) {
-    display: none;
+.words-display {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    border-radius: var(--radius-panel);
+    /* The space between the buttons is a control: a click writes a space. */
+    cursor: pointer;
+
+    &.is-empty {
+        align-items: center;
+        align-content: center;
+        justify-content: center;
+    }
+
+    @media (width <= 768px) {
+        cursor: default;
+    }
 }
 
-.dictionary-sheet > .dictionary-sheet-select {
-    flex: 0 0 auto;
+.no-results-message,
+.empty-words-message {
+    width: 100%;
+    text-align: center;
+    color: var(--color-text-light);
+    font-style: italic;
 }
 
+.no-results-message {
+    padding: var(--space-xs);
+}
+
+.empty-words-message {
+    padding: var(--space-sm);
+}
+
+.vocabulary-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+
+    @media (width <= 768px) {
+        & .btn {
+            min-height: 2.75rem;
+        }
+    }
+}
+
+#copy-output-btn {
+    @media (width <= 768px) {
+        min-height: 2.75rem;
+    }
+}
 
 .word-button {
     --control-text-y-adjust: 0.0625rem;
@@ -1354,21 +1252,19 @@ footer a {
     justify-content: center;
     margin: 2px;
     padding: calc(0.2rem + var(--control-text-y-adjust)) 0.4rem calc(0.2rem - var(--control-text-y-adjust));
-    background: #fff;
+    background: var(--color-white);
     color: var(--color-text);
     border: var(--border-main);
     font-family: var(--font-stack-mono);
-    font-size: 0.75rem;
-    line-height: 1.2;
-    font-weight: 400;
+    font-size: var(--text-2xs);
+    line-height: var(--leading-tight);
+    font-weight: var(--weight-regular);
     cursor: pointer;
     border-radius: var(--radius-word-button);
 
-    /* Skip rendering chips that are scrolled out of the words list — the only
-       list here that can grow without bound (large user/module vocabularies).
-       contain-intrinsic-size uses the `auto` keyword so each chip's real size is
-       remembered after it is first laid out, keeping wrap and scroll positions
-       stable; the fallbacks are only the estimate for a chip not yet rendered. */
+    /* Chips scrolled out of the list are not rendered; `auto` remembers each
+       chip's real size once laid out, and the fallbacks are the estimate for
+       one not yet rendered. */
     content-visibility: auto;
     contain-intrinsic-width: auto 4rem;
     contain-intrinsic-height: auto 1.75rem;
@@ -1388,445 +1284,56 @@ footer a {
         color: var(--color-non-dependency);
     }
 
-    /* Module words are built-ins too: keep the same visual treatment as Core words. */
-    &.module {
-        border-color: var(--color-core);
-        color: var(--color-core);
-    }
-
-    /* Inactive (un-imported) module words and selector entries: faded, signalling
-       they are candidates to be activated with a long-press. */
-    &.is-inactive {
-        opacity: 0.4;
-        background: repeating-linear-gradient(
-            45deg, transparent, transparent 4px,
-            rgba(0, 0, 0, 0.03) 4px, rgba(0, 0, 0, 0.03) 8px
-        );
-    }
-
-    /* Container query: in a slim *desktop* column, grow the chips into
-       comfortable click targets — there a word button types its name into the
-       editor, so it is a control and is worth the room. The mobile block below
-       restates all three of these properties to opt out: a container query
-       cannot tell a phone from a narrow desktop column, and on a phone the
-       chip types nothing and the room is the vocabulary's. */
-    @container panel (max-width: 26rem) {
+    /* In a slim desktop column a word button is a control that types its
+       name, so it grows into a comfortable click target. */
+    @container panel (width <= 26rem) {
         margin: 3px;
         padding: calc(0.4rem + var(--control-text-y-adjust)) 0.6rem calc(0.4rem - var(--control-text-y-adjust));
         font-size: 0.85rem;
     }
-}
 
-/* Custom dictionary selector: a div replacement for the native <select> that
-   supports per-entry long-press toggling and greyed inactive modules. */
-.sheet-selector {
-    position: relative;
-    padding: 0;
-}
-
-.sheet-selector-native-trigger {
-    display: block;
-    pointer-events: none;
-}
-
-.sheet-selector-trigger {
-    position: absolute;
-    inset: 0;
-    padding: calc(0.25rem + var(--control-text-y-adjust)) 0.5rem calc(0.25rem - var(--control-text-y-adjust));
-    width: 100%;
-    color: transparent;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-main);
-    cursor: pointer;
-}
-
-.sheet-selector-trigger:focus {
-    outline: none;
-}
-
-.sheet-selector-panel {
-    /* Native popover (top layer): the left/top/width are set in JS from the
-       trigger's rect just before it opens; here we only neutralize the UA
-       popover centering and padding. */
-    position: fixed;
-    inset: auto;
-    margin: 0;
-    padding: 0;
-    max-height: 60vh;
-    overflow-y: auto;
-    background: #fff;
-    border: var(--border-main);
-    border-radius: var(--radius-main);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.sheet-selector-option {
-    display: block;
-    width: 100%;
-    text-align: left;
-    font-family: var(--font-stack-mono);
-    font-size: 0.8rem;
-    padding: 0.375rem 0.75rem;
-    background: transparent;
-    color: var(--color-text);
-    border: none;
-    cursor: pointer;
-
-    &:hover {
-        background: var(--color-light);
-    }
-
-    &.is-selected {
-        font-weight: 700;
-        background: var(--color-light);
-    }
-
-    &.is-inactive {
-        color: #aaa;
-    }
-}
-
-
-
-.stack-item {
-    font-family: var(--font-stack-mono);
-    font-size: 0.75rem;
-    display: inline;
-    margin: 2px;
-    padding: 2px 4px;
-    border-radius: 6px;
-    background-color: transparent;
-    color: var(--color-stack);
-    border: none;
-    word-break: break-word;
-}
-
-.stack-node {
-    display: inline;
-    border-radius: 6px;
-    line-height: 1.6;
-}
-
-.stack-node-vector {
-    display: inline;
-}
-
-
-.stack-bracket {
-    font-weight: bold;
-    font-size: 1.1em;
-    line-height: 1;
-}
-
-
-/* The Stack area draws a bounded prefix of a large collection (see
-   src/gui/stack-render-budget.ts). The marker that stands for the undrawn tail
-   is styled as commentary — muted, italic, never bold — so it cannot be read as
-   part of the value even when it sits inside the brackets. */
-.stack-elision {
-    font-style: italic;
-    font-weight: normal;
-    opacity: 0.65;
-    white-space: nowrap;
-}
-
-
-.stack-node-vector {
-    background-color: transparent;
-    color: var(--color-stack);
-}
-
-
-.stack-item:last-child {
-    font-weight: bold;
-}
-
-
-/* Operand highlight as a background fill. A fill (not a text-color change) is
-   used so it never competes with the bracket depth-colors that show Vector
-   nesting; the tint is kept very pale so the value's own ink stays legible. A
-   Word takes its operands from the top of the stack, so the fill marks the top
-   item, and the fill *color* carries the one modifier axis
-   (LANG.MODIFIERS.CONSUMPTION) — a non-operand is never consumed, so the fill
-   alone shows both "which value is the operand" and "what becomes of it".
-   Padding is even on all four sides so the value sits with equal vertical and
-   horizontal breathing room, in both the canonical and LaTeX renderings. */
-#stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
-#stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
-    padding: 0.35rem;
-    border-radius: 0;
-}
-
-
-/* EAT (default): operands are removed after the operation — very pale warm red. */
-#stack-display.highlight-top.consume-eat .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: var(--color-consume-eat);
-}
-
-
-/* KEEP: operands are retained — very pale teal-green, set apart from EAT in both
-   hue and lightness so the two read apart under color-vision deficiency. */
-#stack-display.highlight-top.consume-keep .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: var(--color-consume-keep);
-}
-
-
-@media (max-width: 768px) {
-
-
-    html,
-    body {
-        height: 100%;
-        overflow: hidden;
-    }
-
-    .container {
-        height: 100vh;
-        height: 100dvh;
+    /* On a phone the list is a catalogue of the vocabulary, sized so the
+       Core Words fit in one glance: the box tightens, the type does not. All
+       three restated, because the container query above sets each of them. */
+    @media (width <= 768px) {
         min-height: 0;
-    }
-
-
-    .area-selector-left,
-    .area-selector-right {
-        display: none;
-    }
-
-    /* The row itself is laid out by the shared rule above, together with the
-       desktop selector it is the other half of. What is mobile-only is that it
-       stands outside the panel: it has to carry the page gutter and the surface
-       colour that the panel provides to its own children. */
-    .area-selector-mobile {
-        display: flex;
-        padding: 0.75rem 0.75rem 0;
-        background: #fff;
-    }
-
-    .main-layout {
-        flex: 1;
-        flex-direction: column;
-        padding: 0;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    #editor-panel,
-    #state-panel {
-        flex: 1 1 auto;
-        width: 100%;
-        min-height: 0;
-        overflow: hidden;
-        /* Top padding is 0.5rem, not the 0.75rem of the other three sides,
-           because on mobile the panel selector is a *sibling* above this panel
-           rather than a child of it (`.area-selector-mobile` — desktop keeps
-           its selector inside the panel). Its own padding stops at the sides,
-           so the space below it was this panel's 0.75rem padding-top: 12px
-           between the selector and the surface, against the 8px that separates
-           everything else stacked inside one. Desktop, where the selector is a
-           child, has always been 8px at that seam. The other three sides stay
-           at 0.75rem — those are the page gutter, not a gap between two
-           stacked things. */
-        padding: 0.5rem 0.75rem 0.75rem;
-        gap: 0;
-    }
-
-
-    #editor-panel {
-        border-right: none;
-    }
-
-    #state-panel {
-        margin-bottom: 0;
-    }
-
-
-    #editor-panel .input-area,
-    #editor-panel .output-area,
-    #state-panel .stack-area,
-    #state-panel .dictionary-area {
-        flex: 1;
-        min-height: 0;
-    }
-
-    .display-area,
-    .state-display,
-    .words-display {
-        min-height: 80px;
-    }
-
-    .words-display {
-        cursor: default;
-    }
-
-    .stack-area {
-        cursor: pointer;
-    }
-
-    .output-area,
-    .stack-area {
-        cursor: pointer;
-        position: relative;
-        /* Both areas count double-taps to move to the next surface, which is
-           the same gesture the browser reads as zoom. */
-        touch-action: manipulation;
-    }
-
-    .input-area {
-        cursor: default;
-    }
-
-    /* ── Touch targets and text fields ──────────────────────────────────────
-       Two rules run through this block. Anything meant to be tapped gets at
-       least 2.75rem (44px, the smaller of the two platform floors) in its
-       short axis — measured on the hit area, which for an icon button is
-       padding around a glyph that keeps its drawn size, so the floor costs the
-       layout nothing. And anything with a caret gets at least 1rem of text:
-       iOS Safari zooms the page when a field under 16px takes focus, and it
-       does not zoom back out, so the editor at 0.95rem meant the layout shifted
-       under the user the moment they started typing.
-
-       The controls that switch surfaces are deliberately not among them. The
-       panel selector took the floor and the dictionary sheet selector did not,
-       and the two are the same part doing the same job — one 44px and one 30px,
-       one above the other in the Dictionary. A floor that has to be granted to
-       one member of a set and withheld from another is not a rule; both keep
-       the size the base rule gives every selector, on every viewport. */
-
-    #code-input,
-    .vocabulary-search-input {
-        font-size: 1rem;
-    }
-
-    /* The three corner buttons: the glyph keeps its drawn size and the padding
-       around it becomes the target, so they look the same and are four times
-       the area to hit. */
-    #editor-clear-btn,
-    #editor-format-btn,
-    #stack-clear-btn {
-        width: 2.75rem;
-        height: 2.75rem;
-    }
-
-    #editor-clear-btn,
-    #stack-clear-btn {
-        top: 0;
-        right: 0;
-    }
-
-    #editor-format-btn {
-        bottom: 0;
-        right: 0;
-    }
-
-    /* Not `.header-actions .btn`: the header sits above every surface, so a
-       floor there is 10px off all four of them, and those two links were
-       already 34px — inside what a thumb hits. The buttons that live inside a
-       surface pay for themselves. */
-    .vocabulary-actions .btn,
-    #copy-output-btn {
-        min-height: 2.75rem;
-    }
-
-    .stack-latex-toggle {
-        min-height: 2.75rem;
-        padding-right: 0.25rem;
-        font-size: 0.9rem;
-    }
-
-    .stack-latex-toggle input {
-        width: 1.25rem;
-        height: 1.25rem;
-    }
-
-    /* Word completions only. The symbol palette keeps its own 2.25rem cells:
-       they are already comfortable to hit (six to a row, no neighbours to
-       mis-hit into), and at 44px the five rows of it would take another 40px
-       out of the editor it sits under. */
-    .editor-suggestion-item {
-        min-height: 2.75rem;
-        font-size: 0.95rem;
-    }
-
-    /* ── Dictionary words are a catalogue here, not a keyboard ─────────────
-       On desktop a word button types its name into the editor, so it is a
-       control and is sized like one. On a phone it is not: `onWordClick` is a
-       no-op there (gui-application.ts), and tapping a word only brings up its
-       one-line summary and example. That leaves the list two jobs — show what
-       vocabulary exists, and be tappable enough to read a hint — and the first
-       one is the one a 44px floor was breaking. At 44px the 100 Core Words
-       stood 1108px tall inside a 395px box: two thirds of the vocabulary was
-       off-screen, and the only way to learn what Ajisai has was to scroll and
-       remember.
-
-       Sized to fit instead — and note what is *not* smaller. The text stays at
-       the desktop 0.75rem; what the floor was inflating was the box around it,
-       so the padding and margin come in and the type does not. 100 words land
-       in 15 rows at 360px wide and 14 at 390px, with about two rows to spare,
-       so the whole vocabulary is one glance and a little growth does not undo
-       that. A User dictionary past 100 words will still scroll, which is as it
-       should be — that one is as long as its author made it. */
-    .word-button {
-        min-height: 0;
-        /* All three restated, not inherited: the `@container panel` rule above
-           sets each of them and would otherwise keep the chip at 0.85rem. */
-        font-size: 0.75rem;
-        padding: 0.1rem 0.25rem;
+        font-size: var(--text-2xs);
+        padding: 0.1rem var(--space-2xs);
         margin: 1px;
-        /* Matched to the size above. The chips skip rendering off-screen, and
-           this is the height the scrollbar assumes for one that has not been
-           laid out yet — left at the old 1.75rem it would overstate the list
-           by a third of its length. */
         contain-intrinsic-height: auto 1.25rem;
         touch-action: manipulation;
     }
 
-    /* ── The symbol palette is an overlay, pinned to the bottom edge ───────
-       It opens on focus into an *empty* editor, so what it covers is never
-       typed text — it is the placeholder cheat sheet. Two things follow, and
-       they pull in opposite directions: it must not take the editor's height
-       (it is 196px against a phone's ~490px surface, and an editor that
-       collapses to a third of itself the moment you tap into it is not an
-       editor), and it must not sit on top of the first lines of the sheet.
-       An overlay pinned to the *bottom* answers both: the editor keeps its
-       full box, and the sheet reads from the top down into the palette rather
-       than from behind it. The pinning is set inline in `renderSuggestions`,
-       because the caret coordinates it would otherwise write are inline too. */
-    .editor-suggestions--symbols {
-        max-width: none;
-        border-top: var(--border-main);
-    }
-}
-
-
-/* Narrow phones (320px-class hardware), where the list box is 341px rather
-   than 411px and tightening the box is no longer enough. This is the one place
-   the type itself steps down: at 0.75rem the 100 Core Words run six words past
-   the bottom edge here, and six words missing is the thing this whole size is
-   for. At 0.65rem they fit in 16 rows. Only the dictionary chips change —
-   every other control keeps its size. */
-@media (max-width: 340px) {
-    .word-button {
+    /* 320px-class phones: the one place the type itself steps down. */
+    @media (width <= 340px) {
         font-size: 0.65rem;
     }
 }
 
+/* The Delete menu on a User Word: a native popover positioned at the cursor
+   (set in JS); only the UA centring and border are neutralised here. */
+.context-menu {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    border: 0;
+    min-width: 12rem;
+    padding: var(--space-3xs);
+    background: var(--color-white);
+    box-shadow: var(--shadow-popover);
 
-/* Tablet width: tighten the padding between the two columns so the seam looks balanced. */
-@media (min-width: 769px) and (max-width: 1024px) {
-    .main-layout {
-        gap: 0;
-        padding: 0;
-    }
+    & button {
+        display: block;
+        width: 100%;
+        padding: 0.375rem var(--space-sm);
+        background: transparent;
+        color: var(--color-text);
+        border: none;
+        text-align: left;
+        cursor: pointer;
 
-    #editor-panel {
-        padding: 0.75rem 0.375rem 0.75rem 0.75rem;
-    }
-
-    #state-panel {
-        padding: 0.75rem 0.75rem 0.75rem 0.375rem;
+        &:hover {
+            background: var(--color-light);
+        }
     }
 }
-/* Responsive layer placeholder.
- * Existing media-query behavior remains in components.css for safe migration.
- */

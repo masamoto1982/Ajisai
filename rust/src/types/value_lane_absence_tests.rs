@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use super::fraction::Fraction;
 use super::value_persist::{decode_stack, encode_stack};
-use super::{DenseTensor, Interpretation, Value, ValueData};
+use super::{DenseTensor, Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::Recoverability;
 
@@ -107,19 +107,17 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
     }
 
     let dense = Value::from_vector_promoted(vec![Value::from_int(1), div_by_zero()]);
-    let nested = Value {
-        data: ValueData::Vector(Arc::new(vec![Value::from_int(1), div_by_zero()])),
-        hint: Interpretation::Unassigned,
-        absence: None,
-    };
+    let nested = Value::new(
+        ValueData::Vector(Arc::new(vec![Value::from_int(1), div_by_zero()])),
+        None,
+    );
     assert_eq!(dense, nested);
     assert_eq!(hash_of(&dense), hash_of(&nested));
 
-    let written = Value {
-        data: ValueData::Vector(Arc::new(vec![Value::from_int(1), Value::nil()])),
-        hint: Interpretation::Unassigned,
-        absence: None,
-    };
+    let written = Value::new(
+        ValueData::Vector(Arc::new(vec![Value::from_int(1), Value::nil()])),
+        None,
+    );
     assert_ne!(
         dense, written,
         "a computed absence is not a written one, in either representation"
@@ -133,7 +131,7 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
 /// The codec carried a whole-value NIL's reason in its `r` field from the
 /// start, and carried a tensor's lanes as bare numerator/denominator columns
 /// — which record that a lane is absent and nothing about why. So a saved
-/// session reloaded `[ 1 2 ] [ 1 0 ] /` as a vector whose second lane had
+/// session reloaded `[ 1 2 ] [ 1 0 ] DIV` as a vector whose second lane had
 /// stopped being a division by zero. Under LANG.VALUES.NIL the reason is the
 /// whole observable content of an absence, so that reload returned a
 /// different value, which is the one thing this codec promises not to do.
@@ -149,10 +147,9 @@ fn a_tensors_absent_lane_keeps_its_reason_across_the_boundary() {
         value.data
     );
 
-    let encoded = encode_stack(std::iter::once((&value, Interpretation::Unassigned)))
-        .expect("a tensor encodes");
+    let encoded = encode_stack(std::iter::once(&value));
     let decoded = decode_stack(&encoded).expect("it decodes");
-    let restored = &decoded[0].0;
+    let restored = &decoded[0];
 
     let ValueData::Tensor { data, .. } = &restored.data else {
         panic!("expected a tensor back, got {:?}", restored.data);
@@ -297,4 +294,42 @@ fn promotion_carries_an_existing_tensors_lanes_and_reasons_in() {
         vec![1, 3],
         "the second copy's hole is offset by the first copy's length"
     );
+}
+
+/// **A `userDeclared` lane's detail is part of its identity across
+/// representations, as it already is within one.**
+///
+/// `Value::eq` compares a NIL's detail beside its reason, and
+/// `DenseTensor::eq` compares a lane's detail beside its reason; the walk
+/// that decides a nested `Vector` against a `Tensor` compared the reason
+/// alone. So `[ 'a' ABSENT 1 ]` and `[ 'b' ABSENT 1 ]` were different values
+/// as two vectors, different as two tensors, and *equal* as one of each —
+/// an equality that depended on which storage each side happened to have.
+#[test]
+fn cross_representation_equality_reads_the_user_declared_detail() {
+    let nested = |detail: &str| {
+        Value::from_vector(vec![Value::nil_user_declared(detail), Value::from_int(1)])
+    };
+    let dense = |detail: &str| {
+        Value::from_vector_promoted(vec![Value::nil_user_declared(detail), Value::from_int(1)])
+    };
+    assert!(dense("a").is_tensor(), "a NIL lane promotes");
+
+    assert_eq!(
+        nested("a"),
+        dense("a"),
+        "same detail, either representation"
+    );
+    assert_eq!(dense("a"), nested("a"));
+    assert_ne!(nested("a"), nested("b"), "as two vectors");
+    assert_ne!(dense("a"), dense("b"), "as two tensors");
+    assert_ne!(nested("a"), dense("b"), "as a vector and a tensor");
+    assert_ne!(dense("a"), nested("b"), "and the other way round");
+
+    // The same walk decides a Tensor child of a nested Vector.
+    let outer_nested = |detail: &str| Value::from_vector(vec![dense(detail)]);
+    let outer_dense = |detail: &str| Value::from_vector_promoted(vec![dense(detail)]);
+    assert!(outer_dense("a").is_tensor(), "a tensor child promotes");
+    assert_eq!(outer_nested("a"), outer_dense("a"));
+    assert_ne!(outer_nested("a"), outer_dense("b"));
 }

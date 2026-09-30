@@ -3,15 +3,15 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **100 Words**, of which **54** form the Semantic Kernel and **46** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **78 Words**, of which **48** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
-Push the boolean TRUE onto the stack.
+The truth value TRUE: `TRUE` is `1 1 EQ`. It is a Boolean, not the number one (LANG.VALUES.DISJOINT), so `TRUE 1 EQ` is `FALSE`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -20,11 +20,11 @@ Push the boolean TRUE onto the stack.
 
 ## `FALSE`
 
-Push the boolean FALSE onto the stack.
+The truth value FALSE: `FALSE` is `1 2 EQ`. It is a Boolean, not the number zero (LANG.VALUES.DISJOINT), so `FALSE 0 EQ` is `FALSE`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -33,39 +33,27 @@ Push the boolean FALSE onto the stack.
 
 ## `AND`
 
-Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.
+Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE FALSE AND` is `FALSE`, and element-wise over Vectors, `[ TRUE TRUE ] [ TRUE FALSE ] AND` is `[ TRUE FALSE ]`. A NIL read here is UNKNOWN: FALSE settles the answer against it, `NIL FALSE AND` is `FALSE`, and anything else leaves it UNKNOWN with its reason kept. A disjunction is `a NOT b NOT AND NOT`. An operand that is neither a truth value nor a NIL is `nonTruthValue`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `truth`, `truth` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `TRUE TRUE &`
-- **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
-
-## `OR`
-
-Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `booleanLogic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `kleeneAbsorbing`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `TRUE FALSE OR`
+- **Syntax:** `TRUE FALSE AND`
 - **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
 ## `NOT`
 
-Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.
+Negation under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE NOT` is `FALSE`, and element-wise over Vectors, `[ TRUE FALSE ] NOT` is `[ FALSE TRUE ]`. UNKNOWN — a NIL read here — stays UNKNOWN with its reason kept. An operand that is neither a truth value nor a NIL is `nonTruthValue`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `truth` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -75,11 +63,12 @@ Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through 
 
 ## `SELECT`
 
-Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
+Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
+- **Operands:** `element`, `element`, `truth` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -89,245 +78,147 @@ Choose between two already-computed values by a truth value: TRUE answers the fi
 
 ## `EQ`
 
-Test equality of two values.
+Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
-- **Syntax:** `1 1 =`
-- **Aliases:** `=`
+- **Syntax:** `1 1 EQ`
 
 ## `LT`
 
-Test less-than comparison.
+Whether the left number is less than the right: `1 2 LT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 LT` is `[ TRUE FALSE ]`. Order over the exact field always decides (LANG.VALUES.EXACT), irrationals included: `2 SQRT 3/2 LT` is `TRUE`. Only numbers are ordered; anything else is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 2 <`
-- **Aliases:** `<`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
-
-## `LTE`
-
-Test less-than-or-equal comparison.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 1 LTE`
-- **Aliases:** `<=`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
+- **Syntax:** `1 2 LT`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `GT`
 
-Test greater-than comparison.
+Whether the left number is greater than the right: `2 1 GT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 GT` is `[ FALSE TRUE ]`. Order over the exact field always decides (LANG.VALUES.EXACT). Only numbers are ordered; anything else is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `2 1 >`
-- **Aliases:** `>`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
-
-## `GTE`
-
-Test greater-than-or-equal comparison.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 1 GTE`
-- **Aliases:** `>=`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
+- **Syntax:** `2 1 GT`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `ADD`
 
-Add two numeric values, element-wise with broadcasting.
+The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 ] 10 ADD` is `[ 11 12 ]`. Nothing is rounded: `2 SQRT 2 SQRT ADD` is `8 SQRT`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 2 +`
-- **Aliases:** `+`
+- **Syntax:** `1 2 ADD`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `SUB`
 
-Subtract two numeric values, element-wise with broadcasting.
+The exact difference, left minus right: `5 3 SUB` is `2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `2 [ 1 2 3 ] SUB` is `[ 1 0 -1 ]`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `5 3 -`
-- **Aliases:** `-`
+- **Syntax:** `5 3 SUB`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `MUL`
 
-Multiply two numeric values, element-wise with broadcasting.
+The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 3 ] [ 10 ] MUL` is `[ 10 20 30 ]`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 4 *`
-- **Aliases:** `*`
+- **Syntax:** `2 4 MUL`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `DIV`
 
-Divide two numeric values exactly (fractional result).
+The exact quotient, left over right: `1 3 DIV` is `1/3` — never a decimal approximation — and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `10 2 /`
-- **Aliases:** `/`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `MOD`
-
-Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.
-
-- **Vocabulary tier:** Standard (`namedPattern`)
-- **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable,divisorEqualsZero → undecidable, divisionByZero
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `7 3 %`
-- **Aliases:** `%`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `10 2 DIV`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `FLOOR`
 
-Round toward negative infinity.
+The greatest integer not above the number: `7/3 FLOOR` is `2` and `-7/3 FLOOR` is `-3`, element-wise over Vectors. Irrationals floor exactly: `2 SQRT FLOOR` is `1`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 7/3 ] FLOOR`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `CEIL`
-
-Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 7/3 ] CEIL`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+- **Syntax:** `7/3 FLOOR`
+- **ERROR conditions:** `nonNumeric`
 
 ## `ROUND`
 
-Round to nearest integer (half-up).
+The nearest integer, a tie going away from zero: `5/2 ROUND` is `3` and `-5/2 ROUND` is `-3`, element-wise over Vectors. FORMAT rounds its last digit the same way. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 5/2 ] ROUND`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `QUANTIZE`
-
-Round to the nearest multiple of 1/d, bounding the denominator by d. An exact number carries its whole history in its denominator, so an iterative method grows one without bound; quantizing each step keeps the representation the size of the answer rather than the size of the computation. Ties round away from zero, matching ROUND. A d that is not a positive integer projects to NIL.
-
-- **Vocabulary tier:** Standard (`algorithm`)
-- **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: denominatorIsNotAPositiveInteger → domainMiss
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 119/125 32/125 ] 10 QUANTIZE`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `ABS`
-
-Absolute value of a number.
-
-- **Vocabulary tier:** Standard (`namedPattern`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `-2 ABS`
-- **ERROR conditions:** `nonNumeric`
-
-## `NEG`
-
-Numeric negation.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 NEG`
+- **Syntax:** `5/2 ROUND`
 - **ERROR conditions:** `nonNumeric`
 
 ## `MIN`
 
-Smaller of two numbers, element-wise with broadcasting.
+The smaller of two numbers: `1 2 MIN` is `1`, and element-wise over Vectors with broadcasting, `[ 3 1 ] 2 MIN` is `[ 2 1 ]`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
@@ -336,12 +227,13 @@ Smaller of two numbers, element-wise with broadcasting.
 
 ## `MAX`
 
-Larger of two numbers, element-wise with broadcasting.
+The larger of two numbers: `1 2 MAX` is `2`, and element-wise over Vectors with broadcasting, `[ -1 2 -3 ] 0 MAX` is `[ 0 2 0 ]`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
@@ -350,308 +242,224 @@ Larger of two numbers, element-wise with broadcasting.
 
 ## `SQRT`
 
-Exact square root of a non-negative rational, element-wise over a vector. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
+The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so `2 SQRT 2 SQRT MUL` is `2`. The radicand is reduced to its square-free part, so one number has one form however it was built: `8 SQRT` is `2 SQRT 2 MUL`. That reduction factors the radicand and is charged to the run's numeric work; a radicand the remaining work cannot factor is `resourceLimitExceeded`. Element-wise over Vectors, and a negative radicand projects NIL(domainMiss): `[ 4 -1 ] SQRT` is `[ 2 NIL ]` with the second lane absent for that reason. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: negativeScalar → domainMiss
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: negativeScalar → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `2 SQRT`
 - **ERROR conditions:** `nonNumeric`
 
 ## `POW`
 
-Exact power `x y POW`, element-wise over Vectors. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `PI 2 POW` is π² as a computable real. An exponent `p/2` stays in the field — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2√2` — and a rational exponent whose root the base takes exactly answers the rational (`8 1/3 POW` is `2`). Every other exponent, an irrational one included, is `exp(y·ln x)`: a computable real compared under a budget. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under a fractional exponent has no real value and projects `domainMiss`; a Tier 2 base or exponent whose sign the budget cannot settle projects `undecidable`; an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.
+Exact power `x y POW`, element-wise over Vectors, answered inside the exact field. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`. An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2 2 SQRT MUL`. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,tier2SignUndecidable,exponentTooLargeToMaterialize → divisionByZero, domainMiss, undecidable, spaceExhausted
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → divisionByZero, domainMiss, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `2 10 POW`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `GCD`
 
-The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects `domainMiss`; a computable real, whose integrality the budget cannot decide, projects `undecidable`.
+The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects `domainMiss`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: nonIntegerOperand,tier2Operand → domainMiss, undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: nonIntegerOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `12 18 GCD`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `RATIO`
 
-A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`; a computable real, which the budget cannot prove rational, projects `undecidable`.
+A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: irrationalOperand,tier2Operand → domainMiss, undecidable
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: irrationalOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `6/4 RATIO`
 - **ERROR conditions:** `nonNumeric`
 
-## `EXP`
-
-The natural exponential `eˣ`, element-wise over Vectors. `0 EXP` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT): construction is constant-time, and the cost is paid when the value is observed — a comparison refines a rigorous rational enclosure and answers UNKNOWN when its budget runs out, never a wrong order. `1 EXP 20 FORMAT` shows twenty correct digits of e; `1 EXP 1 EXP EQ` is `NIL`, because two computable reals are never proven equal. An argument so large that the enclosure would not fit the machine projects `spaceExhausted`.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 EXP 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`
-
-## `LN`
-
-The natural logarithm, element-wise over Vectors. `1 LN` is exactly `0`; every other result is a computable real compared under a budget (LANG.VALUES.EXACT). Zero and negative arguments have no real logarithm and project `domainMiss`; a computable real argument whose sign the budget cannot separate from zero projects `undecidable`. `10 LN 2 LN DIV` is `log₂ 10`, and `x LN y MUL EXP` is `x y POW` written out.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: nonPositiveArgument,tier2SignUndecidable → domainMiss, undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `10 LN 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`
-
-## `SIN`
-
-The sine of an angle in radians, element-wise over Vectors. `0 SIN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `PI SIN` is a value enclosing 0 that no budget proves to be 0: `PI SIN 0 EQ` is `NIL`, and even `PI SIN 10 FORMAT` projects `undecidable`, because no digit count settles a value that may lie on either side of zero. `PI 3 DIV SIN 6 FORMAT` is `'0.866025'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 SIN 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`
-
-## `COS`
-
-The cosine of an angle in radians, element-wise over Vectors. `0 COS` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT) compared under a budget, so `PI COS` encloses −1 without ever proving it: `PI COS -1 EQ` and `PI COS -1 LT` are both `NIL`, while `PI 4 DIV COS 6 FORMAT` is `'0.707107'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 COS 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`
-
-## `ATAN`
-
-The arctangent, in radians, element-wise over Vectors: the one inverse that accompanies `SIN` and `COS`, total over every real. `0 ATAN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `1 ATAN 4 MUL` is a value enclosing π that no budget proves equal to `PI`. `y x DIV ATAN` gives the angle of a point in the right half-plane.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 ATAN 4 MUL 6 FORMAT`
-- **ERROR conditions:** `nonNumeric`
-
-## `PI`
-
-Push π: a general computable real with no algebraic normal form (LANG.VALUES.EXACT). A comparison against it refines a rational enclosure and may exhaust its budget, yielding UNKNOWN.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `exactArithmetic`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`
-- **Syntax:** `PI`
-
-## `RANDOM`
-
-Count exact rationals in [0,1), determined entirely by the seed.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: spaceExhausted → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `7 3 RANDOM`
-- **ERROR conditions:** `nonInteger`, `negativeCount`
-
 ## `GET`
 
-Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary.
+Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: indexOutOfBounds → indexOutOfBounds
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds,notFound → indexOutOfBounds, notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 10 20 30 ] [ 0 2 ] GET`
-- **ERROR conditions:** `nonVector`, `invalidIndex`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.RECORDS.STRUCTURE`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 10 20 30 ] 1 GET`
+- **ERROR conditions:** `nonContainer`, `invalidInteger`
 
 ## `LENGTH`
 
-Return the number of elements in a vector.
+How many elements a Vector holds: `[ 1 2 3 ] LENGTH` is `3` and `[ ] LENGTH` is `0`. Only the outermost axis is counted — `[ [ 1 2 ] [ 3 ] ] LENGTH` is `2`; SHAPE answers every axis. A non-Vector is `nonVector`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] LENGTH`
 - **ERROR conditions:** `nonVector`
 
 ## `TAKE`
 
-Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Take the first N or last -N elements of a vector: `[ 1 2 3 ] 2 TAKE` is `[ 1 2 ]` and `[ 1 2 3 ] -2 TAKE` is `[ 2 3 ]`. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: indexOutOfBounds → indexOutOfBounds
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
-- **ERROR conditions:** `nonVector`, `invalidCount`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `[ 1 2 3 4 5 ] 3 TAKE`
+- **ERROR conditions:** `nonVector`, `invalidInteger`
 
 ## `DROP`
 
-Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: indexOutOfBounds → indexOutOfBounds
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 4 5 ] [ 2 ] DROP`
-- **ERROR conditions:** `nonVector`, `invalidCount`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `[ 1 2 3 4 5 ] 2 DROP`
+- **ERROR conditions:** `nonVector`, `invalidInteger`
 
 ## `CONCAT`
 
-Flatten and concatenate two vectors.
+Join two vectors end to end: `[ 1 2 ] [ 3 ] CONCAT` is `[ 1 2 3 ]`. Elements are kept as they are — a nested Vector stays nested. Both operands must be Vectors (`nonVector`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 ] [ 3 4 ] CONCAT`
 - **ERROR conditions:** `nonVector`
 
 ## `REVERSE`
 
-Reverse the order of vector elements.
+The elements of a Vector in the opposite order: `[ 1 2 3 ] REVERSE` is `[ 3 2 1 ]`. Only the outermost axis is reversed: `[ [ 1 2 ] 3 ] REVERSE` is `[ 3 [ 1 2 ] ]`. A non-Vector is `nonVector`.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] REVERSE`
 - **ERROR conditions:** `nonVector`
 
 ## `COLLECT`
 
-Collect N items off the stack into a new vector.
+Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidInteger`), and a stack holding fewer than N values is `stackUnderflow`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** variable input(s) → 1 output(s); `eat` consumption
+- **Stack:** variable input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `1 2 3 3 COLLECT`
-- **ERROR conditions:** `invalidCount`, `stackUnderflow`
+- **ERROR conditions:** `invalidInteger`, `stackUnderflow`
 
 ## `RANGE`
 
-Generate a numeric sequence from a [start, end] pair.
+Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidInteger`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 0 5 ] RANGE`
-- **ERROR conditions:** `invalidRange`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `0 5 RANGE`
+- **ERROR conditions:** `invalidInteger`, `shapeMismatch`
 
 ## `FILL`
 
-Fill a target shape with a constant value.
+A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects NIL(spaceExhausted).
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 2 2 0 ] FILL`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `[ 2 2 ] 0 FILL`
 - **ERROR conditions:** `invalidShape`
 
 ## `SHAPE`
 
-The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.
+The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: raggedNesting → domainMiss
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: raggedNesting → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] SHAPE`
-- **ERROR conditions:** `nonVector`
 
 ## `RESHAPE`
 
-Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
+Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: spaceExhausted → spaceExhausted
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE`
 - **ERROR conditions:** `nonVector`, `invalidShape`
 
@@ -661,8 +469,9 @@ Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.DICTIONARY.ACYCLIC`
@@ -671,12 +480,13 @@ Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`
 
 ## `DEPTH`
 
-How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.
+How deeply Vectors nest: anything that is not a Vector — a number, a text, a truth, a Symbol, a Record — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.DICTIONARY.ACYCLIC`
@@ -684,43 +494,46 @@ How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, 
 
 ## `SORT`
 
-Return a copy of a vector sorted in ascending order.
+A copy of a Vector of numbers in ascending order: `[ 3 1 2 ] SORT` is `[ 1 2 3 ]`. Order is exact, irrationals included. Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`. ORDER answers the permutation instead.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 3 1 2 ] SORT`
-- **ERROR conditions:** `nonVector`, `nonComparableElement`
-
-## `ORDER`
-
-The indices that would sort a vector ascending; ties keep their original order.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 30 10 20 ] ORDER`
-- **ERROR conditions:** `nonVector`, `nonComparableElement`
-
-## `UNIQUE`
-
-The distinct elements of a vector, in first-occurrence order.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 3 1 2 ] SORT`
+- **ERROR conditions:** `nonVector`, `nonNumeric`
+
+## `ORDER`
+
+The indices that would sort a Vector of numbers ascending: `[ 30 10 20 ] ORDER` is `[ 1 2 0 ]`, so gathering by it sorts: `[ 30 10 20 ] 'V' BIND V V ORDER GET` is `[ 10 20 30 ]`. Ties keep their original order: `[ 2 1 2 1 ] ORDER` is `[ 1 3 0 2 ]`. Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 30 10 20 ] ORDER`
+- **ERROR conditions:** `nonVector`, `nonNumeric`
+
+## `UNIQUE`
+
+The distinct elements of a Vector, each at its first occurrence: `[ 3 1 3 ] UNIQUE` is `[ 3 1 ]`. Distinct means not one value (LANG.VALUES.DENOTATION), so it works on texts, nested Vectors and NILs alike, and `[ 2 4/2 ] UNIQUE` is `[ 2 ]`. A non-Vector is `nonVector`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 'a' 'b' 'a' ] UNIQUE`
 - **ERROR conditions:** `nonVector`
 
@@ -730,7 +543,8 @@ How many times each distinct element occurs, as a Record from element to count: 
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -740,101 +554,108 @@ How many times each distinct element occurs, as a Record from element to count: 
 
 ## `ZIP`
 
-Bundle equal-length vectors position by position; a matrix transposes.
+Vectors of equal length bundled position by position: `[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] ZIP` is `[ [ 1 3 5 ] [ 2 4 6 ] ]`, so a matrix transposes and `ZIP ZIP` gives it back. Rows of different lengths are `shapeMismatch`; an operand that is not a Vector of Vectors is `nonVector`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] ZIP`
-- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
+- **ERROR conditions:** `nonVector`, `shapeMismatch`
 
 ## `PUT`
 
-A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT` hands it back.
+Write a container: a copy of a Vector with the element at an index replaced, or of a Record with a key set — `[ 1 2 3 ] 1 9 PUT` is `[ 1 9 3 ]`, `R 'z' 3 PUT` is R with `'z'` set to 3. A Record key already present keeps its position and takes the new value; an absent key is appended, so key order records the order keys arrived in. A Vector's positions are fixed by its length, so an index past either end names no slot and projects NIL(indexOutOfBounds), exactly as GET does — the Vector the caller wanted preserved is the one they wrote. The value is carried, so it may be anything, a NIL included (a stored absence). Neither operand is changed: containers are values. GET is the reading half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
 
-- **Vocabulary tier:** Standard (`operational`)
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: indexOutOfBounds → indexOutOfBounds
+- **Stack:** 3 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf`, `element` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.RECORDS.STRUCTURE`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] 1 9 PUT`
-- **ERROR conditions:** `nonVector`, `nonInteger`
+- **ERROR conditions:** `nonContainer`, `invalidInteger`
 
 ## `GROUP`
 
-Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP`
-- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
+- **Syntax:** `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP`
+- **ERROR conditions:** `nonVector`, `shapeMismatch`
 
 ## `INDEX-OF`
 
-Index of the first element equal to the value; Bubble/NIL if absent.
+The index of the first element equal to the value: `[ 10 20 30 ] 20 INDEX-OF` is `1`. The value is an element, compared whole, so a Vector needle looks for an equal Vector. A value the Vector does not contain projects NIL(notFound); MEMBER? asks the same question as a truth value.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: valueAbsent → missingField
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 2 ] 2 INDEX-OF`
 - **ERROR conditions:** `nonVector`
 
-## `MEMBER`
+## `MEMBER?`
 
-Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.
+Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts, nested vectors and NILs as well as numbers. The needle is one value, compared rather than read, so a Vector needle is looked for as an element: `[ [ 1 ] 2 ] [ 1 ] MEMBER?` is `TRUE`. It is `INDEX-OF NIL? NOT`.
 
-- **Vocabulary tier:** Standard (`algorithm`)
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] [ 2 5 ] MEMBER`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] 2 MEMBER?`
 - **ERROR conditions:** `nonVector`
 
 ## `BSEARCH`
 
-The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. A comparison that exhausts its budget (LANG.VALUES.EXACT) projects `undecidable`.
+The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: keyAbsent,budgetExhausted → missingField, undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 3 5 7 ] [ 5 ] BSEARCH`
-- **ERROR conditions:** `nonVector`, `unsortedInput`, `nonComparableElement`
+- **ERROR conditions:** `nonVector`, `unsortedInput`, `nonNumeric`
 
 ## `RECORD`
 
-Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. The literal `{ 'x' 1 'y' 2 }` builds the same Record from the same values, pairing its elements as it reads them; this Word is what builds one from sequences a program computed.
+Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD 'y' GET` is `2`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.VALUES.VECTOR`
 - **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD`
-- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`, `duplicateKey`
+- **ERROR conditions:** `nonVector`, `shapeMismatch`, `duplicateKey`
 
 ## `KEYS`
 
@@ -842,7 +663,8 @@ The keys of a Record as a Vector, in the Record's own order, so that `KEYS` and 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -856,7 +678,8 @@ The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RE
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -864,70 +687,45 @@ The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RE
 - **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES`
 - **ERROR conditions:** `nonRecord`
 
-## `AT`
-
-The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `fallback R 'x' AT NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: keyAbsent → missingField
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
-- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' AT`
-- **ERROR conditions:** `nonRecord`
-
-## `WITH`
-
-A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps its position and takes the new value; a key not yet present is appended, so the Record's key order records the order in which keys arrived. This is `PUT` for keys, and like `PUT` it never changes the operand it was given — Records are values. The value may be anything, a NIL included, since a NIL under a key is a stored absence; a NIL where the Record or the key should be is an ERROR.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `record`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
-- **Syntax:** `[ 'x' ] [ 1 ] RECORD 'y' 2 WITH`
-- **ERROR conditions:** `nonRecord`
-
 ## `WITHOUT`
 
-A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Record does not hold is not an identity but the absence `missingField` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.
+A copy of a Record with one key removed: `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT KEYS` is `[ 'y' ]`. Removing a key the Record does not hold is not an identity but the absence `notFound` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: keyAbsent → missingField
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT`
 - **ERROR conditions:** `nonRecord`
 
 ## `HAS?`
 
-Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `AT` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.
+Whether a Record holds a key: `[ 'x' ] [ 1 ] RECORD 'x' HAS?` is `TRUE` and `[ 'x' ] [ 1 ] RECORD 'y' HAS?` is `FALSE`. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `GET` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `[ 'x' ] [ 1 ] RECORD 'x' HAS?`
 - **ERROR conditions:** `nonRecord`
 
 ## `MERGE`
 
-The union of two Records, the right one winning: `defaults overrides MERGE`. The left Record's keys keep their order and take the right Record's value wherever both hold the key; keys only the right holds are appended in the right's order. Layering overrides on defaults is the shape this Word is for; swap the operands for the left to win. Either operand not a Record is an ERROR.
+The union of two Records, the right one winning: `[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE VALUES` is `[ 1 9 3 ]`. The left Record's keys keep their order and take the right Record's value wherever both hold the key; keys only the right holds are appended in the right's order. Layering overrides on defaults is the shape this Word is for; swap the operands for the left to win. Either operand not a Record is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
@@ -936,12 +734,13 @@ The union of two Records, the right one winning: `defaults overrides MERGE`. The
 
 ## `MAP`
 
-Apply a code block to each element of a vector.
+A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is whatever it leaves on top, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves nothing `blockContractViolation`.
 
-- **Vocabulary tier:** Standard (`operational`)
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `control` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
@@ -950,30 +749,32 @@ Apply a code block to each element of a vector.
 
 ## `FILTER`
 
-Keep only the elements for which a predicate block returns TRUE.
+The elements of a Vector for which a predicate block answers TRUE, in order: `[ 1 2 3 4 ] [ 2 GT ] FILTER` is `[ 3 4 ]`. The block's answer is read as a truth value, and an UNKNOWN drops the element like FALSE does. A non-Vector is `nonVector`, a non-block `notExecutable`, a block that leaves nothing `blockContractViolation`, and an answer that is not a truth value `nonTruthValue`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `control` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 2 = ] FILTER`
+- **Syntax:** `[ 1 2 3 ] [ 2 EQ ] FILTER`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
 
 ## `FOLD`
 
-Reduce a vector to a single value using an initial accumulator and combiner block.
+A Vector reduced to one value by a block that combines the accumulator with each element in turn, starting from a seed: `[ 1 2 3 ] 0 [ ADD ] FOLD` is `6`, and `[ 1 2 3 ] 10 [ SUB ] FOLD` is `4`. An empty Vector answers the seed: `[ ] 0 [ ADD ] FOLD` is `0`. SCAN answers every accumulator instead of the last. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves nothing `blockContractViolation`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
+- **Stack:** 3 input(s) → 1 output(s)
+- **Operands:** `data`, `element`, `control` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] [ + ] FOLD`
+- **Syntax:** `[ 1 2 3 ] 0 [ ADD ] FOLD`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `SCAN`
@@ -982,95 +783,57 @@ Reduce a vector step by step, answering the accumulator after each element rathe
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
+- **Stack:** 3 input(s) → 1 output(s)
+- **Operands:** `data`, `element`, `control` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 4 ] 0 [ ADD ] SCAN`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
-## `ANY`
-
-TRUE if at least one element satisfies the predicate.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 2 = ] ANY`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
-
-## `ALL`
-
-TRUE if every element satisfies the predicate.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 2 4 ] [ 2 MOD 0 = ] ALL`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
-
-## `RANK`
-
-MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.COLLECTIONS.LIFT`, `LANG.DICTIONARY.ACYCLIC`
-- **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK`
-- **ERROR conditions:** `nonVector`, `invalidCount`, `notExecutable`, `blockContractViolation`
-
 ## `CHARS`
 
-Split a string into a vector of one-character strings.
+A text split into its characters, each a one-character text: `'héllo' CHARS` is `[ 'h' 'é' 'l' 'l' 'o' ]`, and `'' CHARS` is `[ ]`. JOIN puts them back. A Vector of texts lifts; a non-text is `nonText`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'hi' CHARS`
 - **ERROR conditions:** `nonText`
 
 ## `JOIN`
 
-Join a vector of strings into a single string.
+A Vector of texts joined end to end into one text: `[ 'h' 'i' ] JOIN` is `'hi'`, and `[ ] JOIN` is `''`, so `CHARS JOIN` gives a text back. Every element must be a text (`nonText`), and a non-Vector is `nonVector`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 'h' 'i' ] JOIN`
-- **ERROR conditions:** `nonTextVector`, `nonTextElement`
+- **ERROR conditions:** `nonVector`, `nonText`
 
 ## `TRIM`
 
-Remove whitespace from both ends of a string.
+A text with the whitespace at both ends removed: `'  a b  ' TRIM` is `'a b'`; whitespace inside is kept. A Vector of texts lifts; a non-text is `nonText`.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'  hi  ' TRIM`
 - **ERROR conditions:** `nonText`
 
@@ -1080,11 +843,12 @@ The String with every character mapped to its upper form under Unicode's default
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'Ajisai' UPPER`
 - **ERROR conditions:** `nonText`
 
@@ -1094,41 +858,44 @@ The String with every character mapped to its lower form under Unicode's default
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'Ajisai' LOWER`
 - **ERROR conditions:** `nonText`
 
 ## `TOKENIZE`
 
-Split a string into a vector of substrings using a separator.
+Split a string into a vector of substrings at every occurrence of a separator: `'a,b,c' ',' TOKENIZE` is `[ 'a' 'b' 'c' ]`. The empty separator splits between every character, as CHARS does. JOIN is the inverse for the empty separator.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
-- **ERROR conditions:** `nonText`, `nonTextSeparator`
+- **ERROR conditions:** `nonText`, `shapeMismatch`
 
 ## `SEARCH`
 
-The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(missingField). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
+The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(notFound). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: needleAbsent → missingField
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'hello world' 'world' SEARCH`
-- **ERROR conditions:** `nonText`
+- **ERROR conditions:** `nonText`, `shapeMismatch`
 
 ## `REPLACE`
 
@@ -1136,66 +903,71 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **Stack:** 3 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'a-b-c' '-' '+' REPLACE`
-- **ERROR conditions:** `nonText`
+- **ERROR conditions:** `nonText`, `shapeMismatch`
 
 ## `NUM`
 
-Parse text as a number; Bubble/NIL on parse failure.
+Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'`, `'1/0'` — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (`'1e99999999'`), projects NIL(spaceExhausted). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: parseFailure → invalidEncoding
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: parseFailure,materializationBudgetExceeded → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'42' NUM`
 - **ERROR conditions:** `nonText`
 
 ## `STR`
 
-Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. QUANTIZE names an approximation explicitly when one is wanted.
+Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `1/3 STR NUM` is `1/3`, as `x STR NUM` gives back every number with a lexeme. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: noExactLexemeForValue → invalidEncoding
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: noExactLexemeForValue → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `42 STR`
 
 ## `FORMAT`
 
-Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.
+Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidInteger` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: lastDigitUndecidable → undecidable
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1/3 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`, `invalidCount`
+- **ERROR conditions:** `nonNumeric`, `invalidInteger`, `shapeMismatch`
 
 ## `JSON-DECODE`
 
-Read JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1'` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`).
+Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: textIsNotJson,nestingDeeperThanTheMachineHolds → invalidEncoding, spaceExhausted
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: textIsNotJson,materializationBudgetExceeded → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'{"a": 1, "b": [true, null]}' JSON-DECODE`
 - **ERROR conditions:** `nonText`
 
@@ -1205,20 +977,22 @@ Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String k
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `element` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `consumeNil`; projection: valueHasNoJsonImage → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 'a' ] [ 1 ] RECORD JSON-ENCODE`
 
 ## `EXEC`
 
-Evaluate a code block.
+A block run where it stands, its results left on the stack: `[ 1 2 ADD ] EXEC` is `3`. It reads and writes the stack like any other code, so `2 [ 3 MUL ] EXEC` is `6`. A non-block is `notExecutable`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** 1 input(s) → variable output(s); `eat` consumption
+- **Stack:** 1 input(s) → variable output(s)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -1228,15 +1002,16 @@ Evaluate a code block.
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record: `[ DIV ] 0 GET CONTRACT 'partiality' GET` is `'projecting'`. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
-- **Family:** `control`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: symbolNamesNoWord → missingField
+- **Family:** `dictionary`
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `createsNil`; projection: symbolNamesNoWord → notFound
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`, `LANG.SOURCE.CODE`
+- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`, `LANG.SOURCE.CODE`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ ADD ] 0 GET CONTRACT`
 - **ERROR conditions:** `notASymbol`
 
@@ -1246,7 +1021,8 @@ Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluat
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 0 output(s)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1256,11 +1032,11 @@ Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluat
 
 ## `NIL`
 
-Push the NIL value onto the stack.
+The absence written into the program: `NIL NIL?` is `TRUE`, and its reason is `literal`: `NIL NIL-REASON` is `'literal'` (LANG.VALUES.NIL). ABSENT writes one with a reason of the program's own.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1269,134 +1045,115 @@ Push the NIL value onto the stack.
 
 ## `NIL?`
 
-Test whether the top value is an operational NIL (absent).
+Whether a value is absent: `1 0 DIV NIL?` is `TRUE` and `5 NIL?` is `FALSE`. It asks about the whole value, so a Vector holding a NIL is present: `[ 1 NIL ] NIL?` is `FALSE`. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `element` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL?`
+- **Syntax:** `1 0 DIV NIL?`
 
 ## `NIL-REASON`
 
-Read the direct reason of an operational NIL as a protocol-string Text.
+The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero'`, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrHasNoReason → notAvailable
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `element` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `consumeNil`; projection: valueIsNotNil → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL-REASON`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `1 0 DIV NIL-REASON`
 
 ## `ABSENT`
 
-A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.
+A NIL whose reason the program states: `'rate not quoted' ABSENT NIL?` is `TRUE`. `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `createsNil`; projection: always → userDeclared
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.RECOVERY`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.RECOVERY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'rate not quoted' ABSENT`
 - **ERROR conditions:** `nonText`
 
-## `KEEP`
-
-Set the consumption mode to keep operands.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
-- **Syntax:** `KEEP +`
-
 ## `BIND`
 
-Name a value for the rest of the frame that made it. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.
+Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both. A value that names its own binding, directly or through other bindings, is refused as `selfReferentialDefinition`, the same rule DEF applies (LANG.DICTIONARY.ACYCLIC).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 0 output(s)
+- **Operands:** `element`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.SOURCE.FRAME`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ 1 2 3 ] 'XS' BIND`
-- **ERROR conditions:** `nonText`, `nameIsAWord`, `shapeMismatch`, `invalidName`, `protectedWord`
+- **ERROR conditions:** `nonText`, `nameConflict`, `shapeMismatch`, `invalidName`, `selfReferentialDefinition`
 
 ## `DEF`
 
-Define a user word from a body and a name. The body starts with a header: the names written before | declare its inputs, and the call takes exactly that many operands, binds them, and runs the body on an empty stack. A body without a header is refused.
+A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (`definitionConflict`); a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 0 output(s)
+- **Operands:** `control`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
-- **Syntax:** `[ X | X 2 * ] 'DOUBLE' DEF`
-- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
+- **Syntax:** `[ 2 MUL ] 'DOUBLE' DEF`
+- **ERROR conditions:** `invalidName`, `protectedWord`, `nameConflict`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
 
 ## `DEL`
 
-Delete a user word from the dictionary.
+Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 0 output(s)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `[ | [ 1 ] ] 'W' DEF 'W' DEL`
-- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
-
-## `DEFINED?`
-
-Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `dictionary`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.ACYCLIC`, `LANG.VALUES.DISJOINT`
-- **Syntax:** `[ ADD ] 0 GET DEFINED?`
-- **ERROR conditions:** `notASymbol`
+- **Syntax:** `[ 1 ] 'W' DEF 'W' DEL`
+- **ERROR conditions:** `wordNotFound`, `protectedWord`, `nonText`, `definitionConflict`
 
 ## `DIGEST`
 
-The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. A computable real (`PI`) has no finite canonical form to digest, so a value carrying one projects `undecidable`.
+The content identity of a Word, or the digest of a value's denotation, as text: `8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ` is `TRUE`. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: operandCarriesAComputableReal → undecidable
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `element` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.VALUES.DENOTATION`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.VALUES.DENOTATION`, `LANG.VALUES.EXACT`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ ADD ] 0 GET DIGEST`
 
 ## `PRINT`
 
-Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.
+Write a value to the output, consuming it: `42 PRINT` writes `42/1` and leaves nothing. A value other than a text is written as the stack shows it. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `output`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `preserveReason`; projection: none
+- **Stack:** 1 input(s) → 0 output(s)
+- **Operands:** `element` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `effectful` / `hostRelative`
 - **Effects:** `consoleWrite`
 - **Clauses:** `LANG.EFFECTS.OUTPUT`, `LANG.MACHINE.ORDER`

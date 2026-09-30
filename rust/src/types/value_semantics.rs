@@ -1,14 +1,9 @@
-//! Scalar construction and semantic classification for [`Value`].
-//!
-//! Invariant: storage representation is translated to public semantic axes here;
-//! callers do not infer semantic kind, shape, capability, or origin themselves.
+//! Scalar construction and domain classification for [`Value`].
 
 use super::fraction::Fraction;
 use super::value_tensor::tensor_to_nested_values;
-use super::{DenseTensor, Interpretation, RecordData, Value, ValueData};
-use crate::semantic::{
-    AbsenceMetadata, AbsenceOrigin, Capability, SemanticKind, ValueOrigin, ValueShape,
-};
+use super::{DenseTensor, RecordData, Value, ValueData};
+use crate::semantic::AbsenceMetadata;
 use std::sync::Arc;
 
 impl Value {
@@ -33,37 +28,24 @@ impl Value {
             // materialization that reads it.
             return Self::nil_with_absence(AbsenceMetadata::with_reasonless_unknown());
         }
-        Self {
-            data: ValueData::Scalar(f),
-            hint: Interpretation::RawNumber,
-            absence: None,
-        }
+        Self::new(ValueData::Scalar(f), None)
     }
 
     #[inline]
     pub fn from_int(n: i64) -> Self {
-        Self {
-            data: ValueData::Scalar(Fraction::from(n)),
-            hint: Interpretation::RawNumber,
-            absence: None,
-        }
+        Self::new(ValueData::Scalar(Fraction::from(n)), None)
     }
 
     #[inline]
     pub fn from_bool(b: bool) -> Self {
-        Self {
-            data: ValueData::Boolean(b),
-            hint: Interpretation::TruthValue,
-            absence: None,
-        }
+        Self::new(ValueData::Boolean(b), None)
     }
 
     /// The definite truth value carried by a Boolean data value, or `None`
     /// for any non-Boolean value. This is the data-plane truth accessor:
     /// unlike [`Value::is_truthy`] it never coerces a number, vector, or
-    /// other shape into a truth value. The logical Unknown (U) is not a
-    /// Boolean, so it returns `None` here — U is `Nil` data carrying the
-    /// `TruthValue` hint; read it with [`Value::truth_value`] instead.
+    /// other shape into a truth value. UNKNOWN is a NIL, not a Boolean
+    /// (LANG.VALUES.TRUTH), so it returns `None` here.
     #[inline]
     pub fn as_truth(&self) -> Option<bool> {
         match &self.data {
@@ -81,17 +63,13 @@ impl Value {
     /// `TOKENIZE`. NIL means "no value here", and `''` is a perfectly good
     /// value with no characters in it.
     pub fn from_string(s: &str) -> Self {
-        Self {
-            data: ValueData::Text(Arc::from(s)),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+        Self::new(ValueData::Text(Arc::from(s)), None)
     }
 
     /// The characters of a String value, or `None` for any other domain.
     ///
     /// This is the whole of stringhood now: no element inspection, no
-    /// codepoint-range guessing, no hint. A Vector of codepoint Scalars is a
+    /// codepoint-range guessing. A Vector of codepoint Scalars is a
     /// Vector, and answers `None`.
     #[inline]
     pub fn as_text(&self) -> Option<&str> {
@@ -103,11 +81,7 @@ impl Value {
 
     /// Build a Record value (LANG.RECORDS.STRUCTURE).
     pub fn from_record(record: RecordData) -> Self {
-        Self {
-            data: ValueData::Record(Arc::new(record)),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+        Self::new(ValueData::Record(Arc::new(record)), None)
     }
 
     /// The Record behind a Record value, or `None` for any other domain.
@@ -122,20 +96,12 @@ impl Value {
     /// A bare Word reference — data until something executes it. See
     /// `ValueData::Symbol`'s doc comment.
     pub fn from_symbol(s: &str) -> Self {
-        Self {
-            data: ValueData::Symbol(Arc::from(s)),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+        Self::new(ValueData::Symbol(Arc::from(s)), None)
     }
 
     #[inline]
     pub fn from_children(children: Vec<Value>) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(children)),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
+        Self::new(ValueData::Vector(Arc::new(children)), None)
     }
 
     /// Build a Vector value (LANG.VALUES.VECTOR).
@@ -148,36 +114,20 @@ impl Value {
     /// Vector "an ordered finite collection of values" and makes "order and
     /// length" its whole observable structure; zero is a finite length.
     pub fn from_vector(values: Vec<Value>) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(values)),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
-    }
-
-    pub fn from_vector_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(values)),
-            hint,
-            absence: None,
-        }
+        Self::new(ValueData::Vector(Arc::new(values)), None)
     }
 
     #[inline]
     pub fn from_exact_real(er: crate::types::exact::ExactReal) -> Self {
-        // If the ExactReal is already rational, use the fast Fraction path.
+        // A rational takes the `Fraction` path — through `from_fraction`, so
+        // that `Rational(nil)` (what the nil-propagating exact arithmetic
+        // answers for an absent operand) becomes `ValueData::Nil` here as it
+        // does everywhere else, never a `Scalar` wrapping the `0/0` sentinel
+        // that displays as `NIL` while answering `NIL?` with FALSE.
         if let Some(f) = er.as_rational() {
-            return Self {
-                data: ValueData::Scalar(f.clone()),
-                hint: Interpretation::RawNumber,
-                absence: None,
-            };
+            return Self::from_fraction(f.clone());
         }
-        Self {
-            data: ValueData::ExactScalar(er),
-            hint: Interpretation::RawNumber,
-            absence: None,
-        }
+        Self::new(ValueData::ExactScalar(er), None)
     }
 
     #[inline]
@@ -198,186 +148,29 @@ impl Value {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// Whether a Tier 2 computable real sits anywhere inside this value.
-    ///
-    /// `Computable`'s `PartialEq`/`Hash` are allocation identity
-    /// (`types::exact::computable`), so any structural comparison reaching one
-    /// answers from how the value was made rather than from what it denotes —
-    /// which LANG.VALUES.DENOTATION forbids. A caller about to decide from
-    /// `ValueData` equality asks this first and defers to the budgeted
-    /// comparison instead.
-    ///
-    /// Only a Vector needs the walk: a Tensor stores `i64` numerator/
-    /// denominator pairs (`DenseTensor`) and so cannot hold one.
-    pub fn carries_computable(&self) -> bool {
-        match &self.data {
-            ValueData::ExactScalar(er) => er.is_computable(),
-            ValueData::Vector(items) => items.iter().any(Value::carries_computable),
-            ValueData::Record(record) => record
-                .keys()
-                .iter()
-                .chain(record.values())
-                .any(Value::carries_computable),
-            _ => false,
-        }
-    }
-
     /// As [`is_nil`]: operational-absence test, and deliberately *not*
     /// narrower than one.
     ///
-    /// The logical Unknown (U) is `Nil` data carrying the `TruthValue` hint,
-    /// and this briefly excluded that hint, on the theory that U is a truth
-    /// value rather than an absence. That conflated two different things
-    /// under one name. The U this language actually has arises from a NIL
-    /// operand read in truth position (LANG.VALUES.TRUTH): something *is*
-    /// absent, so `NIL?` must answer TRUE and `NIL-REASON` must still report
-    /// the reason it arrived with. Excluding it here made
-    /// `1 0 DIV TRUE AND NIL-REASON` answer `notAvailable` while the host
-    /// protocol went on publishing `absence.reason = divisionByZero` for the
-    /// very same value — the language contradicting its own protocol, and
-    /// LANG.VALUES.NIL ("the reason is the entire observable content of a
-    /// NIL") along with it.
-    ///
-    /// A U that is genuinely *not* an absence — an undecided comparison
-    /// between two reals that both exist — would want that firewall. No such
-    /// value exists yet (comparison over the exact domain is total,
-    /// LANG.VALUES.EXACT), so the distinction belongs to whatever introduces
-    /// one, not here.
+    /// UNKNOWN is a NIL read in truth position (LANG.VALUES.TRUTH), so it is
+    /// an operational NIL like any other: `NIL?` answers TRUE for it and
+    /// `NIL-REASON` reports the reason it arrived with.
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }
 
-    #[inline]
-    pub fn semantic_kind(&self) -> SemanticKind {
+    /// The value's domain, spelled as LANG.VALUES.DISJOINT spells it. Every
+    /// error message names an operand's domain through this, so a reader
+    /// meets one vocabulary for the seven domains and no other.
+    pub fn domain_name(&self) -> &'static str {
         match &self.data {
-            // A definite boolean is truth-valued, not numeric; its truth is
-            // observed through the `truthValue` axis and `truthValued`
-            // capability (LANG.VALUES.TRUTH). It reports `number` on the coarse
-            // `semanticKind` axis only for protocol stability — distinctness
-            // from a number lives in value identity (`TRUE 1 EQ` is false),
-            // not in this axis.
-            ValueData::Boolean(_) => SemanticKind::Number,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
-            // A String reports `collection` on this coarse axis, matching
-            // the frozen `v1_semantic_kind` (which has always mapped
-            // `KernelValue::String` this way). Its distinctness from a Vector
-            // lives in value identity — `'A' [ 65 ] EQ` is false — not on a
-            // protocol axis, so making String a domain costs V1 nothing.
-            ValueData::Text(_) => SemanticKind::Collection,
-            ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
-            // The logical Unknown (U — `Nil` carrying the `TruthValue`
-            // hint) reports `absence` on this coarse `semanticKind` axis,
-            // same as an operational NIL; its distinctness lives on the
-            // `truthValue` axis (LANG.VALUES.TRUTH) and in value identity, not here.
-            ValueData::Nil => SemanticKind::Absence,
-            // A Symbol is a bare Word reference — the closest existing
-            // bucket on this coarse axis is `Code`, though a lone Symbol
-            // (distinct from the Vector holding it) is arguably its own
-            // thing; unresolved.
-            ValueData::Symbol(_) => SemanticKind::Code,
-            // A keyed correspondence is its own domain; on this coarse axis it
-            // reports `record`, so a consumer never mistakes it for a Vector.
-            ValueData::Record(_) => SemanticKind::Record,
-        }
-    }
-
-    #[inline]
-    pub fn shape_kind(&self) -> ValueShape {
-        match &self.data {
-            ValueData::Boolean(_) => ValueShape::Scalar,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
-            // As above: `v1_shape` maps a spine String to `vector`.
-            ValueData::Text(_) => ValueShape::Vector,
-            ValueData::Vector(_) => ValueShape::Vector,
-            ValueData::Tensor { .. } => ValueShape::Tensor,
-            // The logical Unknown (U — `Nil` carrying the `TruthValue`
-            // hint) reports `absence` on this coarse `shape` axis too, same
-            // as an operational NIL.
-            ValueData::Nil => ValueShape::Absence,
-            // `ValueShape::CodeBlock` used to mean "the executable domain";
-            // every Vector is executable now, so the `Vector` arm above
-            // already covers what this used to distinguish. Kept for a lone
-            // Symbol only.
-            ValueData::Symbol(_) => ValueShape::CodeBlock,
-            ValueData::Record(_) => ValueShape::Record,
-        }
-    }
-
-    pub fn capabilities(&self) -> Vec<Capability> {
-        let mut capabilities = vec![
-            Capability::StackItem,
-            Capability::Serializable,
-            Capability::Displayable,
-        ];
-        match &self.data {
-            ValueData::Scalar(_) => {
-                capabilities.push(Capability::Numeric);
-                capabilities.push(Capability::ExactNumeric);
-                capabilities.push(Capability::UserEditable);
-            }
-            ValueData::ExactScalar(_) => {
-                capabilities.push(Capability::Numeric);
-                capabilities.push(Capability::ExactNumeric);
-            }
-            ValueData::Vector(_) | ValueData::Tensor { .. } => {
-                capabilities.push(Capability::Iterable);
-                capabilities.push(Capability::Indexable);
-                capabilities.push(Capability::UserEditable);
-                // Every Vector is potentially executable now (EXEC no longer
-                // rejects it) — Callable used to be exclusive to CodeBlock.
-                capabilities.push(Capability::Callable);
-            }
-            // A String keeps the legacy V1 capability set for a string, which
-            // `v1_capabilities` still reconstructs from `KernelValue::String`.
-            ValueData::Text(_) => {
-                capabilities.push(Capability::Iterable);
-                capabilities.push(Capability::Indexable);
-                capabilities.push(Capability::UserEditable);
-            }
-            // Every NIL advertises `nilPassthrough`, the logical Unknown (U)
-            // included. U used to be excluded here by its `TruthValue` hint,
-            // which advertised something untrue the moment `AND`/`OR`/`NOT`
-            // made U reachable: `TRUE NIL AND 1 ADD` answers NIL, so U does
-            // pass through, and a capability a consumer branches on
-            // (LANG.OBSERVATION.FIREWALL) may not say otherwise. U's
-            // distinction from an ordinary NIL is the `truthValue` axis it
-            // gains below via `is_truth_value`, not a withheld capability.
-            ValueData::Nil => {
-                capabilities.push(Capability::NilPassthrough);
-                capabilities.push(Capability::Diagnosable);
-                capabilities.push(Capability::AiExplainable);
-            }
-            // A lone Symbol has no extra capability of its own — it is data
-            // (a Word reference) until the Vector holding it is EXEC'd, at
-            // which point the Vector's Callable capability is what applies.
-            ValueData::Symbol(_) => {}
-            // A boolean's only extra capability is `truthValued`, added below.
-            ValueData::Boolean(_) => {}
-            // A Record is neither iterable nor indexable by position: its
-            // contents are reached by key (`AT`) or through `KEYS`/`VALUES`.
-            ValueData::Record(_) => {}
-        }
-        // Truth-valued values (true / false / unknown) advertise the
-        // `truthValued` capability so consumers know to read the
-        // `truthValue` axis (LANG.VALUES.TRUTH). This covers definite
-        // booleans (Scalar + TruthValue role) and the logical U.
-        if self.is_truth_value() {
-            capabilities.push(Capability::TruthValued);
-        }
-        capabilities
-    }
-
-    pub fn has_capability(&self, capability: Capability) -> bool {
-        self.capabilities().contains(&capability)
-    }
-
-    pub fn origin(&self) -> ValueOrigin {
-        match self.absence_metadata().map(|metadata| &metadata.origin) {
-            Some(AbsenceOrigin::Literal) => ValueOrigin::Literal,
-            Some(AbsenceOrigin::NilPropagation) => ValueOrigin::NilPropagation,
-            Some(AbsenceOrigin::HostEnvironment) => ValueOrigin::HostEnvironment,
-            _ => ValueOrigin::Unknown,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => "Scalar",
+            ValueData::Boolean(_) => "Boolean",
+            ValueData::Text(_) => "String",
+            ValueData::Vector(_) | ValueData::Tensor { .. } => "Vector",
+            ValueData::Record(_) => "Record",
+            ValueData::Nil => "NIL",
+            ValueData::Symbol(_) => "Symbol",
         }
     }
 
@@ -442,7 +235,7 @@ impl Value {
 
     /// Return a `Cow<Value>` that is guaranteed to use a non-`Tensor`
     /// representation. `Tensor` values are converted into a nested
-    /// `ValueData::Vector` (preserving `hint` and `absence`); every other
+    /// `ValueData::Vector` (preserving `absence`); every other
     /// variant is borrowed in place.
     ///
     /// Useful at user-visible boundaries (PRINT, JSON-EXPORT, GUI hand-off,
@@ -453,11 +246,10 @@ impl Value {
         match &self.data {
             ValueData::Tensor { data, shape } => {
                 let children = tensor_to_nested_values(data, shape);
-                std::borrow::Cow::Owned(Value {
-                    data: ValueData::Vector(Arc::new(children)),
-                    hint: self.hint,
-                    absence: self.absence.clone(),
-                })
+                std::borrow::Cow::Owned(Value::new(
+                    ValueData::Vector(Arc::new(children)),
+                    self.absence.clone(),
+                ))
             }
             _ => std::borrow::Cow::Borrowed(self),
         }
@@ -467,12 +259,10 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         match &self.data {
             ValueData::Boolean(b) => *b,
-            // `is_truthy` is a total two-valued coercion. U (`Nil` carrying
-            // the `TruthValue` hint) is neither definitely true nor false,
-            // so it conservatively collapses to `false` — the same result as
-            // an operational NIL, hence the shared arm. Words that must
-            // honour the third value read it before asking for a definite
-            // truth (`SELECT`, `AND`/`OR`/`NOT`), never here.
+            // `is_truthy` is a total two-valued coercion. NIL — UNKNOWN in
+            // truth position — collapses to `false`. Words that must honour
+            // the third value read it before asking for a definite truth
+            // (`SELECT`, `AND`/`NOT`), never here.
             ValueData::Nil => false,
             // A String is not a truth value. LANG.VALUES.TRUTH is two-valued
             // over Booleans, and the logic Words reject anything else outright

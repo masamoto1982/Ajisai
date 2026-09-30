@@ -2,7 +2,6 @@
   "schemaVersion": 2,
   "generatedFrom": [
     "spec/words.json",
-    "rust/src/core_word_aliases.rs",
     "rust/src/surface_forms.rs"
   ],
   "implementationCatalogValidatedAgainst": [
@@ -11,21 +10,19 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 100,
-    "semanticKernelWords": 54,
-    "standardWords": 46,
-    "corewords": 100,
-    "aliases": 10,
-    "inputHelpers": 1,
-    "surface_forms": 7,
-    "manifestEntries": 118
+    "canonicalWords": 78,
+    "semanticKernelWords": 48,
+    "standardWords": 30,
+    "corewords": 78,
+    "surface_forms": 4,
+    "manifestEntries": 82
   },
   "entries": [
     {
       "id": "core.true",
       "kind": "coreword",
       "surface": "TRUE",
-      "category": "constant",
+      "family": "booleanLogic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "TRUE",
@@ -42,7 +39,7 @@
       "id": "core.false",
       "kind": "coreword",
       "surface": "FALSE",
-      "category": "constant",
+      "family": "booleanLogic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "FALSE",
@@ -59,7 +56,7 @@
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
-      "category": "logic",
+      "family": "booleanLogic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "AND",
@@ -74,28 +71,10 @@
       "classification": "Core"
     },
     {
-      "id": "core.or",
-      "kind": "coreword",
-      "surface": "OR",
-      "category": "logic",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "OR",
-      "coverage_entry_id": "core.or",
-      "semantic_role": "Derived",
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.k3.join"
-      ],
-      "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values",
-      "classification": "Core"
-    },
-    {
       "id": "core.not",
       "kind": "coreword",
       "surface": "NOT",
-      "category": "logic",
+      "family": "booleanLogic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "NOT",
@@ -113,7 +92,7 @@
       "id": "core.select",
       "kind": "coreword",
       "surface": "SELECT",
-      "category": "logic",
+      "family": "booleanLogic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "SELECT",
@@ -131,7 +110,7 @@
       "id": "core.eq",
       "kind": "coreword",
       "surface": "EQ",
-      "category": "comparison",
+      "family": "comparison",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "EQ",
@@ -140,18 +119,18 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
-      "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
+      "implementation_schema": "exact_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
       "classification": "Core"
     },
     {
       "id": "core.lt",
       "kind": "coreword",
       "surface": "LT",
-      "category": "comparison",
+      "family": "comparison",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "LT",
@@ -160,38 +139,18 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "implementation_schema": "ordering_schema(Lt) via apply_ordering_schema",
-      "classification": "Core"
-    },
-    {
-      "id": "core.lte",
-      "kind": "coreword",
-      "surface": "LTE",
-      "category": "comparison",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "LTE",
-      "coverage_entry_id": "core.lte",
-      "semantic_role": "Derived",
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain",
-        "algebra.bubble.passthrough"
-      ],
-      "implementation_schema": "ordering_schema(Le) via apply_ordering_schema",
       "classification": "Core"
     },
     {
       "id": "core.gt",
       "kind": "coreword",
       "surface": "GT",
-      "category": "comparison",
+      "family": "comparison",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "GT",
@@ -200,38 +159,18 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "implementation_schema": "ordering_schema(Gt) via apply_ordering_schema",
-      "classification": "Core"
-    },
-    {
-      "id": "core.gte",
-      "kind": "coreword",
-      "surface": "GTE",
-      "category": "comparison",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "GTE",
-      "coverage_entry_id": "core.gte",
-      "semantic_role": "Derived",
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain",
-        "algebra.bubble.passthrough"
-      ],
-      "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema",
       "classification": "Core"
     },
     {
       "id": "core.add",
       "kind": "coreword",
       "surface": "ADD",
-      "category": "arithmetic",
+      "family": "exactArithmetic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "ADD",
@@ -241,7 +180,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "implementation_schema": "exact_arithmetic_schema(Add) via apply_exact_arithmetic_schema",
       "classification": "Core"
@@ -250,7 +189,7 @@
       "id": "core.sub",
       "kind": "coreword",
       "surface": "SUB",
-      "category": "arithmetic",
+      "family": "exactArithmetic",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "SUB",
@@ -260,7 +199,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "implementation_schema": "exact_arithmetic_schema(Sub) via apply_exact_arithmetic_schema",
       "classification": "Core"
@@ -269,7 +208,7 @@
       "id": "core.mul",
       "kind": "coreword",
       "surface": "MUL",
-      "category": "arithmetic",
+      "family": "exactArithmetic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "MUL",
@@ -279,7 +218,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "implementation_schema": "exact_arithmetic_schema(Mul) via apply_exact_arithmetic_schema",
       "classification": "Core"
@@ -288,7 +227,7 @@
       "id": "core.div",
       "kind": "coreword",
       "surface": "DIV",
-      "category": "arithmetic",
+      "family": "exactArithmetic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "DIV",
@@ -298,35 +237,16 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "implementation_schema": "exact_arithmetic_schema(Div) via apply_exact_arithmetic_schema",
-      "classification": "Core"
-    },
-    {
-      "id": "core.mod",
-      "kind": "coreword",
-      "surface": "MOD",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "MOD",
-      "coverage_entry_id": "core.mod",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.bihomographic",
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
       "classification": "Core"
     },
     {
       "id": "core.floor",
       "kind": "coreword",
       "surface": "FLOOR",
-      "category": "arithmetic",
+      "family": "exactArithmetic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "FLOOR",
@@ -336,25 +256,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.ceil",
-      "kind": "coreword",
-      "surface": "CEIL",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "CEIL",
-      "coverage_entry_id": "core.ceil",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "classification": "Core"
     },
@@ -362,7 +264,7 @@
       "id": "core.round",
       "kind": "coreword",
       "surface": "ROUND",
-      "category": "arithmetic",
+      "family": "exactArithmetic",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "ROUND",
@@ -372,60 +274,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.quantize",
-      "kind": "coreword",
-      "surface": "QUANTIZE",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "QUANTIZE",
-      "coverage_entry_id": "core.quantize",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.abs",
-      "kind": "coreword",
-      "surface": "ABS",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "ABS",
-      "coverage_entry_id": "module.math.abs",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.exact-real.gosper"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.neg",
-      "kind": "coreword",
-      "surface": "NEG",
-      "category": "math",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "NEG",
-      "coverage_entry_id": "module.math.neg",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.gosper"
+        "algebra.absence.passthrough"
       ],
       "classification": "Core"
     },
@@ -433,7 +282,7 @@
       "id": "core.min",
       "kind": "coreword",
       "surface": "MIN",
-      "category": "math",
+      "family": "exactArithmetic",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "MIN",
@@ -442,7 +291,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -451,7 +300,7 @@
       "id": "core.max",
       "kind": "coreword",
       "surface": "MAX",
-      "category": "math",
+      "family": "exactArithmetic",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "MAX",
@@ -460,7 +309,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -469,7 +318,7 @@
       "id": "core.sqrt",
       "kind": "coreword",
       "surface": "SQRT",
-      "category": "math",
+      "family": "exactArithmetic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "SQRT",
@@ -487,7 +336,7 @@
       "id": "core.pow",
       "kind": "coreword",
       "surface": "POW",
-      "category": "math",
+      "family": "exactArithmetic",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "POW",
@@ -496,8 +345,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.bihomographic",
-        "algebra.exact-real.computable-real"
+        "algebra.exact-real.bihomographic"
       ],
       "classification": "Core"
     },
@@ -505,7 +353,7 @@
       "id": "core.gcd",
       "kind": "coreword",
       "surface": "GCD",
-      "category": "math",
+      "family": "exactArithmetic",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "GCD",
@@ -522,7 +370,7 @@
       "id": "core.ratio",
       "kind": "coreword",
       "surface": "RATIO",
-      "category": "math",
+      "family": "exactArithmetic",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "RATIO",
@@ -537,135 +385,10 @@
       "classification": "Core"
     },
     {
-      "id": "core.exp",
-      "kind": "coreword",
-      "surface": "EXP",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "EXP",
-      "coverage_entry_id": "core.exp",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.ln",
-      "kind": "coreword",
-      "surface": "LN",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "LN",
-      "coverage_entry_id": "core.ln",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.sin",
-      "kind": "coreword",
-      "surface": "SIN",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "SIN",
-      "coverage_entry_id": "core.sin",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.cos",
-      "kind": "coreword",
-      "surface": "COS",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "COS",
-      "coverage_entry_id": "core.cos",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.atan",
-      "kind": "coreword",
-      "surface": "ATAN",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "ATAN",
-      "coverage_entry_id": "core.atan",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.pi",
-      "kind": "coreword",
-      "surface": "PI",
-      "category": "constant",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "PI",
-      "coverage_entry_id": "core.pi",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.random",
-      "kind": "coreword",
-      "surface": "RANDOM",
-      "category": "math",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "RANDOM",
-      "coverage_entry_id": "core.random",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.seeded-stream",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "classification": "Core"
-    },
-    {
       "id": "core.get",
       "kind": "coreword",
       "surface": "GET",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "GET",
@@ -675,7 +398,8 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.bubble.domain"
+        "algebra.absence.domain",
+        "algebra.record.keyed-correspondence"
       ],
       "classification": "Core"
     },
@@ -683,7 +407,7 @@
       "id": "core.length",
       "kind": "coreword",
       "surface": "LENGTH",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "LENGTH",
@@ -700,7 +424,7 @@
       "id": "core.take",
       "kind": "coreword",
       "surface": "TAKE",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "TAKE",
@@ -717,7 +441,7 @@
       "id": "core.drop",
       "kind": "coreword",
       "surface": "DROP",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "DROP",
@@ -734,7 +458,7 @@
       "id": "core.concat",
       "kind": "coreword",
       "surface": "CONCAT",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "CONCAT",
@@ -751,7 +475,7 @@
       "id": "core.reverse",
       "kind": "coreword",
       "surface": "REVERSE",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "REVERSE",
@@ -768,7 +492,7 @@
       "id": "core.collect",
       "kind": "coreword",
       "surface": "COLLECT",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "COLLECT",
@@ -785,7 +509,7 @@
       "id": "core.range",
       "kind": "coreword",
       "surface": "RANGE",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "RANGE",
@@ -802,7 +526,7 @@
       "id": "core.fill",
       "kind": "coreword",
       "surface": "FILL",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "FILL",
@@ -820,7 +544,7 @@
       "id": "core.shape",
       "kind": "coreword",
       "surface": "SHAPE",
-      "category": "shape",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "SHAPE",
@@ -838,7 +562,7 @@
       "id": "core.reshape",
       "kind": "coreword",
       "surface": "RESHAPE",
-      "category": "shape",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "RESHAPE",
@@ -856,7 +580,7 @@
       "id": "core.flatten",
       "kind": "coreword",
       "surface": "FLATTEN",
-      "category": "shape",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "FLATTEN",
@@ -874,7 +598,7 @@
       "id": "core.depth",
       "kind": "coreword",
       "surface": "DEPTH",
-      "category": "shape",
+      "family": "collection",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "DEPTH",
@@ -892,7 +616,7 @@
       "id": "core.sort",
       "kind": "coreword",
       "surface": "SORT",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "SORT",
@@ -902,7 +626,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -911,7 +635,7 @@
       "id": "core.order",
       "kind": "coreword",
       "surface": "ORDER",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "ORDER",
@@ -921,7 +645,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -930,7 +654,7 @@
       "id": "core.unique",
       "kind": "coreword",
       "surface": "UNIQUE",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "UNIQUE",
@@ -947,7 +671,7 @@
       "id": "core.tally",
       "kind": "coreword",
       "surface": "TALLY",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "TALLY",
@@ -965,7 +689,7 @@
       "id": "core.zip",
       "kind": "coreword",
       "surface": "ZIP",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "ZIP",
@@ -983,8 +707,8 @@
       "id": "core.put",
       "kind": "coreword",
       "surface": "PUT",
-      "category": "vector",
-      "vocabularyTier": "standard",
+      "family": "collection",
+      "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "PUT",
       "coverage_entry_id": "core.put",
@@ -992,7 +716,8 @@
       "algebraic_family": "structure-lift",
       "core_tier": "material",
       "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.record.keyed-correspondence"
       ],
       "classification": "Core"
     },
@@ -1000,7 +725,7 @@
       "id": "core.group",
       "kind": "coreword",
       "surface": "GROUP",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "GROUP",
@@ -1019,7 +744,7 @@
       "id": "core.index-of",
       "kind": "coreword",
       "surface": "INDEX-OF",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "INDEX-OF",
@@ -1029,19 +754,19 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
-        "algebra.bubble.domain"
+        "algebra.exact-real.order",
+        "algebra.absence.domain"
       ],
       "classification": "Core"
     },
     {
       "id": "core.member",
       "kind": "coreword",
-      "surface": "MEMBER",
-      "category": "vector",
+      "surface": "MEMBER?",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
-      "canonical": "MEMBER",
+      "canonical": "MEMBER?",
       "coverage_entry_id": "core.member",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
@@ -1055,7 +780,7 @@
       "id": "core.bsearch",
       "kind": "coreword",
       "surface": "BSEARCH",
-      "category": "vector",
+      "family": "collection",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "BSEARCH",
@@ -1065,8 +790,8 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
-        "algebra.bubble.domain"
+        "algebra.exact-real.order",
+        "algebra.absence.domain"
       ],
       "classification": "Core"
     },
@@ -1074,7 +799,7 @@
       "id": "core.record",
       "kind": "coreword",
       "surface": "RECORD",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "RECORD",
@@ -1091,7 +816,7 @@
       "id": "core.keys",
       "kind": "coreword",
       "surface": "KEYS",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "KEYS",
@@ -1108,7 +833,7 @@
       "id": "core.values",
       "kind": "coreword",
       "surface": "VALUES",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "VALUES",
@@ -1122,44 +847,10 @@
       "classification": "Core"
     },
     {
-      "id": "core.at",
-      "kind": "coreword",
-      "surface": "AT",
-      "category": "record",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "AT",
-      "coverage_entry_id": "core.at",
-      "semantic_role": "Derived",
-      "algebraic_family": "record",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.record.keyed-correspondence"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.with",
-      "kind": "coreword",
-      "surface": "WITH",
-      "category": "record",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "WITH",
-      "coverage_entry_id": "core.with",
-      "semantic_role": "Derived",
-      "algebraic_family": "record",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.record.keyed-correspondence"
-      ],
-      "classification": "Core"
-    },
-    {
       "id": "core.without",
       "kind": "coreword",
       "surface": "WITHOUT",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "WITHOUT",
@@ -1176,7 +867,7 @@
       "id": "core.has",
       "kind": "coreword",
       "surface": "HAS?",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "HAS?",
@@ -1193,7 +884,7 @@
       "id": "core.merge",
       "kind": "coreword",
       "surface": "MERGE",
-      "category": "record",
+      "family": "record",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "MERGE",
@@ -1210,8 +901,8 @@
       "id": "core.map",
       "kind": "coreword",
       "surface": "MAP",
-      "category": "higher-order",
-      "vocabularyTier": "standard",
+      "family": "higherOrder",
+      "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "MAP",
       "coverage_entry_id": "core.map",
@@ -1229,7 +920,7 @@
       "id": "core.filter",
       "kind": "coreword",
       "surface": "FILTER",
-      "category": "higher-order",
+      "family": "higherOrder",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "FILTER",
@@ -1249,7 +940,7 @@
       "id": "core.fold",
       "kind": "coreword",
       "surface": "FOLD",
-      "category": "higher-order",
+      "family": "higherOrder",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "FOLD",
@@ -1268,7 +959,7 @@
       "id": "core.scan",
       "kind": "coreword",
       "surface": "SCAN",
-      "category": "higher-order",
+      "family": "higherOrder",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "SCAN",
@@ -1284,67 +975,10 @@
       "classification": "Core"
     },
     {
-      "id": "core.any",
-      "kind": "coreword",
-      "surface": "ANY",
-      "category": "higher-order",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "ANY",
-      "coverage_entry_id": "core.any",
-      "semantic_role": "Derived",
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.k3.domain"
-      ],
-      "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection",
-      "classification": "Core"
-    },
-    {
-      "id": "core.all",
-      "kind": "coreword",
-      "surface": "ALL",
-      "category": "higher-order",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "ALL",
-      "coverage_entry_id": "core.all",
-      "semantic_role": "Derived",
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.k3.domain"
-      ],
-      "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection",
-      "classification": "Core"
-    },
-    {
-      "id": "core.rank",
-      "kind": "coreword",
-      "surface": "RANK",
-      "category": "higher-order",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "RANK",
-      "coverage_entry_id": "core.rank",
-      "semantic_role": "Derived",
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.structure-lift.applicative",
-        "algebra.state-transformer.composition"
-      ],
-      "implementation_schema": "traversal_scheme(rank) -> depth_descent -> block_application -> structure_lift",
-      "classification": "Core"
-    },
-    {
       "id": "core.chars",
       "kind": "coreword",
       "surface": "CHARS",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "CHARS",
@@ -1361,7 +995,7 @@
       "id": "core.join",
       "kind": "coreword",
       "surface": "JOIN",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "JOIN",
@@ -1378,7 +1012,7 @@
       "id": "core.trim",
       "kind": "coreword",
       "surface": "TRIM",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "TRIM",
@@ -1395,7 +1029,7 @@
       "id": "core.upper",
       "kind": "coreword",
       "surface": "UPPER",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "UPPER",
@@ -1412,7 +1046,7 @@
       "id": "core.lower",
       "kind": "coreword",
       "surface": "LOWER",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "LOWER",
@@ -1429,7 +1063,7 @@
       "id": "core.tokenize",
       "kind": "coreword",
       "surface": "TOKENIZE",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "TOKENIZE",
@@ -1446,7 +1080,7 @@
       "id": "core.search",
       "kind": "coreword",
       "surface": "SEARCH",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "SEARCH",
@@ -1463,7 +1097,7 @@
       "id": "core.replace",
       "kind": "coreword",
       "surface": "REPLACE",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "REPLACE",
@@ -1480,7 +1114,7 @@
       "id": "core.num",
       "kind": "coreword",
       "surface": "NUM",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "NUM",
@@ -1491,7 +1125,7 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.exact-real.continued-fraction",
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "classification": "Core"
     },
@@ -1499,7 +1133,7 @@
       "id": "core.str",
       "kind": "coreword",
       "surface": "STR",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "STR",
@@ -1516,7 +1150,7 @@
       "id": "core.format",
       "kind": "coreword",
       "surface": "FORMAT",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "FORMAT",
@@ -1525,7 +1159,7 @@
       "algebraic_family": "exact-scalar",
       "core_tier": "material",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "classification": "Core"
@@ -1534,7 +1168,7 @@
       "id": "core.json-decode",
       "kind": "coreword",
       "surface": "JSON-DECODE",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "JSON-DECODE",
@@ -1553,7 +1187,7 @@
       "id": "core.json-encode",
       "kind": "coreword",
       "surface": "JSON-ENCODE",
-      "category": "cast",
+      "family": "text",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "JSON-ENCODE",
@@ -1572,7 +1206,7 @@
       "id": "core.exec",
       "kind": "coreword",
       "surface": "EXEC",
-      "category": "control",
+      "family": "control",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "EXEC",
@@ -1589,7 +1223,7 @@
       "id": "core.contract",
       "kind": "coreword",
       "surface": "CONTRACT",
-      "category": "control",
+      "family": "dictionary",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "CONTRACT",
@@ -1607,7 +1241,7 @@
       "id": "core.fail",
       "kind": "coreword",
       "surface": "FAIL",
-      "category": "control",
+      "family": "control",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "FAIL",
@@ -1624,16 +1258,16 @@
       "id": "core.nil",
       "kind": "coreword",
       "surface": "NIL",
-      "category": "constant",
+      "family": "absence",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "NIL",
       "coverage_entry_id": "core.nil",
       "semantic_role": "Primitive",
-      "algebraic_family": "bubble",
+      "algebraic_family": "absence",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "classification": "Core"
     },
@@ -1641,7 +1275,7 @@
       "id": "core.nil-p",
       "kind": "coreword",
       "surface": "NIL?",
-      "category": "absence",
+      "family": "absence",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "NIL?",
@@ -1650,7 +1284,7 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.bubble.domain",
+        "algebra.absence.domain",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -1659,7 +1293,7 @@
       "id": "core.nil-reason",
       "kind": "coreword",
       "surface": "NIL-REASON",
-      "category": "absence",
+      "family": "absence",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "NIL-REASON",
@@ -1668,7 +1302,7 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "classification": "Core"
     },
@@ -1676,34 +1310,16 @@
       "id": "core.absent",
       "kind": "coreword",
       "surface": "ABSENT",
-      "category": "absence",
+      "family": "absence",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "ABSENT",
       "coverage_entry_id": "core.absent",
       "semantic_role": "Derived",
-      "algebraic_family": "bubble",
+      "algebraic_family": "absence",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.bubble.domain"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.keep",
-      "kind": "coreword",
-      "surface": "KEEP",
-      "category": "modifier",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "KEEP",
-      "coverage_entry_id": "core.modifier.keep",
-      "semantic_role": "Derived",
-      "algebraic_family": "modifier",
-      "core_tier": "flow",
-      "derived_from": [
-        "algebra.modifier.consumption.keep",
-        "algebra.state-transformer.combinator"
+        "algebra.absence.domain"
       ],
       "classification": "Core"
     },
@@ -1711,7 +1327,7 @@
       "id": "core.bind",
       "kind": "coreword",
       "surface": "BIND",
-      "category": "dictionary",
+      "family": "dictionary",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "BIND",
@@ -1729,7 +1345,7 @@
       "id": "core.def",
       "kind": "coreword",
       "surface": "DEF",
-      "category": "dictionary",
+      "family": "dictionary",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "DEF",
@@ -1747,7 +1363,7 @@
       "id": "core.del",
       "kind": "coreword",
       "surface": "DEL",
-      "category": "dictionary",
+      "family": "dictionary",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "DEL",
@@ -1762,27 +1378,10 @@
       "classification": "Core"
     },
     {
-      "id": "core.defined",
-      "kind": "coreword",
-      "surface": "DEFINED?",
-      "category": "dictionary",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "DEFINED?",
-      "coverage_entry_id": "core.defined",
-      "semantic_role": "Derived",
-      "algebraic_family": "dictionary",
-      "core_tier": "flow",
-      "derived_from": [
-        "algebra.dictionary.lookup"
-      ],
-      "classification": "Core"
-    },
-    {
       "id": "core.digest",
       "kind": "coreword",
       "surface": "DIGEST",
-      "category": "dictionary",
+      "family": "dictionary",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "DIGEST",
@@ -1800,7 +1399,7 @@
       "id": "core.print",
       "kind": "coreword",
       "surface": "PRINT",
-      "category": "io",
+      "family": "output",
       "vocabularyTier": "kernel",
       "source": "spec/words.json",
       "canonical": "PRINT",
@@ -1815,160 +1414,6 @@
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
-    },
-    {
-      "id": "alias.plus",
-      "kind": "symbol_alias",
-      "surface": "+",
-      "canonical": "ADD",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.plus",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "ADD",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.minus",
-      "kind": "symbol_alias",
-      "surface": "-",
-      "canonical": "SUB",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.minus",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "SUB",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.asterisk",
-      "kind": "symbol_alias",
-      "surface": "*",
-      "canonical": "MUL",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.asterisk",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "MUL",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.slash",
-      "kind": "symbol_alias",
-      "surface": "/",
-      "canonical": "DIV",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.slash",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "DIV",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.percent",
-      "kind": "symbol_alias",
-      "surface": "%",
-      "canonical": "MOD",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.percent",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "MOD",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.equals",
-      "kind": "symbol_alias",
-      "surface": "=",
-      "canonical": "EQ",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.equals",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "EQ",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.less-than",
-      "kind": "symbol_alias",
-      "surface": "<",
-      "canonical": "LT",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.less-than",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "LT",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.greater-than",
-      "kind": "symbol_alias",
-      "surface": ">",
-      "canonical": "GT",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.greater-than",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "GT",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.less-than-or-equal",
-      "kind": "symbol_alias",
-      "surface": "<=",
-      "canonical": "LTE",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.less-than-or-equal",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "LTE",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.greater-than-or-equal",
-      "kind": "symbol_alias",
-      "surface": ">=",
-      "canonical": "GTE",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.greater-than-or-equal",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "GTE",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.quote",
-      "kind": "input_helper",
-      "surface": "'",
-      "canonical": "STRING-QUOTE",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.quote",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "STRING-QUOTE",
-      "classification": "Surface"
     },
     {
       "id": "surface.hash",
@@ -2016,54 +1461,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "END-VECTOR",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.left-brace",
-      "kind": "delimiter_sugar",
-      "surface": "{",
-      "concept": "BEGIN-RECORD",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "BEGIN-RECORD",
-      "coverage_entry_id": "surface.left-brace",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "BEGIN-RECORD",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.right-brace",
-      "kind": "delimiter_sugar",
-      "surface": "}",
-      "concept": "END-RECORD",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "END-RECORD",
-      "coverage_entry_id": "surface.right-brace",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "END-RECORD",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.pipe",
-      "kind": "delimiter_sugar",
-      "surface": "|",
-      "concept": "PARAMETER-SEPARATOR",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "PARAMETER-SEPARATOR",
-      "coverage_entry_id": "surface.pipe",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "PARAMETER-SEPARATOR",
       "classification": "Surface"
     },
     {

@@ -66,10 +66,6 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         ValueData::Text(_) => None,
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) => nested_vector_shape(items),
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
-        // has no dedicated variant, so it takes the `Nil` arm above too and
-        // counts as a rank-0 element (a nil lane, via the valid-mask), same
-        // as an operational NIL.
         ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
     }
 }
@@ -83,15 +79,19 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
                 }
                 *idx += 1;
             }
-            // A NIL matches an absent lane carrying the same reason. Both
-            // halves matter: `is_valid` alone would let a NIL equal a zero
-            // (an absent lane's numerator is 0 too), and the lane alone would
-            // let `NIL(divisionByZero)` equal a written `NIL`, which the same
-            // two values as scalars already refuse.
+            // A NIL matches an absent lane carrying the same reason and the
+            // same `userDeclared` detail. All three halves matter: `is_valid`
+            // alone would let a NIL equal a zero (an absent lane's numerator
+            // is 0 too), the lane alone would let `NIL(divisionByZero)` equal
+            // a written `NIL`, and the reason alone would let `'a' ABSENT`
+            // equal `'b' ABSENT` across representations — which the same two
+            // values as scalars (`Value::eq`) and as two tensors
+            // (`DenseTensor::eq`) both already refuse.
             ValueData::Nil => {
                 if *idx >= data.len()
                     || data.is_valid(*idx)
                     || data.lane_reason(*idx) != child.nil_reason().copied()
+                    || data.lane_detail(*idx) != child.absence_detail()
                 {
                     return false;
                 }
@@ -111,6 +111,7 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
                     if *idx >= data.len()
                         || data.fraction_or_nil(*idx) != inner_data.fraction_or_nil(lane)
                         || data.lane_reason(*idx) != inner_data.lane_reason(lane)
+                        || data.lane_detail(*idx) != inner_data.lane_detail(lane)
                     {
                         return false;
                     }

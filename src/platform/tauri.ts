@@ -2,13 +2,12 @@
 // persistence, and the native dialogs and filesystem for file I/O.
 
 import type {
-    ExportData,
     FileIO,
     InterpreterStateSnapshot,
     OpenResult,
     Persistence,
     SaveResult,
-    TablePayload
+    StoredInterpreterState
 } from './index';
 import { WEB_PERSISTENCE, formatJsonDocument, readInterpreterStateSnapshot } from './web';
 
@@ -17,21 +16,17 @@ import { WEB_PERSISTENCE, formatJsonDocument, readInterpreterStateSnapshot } fro
 const dynamicImport = (specifier: string): Promise<any> =>
     import(/* @vite-ignore */ specifier);
 
+// The file's one field. A `tables` array sat beside it for years without
+// anything ever writing an entry; a file that still carries one is read for
+// its state and rewritten without it.
 interface StoredData {
-    interpreterState: ExportData['interpreterState'];
-    tables: ExportData['tables'];
+    interpreterState: StoredInterpreterState | null;
 }
 
 const STATE_FILE = 'ajisai-state.json';
 
-const EMPTY_DATA: StoredData = {
-    interpreterState: null,
-    tables: []
-};
-
 const cloneEmptyData = (): StoredData => ({
-    interpreterState: null,
-    tables: []
+    interpreterState: null
 });
 
 async function readStoredData(): Promise<StoredData> {
@@ -48,8 +43,7 @@ async function readStoredData(): Promise<StoredData> {
     const parsed = JSON.parse(raw) as Partial<StoredData>;
 
     return {
-        interpreterState: parsed.interpreterState ?? null,
-        tables: Array.isArray(parsed.tables) ? parsed.tables : []
+        interpreterState: parsed.interpreterState ?? null
     };
 }
 
@@ -75,10 +69,10 @@ export class TauriPersistence implements Persistence {
 
         const alreadyExists = await exists(STATE_FILE, { baseDir: BaseDirectory.AppData });
         if (!alreadyExists) {
-            await writeStoredData(EMPTY_DATA);
+            await writeStoredData(cloneEmptyData());
             // A first launch inherits whatever the web playground had stored in
             // this WebView's IndexedDB.
-            await this.migrateFromIndexedDb(() => WEB_PERSISTENCE.exportAll()).catch((error) => {
+            await this.migrateFromIndexedDb(() => WEB_PERSISTENCE.exportInterpreterState()).catch((error) => {
                 console.warn('Failed to migrate IndexedDB data into Tauri storage:', error);
             });
         }
@@ -86,74 +80,30 @@ export class TauriPersistence implements Persistence {
         this.opened = true;
     }
 
-    private async migrateFromIndexedDb(exportWebData: () => Promise<ExportData>): Promise<void> {
-        const data = await exportWebData();
-        const hasState = !!data.interpreterState;
-        const hasTables = Array.isArray(data.tables) && data.tables.length > 0;
-
-        if (!hasState && !hasTables) {
+    private async migrateFromIndexedDb(
+        exportWebState: () => Promise<StoredInterpreterState | null>
+    ): Promise<void> {
+        const interpreterState = await exportWebState();
+        if (!interpreterState) {
             return;
         }
 
-        await writeStoredData({
-            interpreterState: data.interpreterState,
-            tables: data.tables
-        });
+        await writeStoredData({ interpreterState });
     }
 
     async saveInterpreterState(state: InterpreterStateSnapshot): Promise<void> {
         await this.open();
-        const current = await readStoredData();
-        current.interpreterState = {
-            key: 'interpreter_state',
-            stateVersion: state.stateVersion,
-            stack: state.stack,
-            stackSnapshot: state.stackSnapshot,
-            userWords: state.userWords,
-            activeDictionarySheet: state.activeDictionarySheet,
-            updatedAt: new Date().toISOString()
-        };
-        await writeStoredData(current);
+        await writeStoredData({
+            interpreterState: {
+                key: 'interpreter_state',
+                ...state,
+                updatedAt: new Date().toISOString()
+            }
+        });
     }
 
     async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
-        await this.open();
-        const current = await readStoredData();
-        return readInterpreterStateSnapshot(current.interpreterState);
-    }
-
-    async saveTable(name: string, schema: unknown, records: unknown): Promise<void> {
-        await this.open();
-        const current = await readStoredData();
-        const nextTables = current.tables.filter((table) => table.name !== name);
-        nextTables.push({
-            name,
-            schema,
-            records,
-            updatedAt: new Date().toISOString()
-        });
-        current.tables = nextTables;
-        await writeStoredData(current);
-    }
-
-    async loadTable(name: string): Promise<TablePayload | null> {
-        await this.open();
-        const current = await readStoredData();
-        const table = current.tables.find((entry) => entry.name === name);
-        return table ? { schema: table.schema, records: table.records } : null;
-    }
-
-    async collectTableNames(): Promise<string[]> {
-        await this.open();
-        const current = await readStoredData();
-        return current.tables.map((entry) => entry.name);
-    }
-
-    async deleteTable(name: string): Promise<void> {
-        await this.open();
-        const current = await readStoredData();
-        current.tables = current.tables.filter((entry) => entry.name !== name);
-        await writeStoredData(current);
+        return readInterpreterStateSnapshot(await this.exportInterpreterState());
     }
 
     async clearAll(): Promise<void> {
@@ -161,21 +111,10 @@ export class TauriPersistence implements Persistence {
         await writeStoredData(cloneEmptyData());
     }
 
-    async exportAll(): Promise<ExportData> {
+    async exportInterpreterState(): Promise<StoredInterpreterState | null> {
         await this.open();
         const current = await readStoredData();
-        return {
-            tables: [...current.tables],
-            interpreterState: current.interpreterState
-        };
-    }
-
-    async importAll(data: ExportData): Promise<void> {
-        await this.open();
-        await writeStoredData({
-            tables: Array.isArray(data.tables) ? data.tables : [],
-            interpreterState: data.interpreterState ?? null
-        });
+        return current.interpreterState;
     }
 }
 

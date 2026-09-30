@@ -74,62 +74,17 @@ export function alphaNormalize(source) {
 }
 
 /**
- * Split a body into its parameter header and the rest: the names written
- * before the first `|` of its first statement, at its own level
- * (LANG.SOURCE.FRAME). `params` is null for a header-less body.
+ * Replace each user Word named in `source` by `[ body ] EXEC`, recursively,
+ * so the result names Core Words only. `definitions` maps a normalized name
+ * to its body text.
  */
-export function splitHeader(body) {
-  const tokens = tokenize(body);
-  let depth = 0;
-  for (let i = 0; i < tokens.length; i += 1) {
-    const t = tokens[i];
-    if (t === '[' || t === '{') depth += 1;
-    else if (t === ']' || t === '}') depth -= 1;
-    else if (depth === 0 && t === '|') {
-      return { params: tokens.slice(0, i).map(norm), rest: tokens.slice(i + 1).join(' ') };
-    }
-  }
-  return { params: null, rest: body };
-}
-
-/**
- * Replace each user Word named in `source` by Core-only source, recursively.
- * `definitions` maps a normalized name to its body text.
- *
- * A header-carrying Word expands through `BIND` — `F` to
- * `'B' BIND 'A' BIND body`, and `KEEP F` to the same with `A B` pushed back
- * first — which means the same as the call (LANG.SOURCE.FRAME). Parameters
- * are renamed per expansion so they cannot meet a name of the caller's. A
- * header-less Word expands to `[ body ] EXEC`, which is not faithful under
- * `KEEP` (the pilot results note, H5); that case is what H5 reports.
- */
-export function expand(source, definitions, fresh = { n: 0 }) {
-  const tokens = tokenize(source);
-  const out = [];
-  for (let i = 0; i < tokens.length; i += 1) {
-    const token = tokens[i];
-    const name = norm(token);
-    if (isString(token) || !definitions.has(name)) {
-      out.push(token);
-      continue;
-    }
-    const { params, rest } = splitHeader(definitions.get(name));
-    if (params === null) {
-      out.push(`[ ${expand(definitions.get(name), definitions, fresh)} ] EXEC`);
-      continue;
-    }
-    const kept = out.length > 0 && norm(out[out.length - 1]) === 'KEEP';
-    if (kept) out.pop();
-    fresh.n += 1;
-    const renames = new Map(params.map((p) => [p, `_X${fresh.n}_${p}`]));
-    const body = tokenize(rest)
-      .map((t) => (!isString(t) && renames.has(norm(t)) ? renames.get(norm(t)) : t))
-      .join(' ');
-    const binds = [...params].reverse().map((p) => `'${renames.get(p)}' BIND`);
-    const pushBack = kept ? params.map((p) => renames.get(p)) : [];
-    out.push([...binds, ...pushBack, expand(body, definitions, fresh)].filter(Boolean).join(' '));
-  }
-  return out.join(' ');
+export function expand(source, definitions) {
+  return tokenize(source)
+    .map((token) => {
+      if (isString(token) || !definitions.has(norm(token))) return token;
+      return `[ ${expand(definitions.get(norm(token)), definitions)} ] EXEC`;
+    })
+    .join(' ');
 }
 
 /** The DEF lines that make `definitions` (a list of { name, body }) exist, in order. */

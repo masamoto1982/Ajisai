@@ -1,7 +1,8 @@
+import { isMobileViewport } from '../platform/viewport';
 import { formatAjisaiSource } from './code-formatter';
+import { countLeadingSourceWhitespace, isSourceWhitespace, trimSource } from './source-atoms';
 
 export interface EditorCallbacks {
-    readonly onContentChange?: (content: string) => void;
     readonly onSwitchToInputMode?: () => void;
     readonly onRequestSuggestions?: (prefix: string) => string[];
 }
@@ -11,7 +12,6 @@ export interface Editor {
     readonly updateValue: (value: string) => void;
     readonly clear: (switchView?: boolean) => void;
     readonly insertWord: (word: string) => void;
-    readonly insertText: (text: string) => void;
     readonly removeLastWord: () => void;
     readonly format: () => void;
     readonly focus: () => void;
@@ -28,7 +28,6 @@ export interface Editor {
      * the selection, which is how step mode says it has finished.
      */
     readonly revealRange: (start: number, end: number) => void;
-    readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
     /**
      * The word-shaped token touching the cursor (or the current selection's
      * start), the same extraction autocomplete uses. Empty when the cursor
@@ -37,38 +36,42 @@ export interface Editor {
     readonly getWordAtCursor: () => string;
 }
 
-const insertAt = (
-    text: string,
+// A Dictionary word written at [start, end) of `text`, with a space on either
+// side where it would otherwise run into a neighbouring name: clicking ADD and
+// then SQRT wrote `ADDSQRT`, one unknown Word, where the reader had asked for
+// two. Whitespace (the space written by a click between the word buttons) is
+// written as it is. Exported for `code-input-editor.test.ts`.
+export const separateWord = (text: string, start: number, end: number, word: string): {
+    readonly insertion: string;
+    readonly caretOffset: number;
+} => {
+    if (trimSource(word) === '') return { insertion: word, caretOffset: word.length };
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    const lead = before !== '' && !isSourceWhitespace(before[before.length - 1]!) ? ' ' : '';
+    const trail = after !== '' && !isSourceWhitespace(after[0]!) ? ' ' : '';
+    return { insertion: lead + word + trail, caretOffset: lead.length + word.length };
+};
+
+// Replace [start, end) of the textarea with `text` the way typing would, so
+// the change joins the browser's own undo history. Assigning `value` — which
+// every programmatic edit here used to do — empties that history, so one
+// dictionary click or Format made every earlier Ctrl+Z impossible. The
+// browser's editing command acts on the focused field only; an unfocused one
+// (a phone, where focus would raise the keyboard) takes `setRangeText`, which
+// keeps the rest of the text and the caret as the same edit would.
+const replaceRange = (
+    element: HTMLTextAreaElement,
     start: number,
     end: number,
-    insertion: string
-): string => text.substring(0, start) + insertion + text.substring(end);
-
-const locateInnerBracketPosition = (text: string): number | null => {
-    const pos = text.lastIndexOf('[ ]');
-    return pos !== -1 ? pos + 2 : null;
-};
-
-const computeCursorPosition = (
-    basePosition: number,
-    insertedText: string,
-    preferInnerBracket: boolean
-): number => {
-    if (preferInnerBracket) {
-        const innerPos = locateInnerBracketPosition(insertedText);
-        if (innerPos !== null) {
-            return basePosition + innerPos;
-        }
+    text: string
+): void => {
+    if (document.activeElement === element && typeof document.execCommand === 'function') {
+        element.setSelectionRange(start, end);
+        if (start === end && text === '') return;
+        if (document.execCommand(text === '' ? 'delete' : 'insertText', false, text)) return;
     }
-    return basePosition + insertedText.length;
-};
-
-const updateElementValue = (element: HTMLTextAreaElement, value: string): void => {
-    element.value = value;
-};
-
-const focusElement = (element: HTMLTextAreaElement): void => {
-    element.focus();
+    element.setRangeText(text, start, end, 'end');
 };
 
 const updateSelectionRange = (
@@ -86,21 +89,12 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 });
 
 const MAX_SUGGESTIONS = 10;
-// Two characters, not three. The mobile cheat sheet advertises autocomplete
-// while typing, and a three-character floor silently withholds it for exactly
-// the prefixes a phone typist most wants it for: `AB` for `ABS`, `DU` for
-// `DUP`. Ten results are the ceiling either way (`MAX_SUGGESTIONS`), so a
-// shorter prefix costs a longer list, not an unbounded one.
+// Two characters. The mobile cheat sheet advertises autocomplete while
+// typing, and a longer floor silently withholds it for exactly the prefixes a
+// phone typist most wants it for: `MA` for `MAP`, `SQ` for `SQRT`. Ten
+// results are the ceiling either way (`MAX_SUGGESTIONS`), so a shorter prefix
+// costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
-const MOBILE_BREAKPOINT = 768;
-const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
-const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
-    '(', ')', '[', ']', '{', '}',
-    '<', '>', '+', '-', '*', '/',
-    '%', '=', '!', '?', '&', '|',
-    '~', '@', '#', '$', '_', '\\',
-    ':', ';', '.', ',', "'", '"',
-]);
 
 const CARET_MIRROR_STYLE_PROPERTIES = [
     'borderBottomWidth',
@@ -134,50 +128,53 @@ const copyCaretMirrorStyle = (
     });
 };
 
-const extractToken = (
+// The word the cursor touches, as Lookup and the suggestion panel read it.
+// A name is any run of non-whitespace (spec/grammar.json,
+// characterClasses.nameCharacter), so a User Word spelled `X.Y`, `A|B` or
+// `合計` is one word here, and Lookup identifies the entry execution would —
+// an ASCII letter class used to hand Lookup `X` for a cursor on `X.Y`, and
+// nothing at all for a Japanese name. The one split made is the formatter's:
+// `[` and `]` must stand alone whatever they are glued to, so the word in
+// `[SQRT]` is `SQRT`, and a cursor on a bracket, like one on whitespace,
+// touches no word. Exported for `code-input-editor.test.ts`.
+export const extractToken = (
     text: string,
     cursorPosition: number
 ): { token: string; start: number; end: number } => {
     const safeCursor = Math.max(0, Math.min(cursorPosition, text.length));
-    const left = text.slice(0, safeCursor);
-    const right = text.slice(safeCursor);
-    const leftMatch = left.match(/[A-Za-z0-9_?!+\-*/<>=]+$/);
-    const rightMatch = right.match(/^[A-Za-z0-9_?!+\-*/<>=]*/);
+    let start = safeCursor;
+    while (start > 0 && !isSourceWhitespace(text[start - 1]!)) start -= 1;
+    let end = safeCursor;
+    while (end < text.length && !isSourceWhitespace(text[end]!)) end += 1;
 
-    const tokenLeft = leftMatch?.[0] ?? '';
-    const tokenRight = rightMatch?.[0] ?? '';
-
-    return {
-        token: `${tokenLeft}${tokenRight}`,
-        start: safeCursor - tokenLeft.length,
-        end: safeCursor + tokenRight.length
-    };
+    let pieceStart = start;
+    for (const piece of text.slice(start, end).match(/[[\]]|[^[\]]+/g) ?? []) {
+        const pieceEnd = pieceStart + piece.length;
+        if (piece !== '[' && piece !== ']' && pieceStart <= safeCursor && safeCursor <= pieceEnd) {
+            return { token: piece, start: pieceStart, end: pieceEnd };
+        }
+        pieceStart = pieceEnd;
+    }
+    return { token: '', start: safeCursor, end: safeCursor };
 };
 
 export const createEditor = (
     element: HTMLTextAreaElement,
     callbacks: EditorCallbacks = {}
 ): Editor => {
-    let onContentChangeCallback = callbacks.onContentChange;
     const switchToInputMode = callbacks.onSwitchToInputMode ?? (() => {});
     const requestSuggestions = callbacks.onRequestSuggestions ?? (() => []);
 
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
-    let isSymbolMode = false;
     let lastKnownSelection = lookupSelectionRange(element);
 
     const textareaContainer = element.closest('.input-area');
     const suggestionPanel = document.createElement('div');
     suggestionPanel.className = 'editor-suggestions';
+    suggestionPanel.setAttribute('role', 'listbox');
     suggestionPanel.style.display = 'none';
     textareaContainer?.appendChild(suggestionPanel);
-
-    const emitContentChange = (): void => {
-        if (onContentChangeCallback) {
-            onContentChangeCallback(element.value);
-        }
-    };
 
     const syncLastKnownSelection = (): void => {
         lastKnownSelection = lookupSelectionRange(element);
@@ -192,10 +189,8 @@ export const createEditor = (
 
     const hideSuggestions = (): void => {
         suggestionPanel.style.display = 'none';
-        suggestionPanel.classList.remove('editor-suggestions--symbols');
         currentSuggestions = [];
         selectedSuggestionIndex = 0;
-        isSymbolMode = false;
     };
 
     const computeCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
@@ -235,97 +230,58 @@ export const createEditor = (
             return;
         }
 
-        // Two panels, two anchors, and the symbol palette switches between them
-        // on whether there is anything written yet.
-        //
-        // Word completions belong to the text being typed, so they always
-        // follow the caret. The symbol palette opens at any token boundary,
-        // which includes an empty editor — and there the caret is on line one,
-        // so a caret anchor puts the palette square over the first lines of
-        // the placeholder cheat sheet. On a phone that sheet is the only place
-        // the touch gestures are written down, so tapping in to read how to
-        // run something hid how to run something. Pinned to the bottom edge
-        // the sheet reads from the top down into the palette instead, and the
-        // corner buttons it would otherwise cover are themselves hidden while
-        // the placeholder shows (`:placeholder-shown` in playground.css).
-        //
-        // Once something *is* written those corner buttons are live, and the
-        // bottom edge is where Format sits — so from the first character on,
-        // the palette goes back to the caret.
-        const anchorToBottomEdge = isSymbolMode && element.value.length === 0;
-
-        if (anchorToBottomEdge) {
-            suggestionPanel.style.top = 'auto';
-            suggestionPanel.style.bottom = '0';
-            suggestionPanel.style.left = '0';
-            suggestionPanel.style.right = '0';
-        } else {
-            const { top, left } = computeCursorCoords(element);
-            suggestionPanel.style.top = `${top}px`;
-            suggestionPanel.style.left = `${left + 8}px`;
-            suggestionPanel.style.right = 'auto';
-            suggestionPanel.style.bottom = 'auto';
-        }
-
-        suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
+        // Completions belong to the text being typed, so they follow the caret.
+        const { top, left } = computeCursorCoords(element);
+        suggestionPanel.style.top = `${top}px`;
+        suggestionPanel.style.left = `${left + 8}px`;
 
         suggestionPanel.innerHTML = '';
-        currentSuggestions.forEach((suggestion) => {
+        currentSuggestions.forEach((suggestion, index) => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'editor-suggestion-item';
+            button.setAttribute('role', 'option');
+            // The item Tab will accept, moved by ArrowUp/ArrowDown.
+            const selected = index === selectedSuggestionIndex;
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-selected', String(selected));
             button.textContent = suggestion;
-            button.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                applySuggestion(suggestion);
-            });
+            // The press is swallowed so focus, and with it the phone keyboard,
+            // stays on the editor; the click that follows still arrives.
+            button.addEventListener('pointerdown', (e) => e.preventDefault());
+            button.addEventListener('click', () => applySuggestion(suggestion));
             suggestionPanel.appendChild(button);
         });
 
-        suggestionPanel.style.display = isSymbolMode ? 'grid' : 'block';
+        suggestionPanel.style.display = 'block';
+        suggestionPanel.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
     };
 
     const refreshSuggestions = (): void => {
-        const cursorPos = element.selectionStart;
-        const prevChar = cursorPos > 0 ? element.value[cursorPos - 1] ?? '' : '';
-        const isTokenStart = cursorPos === 0 || /\s/.test(prevChar);
+        // Symbols come from the device's own keyboard; this panel completes
+        // Words, from their second character.
         const { token } = extractToken(element.value, element.selectionStart);
-        if (isTokenStart && token.length === 0) {
-            if (!checkIsMobile()) {
-                hideSuggestions();
-                return;
-            }
-            currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice();
-            isSymbolMode = true;
-            selectedSuggestionIndex = 0;
-            renderSuggestions();
-            return;
-        }
-
         if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) {
             hideSuggestions();
             return;
         }
 
         const suggestions = requestSuggestions(token)
-            .filter(word => token.length === 0 || word.toLowerCase().startsWith(token.toLowerCase()))
+            .filter(word => word.toLowerCase().startsWith(token.toLowerCase()))
             .slice(0, MAX_SUGGESTIONS);
 
         currentSuggestions = suggestions;
-        isSymbolMode = false;
         selectedSuggestionIndex = 0;
         renderSuggestions();
     };
 
     const applySuggestion = (suggestion: string): void => {
         const { start, end } = extractToken(element.value, element.selectionStart);
-        const newText = insertAt(element.value, start, end, suggestion);
-        updateElementValue(element, newText);
+        replaceRange(element, start, end, suggestion);
         const newPos = start + suggestion.length;
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
         hideSuggestions();
-        emitContentChange();
     };
 
     const registerEventListeners = (): void => {
@@ -342,7 +298,6 @@ export const createEditor = (
 
         element.addEventListener('input', () => {
             syncLastKnownSelection();
-            emitContentChange();
             refreshSuggestions();
         });
 
@@ -366,11 +321,10 @@ export const createEditor = (
                 // Tab accepts; Enter never does. A newline separates
                 // statements in a definition body, so it is load-bearing
                 // syntax in this language — an open suggestion panel must not
-                // be able to eat one. It used to: typing `PRINT` opened the panel, and the
-                // Enter meant to end the line accepted the completion instead,
-                // so the next line's first token was appended to it (`PRINT3`).
-                // Dismissing the panel instead keeps the following Enter,
-                // whether the panel was wanted or not, a newline.
+                // be able to eat one (an Enter that accepted the completion for
+                // `PRINT` would glue the next line's first token to it:
+                // `PRINT3`). Dismissing the panel instead keeps the following
+                // Enter, whether the panel was wanted or not, a newline.
                 e.preventDefault();
                 applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
             } else if (e.key === 'Enter') {
@@ -381,33 +335,46 @@ export const createEditor = (
         });
     };
 
-    if (element.value.trim() === '') {
-        updateElementValue(element, '');
+    if (trimSource(element.value) === '') {
+        element.value = '';
     }
     registerEventListeners();
 
-    const extractValue = (): string => element.value.trim();
+    const extractValue = (): string => trimSource(element.value);
 
     const updateValue = (value: string): void => {
-        updateElementValue(element, value);
+        replaceRange(element, 0, element.value.length, value);
         const cursor = value.length;
         updateSelectionRange(element, cursor, cursor);
         syncLastKnownSelection();
         hideSuggestions();
-        emitContentChange();
         switchToInputMode();
+    };
+
+    // On a phone, taking focus raises the keyboard over the surface the user
+    // is looking at, so focus is only kept where it already was. A field that
+    // is not on screen cannot take focus at all: on desktop the left column
+    // can show Output while the right shows Dictionary (a run that changed
+    // both leaves it so), and a Dictionary word clicked then was written into
+    // the hidden editor, unseen and outside the undo history. The Input
+    // surface is shown first where focus was refused, so the edit lands
+    // where the spec puts it — on the Input surface, as an ordinary edit.
+    const refocus = (wasFocused: boolean): void => {
+        if (!wasFocused && isMobileViewport()) return;
+        element.focus();
+        if (document.activeElement !== element) {
+            switchToInputMode();
+            element.focus();
+        }
     };
 
     const clear = (switchView = true): void => {
         const wasFocused = document.activeElement === element;
-        updateElementValue(element, '');
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
+        refocus(wasFocused);
+        replaceRange(element, 0, element.value.length, '');
         updateSelectionRange(element, 0, 0);
         syncLastKnownSelection();
         hideSuggestions();
-        emitContentChange();
         if (switchView) {
             switchToInputMode();
         }
@@ -416,74 +383,49 @@ export const createEditor = (
     const insertWord = (word: string): void => {
         const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
-        const newText = insertAt(element.value, start, end, word);
-
-        updateElementValue(element, newText);
-
-        const newPos = start + word.length;
+        const { insertion, caretOffset } = separateWord(element.value, start, end, word);
+        // Focus first where it will be kept anyway, so the edit is the
+        // browser's own and Ctrl+Z takes it back.
+        refocus(wasFocused);
+        replaceRange(element, start, end, insertion);
+        const newPos = start + caretOffset;
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
-
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
         hideSuggestions();
-        emitContentChange();
-    };
-
-    const insertText = (text: string): void => {
-        const wasFocused = document.activeElement === element;
-        const { start, end } = lookupEditableSelectionRange();
-        const newText = insertAt(element.value, start, end, text);
-
-        updateElementValue(element, newText);
-
-        const cursorPos = computeCursorPosition(start, text, true);
-        updateSelectionRange(element, cursorPos, cursorPos);
-        syncLastKnownSelection();
-
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
-        hideSuggestions();
-        emitContentChange();
     };
 
     const removeLastWord = (): void => {
         const wasFocused = document.activeElement === element;
         const { start } = lookupEditableSelectionRange();
         const before = element.value.substring(0, start);
-        const after = element.value.substring(start);
 
-        const trimmed = before.replace(/\S+\s*$/, '');
-        const newText = trimmed + after;
-
-        updateElementValue(element, newText);
-        updateSelectionRange(element, trimmed.length, trimmed.length);
+        // The last word before the caret and the whitespace after it, by the
+        // grammar's whitespace class; nothing is taken when no word precedes.
+        let wordEnd = before.length;
+        while (wordEnd > 0 && isSourceWhitespace(before[wordEnd - 1]!)) wordEnd -= 1;
+        let wordStart = wordEnd;
+        while (wordStart > 0 && !isSourceWhitespace(before[wordStart - 1]!)) wordStart -= 1;
+        const cut = wordStart === wordEnd ? start : wordStart;
+        refocus(wasFocused);
+        replaceRange(element, cut, start, '');
+        updateSelectionRange(element, cut, cut);
         syncLastKnownSelection();
-
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
         hideSuggestions();
-        emitContentChange();
     };
 
     const format = (): void => {
         const wasFocused = document.activeElement === element;
         const formatted = formatAjisaiSource(element.value);
 
+        refocus(wasFocused);
+
         if (formatted !== element.value) {
-            updateElementValue(element, formatted);
+            replaceRange(element, 0, element.value.length, formatted);
             const cursor = formatted.length;
             updateSelectionRange(element, cursor, cursor);
             syncLastKnownSelection();
-            emitContentChange();
         }
 
-        if (wasFocused || !checkIsMobile()) {
-            focusElement(element);
-        }
 
         // Focusing the textarea re-runs the focus handler, which would reopen the
         // suggestion panel. Formatting is an explicit, whole-buffer action, so
@@ -492,20 +434,14 @@ export const createEditor = (
     };
 
     const focus = (): void => {
-        focusElement(element);
+        element.focus();
         switchToInputMode();
         refreshSuggestions();
     };
 
-    const registerContentChangeCallback = (callback: (content: string) => void): void => {
-        onContentChangeCallback = callback;
-    };
-
-    // Escape is bound window-wide to Abort, on a capturing listener that stops
-    // propagation, so the panel's own Escape branch never ran and the panel
-    // could not be dismissed with the key every other editor dismisses it with.
-    // The window handler now asks here first and only aborts when there was no
-    // panel to close.
+    // Escape is bound window-wide to Abort on a capturing listener, so the
+    // window handler asks here first and only aborts when there was no panel
+    // to close.
     const dismissSuggestions = (): boolean => {
         if (suggestionPanel.style.display === 'none') return false;
         hideSuggestions();
@@ -520,17 +456,17 @@ export const createEditor = (
     // with the text.
     const revealRange = (start: number, end: number): void => {
         const raw = element.value;
-        const offset = raw.length - raw.trimStart().length;
+        const offset = countLeadingSourceWhitespace(raw);
         const from = Math.min(offset + start, raw.length);
         const to = Math.min(offset + end, raw.length);
-        focusElement(element);
+        element.focus();
         updateSelectionRange(element, from, to);
         syncLastKnownSelection();
     };
 
-    // Reads the last known caret position rather than the live one: the mobile
-    // Lookup button takes focus off the textarea when it is tapped, and a
-    // blurred textarea's own `selectionStart` is not something to rely on.
+    // Reads the last known caret position rather than the live one: anything
+    // that takes focus off the textarea before Lookup runs leaves a blurred
+    // textarea, and its own `selectionStart` is not something to rely on.
     // `lookupEditableSelectionRange` is the same caret every other
     // cursor-addressed operation here uses.
     const getWordAtCursor = (): string =>
@@ -541,13 +477,11 @@ export const createEditor = (
         updateValue,
         clear,
         insertWord,
-        insertText,
         removeLastWord,
         format,
         focus,
         dismissSuggestions,
         revealRange,
-        registerContentChangeCallback,
         getWordAtCursor
     };
 };

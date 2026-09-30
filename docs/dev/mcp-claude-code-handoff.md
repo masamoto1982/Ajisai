@@ -1,6 +1,6 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-11 (work-meter recalibration; previously trace provenance, response compaction, exactDisplay, onboarding)
+Updated: 2026-08-11 (exactDisplay removed: stackDisplay now renders the normal form; previously work-meter recalibration, trace provenance, response compaction, onboarding)
 
 - Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
 - Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
@@ -25,7 +25,7 @@ documented semantics.
 The browser playground is a supported, independent host. **Do not remove,
 replace or weaken it while building the MCP product.** Native CLI, WASM and MCP
 must continue to agree on shared value-protocol semantics, especially
-`exactTerms` and its `exactDisplay` rendering.
+`exactTerms` and the `stackDisplay` that renders it.
 
 ## 2. Semantics that must survive every adapter
 
@@ -41,13 +41,13 @@ Keep these distinctions at the wire boundary:
 Never translate every Ajisai `ERROR` into `isError`; that discards the language's
 diagnostic model. Never serialize arbitrary-precision integers as JSON numbers.
 For algebraic values, `semantics.exactTerms` is the value and the rational
-approximation is only a convenience representation; `semantics.exactDisplay`
-writes those same terms short and is present in exactly the cases they are.
+approximation is only a convenience representation; `stackDisplay` writes
+those same terms as one token.
 
 One nuance to keep straight when documenting this: `exactTerms` is the exact
 *stored* form, not a canonical form for equality. `8 SQRT` holds `{1/1, 8}` and
 `2 SQRT 2 SQRT +` holds `{2/1, 2}`, and `=` decides they are the same number.
-Never suggest comparing terms — or `exactDisplay` strings — to decide equality.
+Never suggest comparing terms — or display strings — to decide equality.
 
 A host failure is machine-readable in both directions: `error.code` is stable
 and the message is model-facing. Do not put host paths, environment-variable
@@ -72,10 +72,9 @@ names or spawn diagnostics into it; that belongs on stderr, and
   `debug_next_checks_tests.rs` fail if either locale carries the other's
   language.
 - `rust/src/types/value_protocol.rs`: shared exact-value protocol helpers.
-  `exact_terms` and `exact_display` both derive from one `algebraic_normal_form`
-  extraction, which is what makes "present in exactly the same cases" a
-  structural property rather than a convention two serializers must remember.
-  The result schema states the same pairing as `dependentRequired`.
+  `exact_terms` reads the one `algebraic_normal_form` extraction, and the
+  stack display renders the same terms (`display::render_algebraic_terms`),
+  so the rendering and the terms cannot disagree.
 - `rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs`: WASM exposure
   of the same exact-term representation.
 - `docs/dev/agent-cli-output-contract.md`: implemented native agent envelope,
@@ -347,10 +346,10 @@ but do not silently raise the committed budget to fix a regression.
   `npm run build:wasm`). They are checked in, so a value-protocol change that
   rebuilds only the MCP one leaves the playground silently a version behind on
   a field the CLI already sends.
-- Do not reduce `exactDisplay` to a canonical form. It renders the stored
-  normal form, and reducing it would make the string disagree with the
-  `exactTerms` printed beside it — trading a surprise a reader can see for one
-  they cannot.
+- Do not reduce the display of an algebraic value to a canonical form. It
+  renders the stored normal form, and reducing it would make the string
+  disagree with the `exactTerms` printed beside it — trading a surprise a
+  reader can see for one they cannot.
 - Do not replace the text content block with a prose summary. MCP asks a tool
   with an output schema to also return the serialized JSON there, and it is the
   only route a text-only client has to the result. Compaction means removing

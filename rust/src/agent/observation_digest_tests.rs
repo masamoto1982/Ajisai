@@ -10,11 +10,11 @@ mod observation_digest_tests {
     use crate::semantic::Recoverability;
     use crate::types::exact::ExactReal;
     use crate::types::fraction::Fraction;
-    use crate::types::{Interpretation, Value};
+    use crate::types::Value;
     use num_bigint::BigInt;
     use std::collections::HashSet;
 
-    fn digest_of(value: &Value) -> Option<String> {
+    fn digest_of(value: &Value) -> String {
         let stack = [value.clone()];
         observation_digest(ObservationDigestInput {
             status: "ok",
@@ -80,7 +80,7 @@ mod observation_digest_tests {
             Value::from_string(""),
             Value::from_string("A"),
             Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
-            Value::nil_with_reason(NilReason::MissingField, Recoverability::Unknown),
+            Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown),
             sqrt_of(2),
             sqrt_of(3),
             sqrt_of(12),
@@ -126,12 +126,12 @@ mod observation_digest_tests {
     }
 
     /// The regression this Phase exists to fix: `8 SQRT` keeps the coarse
-    /// basis `{8}`, `2 SQRT 2 SQRT +` keeps `{3}` — equal values with
+    /// basis `{8}`, `2 SQRT 2 SQRT ADD` keeps `{3}` — equal values with
     /// disagreeing `normal_form_terms()` (pitfall A).
     #[tokio::test]
     async fn sqrt_eight_matches_sqrt_two_plus_sqrt_two() {
         let a = digest_field("8 SQRT").await;
-        let b = digest_field("2 SQRT 2 SQRT +").await;
+        let b = digest_field("2 SQRT 2 SQRT ADD").await;
         assert!(a.is_string(), "expected a digest string, got {a}");
         assert_eq!(a, b);
     }
@@ -159,17 +159,37 @@ mod observation_digest_tests {
         assert_eq!(digest_of(&nested), digest_of(&rank2));
     }
 
-    /// `hint` is presentation, not meaning (pitfall C): two values that only
-    /// differ in `hint` must digest the same.
-    #[test]
-    fn hint_does_not_change_the_digest() {
-        let mut raw = Value::from_int(1);
-        raw.hint = Interpretation::RawNumber;
-        let mut unassigned = raw.clone();
-        unassigned.hint = Interpretation::Unassigned;
-        assert_ne!(raw.hint, unassigned.hint);
-        assert_eq!(raw, unassigned);
-        assert_eq!(digest_of(&raw), digest_of(&unassigned));
+    /// How a value was made is not part of it (LANG.VALUES.DENOTATION): a
+    /// Boolean straight from a comparison and the same Boolean from a `FOLD`
+    /// of `AND` must digest the same.
+    #[tokio::test]
+    async fn how_a_value_was_made_does_not_change_the_digest() {
+        let compared = agent_json("3 2 GT").await;
+        let fold = agent_json("[ 3 4 ] [ 2 GT ] MAP TRUE [ AND ] FOLD").await;
+        assert_eq!(compared["stack"], fold["stack"]);
+        assert_eq!(compared["observationDigest"], fold["observationDigest"]);
+    }
+
+    /// A NIL that passed through arithmetic is observed exactly as the NIL it
+    /// was: `type: "nil"` with its reason, never as a number.
+    #[tokio::test]
+    async fn a_nil_through_arithmetic_is_observed_as_that_nil() {
+        let through = agent_json("NIL -1 MUL").await;
+        let literal = agent_json("NIL").await;
+        assert_eq!(through["stack"][0]["type"], "nil");
+        assert!(through["stack"][0].get("displayHint").is_none());
+        assert_eq!(through["stack"], literal["stack"]);
+        assert_eq!(through["observationDigest"], literal["observationDigest"]);
+    }
+
+    /// UNKNOWN is a NIL (LANG.VALUES.TRUTH): no truth axis on the wire.
+    #[tokio::test]
+    async fn unknown_is_observed_as_a_nil() {
+        let unknown = agent_json("NIL TRUE AND").await;
+        let node = &unknown["stack"][0];
+        assert_eq!(node["type"], "nil");
+        assert!(node["semantics"].get("truthValue").is_none());
+        assert_eq!(node["semantics"]["absence"]["reason"], "literal");
     }
 
     /// The reverse of the previous test: the NIL reason *is* meaning
@@ -177,9 +197,22 @@ mod observation_digest_tests {
     #[test]
     fn nil_reasons_separate_digests() {
         let division = Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
-        let missing = Value::nil_with_reason(NilReason::MissingField, Recoverability::Unknown);
+        let missing = Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown);
         assert_ne!(division, missing);
         assert_ne!(digest_of(&division), digest_of(&missing));
+    }
+
+    /// Two ABSENT NILs are the same value exactly when their Texts are equal
+    /// (LANG.VALUES.NIL), so the Text is part of the digest too — as it is
+    /// of `Value::hash` and `PartialEq`.
+    #[test]
+    fn absent_texts_separate_digests() {
+        let a = Value::nil_user_declared("a");
+        let b = Value::nil_user_declared("b");
+        let a_again = Value::nil_user_declared("a");
+        assert_ne!(a, b);
+        assert_ne!(digest_of(&a), digest_of(&b));
+        assert_eq!(digest_of(&a), digest_of(&a_again));
     }
 
     /// `create_unreduced` never calls the gcd normalizer; the digest must
@@ -235,8 +268,8 @@ mod observation_digest_tests {
     /// dictionaries must not collapse to one digest.
     #[tokio::test]
     async fn dictionary_state_is_observable() {
-        let a = digest_field("[ | 1 ] 'F' DEF").await;
-        let b = digest_field("[ | 2 ] 'G' DEF").await;
+        let a = digest_field("[ 1 ] 'F' DEF").await;
+        let b = digest_field("[ 2 ] 'G' DEF").await;
         assert!(a.is_string(), "expected a digest string, got {a}");
         assert_ne!(a, b);
     }
@@ -246,7 +279,7 @@ mod observation_digest_tests {
     /// same every time.
     #[tokio::test]
     async fn digest_is_stable_across_runs() {
-        let source = "[ 1 2 3 ] 1 { + } FOLD";
+        let source = "[ 1 2 3 ] 1 { ADD } FOLD";
         let a = digest_field(source).await;
         let b = digest_field(source).await;
         assert!(a.is_string(), "expected a digest string, got {a}");
@@ -290,7 +323,7 @@ mod observation_digest_tests {
         let start = std::time::Instant::now();
         let digest = digest_of(&value);
         let elapsed = start.elapsed();
-        assert!(digest.is_some());
+        assert!(digest.starts_with('#'));
         assert!(
             elapsed < std::time::Duration::from_secs(2),
             "digesting a {terms}-term algebraic value took {elapsed:?} (debug build); \

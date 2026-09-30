@@ -1,6 +1,7 @@
 
 import {
     applyInterpreterSnapshot,
+    ExecutionAbortedError,
     ExecutionTimeoutError,
     type InterpreterSnapshot
 } from '../workers/execution-contract';
@@ -12,24 +13,22 @@ import type {
     UserWord
 } from '../wasm-interpreter-types';
 import { renderDiagnosisReport } from './diagnosis-report';
+import { toError } from './to-error';
 
-// A word is addressed by its bare name. The dictionary has two tiers and User
-// is one of them (LANG.DICTIONARY.RESOLUTION), so there is nothing for a
-// `DICT@NAME` prefix to select and the interpreter no longer resolves one:
-// looking a word up as `USER@FOO` returns null. That null then travelled the
-// whole execution path — `restore_user_words` skips a definition-less word, so
-// the worker ran without the user's words and reported none back, and the
-// post-run sync wiped them from the main interpreter. Every run then looked
-// like a dictionary change and dragged the right column to the Words sheet.
-export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    return userWordsInfo.map(wordData => ({
-        dictionary: wordData[0],
-        name: wordData[1],
-        definition: interpreter.lookup_word_definition(wordData[1]),
-        description: interpreter.lookup_word_description(wordData[1])
+// Every User word with its definition and description, looked up by name.
+// `restore_user_words` skips a definition-less word, so a lookup that missed
+// here would run the worker without the user's words.
+export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] =>
+    interpreter.collect_user_words_info().map(([name]) => ({
+        name,
+        definition: interpreter.lookup_word_definition(name),
+        description: interpreter.lookup_word_description(name)
     }));
-};
+
+// The one reading of a result's success. The host sets `status` and `error`
+// together; either says the run did not complete.
+export const isFailure = (result: ExecuteResult): boolean =>
+    result.status !== 'OK' || Boolean(result.error);
 
 export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot => ({
     stack: interpreter.collect_stack(),
@@ -50,8 +49,8 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
 // but each of those printed `Defined word: X` on its way through, and those
 // lines are still in the output the error path shows. A reader who believes
 // them finds out only when `LOOKUP` answers `Unknown word` for something the
-// log says exists; the tester who hit this lost seven definitions that way.
-// The correction goes below them, where it cancels what they claimed.
+// log says exists. The correction goes below them, where it cancels what they
+// claimed.
 export const describeFailedRunOutput = (result: ExecuteResult): string => {
     const output = result.output || '';
     const discarded = result.discardedDictionaryChanges ?? [];
@@ -63,38 +62,19 @@ export const describeFailedRunOutput = (result: ExecuteResult): string => {
     return output ? `${output.replace(/\n*$/, '')}\n${correction}` : correction;
 };
 
-// What a run that succeeded but cannot be carried into the session has to say,
-// or null when there is nothing to explain.
-//
-// The snapshot is taken after the program has already run, so its refusal is
-// not the program's failure — reporting it as one is how `PI` came to look like
-// a Word that does not work. The session keeps its pre-run stack (see
-// `syncInterpreterState`), which is the same answer a failed run gets, so this
-// says both halves: the run worked, and its result stops here.
-export const describeSnapshotRefusal = (result: ExecuteResult): string | null => {
-    if (!result?.stackSnapshotError) return null;
-    return [
-        'The program ran and produced its result, but the session cannot keep it: ',
-        result.stackSnapshotError,
-        '. The stack is unchanged from before the run.'
-    ].join('');
-};
-
 // The diagnosis a wall-clock stop can answer with.
 //
 // Every other refusal is built by the interpreter, which knows the Word, the
 // position and the ceiling. This one is not: the playground terminates the
-// worker where it stands, so nothing of the run survives to be diagnosed and
-// the bare sentence was all the reader got. What is knowable here is knowable
-// without the run — which guard fired, that it is the host's and not the
-// language's, and what makes a program fit inside it.
+// worker where it stands, so nothing of the run survives to be diagnosed. What
+// is knowable here is knowable without the run — which guard fired, that it is
+// the host's and not the language's, and what makes a program fit inside it.
 //
 // It is assembled as a `ProtocolDiagnosis` and rendered by
 // `renderDiagnosisReport`, the same way a diagnosis that arrives from the
-// interpreter is: this used to hand-write the `[DIAGNOSIS]` / `Q1` / `next:`
-// lines as literals, which made the reading format two things instead of one.
-// Only the ceiling line is its own, because a wall-clock stop has no observed
-// value to report against the limit and no Word to attribute it to.
+// interpreter is, so the reading format stays one thing. Only the ceiling line
+// is its own, because a wall-clock stop has no observed value to report
+// against the limit and no Word to attribute it to.
 const TIMEOUT_DIAGNOSIS: ProtocolDiagnosis = {
     when: 'hostGuard',
     // `playground` is the host, not a Word: the guard belongs to the page that
@@ -132,10 +112,10 @@ const TIMEOUT_DIAGNOSIS: ProtocolDiagnosis = {
             code: 'trimWhatTheRunCarries',
             title: { en: 'Trim what the run carries', ja: '実行が抱える値を削る' },
             detail: {
-                en: 'Exact values grow as they are combined; QUANTIZE bounds a denominator that '
-                    + 'is otherwise free to grow every iteration.',
-                ja: '厳密値は組み合わせるほど大きくなる。QUANTIZE は、そのままでは反復ごとに'
-                    + '増え続ける分母に上限を与える。'
+                en: 'Exact values grow as they are combined; rounding to a grid (x d MUL FLOOR d DIV) '
+                    + 'bounds a denominator that is otherwise free to grow every iteration.',
+                ja: '厳密値は組み合わせるほど大きくなる。格子への丸め(x d MUL FLOOR d DIV)は、'
+                    + 'そのままでは反復ごとに増え続ける分母に上限を与える。'
             }
         },
         {
@@ -161,12 +141,7 @@ export const syncInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult
 ): void => {
-    if (!result || result.error) return;
-    // A result that could not be snapshotted is not applied at all: the
-    // observation format is never restored from (LANG.OBSERVATION.FIREWALL), so applying a
-    // snapshot-less state would replace the session's stack with an empty one
-    // — losing what the user had, on top of the value the run just made.
-    if (result.stackSnapshotError) return;
+    if (isFailure(result)) return;
     applyInterpreterSnapshot(interpreter, {
         stack: result.stack,
         // The worker's lossless snapshot is what restores the post-run stack
@@ -184,15 +159,14 @@ export const resolveExecutionException = (
     showError: (error: Error | string) => void
 ): void => {
     console.error(`[${context}] Execution failed:`, error);
-    if (error instanceof Error && error.message.includes('aborted')) {
+    if (error instanceof ExecutionAbortedError) {
         showInfo('Execution aborted', true);
         return;
     }
-    showError(error as Error);
+    showError(toError(error));
     // The one refusal the interpreter never gets to explain: it is stopped from
     // outside, so the diagnosis is written here instead of arriving with the
-    // result. Without it the wall-clock stop was the only error in the
-    // playground that answered with a bare sentence.
+    // result.
     if (error instanceof ExecutionTimeoutError) {
         showInfo(describeTimeoutDiagnosis(error.limitMs), true);
     }

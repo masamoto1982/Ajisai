@@ -1,7 +1,7 @@
 //! Linking a downstream type failure back to the NIL that caused it.
 //!
 //! A NIL flows like any other value (LANG.FAILURE.PASSTHROUGH), so the Word
-//! that *fails* is routinely not the Word that went wrong. `[ 0 100001 ] RANGE
+//! that *fails* is routinely not the Word that went wrong. `0 100001 RANGE
 //! LENGTH` is the canonical shape: `RANGE` correctly answers
 //! `NIL(spaceExhausted)`, `LENGTH` is handed a Nil where it declares a Vector,
 //! and the run ends as `LENGTH: expected a Vector, got Nil`.

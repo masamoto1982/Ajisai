@@ -137,14 +137,14 @@ mod num_tests {
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
-    async fn test_num_parse_error_stack_restoration() {
+    async fn test_num_lifts_over_a_vector_and_projects_per_element() {
+        // A Vector where one String is read lifts NUM over its elements
+        // (LANG.COLLECTIONS.LIFT); an unparsable element projects its own NIL.
         let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ 'hello' ]").await.unwrap();
-        let result = interp.execute("NUM").await;
-        assert!(result.is_err());
+        interp.execute("[ '1' 'hello' ] NUM").await.unwrap();
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should be restored after parse error");
+        assert_eq!(stack.len(), 1);
+        assert_eq!(stack[0].to_string(), "[ 1/1 NIL ]");
     }
 
     #[tokio::test]
@@ -160,14 +160,14 @@ mod num_tests {
     }
 
     #[tokio::test]
-    async fn test_num_nil_error_stack_restoration() {
+    async fn test_num_error_in_one_element_restores_the_whole_operand() {
         let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ nil ]").await.unwrap();
+        interp.execute("[ '1' TRUE ]").await.unwrap();
         let result = interp.execute("NUM").await;
         assert!(result.is_err());
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should be restored after nil error");
+        assert_eq!(stack.len(), 1, "the lifted operand is restored whole");
+        assert_eq!(stack[0].to_string(), "[ '1' TRUE ]");
     }
 
     #[tokio::test]
@@ -214,7 +214,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn add_with_nil_left_yields_nil() {
-        let interp = run("NIL 3 +").await;
+        let interp = run("NIL 3 ADD").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil(), "got {}", stack[0]);
@@ -222,7 +222,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn add_with_nil_right_yields_nil() {
-        let interp = run("3 NIL +").await;
+        let interp = run("3 NIL ADD").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil(), "got {}", stack[0]);
@@ -230,39 +230,27 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn sub_mul_div_with_nil_yield_nil() {
-        let interp = run("NIL 5 -").await;
+        let interp = run("NIL 5 SUB").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 5 *").await;
+        let interp = run("NIL 5 MUL").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 5 /").await;
+        let interp = run("NIL 5 DIV").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
     #[tokio::test]
     async fn div_by_nil_does_not_raise_division_by_zero() {
-        let interp = run("5 NIL /").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    #[tokio::test]
-    async fn mod_with_nil_yields_nil() {
-        let interp = run("NIL 3 MOD").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL MOD").await;
+        let interp = run("5 NIL DIV").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
     #[tokio::test]
     async fn comparisons_with_nil_yield_nil() {
-        let interp = run("NIL 3 <").await;
+        let interp = run("NIL 3 LT").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL LTE").await;
+        let interp = run("NIL NIL EQ").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL NIL =").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 3 >").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL GTE").await;
+        let interp = run("NIL 3 GT").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL 3 EQ NOT").await;
         assert!(interp.get_stack()[0].is_nil());
@@ -270,9 +258,9 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn divide_then_add_propagates_nil_through_pipeline() {
-        // The scalar law: `10 0 /` projects to NIL, and the NIL survives the
-        // `+` that follows it.
-        let interp = run("10 0 / 1 +").await;
+        // The scalar law: `10 0 DIV` projects to NIL, and the NIL survives the
+        // `ADD` that follows it.
+        let interp = run("10 0 DIV 1 ADD").await;
         let stack = interp.get_stack();
         assert!(
             stack.last().unwrap().is_nil(),
@@ -284,9 +272,9 @@ mod nil_passthrough_tests {
         // (LANG.COLLECTIONS.LIFT): the zero divisor empties its own lane, and
         // the lane -- not the vector around it -- is what carries the NIL
         // onward. This case used to assert the whole value went NIL, which is
-        // the collapse the lane law forbids: `[ 10 ] [ 2 ] /` answers
-        // `[ 5/1 ]`, so `[ 10 ] [ 0 ] /` answers `[ NIL ]`.
-        let interp = run("[ 10 ] [ 0 ] / 1 +").await;
+        // the collapse the lane law forbids: `[ 10 ] [ 2 ] DIV` answers
+        // `[ 5/1 ]`, so `[ 10 ] [ 0 ] DIV` answers `[ NIL ]`.
+        let interp = run("[ 10 ] [ 0 ] DIV 1 ADD").await;
         let stack = interp.get_stack();
         let result = stack.last().unwrap();
         let lanes = result
@@ -301,7 +289,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn a_fallback_can_replace_a_nil_that_passed_through() {
-        let interp = run("0 10 0 / 1 + NIL? SELECT").await;
+        let interp = run("10 0 DIV 1 ADD 'S' BIND 0 S S NIL? SELECT").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
         assert!(
@@ -315,8 +303,8 @@ mod nil_passthrough_tests {
 #[cfg(test)]
 mod ai_first_comparison_tests {
     use crate::interpreter::Interpreter;
-    // Tests for the AI-first comparison primitives GT and GTE. These mirror
-    // LT / LTE / EQ and exist so an automated producer can emit the relation
+    // Tests for the AI-first comparison primitive GT. It mirrors
+    // LT / EQ and exists so an automated producer can emit the relation
     // that matches its intent directly rather than rewriting it as a
     // negation or operand swap.
 
@@ -338,7 +326,7 @@ mod ai_first_comparison_tests {
         }
     }
 
-    // ── canonical-name parity with LT/LTE/EQ ─────────────────────────────
+    // ── canonical-name parity with LT/EQ ─────────────────────────────────
 
     #[tokio::test]
     async fn gt_canonical_name_returns_true_when_strictly_greater() {
@@ -353,18 +341,6 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn gte_canonical_name_returns_true_on_equal_values() {
-        let interp = run("1 1 GTE").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_returns_false_when_strictly_less() {
-        let interp = run("0 1 GTE").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
     async fn eq_not_canonical_name_returns_true_when_different() {
         let interp = run("1 2 EQ NOT").await;
         assert!(bool_of(&interp));
@@ -374,20 +350,6 @@ mod ai_first_comparison_tests {
     async fn eq_not_returns_false_when_equal() {
         let interp = run("3 3 EQ NOT").await;
         assert!(!bool_of(&interp));
-    }
-
-    // ── symbol-alias parity ──────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn gt_symbol_alias_matches_canonical() {
-        let interp = run("5 3 >").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_symbol_alias_matches_canonical() {
-        let interp = run("3 3 GTE").await;
-        assert!(bool_of(&interp));
     }
 
     // ── exact rational comparison ────────────────────────────────────────
@@ -421,12 +383,6 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn gte_with_nil_right_yields_nil() {
-        let interp = run("1 NIL GTE").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    #[tokio::test]
     async fn eq_not_with_two_nils_yields_nil() {
         // EQ is NIL-passthrough and NOT keeps UNKNOWN, so NIL NIL EQ NOT is NIL — *not* FALSE.
         // (NIL is an absence value, not a member of an equivalence class.)
@@ -435,32 +391,13 @@ mod ai_first_comparison_tests {
     }
 
     // ── stack-mode sequence properties ───────────────────────────────────
-
-    // ── KEEP modifier preserves operands ─────────────────────────────────
-
-    #[tokio::test]
-    async fn gt_keep_mode_preserves_both_operands() {
-        let interp = run("2 1 KEEP GT").await;
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 3, "KEEP must retain both operands plus result");
-    }
 }
 
 #[cfg(test)]
-mod comparison_budget_infrastructure_tests {
+mod ordering_decision_tests {
     use crate::interpreter::Interpreter;
-    // Phase 6 infrastructure for LANG.VALUES.EXACT's partial-quotient
-    // budget. Every Ajisai scalar currently on the stack is still
-    // a `Fraction`, so the ordering ops always decide and never
-    // project Undecidable. These tests pin the *current* behavior
-    // against regression as the refactor lands, and assert that the
-    // Undecidable / ComparisonBudget plumbing (NilReason +
-    // AbsenceOrigin) is wired correctly so Phase 7's non-Rational
-    // ExactReals will surface NIL with the right metadata when they
-    // exhaust the budget.
-    use crate::error::NilReason;
-    use crate::semantic::AbsenceOrigin;
-    use crate::types::Value;
+    // The ordering Words decide every pair of numbers (LANG.VALUES.EXACT);
+    // a NIL operand passes through.
 
     async fn run(source: &str) -> Interpreter {
         let mut interp = Interpreter::new();
@@ -487,38 +424,9 @@ mod comparison_budget_infrastructure_tests {
     }
 
     #[tokio::test]
-    async fn lte_decides_on_equal_reduced_rationals() {
-        let interp = run("2/4 1/2 LTE").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
     async fn gt_decides_on_negative_left() {
         let interp = run("-3/2 1/2 GT").await;
         assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_decides_on_large_rationals() {
-        let interp = run("355/113 22/7 GTE").await;
-        // 355/113 ≈ 3.14159292 < 22/7 ≈ 3.14285714 ⇒ GTE is false.
-        assert!(!bool_of(&interp));
-    }
-
-    // ── NIL projection contract for the Undecidable case ─────────────────
-
-    #[tokio::test]
-    async fn undecidable_nil_carries_comparison_budget_origin() {
-        // We can't yet drive the comparison path into the Undecidable
-        // branch via runtime source (no non-Rational ExactReal scalar
-        // is constructable yet — Phase 7 introduces that), so this
-        // test pins the helper that the comparison.rs refactor calls:
-        // building NIL with reason `Undecidable` must yield the
-        // LANG.VALUES.EXACT origin `ComparisonBudget`.
-        let v = Value::nil_with_reason_unknown(NilReason::Undecidable);
-        let absence = v.absence_metadata().expect("nil carries absence");
-        assert_eq!(absence.reason, Some(NilReason::Undecidable));
-        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
     }
 
     // ── NIL passthrough is unchanged ─────────────────────────────────────
@@ -536,37 +444,13 @@ mod comparison_budget_infrastructure_tests {
     }
 }
 
-/// Phase 7 — EQ Undecidable-NIL plumbing.
-///
-/// Phase 6 (PR #904) wired the `Undecidable` / `ComparisonBudget`
-/// projection through the ordering path (`LT` / `LTE` / `GT` /
-/// `GTE`) and explicitly left `EQ` for Phase 7. This module
-/// pins the new dispatch shape:
-///
-/// 1. `pairwise_eq` is three-valued (`Option<bool>`): rational
-///    operands always decide; non-Rational `ExactReal` operands run
-///    through `ExactReal::eq_with_budget` and may surface `None`.
-/// 2. `apply_equality` projects `None` to the LANG.VALUES.EXACT Undecidable
-///    NIL via the existing `push_undecidable_nil` helper.
-/// 3. A vector-lifted `EQ` short-circuits on the first
-///    NIL-producing pair (LANG.VALUES.EXACT).
-///
-/// We can't yet construct a non-Rational `ExactReal` scalar value
-/// from Ajisai source — `ValueData::Scalar` is still `Fraction`-
-/// backed — so these tests:
-///
-/// * regress the rational-operand fast path through EQ for
-///   value equality, reduced-form equality, and structural fallback;
-/// * pin the dispatch helpers (`ExactReal::eq_with_budget`) so the
-///   non-Rational branch is exercised at the type-level boundary
-///   that `apply_equality` will route through once subsequent phases
-///   replace the scalar storage.
+/// `EQ` decides every pair of numbers (LANG.VALUES.EXACT): rational operands
+/// by `Fraction` equality, anything reaching the algebraic field through the
+/// total `ExactReal::cmp_exact`.
 #[cfg(test)]
-mod phase_seven_eq_budget_tests {
-    use crate::error::NilReason;
+mod eq_decision_tests {
     use crate::interpreter::Interpreter;
-    use crate::semantic::AbsenceOrigin;
-    use crate::types::exact::{ExactCmp, ExactReal};
+    use crate::types::exact::ExactReal;
     use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
@@ -642,7 +526,7 @@ mod phase_seven_eq_budget_tests {
     //
     // These cover the exact comparison that `pairwise_eq` /
     // `scalar_pair_eq` route through whenever at least one operand is
-    // non-Rational: total and budget-free over Tier ≤ 1.
+    // non-Rational: total over the field.
 
     fn rational(n: i64, d: i64) -> ExactReal {
         ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
@@ -652,7 +536,7 @@ mod phase_seven_eq_budget_tests {
     fn exact_real_cmp_decides_equal_rationals() {
         assert_eq!(
             rational(2, 4).cmp_exact(&rational(1, 2)),
-            ExactCmp::Decided(std::cmp::Ordering::Equal)
+            Some(std::cmp::Ordering::Equal)
         );
     }
 
@@ -660,7 +544,7 @@ mod phase_seven_eq_budget_tests {
     fn exact_real_cmp_decides_unequal_rationals() {
         assert_eq!(
             rational(1, 2).cmp_exact(&rational(2, 3)),
-            ExactCmp::Decided(std::cmp::Ordering::Less)
+            Some(std::cmp::Ordering::Less)
         );
     }
 
@@ -673,22 +557,7 @@ mod phase_seven_eq_budget_tests {
                 .expect("sqrt(2) constructible");
         assert_eq!(
             sqrt_two.cmp_exact(&rational(7, 5)),
-            ExactCmp::Decided(std::cmp::Ordering::Greater)
+            Some(std::cmp::Ordering::Greater)
         );
-    }
-
-    // ── Undecidable-NIL helper still has the LANG.VALUES.EXACT origin ───────────────
-    //
-    // `apply_equality` projects the `None` branch through
-    // `push_undecidable_nil` — the same helper the ordering path
-    // already uses. The contract is identical, so any future EQ /
-    // EQ Undecidable NIL surfaces the LANG.VALUES.EXACT metadata.
-
-    #[tokio::test]
-    async fn eq_undecidable_nil_carries_comparison_budget_origin() {
-        let v = crate::types::Value::nil_with_reason_unknown(NilReason::Undecidable);
-        let absence = v.absence_metadata().expect("nil carries absence");
-        assert_eq!(absence.reason, Some(NilReason::Undecidable));
-        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
     }
 }

@@ -1,15 +1,10 @@
-use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::arithmetic::{push_exact_real_broadcast_result, ExactArithmeticSchema};
-use crate::interpreter::arithmetic_division::{division_by_zero_projection, modulo_lane};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::record_lift;
-use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
-use crate::interpreter::value_extraction_helpers::{
-    create_number_value, nil_passthrough_binary, nil_passthrough_unary,
-};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::value_extraction_helpers::{create_number_value, nil_passthrough_unary};
+use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// Multiply dimension sizes without ever overflowing `usize`. Returns `None`
 /// when the running product would wrap, so callers can reject pathological
@@ -21,50 +16,25 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
-/// Push a LANG.VALUES.EXACT Undecidable NIL. Used when an exact-real (CF)
-/// arithmetic word cannot resolve its result within the partial-quotient
-/// budget; the NIL Projection Rule (LANG.FAILURE.PROJECT) places NIL on the stack instead
-/// of raising an error, matching the comparison-budget exhaustion path.
-fn push_undecidable_nil(interp: &mut Interpreter) {
-    interp
-        .stack
-        .push(Value::nil_with_reason_unknown(NilReason::Undecidable));
-    let stack_len = interp.stack.len();
-    interp.stack.set_role_at(stack_len - 1, Interpretation::Nil);
-}
+use super::tensor_ops::{apply_unary_flat_with_metrics, build_nested_value};
 
-use super::tensor_ops::{
-    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
-};
-
-fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G, op_name: &str) -> Result<()>
+fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G) -> Result<()>
 where
     F: Fn(&Fraction) -> Fraction + Copy,
-    G: Fn(&ExactReal) -> Option<ExactReal>,
+    G: Fn(&ExactReal) -> ExactReal,
 {
     if nil_passthrough_unary(interp) {
         return Ok(());
     }
 
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let val: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     if val.is_nil() {
-        if !is_keep_mode {
-            interp.stack.push(val);
-        }
+        let got = val.domain_name();
+        interp.stack.push(val);
         return Err(AjisaiError::declared(
             "nonNumeric",
-            format!("{} requires number or vector", op_name),
+            format!("expected a Scalar or a Vector, got {got}"),
         ));
     }
 
@@ -76,16 +46,39 @@ where
         }
     }
 
-    // ExactScalar path: exact irrational via CF (LANG.VALUES.EXACT). When the
-    // CF stream exhausts its partial-quotient budget the result is
-    // undecidable, so project to a NIL (LANG.VALUES.EXACT, LANG.FAILURE.PROJECT)
-    // instead of raising an error — matching the comparison-budget path.
+    // ExactScalar path: an algebraic irrational, whose floor and rounding
+    // are decidable (LANG.VALUES.EXACT).
     if let ValueData::ExactScalar(er) = &val.data {
-        match exact_op(er) {
-            Some(result) => interp.stack.push(Value::from_exact_real(result)),
-            None => push_undecidable_nil(interp),
-        }
+        interp.stack.push(Value::from_exact_real(exact_op(er)));
         return Ok(());
+    }
+
+    // A NIL lane passes through carrying its reason (LANG.FAILURE.PASSTHROUGH).
+    // The flat route below works on bare fractions and would keep the lane
+    // absent but drop why, so a vector holding one takes the lane-wise route.
+    if val.is_vector() && holds_nil_lane(&val) {
+        let scalar_op = |lane: &Value| -> Result<Value> {
+            if let Some(f) = lane.as_scalar() {
+                return Ok(create_number_value(op(f)));
+            }
+            if let ValueData::ExactScalar(er) = &lane.data {
+                return Ok(Value::from_exact_real(exact_op(er)));
+            }
+            Err(AjisaiError::declared(
+                "nonNumeric",
+                format!("expected a Scalar or a Vector, got {}", lane.domain_name()),
+            ))
+        };
+        return match crate::interpreter::math_ops::lift_unary_numeric(&val, &scalar_op) {
+            Ok(result) => {
+                interp.stack.push(result);
+                Ok(())
+            }
+            Err(e) => {
+                interp.stack.push(val);
+                Err(e)
+            }
+        };
     }
 
     if val.is_vector() {
@@ -95,237 +88,86 @@ where
                 return Ok(());
             }
             Err(_) => {
-                if !is_keep_mode {
-                    interp.stack.push(val);
-                }
+                interp.stack.push(val);
                 return Err(AjisaiError::declared(
                     "nonNumeric",
-                    format!("{} requires number or vector", op_name),
+                    "expected a Scalar or a Vector of Scalars",
                 ));
             }
         }
     }
 
-    if !is_keep_mode {
-        interp.stack.push(val);
-    }
+    let got = val.domain_name();
+    interp.stack.push(val);
     Err(AjisaiError::declared(
         "nonNumeric",
-        format!("{} requires number or vector", op_name),
+        format!("expected a Scalar or a Vector, got {got}"),
     ))
+}
+
+fn holds_nil_lane(value: &Value) -> bool {
+    match value.as_vector_view() {
+        Some(items) => items.iter().any(holds_nil_lane),
+        None => value.is_nil(),
+    }
 }
 
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_floor)? {
         return Ok(());
     }
-    apply_unary_math(interp, |f| f.floor(), |er| er.floor(), "FLOOR")
-}
-
-/// `CEIL` is `FLOOR`'s counterpart: the same integer projection, toward
-/// positive infinity. `Fraction::ceil` and `ExactReal::ceil` already existed
-/// beside their `floor`s, so the Word is the one line that names them; a
-/// Kernel-only `NEG FLOOR NEG` says the same thing in three tokens, which is
-/// why it is a Standard shorthand rather than a Kernel Word.
-pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_unary(interp, &op_ceil)? {
-        return Ok(());
-    }
-    apply_unary_math(interp, |f| f.ceil(), |er| er.ceil(), "CEIL")
+    apply_unary_math(
+        interp,
+        |f| f.floor(),
+        |er| er.floor().expect("a number has a floor"),
+    )
 }
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_round)? {
         return Ok(());
     }
-    apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
+    apply_unary_math(
+        interp,
+        |f| f.round(),
+        |er| er.round().expect("a number has a nearest integer"),
+    )
 }
 
-pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
-    if nil_passthrough_binary(interp) {
-        return Ok(());
+/// `[ shape ] value FILL` — a Vector of the given shape, every leaf `value`:
+/// `[ 2 3 ] 0 FILL` is two rows of three zeros. The shape comes first and the
+/// value second, the order `RESHAPE` takes its data and its shape in; the
+/// value is a `leaf`, so a Vector of values lifts to one filled Vector each.
+pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::stack_underflow());
     }
-    if record_lift::lift_binary(interp, &op_mod)? {
-        return Ok(());
-    }
+    let value_val = interp.stack.pop().expect("length checked");
+    let shape_val = interp.stack.pop().expect("length checked");
+    let restore = |interp: &mut Interpreter, shape_val: Value, value_val: Value| {
+        interp.stack.push(shape_val);
+        interp.stack.push(value_val);
+    };
 
-    // ExactScalar path: a mod b = a - b * floor(a/b), exact over Tier 1
-    if interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a_ref = &interp.stack[stack_len - 2];
-        let b_ref = &interp.stack[stack_len - 1];
-        let has_exact = matches!(&a_ref.data, ValueData::ExactScalar(_))
-            || matches!(&b_ref.data, ValueData::ExactScalar(_));
-        if has_exact {
-            let a_er = match &a_ref.data {
-                ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-                ValueData::ExactScalar(er) => Some(er.clone()),
-                _ => None,
-            };
-            let b_er = match &b_ref.data {
-                ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-                ValueData::ExactScalar(er) => Some(er.clone()),
-                _ => None,
-            };
-            if let (Some(a), Some(b)) = (a_er, b_er) {
-                // Zero-ness of the divisor is decidable on the normal
-                // form: a Tier 1 algebraic is never zero, and a rational
-                // shows it structurally.
-                if b.is_structurally_zero() {
-                    // A zero divisor is a projection, not a failure: the
-                    // operands are well formed and the operation simply has no
-                    // answer (`LANG.FAILURE.TRICHOTOMY`). `DIV` has always read
-                    // it that way; `MOD` raised, which made one condition mean
-                    // two things depending on which Word wrapped the same
-                    // division.
-                    if interp.consumption_mode != ConsumptionMode::Keep {
-                        interp.stack.pop();
-                        interp.stack.pop();
-                    }
-                    interp.stack.push(division_by_zero_projection());
-                    return Ok(());
-                }
-                // a mod b = a - b * floor(a/b). A `None` here (after the
-                // zero check) means an absent operand slipped through:
-                // project to NIL rather than erroring.
-                let modulo = a
-                    .div(&b)
-                    .and_then(|q| q.floor())
-                    .map(|fl| a.sub(&b.mul(&fl)));
-                if interp.consumption_mode != ConsumptionMode::Keep {
-                    interp.stack.pop();
-                    interp.stack.pop();
-                }
-                match modulo {
-                    Some(result) => interp.stack.push(Value::from_exact_real(result)),
-                    None => push_undecidable_nil(interp),
-                }
-                return Ok(());
-            }
-        }
-    }
-
-    // A *vector* of irrationals has no scalar `ExactScalar` on top, so the
-    // block above declines it and the rational broadcast below cannot hold it
-    // either: `[ 2 3 ] [ SQRT ] MAP [ 1 1 ] %` flattened two continued
-    // fractions into a rational lane buffer and indexed off its end — a panic,
-    // which is no outcome at all under LANG.FAILURE.TRICHOTOMY. Take the same
-    // exact-real broadcast ADD/SUB/MUL/DIV take; `MOD` was simply never given
-    // one.
-    if let Some((a, b)) = crate::interpreter::arithmetic::stacktop_pair(interp) {
-        if push_exact_real_broadcast_result(interp, ExactArithmeticSchema::Mod, &a, &b)? {
-            return Ok(());
-        }
-    }
-
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let b_val: Value = if is_keep_mode {
+    let Some(shape) = super::shape_words::parse_shape(&shape_val) else {
+        restore(interp, shape_val, value_val);
+        return Err(AjisaiError::declared(
+            "invalidShape",
+            "expected a shape: a Vector of non-negative integers",
+        ));
+    };
+    // The shape's rank is the nesting of the value FILL builds: declined past
+    // the nesting ceiling before building, as RESHAPE does.
+    let max_nesting = interp.runtime_limits.max_nesting_depth;
+    if shape.len() > max_nesting {
         interp
             .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
-
-    let a_val = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        if stack_len < 2 {
-            return Err(AjisaiError::StackUnderflow);
-        }
-        interp.stack[stack_len - 2].clone()
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
-
-    let result = apply_binary_broadcast_with_metrics(
-        &a_val,
-        &b_val,
-        |x, y| ExactArithmeticSchema::Mod.fraction(x, y),
-        Some(&mut interp.runtime_metrics),
-    );
-
-    // `LANG.COLLECTIONS.LIFT`: a zero divisor empties its own lane, it does not
-    // empty the vector. The flat broadcast's leaf answers with a `Fraction`, so
-    // a projection can only surface there as one error for the whole operation;
-    // re-run lane-wise, where the leaf answers with a value and each projection
-    // carries its reason. The same fallback `DIV` uses, and it costs a second
-    // pass only when a zero divisor was actually met.
-    let result = match result {
-        Err(AjisaiError::DivisionByZero) => apply_lane_wise_broadcast(&a_val, &b_val, modulo_lane),
-        other => other,
-    };
-
-    match result {
-        Ok(r) => {
-            interp.stack.push(r);
-            Ok(())
-        }
-        Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-            }
-            Err(e)
-        }
-    }
-}
-
-pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
-    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    if args_val.is_nil() {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::declared(
-            "invalidShape",
-            "FILL: expected a [ shape... value ] vector, got NIL",
-        ));
-    }
-
-    let n = args_val.len();
-
-    if n < 2 {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::declared(
-            "invalidShape",
-            format!(
-                "FILL: expected a [ shape... value ] vector of at least 2 elements, got a vector of {} element(s)",
-                n
-            ),
-        ));
-    }
-
-    let fill_value = match args_val.child(n - 1).and_then(|v| v.as_scalar().cloned()) {
-        Some(f) => f,
-        None => {
-            interp.stack.push(args_val);
-            return Err(AjisaiError::declared(
-                "invalidShape",
-                "FILL: expected a scalar as the last element of [ shape... value ], got a non-scalar value",
+            .push(crate::interpreter::space_projection::nesting_exhausted_nil(
+                "FILL",
+                max_nesting,
+                shape.len(),
             ));
-        }
-    };
-
-    let shape_len = n - 1;
-
-    let mut shape = Vec::with_capacity(shape_len);
-    for i in 0..shape_len {
-        let dim_child = args_val
-            .child(i)
-            .expect("FILL: child index in 0..len must be valid");
-        let dim = match dim_child.as_scalar().and_then(|f| f.as_usize()) {
-            Some(d) if d > 0 => d,
-            Some(_) | None => {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::declared(
-                    "invalidShape",
-                    "FILL: expected positive integer dimensions, got invalid dimension",
-                ));
-            }
-        };
-        shape.push(dim);
+        return Ok(());
     }
 
     // Compute the element count with overflow protection and reject anything
@@ -345,11 +187,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             // `usize`) is a well-formed operation that cannot materialize within
             // budget. The NIL Projection Rule projects it onto a diagnosable NIL
             // (reason `spaceExhausted`), recoverable with a chosen fallback, instead of
-            // a channel error. Under KEEP the operands are retained as on the
-            // success path.
-            if interp.consumption_mode == ConsumptionMode::Keep {
-                interp.stack.push(args_val);
-            }
+            // a channel error.
             interp
                 .stack
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
@@ -362,17 +200,20 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     };
     if let Err(e) = crate::interpreter::collection_meter::charge_materialization(interp, total_size)
     {
-        interp.stack.push(args_val);
+        restore(interp, shape_val, value_val);
         return Err(e);
     }
 
-    let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
-
-    let result = build_nested_value(&data, &shape);
-
-    if interp.consumption_mode == ConsumptionMode::Keep {
-        interp.stack.push(args_val);
-    }
+    // Any leaf fills: a number, a text, a truth or a Symbol (a Vector or a
+    // Record has already lifted, and a NIL has already passed through). A
+    // rational keeps the dense construction it always had.
+    let result = match value_val.as_scalar() {
+        Some(fill_value) => {
+            let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
+            build_nested_value(&data, &shape)
+        }
+        None => super::shape_words::regroup(&vec![value_val; total_size], &shape),
+    };
 
     interp.stack.push(result);
     Ok(())

@@ -8,7 +8,7 @@
 //!
 //! The observation digest already solves the hard representation problems
 //! (`observation_digest`'s own module doc: algebraic normal forms, Vector/
-//! Tensor equivalence, `hint` vs meaning, `stackDisplay` vs value). A receipt
+//! Tensor equivalence, NIL reasons, `stackDisplay` vs value). A receipt
 //! is strictly a superset: it bundles that digest alongside everything else
 //! a verifier needs — what source, which engine, which vocabulary and
 //! outcome-space registry, which resource ceilings, and what the run
@@ -25,7 +25,7 @@ use crate::interpreter::{limit_profile, ResourceUsage, RuntimeLimits};
 /// Version tag for the receipt's own byte grammar. Bump it if the grammar
 /// changes — a receipt is not a compatible value across a tag change, the
 /// same discipline `observation_digest::DIGEST_SCHEMA_TAG` documents.
-const RECEIPT_SCHEMA_TAG: &[u8] = b"AJISAI-RECEIPT-1";
+const RECEIPT_SCHEMA_TAG: &[u8] = b"AJISAI-RECEIPT-2";
 
 /// The exact bytes of the vocabulary and outcome-space registry this binary
 /// was built from, embedded at compile time. `spec/words.json` and
@@ -76,12 +76,7 @@ fn write_limit_profile(bytes: &mut Vec<u8>, limits: &RuntimeLimits, step_limit: 
     limit_profile::write_digest_bytes(bytes, limits, step_limit);
 }
 
-/// Assemble the execution receipt for one run, or `None` when the
-/// observation itself could not be digested — a Tier 2 `ExactReal::Computable`
-/// scalar was present somewhere in the stack, the same condition
-/// `observation_digest` refuses to fabricate a value for (pitfall C: a
-/// receipt built over an approximated observation would certify the wrong
-/// thing, which is worse than certifying nothing).
+/// Assemble the execution receipt for one run.
 ///
 /// `observation_digest` is the caller's own already-computed digest for this
 /// run (`Report::observation_digest`) — never recomputed here, so the two
@@ -92,9 +87,8 @@ pub(crate) fn build_receipt(
     step_limit: usize,
     status: &str,
     resource_usage: &ResourceUsage,
-    observation_digest: Option<&str>,
-) -> Option<Json> {
-    let observation_digest = observation_digest?;
+    observation_digest: &str,
+) -> Json {
     let registry_digest = registry_digest();
     let engine_version = engine_version();
 
@@ -111,7 +105,7 @@ pub(crate) fn build_receipt(
     bytes.extend_from_slice(&resource_usage.collection_work.to_be_bytes());
     let digest = content_digest(&bytes);
 
-    Some(json!({
+    json!({
         "sourceDigest": content_digest(source.as_bytes()),
         "engineVersion": engine_version,
         "registryDigest": registry_digest,
@@ -124,5 +118,5 @@ pub(crate) fn build_receipt(
             "collectionWork": resource_usage.collection_work,
         },
         "digest": digest,
-    }))
+    })
 }

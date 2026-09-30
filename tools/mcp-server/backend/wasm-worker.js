@@ -119,6 +119,6 @@ export class WasmWorkerBackend {
   }
 
   outcomes(source) {
-    return this.#run("outcomes", source);
+    return this.#run("outcomes", source, { stepLimit: this.executionSteps });
   }
 }

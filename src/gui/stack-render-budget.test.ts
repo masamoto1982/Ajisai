@@ -1,6 +1,7 @@
 // The Stack area's drawing bound. A legal program can put a half-million
-// element Vector on the stack; drawing it unbounded froze the browser tab for
-// tens of seconds, so the render is capped and the undrawn tail is counted.
+// element Vector on the stack; drawing it unbounded would freeze the browser
+// tab for tens of seconds, so the render is capped and the undrawn tail is
+// counted.
 
 import { describe, expect, test } from 'vitest';
 import {

@@ -11,6 +11,7 @@ fn sample() -> (RuntimeLimits, usize) {
             max_collection_work: 6,
             max_bigint_bits: 7,
             max_algebraic_terms: 8,
+            max_nesting_depth: 9,
         },
         1,
     )
@@ -54,7 +55,7 @@ fn the_digest_bytes_are_the_entry_values_in_order() {
     assert_eq!(bytes.len(), LIMIT_PROFILE_CEILINGS * 8);
 
     let mut expected = Vec::new();
-    for value in [1u64, 2, 3, 4, 5, 6, 7, 8] {
+    for value in [1u64, 2, 3, 4, 5, 6, 7, 8, 9] {
         expected.extend_from_slice(&value.to_be_bytes());
     }
     assert_eq!(
@@ -100,6 +101,10 @@ fn changing_any_single_ceiling_changes_the_bytes() {
         },
         |mut l: RuntimeLimits| {
             l.max_algebraic_terms += 1000;
+            l
+        },
+        |mut l: RuntimeLimits| {
+            l.max_nesting_depth += 1000;
             l
         },
     ] {

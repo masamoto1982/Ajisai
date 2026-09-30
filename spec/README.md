@@ -12,6 +12,7 @@ it defines Ajisai semantics.
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
 | `outcomes.json` (`outcomes.schema.json`) | The complete outcome space — every NIL reason and every error category a Word's contract can name |
 | `semantic-families.json` | The shared laws Words select |
+| `retired-words.json` | The names that were once Words and must stay unknown — read by both the registry gate and the runtime test |
 | `gui-semantics.md` | Presentation |
 | `host-protocol.schema.json` | The host protocol boundary between them |
 
@@ -33,10 +34,6 @@ Within the current host protocol version, consumers may receive new optional
 fields, but existing fields, meanings, and tuple shapes cannot be removed,
 renamed, reordered, or changed. A breaking change raises the protocol version
 and supersedes the previous one; exactly one protocol is current at a time.
-
-The `freeze/` fixtures pin representative protocol payloads and the production
-GUI surface. Contract tests deliberately inspect the existing sources rather
-than duplicating GUI behavior in a replacement implementation.
 
 `SPECIFICATION.html` is a distribution artifact assembled from the semantic
 sources, the implementation-rules fragment, and `specification.template.html`.
@@ -60,7 +57,7 @@ number to pin — the Status block names the release stage instead
 independently of the implementation's, once beta is declared.
 
 `npm run semantic-kernel:check` enforces the budgets that keep the language
-small: at most 400 lines of kernel, 12 semantic families, 70 canonical Words,
-and 16 aliases, with every family and clause reference resolving. The budgets
-are ceilings — shrinking is always allowed, growing is a deliberate
-specification change.
+small — ceilings on the kernel's lines, on semantic families and on canonical
+Words, whose numbers live in `scripts/check-semantic-kernel.mjs` alone — with
+every family and clause reference resolving. The budgets are ceilings —
+shrinking is always allowed, growing is a deliberate specification change.

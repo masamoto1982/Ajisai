@@ -5,7 +5,7 @@ Status: **非正典（`[設計根拠]`）**。この文書は Ajisai の意味�
 本書と正典が矛盾したら正典が勝つ。
 
 対象実装者: Claude（またはそれに準ずるエージェント）
-添付: `docs/dev/_attachments/vocabulary-100-draft-contracts.json`（新語の契約スケルトン。非正典）
+添付: 新語の契約スケルトン `docs/dev/_attachments/vocabulary-100-draft-contracts.json`（非正典）は、全 Phase の正典への移送完了をもって削除した。§5 はその移送前の状態を記述する
 
 所有者判断: 本書の設計判断（§2 の三分岐・§3 の概念組み替え・§4 の 100 語割り当て）は
 採用済み。**後方互換性は要求しない**（所有者の明示指示）。
@@ -263,6 +263,8 @@ Record リテラルの構文は**作らない**。Record は `RECORD`（キー�
 ---
 
 ## 5. 新語の契約スケルトン
+
+> **注記**: 本節が述べる添付ファイルは、§7 の全 Phase で正典 `spec/words.json` への移送が完了したため削除済み。以下は移送元として機能していた当時の記述であり、現在の語の契約は `spec/words.json` のみが定める。
 
 `docs/dev/_attachments/vocabulary-100-draft-contracts.json` に、新語 35 件と
 再定義 3 件（`GROUP` `TALLY` `PROBE`）の契約を `spec/words.json` の `entries` と同じ形で

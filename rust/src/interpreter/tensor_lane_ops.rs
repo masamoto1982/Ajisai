@@ -76,8 +76,8 @@ pub(crate) fn lane_nil_passthrough(a: &Value, b: &Value) -> Option<Value> {
 
 /// The tree-walking half of [`apply_lane_wise_broadcast`], for ragged or
 /// nested-mixed operands. Mirrors [`apply_recursive_broadcast`] exactly; only
-/// the leaf's return type differs. Every caller (ADD/SUB/MUL/DIV/MOD/
-/// QUANTIZE, directly or through DIV/MOD's own division-by-zero fallback)
+/// the leaf's return type differs. Every caller (ADD/SUB/MUL/DIV, directly or
+/// through DIV's own division-by-zero fallback)
 /// declares `nonNumeric` uniformly, same as `FlatTensor::from_value`.
 fn apply_lane_wise_recursive<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
@@ -101,10 +101,10 @@ where
         }
         (Some(a_children), Some(b_children)) => {
             if a_children.len() != b_children.len() {
-                return Err(AjisaiError::VectorLengthMismatch {
-                    len1: a_children.len(),
-                    len2: b_children.len(),
-                });
+                return Err(AjisaiError::length_mismatch(
+                    a_children.len(),
+                    b_children.len(),
+                ));
             }
             let out: Vec<Value> = a_children
                 .iter()
@@ -129,9 +129,9 @@ where
 ///
 /// Shape handling is the flat path's, lane for lane — the same
 /// [`broadcast_shape`] and the same index projection — so a Word cannot mean
-/// one thing when it projects and another when it does not: `[ 6 ] [ 1 2 0 ] /`
+/// one thing when it projects and another when it does not: `[ 6 ] [ 1 2 0 ] DIV`
 /// broadcasts its single dividend across three divisors here exactly as
-/// `[ 6 ] [ 1 2 3 ] /` does there.
+/// `[ 6 ] [ 1 2 3 ] DIV` does there.
 ///
 /// The leaf law never sees an absent operand: [`apply_lane_law`] settles those
 /// first, from the `Value`, so each lane's reason survives the lift. It is not
@@ -143,12 +143,12 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
 {
     if a.is_nil() || b.is_nil() {
-        // Defensive: callers pass through a NIL operand before reaching here
-        // (LANG.FAILURE.PASSTHROUGH), so this is an invariant guard rather
-        // than a condition any Word's contract names.
-        return Err(AjisaiError::create_structure_error(
-            "two non-NIL operands to broadcast",
-            "a NIL operand",
+        // Defensive: the dispatcher passes a NIL operand through before a
+        // numeric Word runs (LANG.FAILURE.PASSTHROUGH). Every caller declares
+        // `nonNumeric`, and a NIL is not a Scalar.
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            "expected a Scalar or a Vector, got NIL",
         ));
     }
 
@@ -206,7 +206,14 @@ where
     let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
         return Err(AjisaiError::declared(
             "nonNumeric",
-            "expected a number or vector, got a non-numeric value",
+            format!(
+                "expected a Scalar or a Vector, got {}",
+                if broadcast_leaf(a).is_none() {
+                    a.domain_name()
+                } else {
+                    b.domain_name()
+                }
+            ),
         ));
     };
     op(&fa, &fb)

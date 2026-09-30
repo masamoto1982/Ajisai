@@ -7,11 +7,10 @@ import { norm, referencedWords, tokenize } from './source.mjs';
 
 const CORE = JSON.parse(readFileSync(new URL('../../mcp-server/assets/words.json', import.meta.url), 'utf8'));
 const CORE_NAMES = new Set(CORE.entries.map((w) => w.name));
-const ALIASES = new Map(CORE.entries.flatMap((w) => (w.aliases ?? []).map((a) => [a, w.name])));
 
 const coreWordOf = (token) => {
   const t = norm(token);
-  return CORE_NAMES.has(t) ? t : ALIASES.get(token) ?? null;
+  return CORE_NAMES.has(t) ? t : null;
 };
 
 export async function analyze(ajisai, gens, families) {

@@ -82,9 +82,20 @@ check(
 check(
   "every tool advertises the same structured output contract",
   tools.every(({ outputSchema }) =>
-    outputSchema?.$id === "ajisai://schema/result" &&
+    JSON.stringify(canonicalJson(outputSchema)) === JSON.stringify(canonicalJson(tools[0].outputSchema)) &&
     outputSchema?.required?.includes("status")
   ),
+);
+// One `$id` embedded five times is a duplicate schema to any client that
+// registers compiled validators by `$id`; the embedded copies carry none.
+check(
+  "an embedded output schema carries no $id a validator cache would collide on",
+  tools.every(({ outputSchema }) => !("$id" in (outputSchema ?? {}))) &&
+    (() => {
+      const ajv = new Ajv2020();
+      for (const { outputSchema } of tools) ajv.compile(outputSchema);
+      return true;
+    })(),
 );
 check(
   "the source input schema states the unit its limit is measured in",
@@ -125,7 +136,8 @@ check(
 );
 check(
   "word_contract carries the same provenance as an execution result",
-  contract.structuredContent?.mcp?.registryDigest?.length === 64 &&
+  contract.structuredContent?.mcp?.assetDigest?.length === 64 &&
+    !("registryDigest" in (contract.structuredContent?.mcp ?? {})) &&
     contract.structuredContent?.mcp?.serverVersion === serverVersion() &&
     contract.structuredContent?.suggestions?.length === 0,
 );
@@ -138,7 +150,7 @@ check(
     contract.structuredContent?.matches?.[0]?.cost?.numeric?.class === "unbounded" &&
     contract.structuredContent?.matches?.[0]?.cost?.collection?.class === "unbounded",
 );
-const addContract = await client.callTool({ name: "word_contract", arguments: { word: "+" } });
+const addContract = await client.callTool({ name: "word_contract", arguments: { word: "ADD" } });
 // `MAP` is unbounded on every axis, so it cannot show that the axes are read
 // independently; `ADD` is the case where they differ, and its `numeric` bound
 // is the one `runtime_limits.rs` prices limb×limb and therefore attains.
@@ -163,6 +175,23 @@ check(
       "ajisai://schema/result",
       "ajisai://vocabulary",
     ]),
+);
+// The vocabulary is the inventory, not the repository's bookkeeping: retired
+// classification axes and source paths served as-is read to an agent as live
+// language concepts.
+const vocabularyResource = JSON.parse(
+  (await client.readResource({ uri: "ajisai://vocabulary" })).contents[0]?.text ?? "{}",
+);
+const registryNames = JSON.parse(readFileSync(new URL("./assets/words.json", import.meta.url), "utf8"))
+  .entries.map(({ name }) => name).sort();
+check(
+  "the vocabulary resource lists every Word, and only name, kind, family and tier",
+  vocabularyResource.wordCount === registryNames.length &&
+    JSON.stringify(vocabularyResource.entries.filter(({ kind }) => kind === "coreword").map(({ name }) => name).sort()) ===
+      JSON.stringify(registryNames) &&
+    vocabularyResource.entries.every((entry) =>
+      Object.keys(entry).every((key) => ["name", "kind", "family", "vocabularyTier"].includes(key))
+    ),
 );
 // Bounding a phrase means joining the bounds of every Word in it, which 65
 // separate `word_contract` probes cannot practically deliver. The bulk read is
@@ -190,11 +219,11 @@ check(
 );
 // The property that makes a published bound worth reading: a caller that joins
 // the atoms' classes gets the same answer the engine infers for the phrase.
-// `[ 1 ] +` is `ADD` against a literal, so `numeric` stays `linear` while every
+// `[ 1 ] ADD` is `ADD` against a literal, so `numeric` stays `linear` while every
 // other axis stays at the lattice bottom.
 const composed = await client.callTool({
   name: "infer_contracts",
-  arguments: { source: "[ X | X [ 1 ] + ] 'BUDGETED' DEF" },
+  arguments: { source: "[ [ 1 ] ADD ] 'BUDGETED' DEF" },
 });
 check(
   "an inferred phrase bound agrees with the join of its Words' published bounds",
@@ -230,7 +259,7 @@ check("quickstart resource reads generated guidance", guideText.includes("Agent 
 // The served guide leads with the MCP interface, not with the CLI run loop the
 // generated protocol opens on. A connected client cannot issue `ajisai run`,
 // and a model that met that first learned the language before learning which
-// of the four tools to call.
+// of the tools to call.
 const [preface] = guideText.split(SKILL_BOUNDARY);
 check(
   "the quickstart opens with MCP tool selection, not the CLI run loop",
@@ -246,18 +275,17 @@ check(
     preface.includes(token)
   ),
 );
-// The short rendering only helps if the section teaching algebraic values
-// reaches it before the two renderings that mislead, so the order is part of
-// the fix rather than a stylistic choice. Scoped to that section: `§2` names
-// `stackDisplay` first for good reason, and that is not what this is about.
+// The algebraic section teaches the exact terms before the approximation that
+// misleads, so the order is part of the guidance rather than a stylistic
+// choice.
 const algebraicSection = preface
   .split(/^## /m)
-  .find((section) => section.includes("exactDisplay")) ?? "";
+  .find((section) => section.includes("exactTerms") && section.includes("approximate")) ?? "";
 check(
-  "the quickstart reaches the short algebraic rendering before the misleading ones",
-  algebraicSection.indexOf("exactDisplay") <= algebraicSection.indexOf("exactTerms") &&
-    algebraicSection.indexOf("exactDisplay") < algebraicSection.indexOf("stackDisplay") &&
-    algebraicSection.includes("approximate"),
+  "the quickstart teaches the exact terms before the approximation",
+  algebraicSection.length > 0 &&
+    algebraicSection.indexOf("exactTerms") < algebraicSection.indexOf("approximate") &&
+    algebraicSection.includes("stackDisplay"),
 );
 
 // Every example in the hand-written preface runs against the live backend. The
@@ -301,7 +329,7 @@ check(
 check(
   "tool output and result resource use the same schema",
   JSON.stringify(canonicalJson(tools.find(({ name }) => name === "compute")?.outputSchema)) ===
-    JSON.stringify(canonicalJson(resultSchema)),
+    JSON.stringify(canonicalJson((({ $id, ...rest }) => rest)(resultSchema))),
 );
 const templates = await client.listResourceTemplates();
 check(
@@ -330,10 +358,10 @@ for (const goldenCase of golden.cases) {
   );
   // A field that must *not* be there. `expect` cannot say this: a missing
   // pointer and a pointer holding `null` both stringify to the same thing, so
-  // "absent" and "present and null" were indistinguishable. `exactDisplay` and
-  // `exactTerms` are meaningless on a rational — a short algebraic rendering
-  // of a number that has no radical would be a field inviting a reader to
-  // wonder what it means — and this is what pins their absence.
+  // "absent" and "present and null" were indistinguishable. `exactTerms` is
+  // meaningless on a rational — terms of a number that has no radical would
+  // be a field inviting a reader to wonder what it means — and this is what
+  // pins its absence.
   const unexpected = (goldenCase.expectAbsent ?? []).filter(
     (pointer) => atPointer(observed.structuredContent, pointer) !== undefined,
   );
@@ -371,7 +399,10 @@ for (const limit of limitCases()) {
           JSON.stringify(expected),
       );
       check(`limit ${limit.name} (${probe.edge})`, mismatches.length === 0);
-      if (mismatches.length) console.error(`  ${JSON.stringify(mismatches)}`);
+      if (mismatches.length) {
+        const actual = mismatches.map(([pointer]) => [pointer, atPointer(observed.structuredContent, pointer)]);
+        console.error(`  expected ${JSON.stringify(mismatches)}, got ${JSON.stringify(actual)}`);
+      }
     }
   } else {
     check(
@@ -386,6 +417,23 @@ for (const limit of limitCases()) {
   }
 }
 
+// `responseBytes` bounds the response as sent — the result twice (structured
+// and serialized) plus provenance — not the one copy a backend produces. The
+// gap between the two used to let a 2.29 MB answer through a 1 MiB ceiling.
+for (const [source, mustRefuse] of [["0 5000 RANGE", false], ["0 7000 RANGE", true]]) {
+  const observed = await client.callTool({ name: "compute", arguments: { source } });
+  const sent = Buffer.byteLength(
+    JSON.stringify({ content: observed.content, structuredContent: observed.structuredContent }),
+    "utf8",
+  );
+  const refused = observed.structuredContent?.error?.code === "responseTooLarge";
+  check(
+    `responseBytes bounds the whole response to \`${source}\` (${sent} bytes sent)`,
+    sent <= LIMITS.responseBytes && refused === mustRefuse &&
+      (refused || observed.structuredContent?.status === "ok"),
+  );
+}
+
 // `wallTimeMs` is a deadline the adapter holds around execution, not a budget
 // the engine spends, and since the collection meter landed no source program
 // reaches it — the named ceilings answer first, which is the outcome they exist
@@ -396,7 +444,7 @@ const impatient = createBackend({ wallTimeMs: 1 });
 if (impatient) {
   let timedOut = null;
   try {
-    await impatient.compute("[ 0 99999 ] RANGE SORT LENGTH");
+    await impatient.compute("0 99999 RANGE SORT LENGTH");
   } catch (error) {
     timedOut = error;
   }
@@ -415,7 +463,7 @@ if (impatient) {
 // summary of it. That makes the text a *mirror*: if it ever stops being the
 // same object, the two kinds of client stop seeing the same answer. These pin
 // the mirror, and pin the padding that used to cost a third of it.
-const mirrored = await client.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+const mirrored = await client.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
 check(
   "the text block is the structured result, not a summary of it",
   JSON.stringify(JSON.parse(mirrored.content?.[0]?.text ?? "null")) ===
@@ -438,10 +486,10 @@ check(
 // Compaction must not cost a text-only client the outcome distinction, which
 // is the whole reason the text is the serialized result rather than prose.
 for (const [label, call] of [
-  ["a value", { name: "compute", arguments: { source: "1 3 /" } }],
-  ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 /" } }],
+  ["a value", { name: "compute", arguments: { source: "1 3 DIV" } }],
+  ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 DIV" } }],
   ["a language error", { name: "compute", arguments: { source: "FROBNICATE" } }],
-  ["a host failure", { name: "compute", arguments: { source: "" } }],
+  ["a host failure", { name: "compute", arguments: { source: 42 } }],
 ]) {
   const observed = await client.callTool(call);
   const text = JSON.parse(observed.content?.[0]?.text ?? "null");
@@ -451,6 +499,36 @@ for (const [label, call] of [
       text.status === observed.structuredContent?.status &&
       (text.status !== "hostError" || typeof text.error?.code === "string") &&
       (text.status !== "error" || typeof text.diagnosis?.why === "string"),
+  );
+}
+
+// A run names its outcome in the ids `outcomes` predicts, so the three
+// results are told apart without reading the top stack node — and a
+// prediction is checked against a run with one `includes`.
+for (const [source, expected] of [
+  ["1 3 DIV", "value"],
+  ["1 0 DIV", "nil:divisionByZero"],
+  ["NIL", "nil:literal"],
+  ["FROBNICATE", "error:unknownWord"],
+  ["1 ADD", "error:stackUnderflow"],
+  ["[ 1 2", "error:malformedSource"],
+]) {
+  const run = await client.callTool({ name: "compute", arguments: { source } });
+  const predicted = await client.callTool({ name: "outcomes", arguments: { source } });
+  check(
+    `compute names the outcome of \`${source}\` as ${expected}, inside the predicted set`,
+    run.structuredContent?.outcome === expected &&
+      validateResult(run.structuredContent) &&
+      predicted.structuredContent?.outcomes?.includes(expected),
+  );
+}
+for (const [source, exact] of [["", true], ["[ 1 2", true], ["42", false], ["1 2 ADD", false]]) {
+  const predicted = await client.callTool({ name: "outcomes", arguments: { source } });
+  check(
+    `outcomes reports exact=${exact} for \`${source}\`, as its description says`,
+    predicted.structuredContent?.exact === exact &&
+      (predicted.structuredContent?.outcomes?.length === 1) === exact &&
+      validateResult(predicted.structuredContent),
   );
 }
 
@@ -476,11 +554,20 @@ check(
   "a host failure message carries no host paths or environment names",
   !/AJISAI_(BIN|REPO)|\/(home|usr|tmp)\//.test(oversized.structuredContent?.error?.message ?? ""),
 );
-const badRequest = await client.callTool({ name: "compute", arguments: { source: "" } });
+const badRequest = await client.callTool({ name: "compute", arguments: { source: 42 } });
 check(
   "an invalid request is a host error, not a language error",
   badRequest.structuredContent?.error?.code === "invalidRequest",
 );
+// Empty source and whitespace-only source are the same empty program; one used
+// to be a host error and the other a value.
+for (const source of ["", "   "]) {
+  const empty = await client.callTool({ name: "compute", arguments: { source } });
+  check(
+    `an empty program (${JSON.stringify(source)}) is a value, not a host error`,
+    empty.structuredContent?.status === "ok" && empty.structuredContent?.outcome === "value",
+  );
+}
 check(
   "every declared host-error code is retryable or not, explicitly",
   Object.values(HOST_ERRORS).every(({ retryable }) => typeof retryable === "boolean") &&
@@ -499,13 +586,11 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       exactTerm?.denominator === "1" &&
       exactTerm?.radicand === "2",
   );
-  // The same normal form written short. Everything else on this result that
-  // looks like the value is not: `stackDisplay` is a continued fraction cut
-  // off at a display budget, and `value` is a rational approximation.
+  // `stackDisplay` writes those same terms; only `value` (a rational
+  // approximation) is not the number.
   check(
-    "compute writes the algebraic value short beside the terms it renders",
-    sqrt?.semantics?.exactDisplay === "sqrt(2)" &&
-      compute.structuredContent?.stackDisplay?.[0]?.includes("…") === true,
+    "compute renders the algebraic value from the terms it carries",
+    compute.structuredContent?.stackDisplay?.[0] === "[ sqrt(2) ]",
   );
   check(
     "compute reports engine provenance and applied limits",
@@ -514,7 +599,8 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
       compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
       compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
-      compute.structuredContent?.mcp?.limits?.algebraicTerms === 512,
+      compute.structuredContent?.mcp?.limits?.algebraicTerms === 512 &&
+      compute.structuredContent?.mcp?.limits?.nestingDepth === 256,
   );
   check(
     "compute names which backend answered",
@@ -564,7 +650,7 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   // every limit check increments.
   const spent = await client.callTool({
     name: "compute",
-    arguments: { source: "[ 1 20 ] RANGE 1 [ * ] FOLD" },
+    arguments: { source: "1 20 RANGE 1 [ MUL ] FOLD" },
   });
   const usage = spent.structuredContent?.resourceUsage;
   check(
@@ -581,19 +667,27 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     Object.keys(usage ?? {}).every((key) => key in LIMITS),
   );
   check(
-    "the compatibility alias agrees with the resource it mirrors",
-    spent.structuredContent?.runtimeMetrics?.executionSteps === usage?.executionSteps,
+    "a budget is reported once, under resourceUsage, not again beside the optimizer counters",
+    spent.structuredContent?.runtimeMetrics !== undefined &&
+      !("executionSteps" in spent.structuredContent.runtimeMetrics),
+  );
+  // One envelope, one version: the adapter's own answers (`word_contract`)
+  // carry the backend report's schema version, not a number of their own.
+  check(
+    "every envelope carries the one schema version",
+    Number.isInteger(spent.structuredContent?.schemaVersion) &&
+      addContract.structuredContent?.schemaVersion === spent.structuredContent.schemaVersion,
   );
 
   // An error report's answer is its diagnosis; the stack is residual state.
-  // `[ 0 99999 ] RANGE LENGHT` is a one-character typo holding a
+  // `0 99999 RANGE LENGHT` is a one-character typo holding a
   // 100,000-element vector, which serialized in full is ~27 MB — so before the
   // stack was elided the whole result became `responseTooLarge` and the reader
   // was told its answer was too big rather than that it had misspelled
   // `LENGTH`. The residue is what gives way, never the reason.
   const hugeResidue = await client.callTool({
     name: "compute",
-    arguments: { source: "[ 0 99999 ] RANGE LENGHT" },
+    arguments: { source: "0 99999 RANGE LENGHT" },
   });
   const hugeResidueBytes = Buffer.byteLength(
     JSON.stringify(hugeResidue.structuredContent ?? {}),
@@ -625,13 +719,13 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
 
   const checked = await client.callTool({
     name: "check",
-    arguments: { source: "[ X | X [ 1 ] + ] 'INC' DEF" },
+    arguments: { source: "[ [ 1 ] ADD ] 'INC' DEF" },
   });
   check("check is execution-free and structured", checked.structuredContent?.status === "ok");
 
   const inferred = await client.callTool({
     name: "infer_contracts",
-    arguments: { source: "[ X | X [ 1 ] + ] 'INC' DEF" },
+    arguments: { source: "[ [ 1 ] ADD ] 'INC' DEF" },
   });
   check(
     "infer_contracts returns the user Word contract",
@@ -673,7 +767,7 @@ check(
 );
 check(
   "--doctor proves exactness rather than only reporting that it started",
-  doctorRun.text.includes("2 3 / 1 3 / + = 1/1") && doctorRun.text.includes("exactTerms"),
+  doctorRun.text.includes("2 3 DIV 1 3 DIV ADD = 1/1") && doctorRun.text.includes("exactTerms"),
 );
 const unknownFlag = await cli("--frobnicate");
 check(

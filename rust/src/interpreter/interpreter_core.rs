@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::types::{Interpretation, Stack, Token, Value, WordDefinition};
+use crate::types::{Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -27,27 +27,12 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MA
 /// definition impossible to construct.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
-/// Cap on how deeply vector literals may nest (`[ [ [ ... ] ] ]`). The literal
-/// builder `collect_vector_with_depth` recurses one frame per level, and so do
-/// every downstream traversal of the resulting value — `Display`, the derived
-/// recursive `Drop` of the nested `Arc<Vec<Value>>`, and the JSON
-/// arena/stringify conversions. None of those had a depth guard, so a few
-/// thousand levels of nesting from plain source overflowed the native stack and
-/// aborted the process (an unrecoverable trap inside the WASM playground)
-/// rather than producing a diagnosable `AjisaiError`. The ceiling matches
-/// `MAX_USER_WORD_DEPTH`: a single self-recursive vector frame is lighter than
-/// a user-word call (which expands to several Rust frames per level), so a
-/// value capped at this depth stays safely within the same WASM stack envelope
-/// that depth is already vetted against, while remaining ~20x the deepest
-/// hand-written nesting in the corpus.
-pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
-
 /// Default cap on the number of elements a single generative built-in
 /// (`RANGE`, `FILL`, ...) may materialize in one call. Such words loop
 /// internally to build a vector/tensor, so they each count as a *single*
 /// execution step and therefore bypass `DEFAULT_MAX_EXECUTION_STEPS`. Without
-/// this guard an input like `[ 0 9999999999999 ] RANGE` or
-/// `[ 1000000 1000000 7 ] FILL` drives an unbounded allocation that aborts the
+/// this guard an input like `0 9999999999999 RANGE` or
+/// `[ 1000000 1000000 ] 7 FILL` drives an unbounded allocation that aborts the
 /// process with an OOM instead of a diagnosable `AjisaiError`.
 ///
 /// CS5: this is now the *default* for [`RuntimeLimits::max_materialized_elements`]
@@ -57,12 +42,6 @@ pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
 /// [`super::runtime_limits::DEFAULT_MAX_MATERIALIZED_ELEMENTS`].
 pub const MAX_MATERIALIZED_ELEMENTS: usize =
     super::runtime_limits::DEFAULT_MAX_MATERIALIZED_ELEMENTS;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ConsumptionMode {
-    Consume,
-    Keep,
-}
 
 /// Counters describing how the runtime went about its work: which cache
 /// answered, which fast path fired, how often a plan was rebuilt.
@@ -147,7 +126,6 @@ pub struct Interpreter {
     /// seven definitions and only noticed when `LOOKUP` answered
     /// `Unknown word`. Cleared at the start of each top-level run.
     pub(crate) dictionary_changes_this_run: Vec<String>,
-    pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
@@ -189,22 +167,14 @@ pub struct Interpreter {
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
 
-    /// Owning user dictionary of the word currently being defined,
-    /// dependency-scanned, or executed. Bare names resolve through this
-    /// dictionary's words first (Section 8.6), so an imported word group is
-    /// self-referential regardless of which other dictionaries are loaded.
-    /// `None` at top level, where resolution falls back to the global order.
-
-    /// Content identity of each user word, keyed by fully-qualified name
-    /// (Section 8.6). Derived state: recomputed whenever the user-word graph
-    /// changes.
+    /// Content identity of each user word, keyed by name. Derived state:
+    /// recomputed whenever the user-word graph changes.
     pub(crate) word_identities: HashMap<String, String>,
 
-    /// Content store for definition bodies (Section 8.6), keyed by content key.
-    /// Textually identical bodies share a single `Arc<[ExecutionLine]>`, so
-    /// re-importing or copying a word group does not duplicate its code in
-    /// memory.
-    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::ExecutionLine]>>,
+    /// Content store for definition bodies, keyed by content key. Textually
+    /// identical bodies share a single `Arc<[Token]>`, so restoring or copying
+    /// a word group does not duplicate its code in memory.
+    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::Token]>>,
 
     /// When set, `recompute_word_identities` is a no-op. Bulk operations (e.g.
     /// restoring or importing many words) set this for the duration of the
@@ -212,7 +182,7 @@ pub struct Interpreter {
     pub(crate) defer_identity_recompute: bool,
 
     /// A `DEF` body's own written tokens, captured lexically when a literal
-    /// precedes `<name> [KEEP] DEF` (`execution_loop.rs`, `execute_def.rs`).
+    /// precedes `<name> DEF` (`execution_loop.rs`, `execute_def.rs`).
     pub(crate) pending_def_body_tokens: Option<Vec<crate::types::Token>>,
 
     /// `#:contract NAME ...` directive text scanned out of the raw source at
@@ -237,14 +207,6 @@ pub struct Interpreter {
     /// is attributed here, which is what turns "Stack underflow" into
     /// "Stack underflow at line 4, column 12, in SELECT".
     pub(crate) current_source_span: Option<crate::tokenizer::SourceSpan>,
-    /// How that same top-level token was *spelled*, kept only when the
-    /// spelling differs from the name it resolved to. Dispatch canonicalizes
-    /// an alias before anything downstream sees it, so a failure in `1 + 2`
-    /// was reported against `ADD` — a name the reader never wrote, with
-    /// nothing tying it to the `+` they did. The canonical name stays the
-    /// answer to "which Word failed" (the diagnosis classifies on it); this is
-    /// the spelling that reached it.
-    pub(crate) current_source_word: Option<std::sync::Arc<str>>,
 
     /// When true (default), `compile_word_definition` lowers fully-literal
     /// vectors into a prebuilt `CompiledOp::PushVectorLiteral` instead of
@@ -254,7 +216,7 @@ pub struct Interpreter {
 
     /// When true (default), StackTop scalar-scalar arithmetic and comparison can
     /// bypass the tensor broadcast wrapper for bare scalars and same-shape
-    /// singleton tensor/vector wrappers in Consume and Keep modes. Disable via
+    /// singleton tensor/vector wrappers. Disable via
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
 }
@@ -281,7 +243,6 @@ impl Interpreter {
             host_env,
             binding_scopes: vec![super::bindings::BindingScope::root()],
             dictionary_changes_this_run: Vec::new(),
-            consumption_mode: ConsumptionMode::Consume,
             disable_no_change_check: true,
             pending_tokens: None,
             pending_token_index: 0,
@@ -311,7 +272,6 @@ impl Interpreter {
             source_spans: Vec::new(),
             section_depth: 0,
             current_source_span: None,
-            current_source_word: None,
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
         };
@@ -356,6 +316,26 @@ impl Interpreter {
             });
         }
         Ok(())
+    }
+
+    /// Hold every value written to the stack since the last check to the
+    /// nesting ceiling (LANG.MACHINE.LIMITS).
+    ///
+    /// Run after each Word, so a Word that builds a value too deep fails as
+    /// itself, and once more when a run ends, for the literals pushed after
+    /// the last Word. A literal is bounded by its own builder and a Word adds
+    /// only a few levels to operands that already passed, so nothing between
+    /// two checks can grow deep enough to overflow a walk. Each value's
+    /// nesting is kept on the value, and only the slots written since the last
+    /// check are read, so the check costs what the Word wrote.
+    pub(crate) fn check_fresh_nesting(&mut self) -> crate::error::Result<()> {
+        let start = self.stack.take_fresh_start();
+        let deepest = self.stack.as_slice()[start..]
+            .iter()
+            .map(Value::nesting)
+            .max()
+            .unwrap_or(0);
+        self.runtime_limits.check_nesting_depth(deepest as usize)
     }
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
@@ -404,38 +384,6 @@ impl Interpreter {
         true
     }
 
-    /// Record a Word's failure in the error-flow trace, attributed to that
-    /// Word and positioned at the top-level token that reached it.
-    pub(crate) fn record_word_failure(
-        &mut self,
-        word: &str,
-        err: &crate::error::AjisaiError,
-        stack_len_before: usize,
-    ) {
-        use super::debug_diagnosis::DebugDiagnosis;
-        use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
-        let stack_len_after = self.stack.len();
-        let mut diagnosis =
-            DebugDiagnosis::from_error(err, Some(word), stack_len_before, stack_len_after)
-                .with_source_position(self.current_source_span)
-                .with_source_word(self.current_source_word.as_deref());
-        // The compiled-in registry cannot know a user Word, and a misspelled
-        // user Word is exactly the case a fresh vocabulary lookup misses. This
-        // is the one place that holds the live dictionary.
-        diagnosis.with_user_vocabulary(self.user_words.keys().map(String::as_str));
-        self.push_error_flow_trace(ErrorFlowEvent {
-            kind: ErrorFlowEventKind::WordError,
-            word: Some(word.to_string()),
-            error_category: Some(crate::error::ErrorCategory::from_error(err)),
-            absence: None,
-            stack_len_before,
-            stack_len_after,
-            message: format!("word error word={} error={}", word, err),
-            diagnosis: Some(diagnosis),
-            error_text: err.to_string(),
-        });
-    }
-
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
         EpochSnapshot {
             global_epoch: self.global_epoch,
@@ -443,25 +391,11 @@ impl Interpreter {
             execution_epoch: self.execution_epoch,
         }
     }
-    pub(crate) fn update_consumption_mode(&mut self, mode: ConsumptionMode) {
-        self.consumption_mode = mode;
-    }
-
-    pub(crate) fn reset_execution_modes(&mut self) {
-        self.consumption_mode = ConsumptionMode::Consume;
-    }
-
     pub(crate) fn normalize_symbol<'a>(symbol: &'a str) -> std::borrow::Cow<'a, str> {
-        match symbol {
-            "%" => std::borrow::Cow::Borrowed("MOD"),
-            "&" => std::borrow::Cow::Borrowed("AND"),
-            _ => {
-                if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
-                    std::borrow::Cow::Owned(symbol.to_uppercase())
-                } else {
-                    std::borrow::Cow::Borrowed(symbol)
-                }
-            }
+        if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
+            std::borrow::Cow::Owned(symbol.to_uppercase())
+        } else {
+            std::borrow::Cow::Borrowed(symbol)
         }
     }
 
@@ -480,6 +414,16 @@ impl Interpreter {
     /// suite, distinct from the human-readable `output_buffer`.
     pub fn host_effects(&self) -> &[super::HostEffect] {
         &self.host_effects
+    }
+
+    /// Take the structured host effects produced so far, leaving the log
+    /// empty. A host that holds one interpreter across many runs (the
+    /// Playground's WASM instance) reads each run's output once, and without
+    /// draining, every `PRINT` payload of the session stayed in memory for as
+    /// long as the interpreter lived. `execute` itself never clears the log,
+    /// because the REPL reads it across lines by index (`cli::repl`).
+    pub fn take_host_effects(&mut self) -> Vec<super::HostEffect> {
+        std::mem::take(&mut self.host_effects)
     }
 
     pub(crate) fn emit_host_effect(&mut self, effect: super::HostEffect) {
@@ -612,9 +556,5 @@ impl Interpreter {
 
     pub fn update_stack(&mut self, stack: impl Into<Stack>) {
         self.stack = stack.into();
-    }
-
-    pub fn update_stack_with_hints(&mut self, values: Vec<Value>, hints: Vec<Interpretation>) {
-        self.stack = Stack::from_values_and_roles(values, hints);
     }
 }
