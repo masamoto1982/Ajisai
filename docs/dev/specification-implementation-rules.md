@@ -86,5 +86,8 @@ disagree. Deliberate non-sharing is recorded the same way:
 deliberately independent of `word_contract.rs` rather than leaving a reader to
 assume the overlap was missed.
 
-The 2026-09 review that produced this section, with what it found, is
-`docs/dev/dry-criterion-2026-09.md`.
+This section came out of a 2026-09 review that measured duplication by
+knowledge rather than by shape and found three knowledge duplications (the
+default step budget restated, the diagnostic format doubled, the persisted
+record shape restated), all fixed then. The review's memo was retired once
+its findings were folded in here; the version history holds it.

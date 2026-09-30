@@ -1,20 +1,26 @@
+//! The numeric Words beyond the four arithmetic operators: `MIN`, `MAX`,
+//! `SQRT`, and the three that close the number concept, `POW`, `GCD`,
+//! `RATIO` (LANG.VALUES.EXACT).
+
+use num_bigint::BigInt;
+use num_integer::Integer;
+use num_traits::Signed;
+
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::record_lift;
+use crate::interpreter::record_ops;
 use crate::interpreter::value_extraction_helpers::{
-    extract_operands, nil_passthrough_binary, push_result,
+    exact_real_of, extract_operands, nil_passthrough_binary,
 };
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
+use crate::types::exact::{ExactReal, PowOutcome};
+use crate::types::fraction::Fraction;
 use crate::types::Value;
-
-fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
-    Ok(())
-}
 
 /// `three_way_compare` for MIN/MAX, raising `nonNumeric` like every other
 /// Word that asks for the exact order.
 fn compare_for_numeric(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
-    crate::interpreter::comparison_scalar::three_way_compare(a, b).map_err(|e| {
+    crate::interpreter::comparison::three_way_compare(a, b).map_err(|e| {
         AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {}", e.got))
     })
 }
@@ -141,12 +147,11 @@ pub(crate) fn lift_binary_numeric(
 /// as the relations, which always decides. The selected operand is returned
 /// unchanged (preserving its exact representation). NIL-passthrough.
 /// Element-wise over vectors, by [`lift_binary_numeric`].
-fn apply_selecting<F>(interp: &mut Interpreter, word: &str, pick_left: F) -> Result<()>
+fn apply_selecting<F>(interp: &mut Interpreter, pick_left: F) -> Result<()>
 where
     // Given the order of `a` (left) vs `b` (right), return true to keep `a`.
     F: Fn(std::cmp::Ordering) -> bool,
 {
-    require_stack_top(interp, word)?;
     if nil_passthrough_binary(interp) {
         return Ok(());
     }
@@ -157,34 +162,30 @@ where
     };
     match lift_binary_numeric(&operands[0], &operands[1], &select) {
         Ok(result) => {
-            push_result(interp, result);
+            interp.stack.push(result);
             Ok(())
         }
         Err(e) => {
-            restore_operands(interp, operands);
+            interp.stack.extend(operands);
             Err(e)
         }
     }
 }
 
 pub(crate) fn op_min(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_min)? {
+    if record_ops::lift_binary(interp, &op_min)? {
         return Ok(());
     }
     // Keep the left operand when it is less-or-equal to the right.
-    apply_selecting(interp, "MIN", |ord| ord != std::cmp::Ordering::Greater)
+    apply_selecting(interp, |ord| ord != std::cmp::Ordering::Greater)
 }
 
 pub(crate) fn op_max(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_max)? {
+    if record_ops::lift_binary(interp, &op_max)? {
         return Ok(());
     }
     // Keep the left operand when it is greater-or-equal to the right.
-    apply_selecting(interp, "MAX", |ord| ord != std::cmp::Ordering::Less)
-}
-
-fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
-    interp.stack.extend(operands);
+    apply_selecting(interp, |ord| ord != std::cmp::Ordering::Less)
 }
 
 /// `SQRT`: the exact square root of a non-negative rational, and the only Word
@@ -198,11 +199,11 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
 /// Element-wise over a vector, by [`lift_unary_numeric`]: a per-element
 /// standard deviation is `variances SQRT`, not a `MAP` around a block.
 pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_unary(interp, &op_sqrt)? {
+    if record_ops::lift_unary(interp, &op_sqrt)? {
         return Ok(());
     }
     let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
-    let budget = crate::interpreter::radicand_budget::RadicandBudget::of(interp);
+    let budget = crate::interpreter::arithmetic_meter::RadicandBudget::of(interp);
 
     let lifted = lift_unary_numeric(&value, &|lane| sqrt_scalar(lane, &budget));
     match budget.settle(interp).and(lifted) {
@@ -220,7 +221,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 /// The scalar law of `SQRT`, lifted by [`lift_unary_numeric`].
 fn sqrt_scalar(
     value: &Value,
-    budget: &crate::interpreter::radicand_budget::RadicandBudget,
+    budget: &crate::interpreter::arithmetic_meter::RadicandBudget,
 ) -> Result<Value> {
     let Some(f) = value.as_scalar() else {
         // `nonNumeric` is the same declared condition `DIV` uses for
@@ -239,4 +240,146 @@ fn sqrt_scalar(
         Some(er) => Value::from_exact_real(er),
         None => Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
     })
+}
+
+// `POW`, `GCD`, `RATIO` — the Words that close the number concept
+// (LANG.VALUES.EXACT).
+//
+// `POW` is the kernel's `ExactReal::pow` lifted like every binary
+// arithmetic Word. `GCD` exposes the reduction the machine already performs
+// on every rational, and `RATIO` reads a rational's two parts back as a
+// Vector, so that arithmetic lifts over the answer. Both refuse what is not
+// a rational integer or rational: an irrational projects `domainMiss`.
+fn non_numeric(operands: &[&Value]) -> AjisaiError {
+    let got = operands
+        .iter()
+        .find(|operand| exact_real_of(operand).is_none())
+        .map_or("NIL", |operand| operand.domain_name());
+    AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {got}"))
+}
+
+fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
+    Value::nil_with_reason(reason, recoverability)
+}
+
+fn pow_scalar(
+    x: &Value,
+    y: &Value,
+    budget: &crate::interpreter::arithmetic_meter::RadicandBudget,
+) -> Result<Value> {
+    let (Some(base), Some(exponent)) = (exact_real_of(x), exact_real_of(y)) else {
+        return Err(non_numeric(&[x, y]));
+    };
+    let mut left = budget.take();
+    let outcome = base.pow_within(&exponent, &mut left);
+    budget.spent(left, matches!(outcome, PowOutcome::WorkExhausted));
+    Ok(match outcome {
+        PowOutcome::WorkExhausted => return Err(budget.exhausted_error()),
+        PowOutcome::Value(er) => Value::from_exact_real(er),
+        PowOutcome::DivisionByZero => nil(NilReason::DivisionByZero, Recoverability::Recoverable),
+        PowOutcome::DomainMiss => nil(NilReason::DomainMiss, Recoverability::Recoverable),
+        PowOutcome::SpaceExhausted => nil(NilReason::SpaceExhausted, Recoverability::Unknown),
+    })
+}
+
+/// The integer a rational integer scalar holds; the projection otherwise.
+fn integer_of(value: &Value) -> std::result::Result<BigInt, Value> {
+    match exact_real_of(value) {
+        Some(ExactReal::Rational(q)) if q.is_integer() => Ok(q.numerator()),
+        Some(_) => Err(nil(NilReason::DomainMiss, Recoverability::Recoverable)),
+        None => Err(non_numeric_value()),
+    }
+}
+
+/// A marker for "not a number at all", told apart from a projection by
+/// the caller.
+fn non_numeric_value() -> Value {
+    Value::from_symbol("__nonNumeric")
+}
+
+fn gcd_scalar(a: &Value, b: &Value) -> Result<Value> {
+    if exact_real_of(a).is_none() || exact_real_of(b).is_none() {
+        return Err(non_numeric(&[a, b]));
+    }
+    match (integer_of(a), integer_of(b)) {
+        (Ok(x), Ok(y)) => Ok(Value::from_fraction(Fraction::new(
+            x.gcd(&y).abs(),
+            BigInt::from(1),
+        ))),
+        (Err(projection), _) | (_, Err(projection)) => Ok(projection),
+    }
+}
+
+fn ratio_scalar(value: &Value) -> Result<Value> {
+    Ok(match exact_real_of(value) {
+        Some(ExactReal::Rational(q)) => {
+            let (n, d) = q.to_bigint_pair();
+            let (n, d) = if d.is_negative() { (-n, -d) } else { (n, d) };
+            Value::from_vector(vec![
+                Value::from_fraction(Fraction::new(n, BigInt::from(1))),
+                Value::from_fraction(Fraction::new(d, BigInt::from(1))),
+            ])
+        }
+        Some(ExactReal::Algebraic(_)) => nil(NilReason::DomainMiss, Recoverability::Recoverable),
+        None => return Err(non_numeric(&[value])),
+    })
+}
+
+fn binary(interp: &mut Interpreter, leaf: &dyn Fn(&Value, &Value) -> Result<Value>) -> Result<()> {
+    let operands = extract_operands(interp, 2)?;
+    match lift_binary_numeric(&operands[0], &operands[1], leaf) {
+        Ok(result) => {
+            interp.stack.push(result);
+            Ok(())
+        }
+        Err(e) => {
+            interp.stack.extend(operands);
+            Err(e)
+        }
+    }
+}
+
+pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
+    if record_ops::lift_binary(interp, &op_pow)? {
+        return Ok(());
+    }
+    let budget = crate::interpreter::arithmetic_meter::RadicandBudget::of(interp);
+    let operands = extract_operands(interp, 2)?;
+    let lifted = lift_binary_numeric(&operands[0], &operands[1], &|x, y| {
+        pow_scalar(x, y, &budget)
+    });
+    match budget.settle(interp).and(lifted) {
+        Ok(result) => {
+            interp.stack.push(result);
+            Ok(())
+        }
+        Err(e) => {
+            interp.stack.extend(operands);
+            Err(e)
+        }
+    }
+}
+
+pub(crate) fn op_gcd(interp: &mut Interpreter) -> Result<()> {
+    if record_ops::lift_binary(interp, &op_gcd)? {
+        return Ok(());
+    }
+    binary(interp, &gcd_scalar)
+}
+
+pub(crate) fn op_ratio(interp: &mut Interpreter) -> Result<()> {
+    if record_ops::lift_unary(interp, &op_ratio)? {
+        return Ok(());
+    }
+    let operands = extract_operands(interp, 1)?;
+    match lift_unary_numeric(&operands[0], &ratio_scalar) {
+        Ok(result) => {
+            interp.stack.push(result);
+            Ok(())
+        }
+        Err(e) => {
+            interp.stack.extend(operands);
+            Err(e)
+        }
+    }
 }

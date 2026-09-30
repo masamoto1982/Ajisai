@@ -20,7 +20,7 @@ use num_traits::{One, Signed, Zero};
 
 use super::ordering_ops::{restore, take_operand};
 use crate::error::{NilReason, Result};
-use crate::interpreter::cast::cast_value_helpers::format_fraction_to_string;
+use crate::interpreter::cast::cast_conversions::format_fraction_to_string;
 use crate::interpreter::collection_meter;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;

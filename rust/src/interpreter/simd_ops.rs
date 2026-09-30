@@ -71,50 +71,27 @@ pub fn create_value_from_integer_vector(values: Vec<i64>) -> Value {
     Value::from_int_tensor(values)
 }
 
-// ── Overflow-checked sequential lanes ───────────────────────────────────────
+// ── Overflow-checked lanes ──────────────────────────────────────────────────
 //
 // Speculative `i64` lowering (handoff 奇策本命): the result is bit-identical to
 // the exact rational answer *iff* no lane overflows. These lanes return `None`
 // the moment a lane overflows so the caller can fall back to the exact
-// `Fraction`/BigInt path. They are the below-threshold / wasm fallback and the
-// element-wise contract partner of the checked parallel kernels.
+// `Fraction`/BigInt path.
 
-fn checked_lane_add(a: &[i64], b: &[i64]) -> Option<Vec<i64>> {
+/// Apply an overflow-checked op element-wise over two equal-length lanes.
+fn checked_lane(a: &[i64], b: &[i64], op: fn(i64, i64) -> Option<i64>) -> Option<Vec<i64>> {
     let mut out = Vec::with_capacity(a.len());
     for (&x, &y) in a.iter().zip(b.iter()) {
-        out.push(x.checked_add(y)?);
+        out.push(op(x, y)?);
     }
     Some(out)
 }
 
-fn checked_lane_sub(a: &[i64], b: &[i64]) -> Option<Vec<i64>> {
-    let mut out = Vec::with_capacity(a.len());
-    for (&x, &y) in a.iter().zip(b.iter()) {
-        out.push(x.checked_sub(y)?);
-    }
-    Some(out)
-}
-
-fn checked_lane_mul(a: &[i64], b: &[i64]) -> Option<Vec<i64>> {
-    let mut out = Vec::with_capacity(a.len());
-    for (&x, &y) in a.iter().zip(b.iter()) {
-        out.push(x.checked_mul(y)?);
-    }
-    Some(out)
-}
-
-fn checked_scalar_add(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
+/// Apply an overflow-checked op between a lane and a broadcast scalar.
+fn checked_scalar(a: &[i64], scalar: i64, op: fn(i64, i64) -> Option<i64>) -> Option<Vec<i64>> {
     let mut out = Vec::with_capacity(a.len());
     for &x in a.iter() {
-        out.push(x.checked_add(scalar)?);
-    }
-    Some(out)
-}
-
-fn checked_scalar_mul(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
-    let mut out = Vec::with_capacity(a.len());
-    for &x in a.iter() {
-        out.push(x.checked_mul(scalar)?);
+        out.push(op(x, scalar)?);
     }
     Some(out)
 }
@@ -134,90 +111,53 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
     }
 }
 
-fn apply_simd_binary(
-    word: &str,
-    a: &Value,
-    b: &Value,
-    op: fn(i64, i64) -> Option<i64>,
-    lane: fn(&[i64], &[i64]) -> Option<Vec<i64>>,
-) -> Option<(Value, bool)> {
+fn apply_simd_binary(a: &Value, b: &Value, op: fn(i64, i64) -> Option<i64>) -> Option<Value> {
     let va: Cow<'_, [i64]> = extract_integer_lane(a)?;
     let vb: Cow<'_, [i64]> = extract_integer_lane(b)?;
     if va.len() != vb.len() {
         return None;
     }
-    let (result, parallel) =
-        sequential_elementwise_binary_checked(word, va.as_ref(), vb.as_ref(), op, lane);
     // `None` => a lane overflowed `i64`; decline so the caller recomputes on
     // the exact path (Same Result). Otherwise emit the SoA tensor result.
-    Some((create_value_from_integer_vector(result?), parallel))
+    Some(create_value_from_integer_vector(checked_lane(
+        va.as_ref(),
+        vb.as_ref(),
+        op,
+    )?))
 }
 
-/// Returns `(result, parallel_used)`; `parallel_used` is `true` only when the
-/// multi-core kernel actually fired (observational metric only).
-pub fn apply_simd_add(a: &Value, b: &Value) -> Option<(Value, bool)> {
-    apply_simd_binary("+", a, b, |x, y| x.checked_add(y), checked_lane_add)
+pub fn apply_simd_add(a: &Value, b: &Value) -> Option<Value> {
+    apply_simd_binary(a, b, |x, y| x.checked_add(y))
 }
 
-pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<(Value, bool)> {
-    apply_simd_binary("-", a, b, |x, y| x.checked_sub(y), checked_lane_sub)
+pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<Value> {
+    apply_simd_binary(a, b, |x, y| x.checked_sub(y))
 }
 
-pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<(Value, bool)> {
-    apply_simd_binary("*", a, b, |x, y| x.checked_mul(y), checked_lane_mul)
+pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<Value> {
+    apply_simd_binary(a, b, |x, y| x.checked_mul(y))
 }
 
-/// Apply an element-wise checked op over two equal-length lanes.
-///
-/// The native data-parallel dispatch this used to route through is gone, so the
-/// lane kernel is the only path. The `bool` in the return keeps the callers'
-/// shape and is always `false`: no parallel kernel fires.
-fn sequential_elementwise_binary_checked(
-    _word: &str,
-    a: &[i64],
-    b: &[i64],
-    _op: fn(i64, i64) -> Option<i64>,
-    lane: fn(&[i64], &[i64]) -> Option<Vec<i64>>,
-) -> (Option<Vec<i64>>, bool) {
-    (lane(a, b), false)
-}
-
-/// Apply an element-wise checked op between a lane and a broadcast scalar.
-/// Same contract as [`sequential_elementwise_binary_checked`].
-fn sequential_elementwise_scalar_checked(
-    _word: &str,
-    a: &[i64],
-    scalar: i64,
-    _op: fn(i64, i64) -> Option<i64>,
-    lane: fn(&[i64], i64) -> Option<Vec<i64>>,
-) -> (Option<Vec<i64>>, bool) {
-    (lane(a, scalar), false)
-}
-
-pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
+fn apply_simd_scalar(
+    vec_val: &Value,
+    scalar_val: &Value,
+    op: fn(i64, i64) -> Option<i64>,
+) -> Option<Value> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    let (result, parallel) = sequential_elementwise_scalar_checked(
-        "+",
+    Some(create_value_from_integer_vector(checked_scalar(
         va.as_ref(),
         scalar,
-        |x, s| x.checked_add(s),
-        checked_scalar_add,
-    );
-    Some((create_value_from_integer_vector(result?), parallel))
+        op,
+    )?))
 }
 
-pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
-    let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
-    let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    let (result, parallel) = sequential_elementwise_scalar_checked(
-        "*",
-        va.as_ref(),
-        scalar,
-        |x, s| x.checked_mul(s),
-        checked_scalar_mul,
-    );
-    Some((create_value_from_integer_vector(result?), parallel))
+pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
+    apply_simd_scalar(vec_val, scalar_val, |x, s| x.checked_add(s))
+}
+
+pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
+    apply_simd_scalar(vec_val, scalar_val, |x, s| x.checked_mul(s))
 }
 
 #[cfg(test)]
@@ -251,7 +191,7 @@ mod tests {
     fn test_simd_add_vectors() {
         let a: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b: Value = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
-        let (result, _) = apply_simd_add(&a, &b).unwrap();
+        let result = apply_simd_add(&a, &b).unwrap();
         let expected: Vec<i64> = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88]);
     }
@@ -260,7 +200,7 @@ mod tests {
     fn test_simd_sub_vectors() {
         let a: Value = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
         let b: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let (result, _) = apply_simd_sub(&a, &b).unwrap();
+        let result = apply_simd_sub(&a, &b).unwrap();
         let expected: Vec<i64> = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![9, 18, 27, 36, 45, 54, 63, 72]);
     }
@@ -269,7 +209,7 @@ mod tests {
     fn test_simd_mul_vectors() {
         let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b = create_int_vector(&[2, 3, 4, 5, 6, 7, 8, 9]);
-        let (result, _) = apply_simd_mul(&a, &b).unwrap();
+        let result = apply_simd_mul(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![2, 6, 12, 20, 30, 42, 56, 72]);
     }
@@ -278,7 +218,7 @@ mod tests {
     fn test_simd_scalar_add() {
         let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(100);
-        let (result, _) = apply_simd_scalar_add(&v, &s).unwrap();
+        let result = apply_simd_scalar_add(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![101, 102, 103, 104, 105, 106, 107, 108]);
     }
@@ -287,7 +227,7 @@ mod tests {
     fn test_simd_scalar_mul() {
         let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(3);
-        let (result, _) = apply_simd_scalar_mul(&v, &s).unwrap();
+        let result = apply_simd_scalar_mul(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![3, 6, 9, 12, 15, 18, 21, 24]);
     }
@@ -296,7 +236,7 @@ mod tests {
     fn test_simd_add_odd_length() {
         let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
         let b = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80, 90]);
-        let (result, _) = apply_simd_add(&a, &b).unwrap();
+        let result = apply_simd_add(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88, 99]);
     }
@@ -320,7 +260,7 @@ mod tests {
         // degrading to a boxed-Value vector.
         let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b = create_int_vector(&[1, 1, 1, 1, 1, 1, 1, 1]);
-        let (result, _) = apply_simd_add(&a, &b).unwrap();
+        let result = apply_simd_add(&a, &b).unwrap();
         assert!(
             matches!(result.data, ValueData::Tensor { .. }),
             "integer SIMD result must be a dense Tensor, got {:?}",
@@ -334,9 +274,9 @@ mod tests {
         // chain, so a second op can borrow the first op's output directly.
         let a = Value::from_int_tensor(vec![1, 2, 3, 4, 5, 6, 7, 8]);
         let b = Value::from_int_tensor(vec![2, 2, 2, 2, 2, 2, 2, 2]);
-        let (sum, _) = apply_simd_add(&a, &b).unwrap();
+        let sum = apply_simd_add(&a, &b).unwrap();
         assert!(matches!(extract_integer_lane(&sum), Some(Cow::Borrowed(_))));
-        let (product, _) = apply_simd_mul(&sum, &b).unwrap();
+        let product = apply_simd_mul(&sum, &b).unwrap();
         let got = extract_integer_vector(&product).unwrap();
         assert_eq!(got, vec![6, 8, 10, 12, 14, 16, 18, 20]);
     }
@@ -382,7 +322,7 @@ mod tests {
         // be taken and the value exact.
         let a = create_int_vector(&[i64::MAX - 1; 8]);
         let b = create_int_vector(&[1; 8]);
-        let (result, _) = apply_simd_add(&a, &b).unwrap();
+        let result = apply_simd_add(&a, &b).unwrap();
         let got = extract_integer_vector(&result).unwrap();
         assert_eq!(got, vec![i64::MAX; 8]);
     }

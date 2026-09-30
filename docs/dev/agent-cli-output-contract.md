@@ -134,8 +134,8 @@ violation.
   code operand that is not the `[ ... ]` literal written before the Word that
   runs it, such as `[ [ [ 42 PRINT ] ] 0 GET EXEC ]` — or no fixed arity
   describes its stack flow). `gap.opaqueReflection` was
-  retired along with `REFLECT` (CodeBlock/Vector unification, docs/dev/
-  type-unification-work-order-2026-08.md): every Vector is executable now,
+  retired along with `REFLECT` (the 2026-08 CodeBlock/Vector unification;
+  its work order has since been retired): every Vector is executable now,
   so there is no separate crossing whose contents inference cannot trust.
 - `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
   declarations; `verified + cannotVerify + violated` always equals it. A
@@ -561,8 +561,9 @@ schema-versioned object.
 ### `outcomes`
 
 Predicts, without executing it, the finite set of outcome ids a program
-could produce (Phase 5,
-`docs/dev/auditable-kernel-work-order-2026-09.md`). Never fails: a program
+could produce (Phase 5 of the 2026-09 auditable-kernel work order, since
+retired; `rust/src/interpreter/predict_program_outcomes.rs` is the
+implementation). Never fails: a program
 that cannot even be read (a tokenize failure, an unbalanced vector) is
 settled before a single Word runs, so it has exactly one predicted outcome.
 

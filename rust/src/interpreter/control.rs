@@ -62,3 +62,27 @@ fn exec_block(interp: &mut Interpreter) -> Result<()> {
     // word's tail position — see `Interpreter::execute_nested_block`.
     interp.execute_nested_block(&tokens)
 }
+
+#[cfg(test)]
+mod tests {
+    //! Test suite for `crate::interpreter::control` (EXEC/EVAL).
+
+    use crate::interpreter::Interpreter;
+    #[tokio::test]
+    async fn test_exec_empty_stack_error() {
+        let mut interp = Interpreter::new();
+
+        let result = interp.execute("EXEC").await;
+
+        assert!(result.is_err(), "EXEC on empty stack should fail");
+    }
+
+    #[tokio::test]
+    async fn test_eval_empty_stack_error() {
+        let mut interp = Interpreter::new();
+
+        let result = interp.execute("EVAL").await;
+
+        assert!(result.is_err(), "EVAL on empty stack should fail");
+    }
+}

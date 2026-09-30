@@ -2,17 +2,7 @@
 //! with NIL standing for UNKNOWN. Split out from `nil_conformance_tests` to
 //! stay under the the file-size budget in docs/dev/specification-implementation-rules.md file-size budget.
 
-use crate::interpreter::Interpreter;
-use crate::types::Value;
-
-async fn run_ok(code: &str) -> Vec<Value> {
-    let mut interp = Interpreter::new();
-    interp
-        .execute(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` unexpectedly errored: {e}"));
-    interp.get_stack().to_vec()
-}
+use crate::test_support::run_ok;
 
 /// FALSE absorbs into `AND` even against a NIL
 /// operand; only where neither operand is the absorbing value does a NIL

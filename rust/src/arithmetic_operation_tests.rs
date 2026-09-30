@@ -204,13 +204,8 @@ mod interval_tests {
 
 #[cfg(test)]
 mod nil_passthrough_tests {
-    use crate::interpreter::Interpreter;
 
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
+    use crate::test_support::run;
 
     #[tokio::test]
     async fn add_with_nil_left_yields_nil() {
@@ -302,29 +297,12 @@ mod nil_passthrough_tests {
 
 #[cfg(test)]
 mod ai_first_comparison_tests {
-    use crate::interpreter::Interpreter;
+
+    use crate::test_support::{bool_of, run};
     // Tests for the AI-first comparison primitive GT. It mirrors
     // LT / EQ and exists so an automated producer can emit the relation
     // that matches its intent directly rather than rewriting it as a
     // negation or operand swap.
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    fn bool_of(interp: &Interpreter) -> bool {
-        // Boolean values are stored as Scalar(0|1) with a Boolean display
-        // hint; the underlying Display impl prints the scalar.
-        let v = &interp.get_stack()[0];
-        let s = format!("{}", v);
-        match s.as_str() {
-            "1" | "1/1" | "TRUE" => true,
-            "0" | "0/1" | "FALSE" => false,
-            other => panic!("expected boolean (0 or 1), got {}", other),
-        }
-    }
 
     // ── canonical-name parity with LT/EQ ─────────────────────────────────
 
@@ -395,25 +373,10 @@ mod ai_first_comparison_tests {
 
 #[cfg(test)]
 mod ordering_decision_tests {
-    use crate::interpreter::Interpreter;
+
+    use crate::test_support::{bool_of, run};
     // The ordering Words decide every pair of numbers (LANG.VALUES.EXACT);
     // a NIL operand passes through.
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    fn bool_of(interp: &Interpreter) -> bool {
-        let v = &interp.get_stack()[0];
-        let s = format!("{}", v);
-        match s.as_str() {
-            "1" | "1/1" | "TRUE" => true,
-            "0" | "0/1" | "FALSE" => false,
-            other => panic!("expected boolean (0 or 1), got {}", other),
-        }
-    }
 
     // ── Regression: every ordering decides on rational operands ──────────
 
@@ -449,26 +412,11 @@ mod ordering_decision_tests {
 /// total `ExactReal::cmp_exact`.
 #[cfg(test)]
 mod eq_decision_tests {
-    use crate::interpreter::Interpreter;
+
+    use crate::test_support::{bool_of, run};
     use crate::types::exact::ExactReal;
     use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    fn bool_of(interp: &Interpreter) -> bool {
-        let v = &interp.get_stack()[0];
-        let s = format!("{}", v);
-        match s.as_str() {
-            "1" | "1/1" | "TRUE" => true,
-            "0" | "0/1" | "FALSE" => false,
-            other => panic!("expected boolean (0 or 1), got {}", other),
-        }
-    }
 
     // ── Regression: EQ still decides on rationals ───────────────────
 

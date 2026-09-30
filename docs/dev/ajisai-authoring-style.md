@@ -32,7 +32,7 @@ The tokenizer maps symbol forms to canonical English names, and two registries h
 | `'` | `STRING-QUOTE` | Literal delimiter, not a Word |
 | `#` | `COMMENT-LINE` | Source directive, not a Word |
 
-Ten alias spellings, six lexical forms, and nothing else: **a mark not in that table is ordinary punctuation, in prose and in source alike.** That is a narrower hazard than this section once described, and the narrowing is worth stating, because the rules below were written against the wider one. `.` `,` `..` `,,` were the target and consumption modifiers; the language now has one modifier axis, spelled `KEEP` as a word with no punctuation sugar (LANG.MODIFIERS.CONSUMPTION). `(` `)` and a bare `|` were a reserved pair and a retired separator; they are ordinary name characters (`docs/dev/source-character-liberation-2026-09.md`). So a comma in running prose is no longer an Ajisai word, and the question "is that `,` part of the program?" no longer has a bad answer.
+Ten alias spellings, six lexical forms, and nothing else: **a mark not in that table is ordinary punctuation, in prose and in source alike.** That is a narrower hazard than this section once described, and the narrowing is worth stating, because the rules below were written against the wider one. `.` `,` `..` `,,` were the target and consumption modifiers; the language now has one modifier axis, spelled `KEEP` as a word with no punctuation sugar (LANG.MODIFIERS.CONSUMPTION). `(` `)` and a bare `|` were a reserved pair and a retired separator; they are ordinary name characters (the per-character rejection rules were removed from `spec/grammar.json` in 2026-09; `check:grammar` holds the tokenizer to the grammar). So a comma in running prose is no longer an Ajisai word, and the question "is that `,` part of the program?" no longer has a bad answer.
 
 What remains is sharper for being smaller. `/` is `DIV` and shares its glyph with the division bar; `=` `<` `>` collide with mathematics; `[` `]` `{` `}` `'` `#` do structural work no word does. Those are the marks the channel rules protect.
 
@@ -163,6 +163,59 @@ Legacy references to `SPECIFICATION.md` in older commits and archived notes are 
 | This document | The shared notation discipline for all writing about Ajisai |
 | `reference-writing-style.md` | Reference site and `?`/LOOKUP help text |
 | `three-layer-documentation-model.md` | Structure of all user-facing guidance |
-| `character-allocation-and-prose-2026-09.md` | The same discipline read backwards: which characters the lexicon may take, given the ones this prose relies on as separators |
+| §11 of this document | The same discipline read backwards: which characters the lexicon may take, given the ones this prose relies on as separators |
 
 All of them share one root principle: **Ajisai code, the mathematics behind it, and the prose about both must be visually and structurally distinct, so that a symbol is never mistaken for punctuation and an operator is never mistaken for a word.** The gray code span marks each Ajisai token; a separate math channel carries the formulas; tables separate them in bulk.
+
+## 11. Which characters the lexicon may take
+
+The discipline above read backwards. §2 and §8 say prose must avoid the
+characters the language uses; this section says the language must avoid
+the characters the prose uses as separators, or the loss goes unrecorded.
+(Moved here from the 2026-09-22 character-allocation memo when that memo was
+retired; the criterion is current.)
+
+**Criterion.** Before a character is assigned a lexical role, check whether
+it is already *working as a separator* on the writing side — the README, the
+Reference, the Specification, and the generated surfaces (`SKILL.md`, the MCP
+quickstart). If it is, the assignment trades the language's readability for
+the documents'. Consuming a free character and taking a working one are
+different decisions: the first spends a slot, the second is an exchange, and
+an exchange has to say what it gives up before it is made.
+
+The loss shows up in three shapes:
+
+- **A gate needs an exception.** Ajisai's reading surfaces are executed
+  (`check:reference-samples` runs every Reference sample; the SKILL.md
+  generator runs every embedded fragment). When a fragment in prose cannot be
+  told from source by a machine, the gate grows an exclusion — the Record
+  section's `{ key value … }` schematics are already identified by their
+  ellipsis and skipped. The more lexical and prose separators overlap, the
+  more of these exclusions accrue.
+- **`:` is already at work in Ajisai's own tooling.** `#:contract` (declared
+  contracts) and `#@` (test directives) are both a mark after `#` that speaks
+  to a tool. Lexically still comment text, but by convention the colon has a
+  job.
+- **`label: value` is a shape this style guide prescribes.**
+  `structured-prose-style.md` names it as one of the translation-stable
+  information shapes, and the Japanese Reference uses the full-width colon
+  the same way.
+
+Two cases fixed the criterion. `{` `}` had no writing-side use when the
+per-character rejection rules were removed from the grammar, so they were
+*taken*, for the Record literal. `:` was at work (the two shapes above), so
+it was *left alone* — the owner's decision, reinforced by the small gain on
+offer: a quote closes only before whitespace, so `{ 'x': 1 }` could never be
+written and the best available form was a floating `{ 'x' : 1 }`; the
+documents' cost would have been paid without buying the shape it was paid
+for.
+
+What the criterion does not say: a commonly used mark is not permanently
+untakeable — ask first whether the writing side can move that shape to
+another information shape (a table, a sentence); if it can, move it first,
+then assign. Writing-side use is not the only test either — a lexical rule
+may refuse the form for its own reasons (for `:`, the string-closing rule),
+so check both. And a taken character enters `SURFACE_FORMS`
+(`rust/src/surface_forms.rs`), which `check:grammar` reconciles against the
+word manifest, exactly as before; whole-lexeme rules are what the grammar
+has, and reviving a per-character rule would be a separate discussion.

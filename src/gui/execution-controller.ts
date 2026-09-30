@@ -1,24 +1,21 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
+    checkRunLeftOwnNil,
     createExecutionSnapshot,
     collectUserWords,
     describeFailedRunOutput,
-    isFailure,
-    syncInterpreterState,
-    resolveExecutionException
-} from './interpreter-execution-utils';
-import { renderDiagnosisReport } from './diagnosis-report';
-import { toError } from './to-error';
-import { createStepExecutor, StepExecutor } from './step-executor';
-import {
-    checkRunLeftOwnNil,
     detectExecutionSurfaceChanges,
+    isFailure,
+    renderDiagnosisReport,
+    syncInterpreterState,
+    resolveExecutionException,
+    toError,
     type ExecutionStateView
-} from './execution-surface-changes';
-import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
-import type { ViewMode } from './mobile-view-switcher';
-import type { ExecutionSurfaceChanges } from './gui-layout-state';
+} from './interpreter-execution-utils';
+import { createStepExecutor, StepExecutor } from './step-executor';
+import { EXECUTION_TIMEOUT_MS } from '../workers/execution-contract';
+import type { ExecutionSurfaceChanges, ViewMode } from './gui-layout-state';
 
 // What one trip through the worker came back with: the interpreter's result,
 // or the exception that stopped the run before it could answer (the wall-clock
@@ -271,12 +268,6 @@ export const createExecutionController = (
         }
     };
 
-    const executeStep = async (): Promise<void> => {
-        await stepExecutor.executeStep();
-    };
-
-    const checkIsStepModeActive = (): boolean => stepExecutor.isActive();
-
     // Abort stops the run where it stands — the worker carrying it is
     // replaced, exactly as the wall-clock guard does — and the run answers
     // through `applyExecutionResult` like any other that did not complete.
@@ -288,8 +279,8 @@ export const createExecutionController = (
     return {
         executeCode,
         executeReset,
-        executeStep,
-        checkIsStepModeActive,
+        executeStep: stepExecutor.executeStep,
+        checkIsStepModeActive: stepExecutor.isActive,
         abortExecution,
         lookupWord
     };

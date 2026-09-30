@@ -168,21 +168,8 @@ fn only_an_unresolved_locus_is_spell_checked_against_the_live_dictionary() {
 #[cfg(test)]
 mod unresolved_name_locus_tests {
     use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorLocusKind};
-    use crate::interpreter::Interpreter;
 
-    async fn diagnose(source: &str) -> DebugDiagnosis {
-        let mut interp = Interpreter::new();
-        assert!(
-            interp.execute(source).await.is_err(),
-            "`{source}` must fail"
-        );
-        interp
-            .drain_error_flow_trace()
-            .iter()
-            .rev()
-            .find_map(|event| event.diagnosis.clone())
-            .expect("the failure carries a diagnosis")
-    }
+    use crate::test_support::diagnose;
 
     fn inside(diagnosis: &DebugDiagnosis) -> Option<&str> {
         diagnosis

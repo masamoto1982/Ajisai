@@ -1,14 +1,9 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::Interpreter;
-use crate::types::fraction::Fraction;
+use crate::types::exact::ExactReal;
 use crate::types::{Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
-
-#[inline]
-pub(crate) fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_) | ValueData::Tensor { .. })
-}
 
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
@@ -136,10 +131,6 @@ pub(crate) fn normalize_index(index: i64, length: usize) -> Option<usize> {
     }
 }
 
-pub(crate) fn create_number_value(fraction: Fraction) -> Value {
-    Value::from_fraction(fraction)
-}
-
 pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
         return Err(AjisaiError::stack_underflow());
@@ -152,8 +143,15 @@ pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result
     Ok(values)
 }
 
-pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
-    interp.stack.push(result);
+/// Exact-real view of a numeric operand: a rational `Scalar` lifts to
+/// `ExactReal::Rational`; a lazy `ExactScalar` is taken as-is. Non-numeric
+/// kinds return `None` — the malformed-use path.
+pub(crate) fn exact_real_of(value: &Value) -> Option<ExactReal> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        _ => None,
+    }
 }
 
 pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
@@ -194,6 +192,7 @@ pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::fraction::Fraction;
     use num_traits::One;
 
     #[test]
@@ -211,16 +210,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_number_value() {
-        let frac = Fraction::new(BigInt::from(42), BigInt::one());
-        let wrapped = create_number_value(frac.clone());
-        assert!(wrapped.is_scalar());
-        assert_eq!(wrapped.as_scalar(), Some(&frac));
-    }
-
-    #[test]
     fn test_extract_integer_from_value() {
-        let wrapped = create_number_value(Fraction::new(BigInt::from(42), BigInt::one()));
+        let wrapped = Value::from_fraction(Fraction::new(BigInt::from(42), BigInt::one()));
         let result = extract_integer_from_value(&wrapped).unwrap();
         assert_eq!(result, 42);
     }

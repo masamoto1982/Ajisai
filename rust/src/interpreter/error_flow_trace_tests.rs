@@ -190,21 +190,8 @@ async fn direct_projection_carries_division_by_zero_reason() {
 #[cfg(test)]
 mod attribution_tests {
     use crate::interpreter::debug_diagnosis::DebugDiagnosis;
-    use crate::interpreter::Interpreter;
 
-    async fn diagnose(source: &str) -> DebugDiagnosis {
-        let mut interp = Interpreter::new();
-        assert!(
-            interp.execute(source).await.is_err(),
-            "`{source}` was expected to fail"
-        );
-        interp
-            .drain_error_flow_trace()
-            .iter()
-            .rev()
-            .find_map(|event| event.diagnosis.clone())
-            .expect("a failed run records a diagnosis")
-    }
+    use crate::test_support::diagnose;
 
     fn evidence<'a>(diagnosis: &'a DebugDiagnosis, key: &str) -> Option<&'a str> {
         diagnosis

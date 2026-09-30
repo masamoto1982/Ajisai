@@ -1,6 +1,93 @@
+// The Input surface: the source editor and the session history it recalls
+// submitted programs from.
+
 import { isMobileViewport } from '../platform/viewport';
-import { formatAjisaiSource } from './code-formatter';
-import { countLeadingSourceWhitespace, isSourceWhitespace, trimSource } from './source-atoms';
+import {
+    countLeadingSourceWhitespace,
+    formatAjisaiSource,
+    isSourceWhitespace,
+    splitBrackets,
+    trimSource
+} from './source-text';
+
+// ── Recall of previously run source ─────────────────────────────────────────
+// A successful Run empties the editor, and Reset empties it too. The Stack, by
+// contrast, persists across runs. Without recall, the natural loop — run
+// something, change one token, run it again — means retyping the whole program
+// every time, and a Reset after a run that did not happen takes the text with
+// it.
+//
+// So every submitted program is remembered for the session and can be walked
+// back into the editor. This is editor convenience in the same class as the
+// suggestion panel: it stores source text only, never a value, never a
+// dictionary entry, and it cannot change what a program observes.
+
+/** Programs kept for recall. Past this the oldest are dropped. */
+export const MAX_HISTORY_ENTRIES = 100;
+
+export interface EditorHistory {
+    /** Remember a submitted program and rewind the cursor to the newest end. */
+    readonly record: (source: string) => void;
+    /**
+     * Step one entry towards older, returning the source to show, or `null`
+     * when there is nothing older (leave the editor as it is).
+     *
+     * `draft` is the editor's current text; it is stashed on the first step
+     * back so stepping forward again returns what the user was typing.
+     */
+    readonly recallOlder: (draft: string) => string | null;
+    /**
+     * Step one entry towards newer. Returns the source to show — the stashed
+     * draft (possibly empty) once past the newest entry — or `null` when the
+     * cursor is already at the newest end.
+     */
+    readonly recallNewer: () => string | null;
+    /** Entries currently held, oldest first. Recall state is not included. */
+    readonly entries: () => readonly string[];
+}
+
+export const createEditorHistory = (limit: number = MAX_HISTORY_ENTRIES): EditorHistory => {
+    const entries: string[] = [];
+    // Index into `entries` of the entry currently recalled; `entries.length`
+    // means "not recalling — the editor holds the draft".
+    let cursor = 0;
+    let stashedDraft = '';
+
+    const record = (source: string): void => {
+        const trimmed = trimSource(source);
+        // An empty submission is not a program, and re-running the identical
+        // program should not push a second copy: recall is for finding what you
+        // wrote, and a run of duplicates buries it.
+        if (trimmed !== '' && entries[entries.length - 1] !== trimmed) {
+            entries.push(trimmed);
+            if (entries.length > limit) entries.shift();
+        }
+        cursor = entries.length;
+        stashedDraft = '';
+    };
+
+    const recallOlder = (draft: string): string | null => {
+        if (cursor === 0) return null;
+        if (cursor === entries.length) stashedDraft = draft;
+        cursor -= 1;
+        return entries[cursor]!;
+    };
+
+    const recallNewer = (): string | null => {
+        if (cursor >= entries.length) return null;
+        cursor += 1;
+        return cursor === entries.length ? stashedDraft : entries[cursor]!;
+    };
+
+    return {
+        record,
+        recallOlder,
+        recallNewer,
+        entries: () => entries
+    };
+};
+
+// ── The editor ──────────────────────────────────────────────────────────────
 
 export interface EditorCallbacks {
     readonly onSwitchToInputMode?: () => void;
@@ -148,7 +235,7 @@ export const extractToken = (
     while (end < text.length && !isSourceWhitespace(text[end]!)) end += 1;
 
     let pieceStart = start;
-    for (const piece of text.slice(start, end).match(/[[\]]|[^[\]]+/g) ?? []) {
+    for (const piece of splitBrackets(text.slice(start, end))) {
         const pieceEnd = pieceStart + piece.length;
         if (piece !== '[' && piece !== ']' && pieceStart <= safeCursor && safeCursor <= pieceEnd) {
             return { token: piece, start: pieceStart, end: pieceEnd };
@@ -212,7 +299,7 @@ export const createEditor = (
         mirror.style.minHeight = '0';
 
         mirror.textContent = el.value.substring(0, el.selectionStart);
-        marker.textContent = '\u200b';
+        marker.textContent = '​';
         mirror.appendChild(marker);
         document.body.appendChild(mirror);
 
@@ -284,61 +371,58 @@ export const createEditor = (
         hideSuggestions();
     };
 
-    const registerEventListeners = (): void => {
-        element.addEventListener('focus', () => {
-            syncLastKnownSelection();
-            switchToInputMode();
-            refreshSuggestions();
-        });
-
-        element.addEventListener('blur', () => {
-            syncLastKnownSelection();
-            setTimeout(hideSuggestions, 100);
-        });
-
-        element.addEventListener('input', () => {
-            syncLastKnownSelection();
-            refreshSuggestions();
-        });
-
-        element.addEventListener('select', syncLastKnownSelection);
-        element.addEventListener('click', syncLastKnownSelection);
-        element.addEventListener('keyup', syncLastKnownSelection);
-        element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
-
-        element.addEventListener('keydown', (e) => {
-            if (currentSuggestions.length === 0) return;
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
-                renderSuggestions();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
-                renderSuggestions();
-            } else if (e.key === 'Tab') {
-                // Tab accepts; Enter never does. A newline separates
-                // statements in a definition body, so it is load-bearing
-                // syntax in this language — an open suggestion panel must not
-                // be able to eat one (an Enter that accepted the completion for
-                // `PRINT` would glue the next line's first token to it:
-                // `PRINT3`). Dismissing the panel instead keeps the following
-                // Enter, whether the panel was wanted or not, a newline.
-                e.preventDefault();
-                applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
-            } else if (e.key === 'Enter') {
-                hideSuggestions();
-            } else if (e.key === 'Escape') {
-                hideSuggestions();
-            }
-        });
-    };
-
     if (trimSource(element.value) === '') {
         element.value = '';
     }
-    registerEventListeners();
+
+    element.addEventListener('focus', () => {
+        syncLastKnownSelection();
+        switchToInputMode();
+        refreshSuggestions();
+    });
+
+    element.addEventListener('blur', () => {
+        syncLastKnownSelection();
+        setTimeout(hideSuggestions, 100);
+    });
+
+    element.addEventListener('input', () => {
+        syncLastKnownSelection();
+        refreshSuggestions();
+    });
+
+    element.addEventListener('select', syncLastKnownSelection);
+    element.addEventListener('click', syncLastKnownSelection);
+    element.addEventListener('keyup', syncLastKnownSelection);
+    element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
+
+    element.addEventListener('keydown', (e) => {
+        if (currentSuggestions.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+            renderSuggestions();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
+            renderSuggestions();
+        } else if (e.key === 'Tab') {
+            // Tab accepts; Enter never does. A newline separates
+            // statements in a definition body, so it is load-bearing
+            // syntax in this language — an open suggestion panel must not
+            // be able to eat one (an Enter that accepted the completion for
+            // `PRINT` would glue the next line's first token to it:
+            // `PRINT3`). Dismissing the panel instead keeps the following
+            // Enter, whether the panel was wanted or not, a newline.
+            e.preventDefault();
+            applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
+        } else if (e.key === 'Enter') {
+            hideSuggestions();
+        } else if (e.key === 'Escape') {
+            hideSuggestions();
+        }
+    });
 
     const extractValue = (): string => trimSource(element.value);
 
@@ -425,7 +509,6 @@ export const createEditor = (
             updateSelectionRange(element, cursor, cursor);
             syncLastKnownSelection();
         }
-
 
         // Focusing the textarea re-runs the focus handler, which would reopen the
         // suggestion panel. Formatting is an explicit, whole-buffer action, so

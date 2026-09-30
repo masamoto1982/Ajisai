@@ -7,7 +7,7 @@
       "names": ["SIGN", "INSERT", "REMOVE", "SPLIT", "REORDER", "CONTAINS", "STARTS-WITH?", "ENDS-WITH?", "CHR", "EAT"]
     },
     {
-      "reason": "Retired after the vocabulary-100 work order's review (docs/dev/vocabulary-100-work-order-2026-09.md §7.2): NEQ is `EQ NOT` at the same cost, and PROBE was CONTRACT over a block. The two slots went to UPPER and LOWER, the top of the waiting list.",
+      "reason": "Retired after the vocabulary-100 work order's review (2026-09, §7.2; the alpha adoption rule that governed the swap is docs/dev/ajisai-minimal-core-identity.md Appendix B): NEQ is `EQ NOT` at the same cost, and PROBE was CONTRACT over a block. The two slots went to UPPER and LOWER, the top of the waiting list.",
       "names": ["NEQ", "PROBE"]
     },
     {

@@ -176,3 +176,61 @@ paid for once.
   parse error, matching the existing `unknown term` behavior) and checking,
   split into `contract_cost.rs` alongside `contract_decl.rs` to keep the
   latter within the §14.1 file-size budget.
+
+## Appendix A — SHA-256 → BLAKE3 in the MCP adapter: evaluated, not adopted
+
+Moved verbatim from the cost-discoverability work order (2026-08, removed
+from `docs/dev/` on 2026-09-30) so the decision and its reconsideration
+condition stay findable. It is here because the question arrived alongside
+the cost-discoverability work and concerns the same digest machinery that
+`#:contract`'s auditability claims rest on.
+
+### A.1 前提の訂正
+
+> Ajisai に採用されているハッシュ技術は SHA-256 だと思いますが
+
+実測の結果、**この前提は成り立たない**。
+
+- **Rust コア（言語処理系・エージェント境界）は既に全面 BLAKE3。**
+  `rust/Cargo.toml` は `blake3 = { version = "1", ... }` を宣言し、
+  `Cargo.lock` の解決済みバージョンは **1.8.5**。
+  語の同一性（`word_identity.rs`）も観測ダイジェスト（`observation_digest.rs`）も BLAKE3 である。
+- **Rust 側に SHA-256 は1箇所も無い**（`sha2` クレートへの依存も無い）。
+- SHA-256 が使われているのは **Node 側の `tools/mcp-server/` 内の4箇所のみ**。
+
+### A.2 その4箇所の実態
+
+| 箇所 | 用途 | 突き合わせ相手 |
+| --- | --- | --- |
+| `capture-traces.js:54` | トレース記録の短縮ID（先頭16桁） | 無し（同一プロセス内の同定のみ） |
+| `capture-repairs.js:36` | 同上 | 無し |
+| `sync-assets.js:19` | 同梱レジストリの `registryDigest` を**書く** | `index.js` |
+| `index.js:300` | 同梱レジストリの digest を**照合する** | `sync-assets.js` |
+
+後半2つは「JS が書いて JS が検証する」自己完結した破損検知であり、
+**Rust 側に対応する digest は存在しない**（`registryDigest` 相当の実装は Rust に0件）。
+前半2つは短縮IDで、暗号学的性質を要求していない。
+
+### A.3 置換しない理由
+
+1. **シナジーが発生する接点が存在しない。** シナジーが生まれるのは
+   「Rust が作った digest を JS が独立に再計算して検証する」場合だが、その要件は現在無い。
+   4箇所はいずれも言語をまたがない。
+2. **依存が増える。** Node には BLAKE3 が組み込まれていない。現在の4箇所は
+   標準の `crypto.createHash` で**依存ゼロ**である。`ajisai-mcp-server` は npm に公開する
+   パッケージで、実行時依存は現在2つしかない。内部識別子のために
+   サプライチェーン依存（多くは wasm もしくはネイティブビルドを伴う）を足すのは割に合わない。
+3. **`1.0.0` への固定は後退になる。** 現行の解決版は 1.8.5 であり、
+   1.0.0 を指定すると Rust 側が8マイナーバージョン分の後退となる。
+   BLAKE3 のバージョンを動かす積極的な理由は見当たらない。
+
+### A.4 再検討の条件（この条件が満たされたら A.3 は無効になる）
+
+**JS が Rust の作った digest を独立に検証する要件が生まれたとき。**
+例えば観測ダイジェストを MCP アダプタ側で再計算して突き合わせたい、という要求である。
+
+ただしその場合でも、ハッシュ関数の選択は問題の**小さい方**であることに注意する。
+観測ダイジェストは `AJISAI-OBS-1` のバイト文法（値の符号化・代数的数の包囲キー・
+辞書の正規化順序）の上に載っており、JS で再現すべき本体はそちらである。
+ハッシュを揃えるのは、その文法を移植し終えた後の最後の1行に過ぎない。
+「まずハッシュを統一する」順序で着手すると、労力の大半を占める部分が手つかずのまま残る。

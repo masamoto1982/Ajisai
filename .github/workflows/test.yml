@@ -171,7 +171,7 @@ jobs:
         # spec/outcomes.json is the single declaration of every NIL reason and
         # error category; this projects NilReason/ErrorCategory from it and
         # checks every words.json projection.reason/errorWhen resolves into it.
-        # See docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 1.
+        # See scripts/check-outcome-registry.mjs.
         run: npm run outcome-registry:check
 
       - name: Exhaustive semantics table is in sync
@@ -187,7 +187,7 @@ jobs:
         # input-domain tuple. spec/outcome-witnesses.json supplies the
         # multi-statement, resource-ceiling-dependent, and no-domain-reaches-
         # it cases by hand, executed for real, not string-matched.
-        # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 2.
+        # See scripts/check-outcome-bijection.mjs.
         run: npm run outcome-bijection:check
 
       - name: Every Word's outcomes lie in its own declared repertoire
@@ -209,7 +209,7 @@ jobs:
         # spec/outcome-witnesses.json, checks that the predicted set contains
         # the outcome that witness's own execution actually observed — an
         # under-approximating predictor is a predictor that lies.
-        # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 5.
+        # See scripts/check-outcome-prediction.mjs.
         run: npm run outcome-prediction:check
 
       - name: A NIL lane keeps its reason through the element-wise lift
@@ -318,11 +318,9 @@ jobs:
         working-directory: rust
         run: cargo check
 
-      # There is one execution path, so one build to test.
-      - name: Run all Rust tests
-        working-directory: rust
-        run: cargo test --lib --verbose && cargo test --tests --verbose
-
+      # The Rust test suite itself runs once, in the quality-gate job
+      # (`cargo test --all-targets`); this job covers the wasm-feature builds
+      # and the committed-bundle checks the gate does not.
       - name: Verify WASM build
         working-directory: rust
         run: |
@@ -410,29 +408,9 @@ jobs:
             echo "Committed MCP wasm bundle matches a fresh build."
           fi
 
-  typescript-check:
-    name: TypeScript Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        # npm ci: reproducible install from the committed package-lock.json
-        # (R1-1); fails rather than silently re-resolving on lock drift.
-        run: npm ci
-
-      - name: Run TypeScript type check
-        run: npm run check
-
-      - name: Run Vitest MC/DC tests
-        run: npm test
-
+  # `npm run check` and `npm test` run once, as blocking steps of the
+  # quality-gate job above; the separate TypeScript Check job that repeated
+  # them was removed on 2026-09-30.
   wasm-boundary-tests:
     name: WASM Boundary Tests
     runs-on: ubuntu-latest

@@ -2,21 +2,9 @@
 //! path. The fast path is observational only: with it enabled or disabled, the
 //! stack values, rendered forms, and per-value hints must be identical.
 
+use crate::agent::block_on;
 use crate::interpreter::{arithmetic, comparison, Interpreter};
 use crate::types::Value;
-
-fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    use std::task::{Context, Poll};
-    let mut fut = Box::pin(fut);
-    let waker = std::task::Waker::noop();
-    let mut cx = Context::from_waker(waker);
-    loop {
-        match fut.as_mut().poll(&mut cx) {
-            Poll::Ready(value) => return value,
-            Poll::Pending => std::thread::yield_now(),
-        }
-    }
-}
 
 fn run(src: &str, enabled: bool) -> Interpreter {
     let mut interp = Interpreter::new();

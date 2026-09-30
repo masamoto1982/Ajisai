@@ -1,16 +1,61 @@
 
 
 import { isMobileViewport } from '../platform/viewport';
-import { ExecutionAbortedError } from './execution-aborted';
-import type { ExecuteResult } from '../wasm-interpreter-types';
-import type { InterpreterSnapshot } from './interpreter-snapshot';
-import { extractCompiledWasmModule } from '../wasm-module-loader';
-import { EXECUTION_TIMEOUT_MS, ExecutionTimeoutError } from './execution-timeout';
+import type { ExecuteResult, WasmModule } from '../wasm-interpreter-types';
+import {
+    EXECUTION_TIMEOUT_MS,
+    ExecutionAbortedError,
+    ExecutionTimeoutError,
+    type InterpreterSnapshot
+} from './execution-contract';
 import {
     detectParallelCapability,
     describeParallelCapability,
     type ParallelCapability,
 } from '../platform/cross-origin-isolation';
+
+// The wasm bundle is compiled once on the main thread and the compiled module
+// is handed to every worker, so each worker skips the download and compile
+// and only instantiates.
+let wasmModule: WasmModule | null = null;
+let compiledModule: WebAssembly.Module | null = null;
+
+export async function initWasm(): Promise<WasmModule | null> {
+    if (wasmModule) return wasmModule;
+
+    try {
+        if (!compiledModule) {
+            const wasmUrl = new URL('../wasm/generated/ajisai_core_bg.wasm', import.meta.url);
+            try {
+                compiledModule = await WebAssembly.compileStreaming(fetch(wasmUrl));
+            } catch {
+                const response = await fetch(wasmUrl);
+                const bytes = await response.arrayBuffer();
+                compiledModule = await WebAssembly.compile(bytes);
+            }
+        }
+
+        const module = await import('../wasm/generated/ajisai_core.js') as unknown as WasmModule;
+
+        if (module.default) {
+            await (module.default as (input?: unknown) => Promise<unknown>)({ module_or_path: compiledModule });
+        }
+
+        // Surface Rust panics as console.error with a real stack trace
+        // instead of an opaque `RuntimeError: unreachable executed`.
+        try {
+            module.init_panic_hook?.();
+        } catch (e) {
+            console.warn('init_panic_hook unavailable; rebuild wasm to enable.', e);
+        }
+
+        wasmModule = module;
+        return module;
+    } catch (error) {
+        console.error('Failed to load WASM:', error);
+        return null;
+    }
+}
 
 interface WorkerTask {
     id: string;
@@ -49,8 +94,7 @@ export class WorkerManager {
         console.log(`[WorkerManager] parallel capability: ${describeParallelCapability(this.parallelCapability)}`);
         this.workers = [];
 
-
-        this.compiledModule = extractCompiledWasmModule();
+        this.compiledModule = compiledModule;
 
         if (!this.compiledModule) {
             console.warn('[WorkerManager] Compiled WASM module not available; workers will init independently');

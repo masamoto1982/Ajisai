@@ -6,10 +6,9 @@
 //! word's body, parallel to (not sharing state with) contract inference.
 //!
 //! A word's own declared vocabulary (`spec/words.json`'s `errorWhen` +
-//! `projection.reason`, read from the spec itself — the generated registry's
-//! own `projection` field carries the `when` condition names, not the
-//! `reason` ids `errorWhen`'s sibling would suggest, so this reads the JSON
-//! directly rather than through that indirection) covers what that Word is
+//! `projection.reason`, read through the generated registry's `error_when`
+//! and `projection_reasons` — the `reason` ids, not the `when` condition
+//! names its `projection` field carries) covers what that Word is
 //! observed to do: `scripts/check-word-outcome-containment.mjs` holds every
 //! executed cell of `docs/semantics-table.json` to the raising Word's own
 //! repertoire, widened only by the machine-attributable error categories and
@@ -50,16 +49,14 @@
 //! reach. That is the allowed direction (pitfall A), and `exact` reports
 //! it.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::sync::Arc;
+use std::collections::{BTreeSet, HashSet};
+use std::sync::{Arc, OnceLock};
 
 use crate::error::{ErrorCategory, NilReason};
-use crate::kernel::generated::GENERATED_WORDS;
+use crate::kernel::generated::{generated_word, GENERATED_WORDS};
 use crate::types::{Token, WordDefinition};
 
 use super::Interpreter;
-
-const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 
 /// Every `spec/outcomes.json` error category that is `kind: "structural"`
 /// (not any specific Word's own declared `errorWhen`) — the fixed,
@@ -79,49 +76,6 @@ fn structural_error_categories() -> [ErrorCategory; 6] {
     ]
 }
 
-/// `strings(value)` reads a schema field that is one string, an array of
-/// strings, or absent/null (`errorWhen` is always an array; `projection.
-/// when`/`projection.reason` are the string-or-array-or-null shape
-/// `spec/words.schema.json` documents) into a uniform `Vec<&str>`.
-fn strings(value: &serde_json::Value) -> Vec<&str> {
-    match value {
-        serde_json::Value::String(s) => vec![s.as_str()],
-        serde_json::Value::Array(items) => items.iter().filter_map(|v| v.as_str()).collect(),
-        _ => Vec::new(),
-    }
-}
-
-/// One builtin's declared `errorWhen` conditions and projection reasons.
-type WordVocabulary = (Vec<String>, Vec<String>);
-
-/// Every builtin's own `(errorWhen, projection.reason)` from `spec/words.json`,
-/// keyed by its canonical uppercase name — built once and cached, mirroring
-/// `execution_receipt::registry_digest`'s reuse of the same embedded file for
-/// a different purpose.
-fn word_outcome_table() -> &'static HashMap<String, WordVocabulary> {
-    static TABLE: std::sync::OnceLock<HashMap<String, WordVocabulary>> = std::sync::OnceLock::new();
-    TABLE.get_or_init(|| {
-        let parsed: serde_json::Value =
-            serde_json::from_str(WORDS_JSON).expect("spec/words.json must parse");
-        let mut table = HashMap::new();
-        for entry in parsed["entries"].as_array().into_iter().flatten() {
-            let Some(name) = entry["name"].as_str() else {
-                continue;
-            };
-            let error_when = strings(&entry["errorWhen"])
-                .into_iter()
-                .map(str::to_string)
-                .collect();
-            let reasons = strings(&entry["projection"]["reason"])
-                .into_iter()
-                .map(str::to_string)
-                .collect();
-            table.insert(name.to_string(), (error_when, reasons));
-        }
-        table
-    })
-}
-
 /// Every outcome id a builtin could ever produce, per `spec/words.json`'s own
 /// declaration: `value`, one `error:<category>` per declared `errorWhen`
 /// condition, and one `nil:<reason>` per declared projection reason — plus
@@ -134,11 +88,11 @@ pub(crate) fn builtin_outcomes_for(name: &str) -> BTreeSet<String> {
     if canonical == NIL_WORD {
         outcomes.insert(NIL_LITERAL.to_string());
     }
-    if let Some((error_when, reasons)) = word_outcome_table().get(&canonical) {
-        for condition in error_when {
+    if let Some(word) = generated_word(&canonical) {
+        for condition in word.error_when {
             outcomes.insert(format!("error:{condition}"));
         }
-        for reason in reasons {
+        for reason in word.projection_reasons {
             outcomes.insert(format!("nil:{reason}"));
         }
     }
@@ -367,5 +321,104 @@ pub(crate) fn resolve_and_collect(
             fallback.insert("error:unknownWord".to_string());
             fallback
         }
+    }
+}
+
+// Where an error category is repaired, read from the outcome registry
+// (`spec/outcomes.json`) rather than restated here.
+//
+// The diagnosis used to answer this with its own seven-value
+// `recoverability` scale (`fixInput`, `fixProgram`, `fixHost`, …), computed
+// from the cause class beside a registry that already declares the answer as
+// `repair: "program"` (absent: the operand is what is wrong). Two
+// classifications of one fact drift, and the one an agent could check
+// against `word_contract` was not the one it was sent. The registry is the
+// answer; this module only reads it.
+const OUTCOMES_JSON: &str = include_str!("../../../spec/outcomes.json");
+
+fn program_repaired() -> &'static HashSet<String> {
+    static IDS: OnceLock<HashSet<String>> = OnceLock::new();
+    IDS.get_or_init(|| {
+        let parsed: serde_json::Value =
+            serde_json::from_str(OUTCOMES_JSON).expect("spec/outcomes.json must parse");
+        parsed["errorCategories"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|entry| entry["repair"].as_str() == Some("program"))
+            .filter_map(|entry| entry["id"].as_str().map(str::to_string))
+            .collect()
+    })
+}
+
+/// `Some("program")` exactly when spec/outcomes.json marks `category`
+/// `repair: program`; `None` otherwise, as the registry leaves the field
+/// absent — which it defines as "the operand is what is wrong".
+pub(crate) fn repair_for_category(category: &str) -> Option<&'static str> {
+    program_repaired().contains(category).then_some("program")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::{builtin_outcomes_for, close_over_nil_reason_loss, conservative_outcomes};
+
+    #[test]
+    fn builtin_outcomes_include_value_and_declared_errors() {
+        let outcomes = builtin_outcomes_for("ADD");
+        assert!(outcomes.contains("value"));
+        assert!(outcomes.contains("error:nonNumeric"));
+        assert!(outcomes.contains("error:shapeMismatch"));
+    }
+
+    #[test]
+    fn builtin_outcomes_include_declared_nil_projections() {
+        let outcomes = builtin_outcomes_for("DIV");
+        assert!(outcomes.contains("nil:divisionByZero"));
+        let outcomes = builtin_outcomes_for("POW");
+        assert!(outcomes.contains("nil:domainMiss"));
+    }
+
+    #[test]
+    fn conservative_outcomes_cover_the_whole_registry() {
+        let outcomes = conservative_outcomes();
+        assert!(outcomes.contains("value"));
+        assert!(outcomes.contains("error:stackUnderflow"));
+        assert!(outcomes.contains("nil:spaceExhausted"));
+        assert!(outcomes.len() > 35, "{}", outcomes.len());
+    }
+
+    /// `NIL` answers with a reasonless NIL, which is `nil:literal` — the one
+    /// outcome id no `spec/words.json` declaration can carry, since the
+    /// declaration only names what a Word *raises* or *projects* and
+    /// `spec/outcomes.json` defines `literal` as the complement of both.
+    #[test]
+    fn the_nil_word_carries_its_own_literal_outcome() {
+        let outcomes = builtin_outcomes_for("NIL");
+        assert!(outcomes.contains("nil:literal"), "outcomes: {outcomes:?}");
+        // Not handed to every Word: `ADD` declares no projection at all.
+        assert!(!builtin_outcomes_for("ADD").contains("nil:literal"));
+    }
+
+    /// A reason is metadata on a whole `Value` and a dense tensor lane cannot
+    /// hold one, so a computed NIL that crosses a lane comes back reasonless and
+    /// reads as `literal`. Predicting from what a program can *produce* keeps
+    /// that sound; predicting from the `NIL` tokens it *writes* would not.
+    #[test]
+    fn any_reachable_nil_admits_a_reasonless_one() {
+        let mut projecting: BTreeSet<String> = BTreeSet::new();
+        projecting.insert("value".to_string());
+        projecting.insert("nil:divisionByZero".to_string());
+        close_over_nil_reason_loss(&mut projecting);
+        assert!(projecting.contains("nil:literal"));
+
+        // A program that can produce no NIL at all is left alone: the widening
+        // is a closure over reason loss, not a blanket.
+        let mut total: BTreeSet<String> = BTreeSet::new();
+        total.insert("value".to_string());
+        total.insert("error:nonNumeric".to_string());
+        close_over_nil_reason_loss(&mut total);
+        assert!(!total.contains("nil:literal"));
     }
 }

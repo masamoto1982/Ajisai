@@ -20,31 +20,17 @@ use num_traits::{One, Signed};
 use std::cmp::Ordering;
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::extract_operands;
+use crate::interpreter::value_extraction_helpers::{exact_real_of, extract_operands};
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::Value;
 
 /// The most digits one `FORMAT` may ask for. Every digit is a decimal place
 /// of big-integer work, and the meter charges each one, so the cap only
 /// stops a single request from allocating a number the meter would refuse
 /// anyway.
 const MAX_DIGITS: u64 = 1 << 16;
-
-fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
-    for operand in operands {
-        interp.stack.push(operand);
-    }
-}
-
-fn exact_real_of(value: &Value) -> Option<ExactReal> {
-    match &value.data {
-        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-        ValueData::ExactScalar(er) => Some(er.clone()),
-        _ => None,
-    }
-}
 
 fn digit_count(value: &Value) -> Option<u64> {
     let f = value.as_scalar()?;
@@ -105,14 +91,14 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(x) = exact_real_of(&operands[0]) else {
         let got = operands[0].domain_name();
-        restore_all(interp, operands);
+        interp.stack.extend(operands);
         return Err(AjisaiError::declared(
             "nonNumeric",
             format!("expected a Scalar as the value, got {got}"),
         ));
     };
     let Some(digits) = digit_count(&operands[1]) else {
-        restore_all(interp, operands);
+        interp.stack.extend(operands);
         return Err(AjisaiError::declared(
             "invalidInteger",
             "expected a non-negative integer digit count",
@@ -120,7 +106,7 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
     };
     // Every digit is a decimal place of big-integer work.
     if let Err(e) = interp.charge_numeric_work(digits + 1) {
-        restore_all(interp, operands);
+        interp.stack.extend(operands);
         return Err(e);
     }
     let n = round_scaled(&x, digits);

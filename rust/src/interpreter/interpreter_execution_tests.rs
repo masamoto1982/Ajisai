@@ -1,161 +1,158 @@
 //! Test suite for interpreter execution behavior.
 
-#[cfg(test)]
-mod tests {
-    use crate::interpreter::Interpreter;
+use crate::interpreter::Interpreter;
 
-    #[tokio::test]
-    async fn test_simple_addition() {
-        let mut interp = Interpreter::new();
+#[tokio::test]
+async fn test_simple_addition() {
+    let mut interp = Interpreter::new();
 
-        let code = "[ 2 ] [ 3 ] ADD";
+    let code = "[ 2 ] [ 3 ] ADD";
 
-        let result = interp.execute(code).await;
-        assert!(
-            result.is_ok(),
-            "Simple addition should succeed: {:?}",
-            result
-        );
+    let result = interp.execute(code).await;
+    assert!(
+        result.is_ok(),
+        "Simple addition should succeed: {:?}",
+        result
+    );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-    }
+    assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+}
 
-    #[tokio::test]
-    async fn test_definition_and_call() {
-        let mut interp = Interpreter::new();
+#[tokio::test]
+async fn test_definition_and_call() {
+    let mut interp = Interpreter::new();
 
-        let code = r#"
+    let code = r#"
 [ [ 2 ] [ 3 ] ADD ] 'ADDTEST' DEF
 ADDTEST
 "#;
 
-        let result = interp.execute(code).await;
-        assert!(
-            result.is_ok(),
-            "Definition and call should succeed: {:?}",
-            result
-        );
-    }
+    let result = interp.execute(code).await;
+    assert!(
+        result.is_ok(),
+        "Definition and call should succeed: {:?}",
+        result
+    );
+}
 
-    #[tokio::test]
-    async fn test_default_line_without_colon() {
-        let mut interp = Interpreter::new();
+#[tokio::test]
+async fn test_default_line_without_colon() {
+    let mut interp = Interpreter::new();
 
-        let code = "[ 5 ] [ 3 ] ADD";
+    let code = "[ 5 ] [ 3 ] ADD";
 
-        let result = interp.execute(code).await;
-        assert!(
-            result.is_ok(),
-            "Default line without colon should succeed: {:?}",
-            result
-        );
+    let result = interp.execute(code).await;
+    assert!(
+        result.is_ok(),
+        "Default line without colon should succeed: {:?}",
+        result
+    );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
-            assert!(val.is_vector(), "Expected vector result");
-            assert_eq!(val.len(), 1, "Result should have one element");
-            let only = val.child(0).expect("len==1 implies child(0) exists");
-            {
-                assert_eq!(
-                    only.as_scalar()
-                        .expect("Expected scalar")
-                        .numerator()
-                        .to_string(),
-                    "8",
-                    "Result should be 8"
-                );
-            }
+    assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    if let Some(val) = interp.stack.last() {
+        assert!(val.is_vector(), "Expected vector result");
+        assert_eq!(val.len(), 1, "Result should have one element");
+        let only = val.child(0).expect("len==1 implies child(0) exists");
+        {
+            assert_eq!(
+                only.as_scalar()
+                    .expect("Expected scalar")
+                    .numerator()
+                    .to_string(),
+                "8",
+                "Result should be 8"
+            );
         }
     }
+}
 
-    #[tokio::test]
-    async fn test_def_with_new_syntax() {
-        let mut interp = Interpreter::new();
+#[tokio::test]
+async fn test_def_with_new_syntax() {
+    let mut interp = Interpreter::new();
 
-        let code = "[ [ 42 ] ] 'ANSWER' DEF";
+    let code = "[ [ 42 ] ] 'ANSWER' DEF";
 
-        let result = interp.execute(code).await;
-        assert!(
-            result.is_ok(),
-            "DEF with new syntax should succeed: {:?}",
-            result
-        );
+    let result = interp.execute(code).await;
+    assert!(
+        result.is_ok(),
+        "DEF with new syntax should succeed: {:?}",
+        result
+    );
 
-        assert!(
-            interp.user_words.contains_key("ANSWER"),
-            "ANSWER should be defined"
-        );
+    assert!(
+        interp.user_words.contains_key("ANSWER"),
+        "ANSWER should be defined"
+    );
 
-        let call_result = interp.execute("ANSWER").await;
-        assert!(call_result.is_ok(), "Calling ANSWER should succeed");
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-    }
+    let call_result = interp.execute("ANSWER").await;
+    assert!(call_result.is_ok(), "Calling ANSWER should succeed");
+    assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+}
 
-    #[tokio::test]
-    async fn test_multiple_lines_without_colon() {
-        let mut interp = Interpreter::new();
+#[tokio::test]
+async fn test_multiple_lines_without_colon() {
+    let mut interp = Interpreter::new();
 
-        let code = r#"
+    let code = r#"
 [ 1 ] [ 2 ] ADD
 [ 3 ] MUL
 "#;
 
-        let result = interp.execute(code).await;
-        assert!(
-            result.is_ok(),
-            "Multiple lines without colon should succeed: {:?}",
-            result
-        );
+    let result = interp.execute(code).await;
+    assert!(
+        result.is_ok(),
+        "Multiple lines without colon should succeed: {:?}",
+        result
+    );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
-            assert!(val.is_vector(), "Expected vector result");
-            assert_eq!(val.len(), 1, "Result should have one element");
-            let only = val.child(0).expect("len==1 implies child(0) exists");
-            {
-                assert_eq!(
-                    only.as_scalar()
-                        .expect("Expected scalar")
-                        .numerator()
-                        .to_string(),
-                    "9",
-                    "Result should be 9"
-                );
-            }
+    assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    if let Some(val) = interp.stack.last() {
+        assert!(val.is_vector(), "Expected vector result");
+        assert_eq!(val.len(), 1, "Result should have one element");
+        let only = val.child(0).expect("len==1 implies child(0) exists");
+        {
+            assert_eq!(
+                only.as_scalar()
+                    .expect("Expected scalar")
+                    .numerator()
+                    .to_string(),
+                "9",
+                "Result should be 9"
+            );
         }
     }
+}
 
-    #[tokio::test]
-    async fn test_sequential_execution() {
-        let mut interp = Interpreter::new();
+#[tokio::test]
+async fn test_sequential_execution() {
+    let mut interp = Interpreter::new();
 
-        let code = r#"
+    let code = r#"
 [ 10 ] [ 20 ] ADD
 [ 5 ] MUL
 "#;
 
-        let result = interp.execute(code).await;
-        assert!(
-            result.is_ok(),
-            "Sequential lines should succeed: {:?}",
-            result
-        );
+    let result = interp.execute(code).await;
+    assert!(
+        result.is_ok(),
+        "Sequential lines should succeed: {:?}",
+        result
+    );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
-            assert!(val.is_vector(), "Expected vector result");
-            assert_eq!(val.len(), 1, "Result should have one element");
-            let only = val.child(0).expect("len==1 implies child(0) exists");
-            {
-                assert_eq!(
-                    only.as_scalar()
-                        .expect("Expected scalar")
-                        .numerator()
-                        .to_string(),
-                    "150",
-                    "Result should be 150"
-                );
-            }
+    assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    if let Some(val) = interp.stack.last() {
+        assert!(val.is_vector(), "Expected vector result");
+        assert_eq!(val.len(), 1, "Result should have one element");
+        let only = val.child(0).expect("len==1 implies child(0) exists");
+        {
+            assert_eq!(
+                only.as_scalar()
+                    .expect("Expected scalar")
+                    .numerator()
+                    .to_string(),
+                "150",
+                "Result should be 150"
+            );
         }
     }
 }

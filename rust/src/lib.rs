@@ -41,7 +41,7 @@ mod wasm_interpreter_bindings;
 pub use wasm_interpreter_bindings::AjisaiInterpreter;
 
 #[cfg(test)]
-mod malformed_numeric_literal_tests;
+pub(crate) mod test_support;
 #[cfg(test)]
 mod tokenizer_regression_tests;
 
@@ -70,10 +70,4 @@ mod materialization_limit_tests;
 mod runtime_limits_tests;
 
 #[cfg(test)]
-mod extreme_index_tests;
-
-#[cfg(test)]
 mod conformance_tests;
-
-#[cfg(test)]
-mod stack_render_tests;

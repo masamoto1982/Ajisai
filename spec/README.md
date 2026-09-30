@@ -6,11 +6,12 @@ it defines Ajisai semantics.
 | Source | Defines |
 | --- | --- |
 | `language-semantics.md` | Program meaning — the semantic kernel |
-| `grammar.json` (`grammar.schema.json`) | The lexical grammar — what text is Ajisai source |
+| `grammar.json` | The lexical grammar — what text is Ajisai source |
 | `termination.json` | Why every evaluation is finite — the recursion sites and the measure |
 | `identity.json` | When two things are the same — the law and each level's reach |
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
-| `outcomes.json` (`outcomes.schema.json`) | The complete outcome space — every NIL reason and every error category a Word's contract can name |
+| `outcomes.json` | The complete outcome space — every NIL reason and every error category a Word's contract can name |
+| `outcome-witnesses.json` | Programs that reach an outcome the one-Word semantics table cannot — the by-hand half of the outcome bijection gate |
 | `semantic-families.json` | The shared laws Words select |
 | `retired-words.json` | The names that were once Words and must stay unknown — read by both the registry gate and the runtime test |
 | `gui-semantics.md` | Presentation |
@@ -38,13 +39,18 @@ and supersedes the previous one; exactly one protocol is current at a time.
 `SPECIFICATION.html` is a distribution artifact assembled from the semantic
 sources, the implementation-rules fragment, and `specification.template.html`.
 
-**It carries no CI guarantee while Ajisai is in alpha: `specification:check` is
-out of the gate, so a committed copy can drift from `spec/` between runs of
-`npm run specification:generate`.** Every source in this directory is current
-and still drives code generation regardless of when `SPECIFICATION.html` was
-last regenerated. Putting the gate back — the last step before beta is
-declared again — is adding `specification:check` to CI once the committed copy
-is expected to stay current on every change, not merely regeneratable.
+`npm run specification:check` runs in CI (`.github/workflows/test.yml`), so
+the committed copy cannot drift from `spec/`: a change to any source here is
+followed by `npm run specification:generate` in the same commit, or the gate
+fails. Every source in this directory is current and still drives code
+generation.
+
+Only `words.schema.json` is machine-read (`scripts/generate-word-registry.mjs`
+builds the Rust enums from it, and `word-schema:check` holds `words.json` to
+it); the other JSON sources are validated by the gates that consume them
+(`check:grammar`, `check:termination`, `check:identity`,
+`outcome-registry:check`, `outcome-bijection:check`) rather than by a schema
+document beside them.
 
 Ajisai carries exactly two version numbers, not three: the implementation's
 (`package.json`, `src-tauri/tauri.conf.json`, e.g. `0.2.0-alpha.1`) and the

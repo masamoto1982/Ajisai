@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "Baseline of Rust source files that exceed the SPECIFICATION §14.1 500-line",
+    "Baseline of Rust source files that exceed the SPECIFICATION the file-size budget in docs/dev/specification-implementation-rules.md 500-line",
     "budget. Recorded so the mandatory rule can be enforced going forward without",
     "a mass file split: files listed here are grandfathered at their recorded line",
     "count and must not grow by 10% or more; files not listed here must stay at or",
@@ -13,16 +13,12 @@
   "limit": 500,
   "growthAllowance": 0.1,
   "files": {
-    "rust/src/types/fraction_mcdc_tests.rs": 787,
-    "rust/src/types/fraction.rs": 727,
-    "rust/src/interpreter/arithmetic.rs": 721,
-    "rust/src/interpreter/interpreter_core.rs": 640,
-    "rust/src/arithmetic_operation_tests.rs": 679,
-    "rust/src/interpreter/dictionary_operation_tests.rs": 663,
-    "rust/src/interpreter/debug_diagnosis.rs": 577,
-    "rust/src/types/display.rs": 522,
-    "rust/src/interpreter/execution_loop.rs": 519,
-    "rust/src/interpreter/compiled_plan.rs": 510,
-    "rust/src/error.rs": 558
+    "rust/src/types/fraction.rs": 763,
+    "rust/src/types/fraction_mcdc_tests.rs": 730,
+    "rust/src/interpreter/dictionary_operation_tests.rs": 660,
+    "rust/src/interpreter/arithmetic.rs": 624,
+    "rust/src/interpreter/interpreter_core.rs": 568,
+    "rust/src/interpreter/debug_diagnosis.rs": 559,
+    "rust/src/arithmetic_operation_tests.rs": 511
   }
 }

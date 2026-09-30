@@ -1,11 +1,401 @@
-mod cast_chars_join;
-mod cast_conversion_tests;
-pub(crate) mod cast_conversions;
-mod cast_search_ops;
-mod cast_text_ops;
-pub(crate) mod cast_value_helpers;
+//! The text Words: `CHARS`, `JOIN`, `TRIM`, `UPPER`, `LOWER`, `TOKENIZE`,
+//! `SEARCH`, `REPLACE` — and, in `cast_conversions`, the two casts `STR` and
+//! `NUM` that cross between the String and number domains
+//! (LANG.VALUES.DISJOINT).
 
-pub use cast_chars_join::{op_chars, op_join};
+pub(crate) mod cast_conversions;
+
 pub use cast_conversions::{op_num, op_str};
-pub use cast_search_ops::{op_replace, op_search};
-pub use cast_text_ops::{op_lower, op_tokenize, op_trim, op_upper};
+
+use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::cast::cast_conversions::is_string_value;
+use crate::interpreter::value_extraction_helpers::{extract_operands, value_as_string};
+use crate::interpreter::Interpreter;
+use crate::semantic::Recoverability;
+use crate::types::Value;
+
+pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+
+    let Some(text) = val.as_text() else {
+        let got = val.domain_name();
+        interp.stack.push(val);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String, got {got}"),
+        ));
+    };
+
+    let chars: Vec<Value> = text
+        .chars()
+        .map(|c| Value::from_string(&c.to_string()))
+        .collect();
+    interp.stack.push(Value::from_vector(chars));
+    Ok(())
+}
+
+pub fn op_join(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+
+    let Some(children) = val.as_vector_view().map(|v| v.into_owned()) else {
+        let got = val.domain_name();
+        interp.stack.push(val);
+        return Err(AjisaiError::declared(
+            "nonVector",
+            format!("expected a Vector, got {got}"),
+        ));
+    };
+
+    // Only Strings: a String is a value domain of its own, not a Vector of
+    // code points (LANG.VALUES.DISJOINT), and CHARS, JOIN's inverse, yields
+    // one-character Strings. Taking an integer as a code point here was the
+    // one place a number still stood for a character, and nothing produced
+    // one to pass.
+    let mut result = String::new();
+    for (i, elem) in children.iter().enumerate() {
+        let Some(text) = elem.as_text() else {
+            let got = elem.domain_name();
+            interp.stack.push(val);
+            return Err(AjisaiError::declared(
+                "nonText",
+                format!("expected a Vector of Strings, got {got} at index {i}"),
+            ));
+        };
+        result.push_str(text);
+    }
+
+    interp.stack.push(Value::from_string(&result));
+    Ok(())
+}
+
+fn pop_string(interp: &mut Interpreter) -> Result<String> {
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    if is_string_value(&val) {
+        return Ok(value_as_string(&val).unwrap_or_default());
+    }
+    let got = val.domain_name();
+    interp.stack.push(val);
+    Err(AjisaiError::declared(
+        "nonText",
+        format!("expected a String, got {got}"),
+    ))
+}
+
+pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
+    let s = pop_string(interp)?;
+    interp.stack.push(Value::from_string(s.trim()));
+    Ok(())
+}
+
+/// `UPPER`: Unicode's default, locale-independent upper-case mapping,
+/// applied character by character — the table is Unicode's own, which no
+/// definition over `CHARS` and `JOIN` could carry, so the Word is native.
+/// `'straße' UPPER` is `'STRASSE'`.
+pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
+    let s = pop_string(interp)?;
+    let mapped: String = s.chars().flat_map(char::to_uppercase).collect();
+    interp.stack.push(Value::from_string(&mapped));
+    Ok(())
+}
+
+/// `LOWER`: the default lower-case mapping, character by character. No
+/// context- or language-specific rule (final sigma, Turkish dotless i) is
+/// applied — `str::to_lowercase` would apply the final-sigma rule — so the
+/// same text lowers the same way wherever it is run, and `CHARS LOWER` per
+/// character agrees with `LOWER` of the whole.
+pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
+    let s = pop_string(interp)?;
+    let mapped: String = s.chars().flat_map(char::to_lowercase).collect();
+    interp.stack.push(Value::from_string(&mapped));
+    Ok(())
+}
+
+pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
+    let sep_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let src_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow());
+    let src_val = match src_val {
+        Ok(v) => v,
+        Err(e) => {
+            interp.stack.push(sep_val);
+            return Err(e);
+        }
+    };
+
+    let restore = |interp: &mut Interpreter, a: Value, b: Value| {
+        interp.stack.push(a);
+        interp.stack.push(b);
+    };
+
+    if !is_string_value(&src_val) {
+        let got = src_val.domain_name();
+        restore(interp, src_val, sep_val);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String, got {got}"),
+        ));
+    }
+    if !is_string_value(&sep_val) {
+        let got = sep_val.domain_name();
+        restore(interp, src_val, sep_val);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String separator, got {got}"),
+        ));
+    }
+
+    let src = value_as_string(&src_val).unwrap_or_default();
+    let sep = value_as_string(&sep_val).unwrap_or_default();
+
+    // The empty separator splits between every character, the same reading
+    // SEARCH and REPLACE give the empty pattern (it matches everywhere). This
+    // keeps TOKENIZE total over Text × Text.
+    let parts: Vec<Value> = if sep.is_empty() {
+        src.chars()
+            .map(|c| Value::from_string(&c.to_string()))
+            .collect()
+    } else {
+        src.split(sep.as_str()).map(Value::from_string).collect()
+    };
+    interp.stack.push(Value::from_vector(parts));
+    Ok(())
+}
+
+// Text search Words: `SEARCH` and `REPLACE` (LANG.VALUES.DISJOINT).
+//
+// `INDEX-OF` and a substitution, for Text. Spelled over `CHARS` each is a
+// window compared at every position; the Word is the one pass
+// (docs/dev/vocabulary-100-work-order-2026-09.md §1).
+/// The texts the operands denote, or the `nonText` every text Word declares.
+fn texts(interp: &mut Interpreter, count: usize) -> Result<Vec<String>> {
+    let operands = extract_operands(interp, count)?;
+    if operands.iter().all(is_string_value) {
+        return Ok(operands
+            .iter()
+            .map(|operand| value_as_string(operand).unwrap_or_default())
+            .collect());
+    }
+    let got = operands
+        .iter()
+        .find(|operand| !is_string_value(operand))
+        .map_or("NIL", |operand| operand.domain_name());
+    interp.stack.extend(operands);
+    Err(AjisaiError::declared(
+        "nonText",
+        format!("expected Strings, got {got}"),
+    ))
+}
+
+/// `SEARCH ( [ text ] [ needle ] -> [ index ] )`: the character position at
+/// which `needle` first occurs, counted as `CHARS` counts; `notFound`
+/// when it does not occur. An empty needle is found at 0.
+pub fn op_search(interp: &mut Interpreter) -> Result<()> {
+    let texts = texts(interp, 2)?;
+    let (haystack, needle) = (&texts[0], &texts[1]);
+    match haystack.find(needle.as_str()) {
+        Some(byte_offset) => {
+            let position = haystack[..byte_offset].chars().count();
+            interp.stack.push(Value::from_int(position as i64));
+        }
+        None => interp.stack.push(Value::nil_with_reason(
+            NilReason::NotFound,
+            Recoverability::Recoverable,
+        )),
+    }
+    Ok(())
+}
+
+/// `REPLACE ( [ text ] [ from ] [ to ] -> [ text' ] )`: every occurrence of
+/// `from` replaced by `to`, found left to right without overlap. An empty
+/// `from` matches nothing, so the text comes back unchanged rather than
+/// growing at every position.
+pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
+    let texts = texts(interp, 3)?;
+    let (text, from, to) = (&texts[0], &texts[1], &texts[2]);
+    let replaced = if from.is_empty() {
+        text.clone()
+    } else {
+        text.replace(from.as_str(), to.as_str())
+    };
+    interp.stack.push(Value::from_string(&replaced));
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpreter::cast::cast_conversions::is_string_value;
+    use crate::interpreter::value_extraction_helpers::value_as_string;
+
+    #[tokio::test]
+    async fn test_chars_basic() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("'hello' CHARS JOIN").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_rejects_a_vector() {
+        // `[ 42 ]` is a Vector of one number. It used to satisfy CHARS because
+        // a codepoint vector *was* a String; CHARS' contract registers
+        // `nonText`, and now that is what happens.
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 42 ] CHARS").await;
+        assert!(result.is_err(), "CHARS must reject a Vector");
+    }
+
+    #[tokio::test]
+    async fn test_chars_yields_one_character_strings() {
+        let mut interp = Interpreter::new();
+        interp.execute("'ab' CHARS").await.unwrap();
+        let val = interp.stack.last().expect("a result");
+        let items = val.as_vector_view().expect("a vector");
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].as_text(), Some("a"));
+        assert_eq!(items[1].as_text(), Some("b"));
+    }
+
+    #[tokio::test]
+    async fn test_join_basic() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("[ 'h' 'e' 'l' 'l' 'o' ] JOIN")
+            .await
+            .unwrap();
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_join_of_the_empty_vector_is_the_empty_string() {
+        // Joining nothing is the identity of concatenation. Both endpoints of
+        // this used to be inexpressible, so it had to be an error.
+        let mut interp = Interpreter::new();
+        interp.execute("[ ] JOIN").await.unwrap();
+        assert_eq!(interp.stack.last().and_then(|v| v.as_text()), Some(""));
+    }
+
+    #[tokio::test]
+    async fn test_chars_join_round_trips_the_empty_string() {
+        let mut interp = Interpreter::new();
+        interp.execute("'' CHARS JOIN").await.unwrap();
+        assert_eq!(interp.stack.last().and_then(|v| v.as_text()), Some(""));
+    }
+
+    #[tokio::test]
+    async fn test_chars_join_roundtrip() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("'hello' CHARS JOIN").await.unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_reverse_join() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("'hello' CHARS REVERSE JOIN").await.unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "olleh");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_pushes_constant() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("NIL").await;
+        assert!(result.is_ok());
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            assert!(val.is_nil());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_multiple() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("NIL NIL NIL").await;
+        assert!(result.is_ok());
+        assert_eq!(interp.stack.len(), 3);
+
+        for val in interp.stack.iter() {
+            assert!(val.is_nil());
+        }
+    }
+
+    fn top_str(interp: &Interpreter) -> String {
+        let v = interp.stack.last().unwrap();
+        assert!(is_string_value(v));
+        value_as_string(v).unwrap()
+    }
+
+    #[tokio::test]
+    async fn trim_both() {
+        let mut interp = Interpreter::new();
+        interp.execute("'  hello  ' TRIM").await.unwrap();
+        assert_eq!(top_str(&interp), "hello");
+    }
+
+    #[tokio::test]
+    async fn tokenize_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("'a,b,c' ',' TOKENIZE").await.unwrap();
+        let v = interp.stack.last().unwrap();
+        let parts = v.as_vector_view().unwrap();
+        assert_eq!(parts.len(), 3);
+        assert_eq!(value_as_string(&parts[0]).unwrap(), "a");
+        assert_eq!(value_as_string(&parts[1]).unwrap(), "b");
+        assert_eq!(value_as_string(&parts[2]).unwrap(), "c");
+    }
+
+    #[tokio::test]
+    async fn tokenize_no_match() {
+        let mut interp = Interpreter::new();
+        interp.execute("'abc' ',' TOKENIZE").await.unwrap();
+        let v = interp.stack.last().unwrap();
+        let parts = v.as_vector_view().unwrap();
+        assert_eq!(parts.len(), 1);
+        assert_eq!(value_as_string(&parts[0]).unwrap(), "abc");
+    }
+
+    #[tokio::test]
+    async fn tokenize_empty_separator_splits_characters() {
+        let mut interp = Interpreter::new();
+        interp.execute("'abc' '' TOKENIZE").await.unwrap();
+        let v = interp.stack.last().unwrap();
+        let parts = v.as_vector_view().unwrap();
+        let got: Vec<String> = parts.iter().map(|p| value_as_string(p).unwrap()).collect();
+        assert_eq!(got, vec!["a", "b", "c"]);
+    }
+
+    #[tokio::test]
+    async fn trim_passes_an_absent_operand_through() {
+        let mut interp = Interpreter::new();
+        interp.execute("0 0 DIV TRIM NIL-REASON").await.unwrap();
+        let reason = interp
+            .stack
+            .last()
+            .and_then(|v| v.as_text().map(str::to_string));
+        assert_eq!(reason.as_deref(), Some("divisionByZero"));
+    }
+}

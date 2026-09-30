@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::record_lift;
-use crate::interpreter::value_extraction_helpers::{create_number_value, nil_passthrough_unary};
+use crate::interpreter::record_ops;
+use crate::interpreter::value_extraction_helpers::nil_passthrough_unary;
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -41,7 +41,7 @@ where
     if val.is_scalar() {
         if let Some(f) = val.as_scalar() {
             let result: Fraction = op(f);
-            interp.stack.push(create_number_value(result));
+            interp.stack.push(Value::from_fraction(result));
             return Ok(());
         }
     }
@@ -59,7 +59,7 @@ where
     if val.is_vector() && holds_nil_lane(&val) {
         let scalar_op = |lane: &Value| -> Result<Value> {
             if let Some(f) = lane.as_scalar() {
-                return Ok(create_number_value(op(f)));
+                return Ok(Value::from_fraction(op(f)));
             }
             if let ValueData::ExactScalar(er) = &lane.data {
                 return Ok(Value::from_exact_real(exact_op(er)));
@@ -113,7 +113,7 @@ fn holds_nil_lane(value: &Value) -> bool {
 }
 
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_unary(interp, &op_floor)? {
+    if record_ops::lift_unary(interp, &op_floor)? {
         return Ok(());
     }
     apply_unary_math(
@@ -124,7 +124,7 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_unary(interp, &op_round)? {
+    if record_ops::lift_unary(interp, &op_round)? {
         return Ok(());
     }
     apply_unary_math(

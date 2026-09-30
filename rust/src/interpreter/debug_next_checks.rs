@@ -10,9 +10,8 @@
 //! repair-rate scorer counts, and it must survive a reworded sentence or a
 //! newly translated locale untouched.
 
-use super::debug_declared_checks::declared_checks;
+use super::debug_declared_checks::{declared_checks, resource_limit_checks};
 use super::debug_diagnosis::{CauseClass, DebugCheck, LocalizedText};
-use super::debug_limit_checks::resource_limit_checks;
 use crate::error::{ErrorCategory, NilReason};
 
 /// Whether an unresolved name is a double-quoted string someone wrote with the

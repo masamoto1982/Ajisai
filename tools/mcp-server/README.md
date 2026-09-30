@@ -8,8 +8,9 @@ Ajisai promises **exactness in its supported numeric domain**, rather than
 unqualified “no rounding errors”. Operations such as explicit rounding and
 functions outside that domain retain their documented semantics.
 
-Development status and next-agent instructions are tracked in
-`docs/dev/mcp-readiness.md` and `docs/dev/mcp-claude-code-handoff.md`.
+This README is the server's own record of what it does and how it is
+verified; the readiness tracker and the hand-off memo that once accompanied
+it in `docs/dev/` were retired when their exit criteria were met.
 Host-by-host resource ceilings are compared in `docs/dev/mcp-host-profiles.md`.
 
 ## Install and connect
@@ -396,10 +397,13 @@ run into a committed claim that the model is perfect, which is the one thing
 this corpus is least entitled to say. A model trace is scored and reported,
 never asserted.
 
-**Model baselines have been captured** and are committed under `eval/traces/`;
-`claude-opus-5-full-corpus.json` and `claude-opus-5-repairs-full-corpus.json`
-are the current full-corpus pair, and `docs/dev/` records what each capture
-found. `npm run eval:capture` drives a real model over the server's tools — one
+**Model baselines have been captured** and are committed under `eval/traces/`:
+`claude-opus-5-full-corpus.json` and `claude-opus-5-repairs-full-corpus.json`,
+the full-corpus pair. The intermediate captures taken while the tool
+descriptions were being tuned (baseline, after-syntax-rules, after-negatives,
+after-entry-surface, and their repair counterparts) were superseded by that
+pair and removed; git history holds them. `npm run eval:capture` drives a
+real model over the server's tools — one
 call per corpus case per language, `tool_choice: auto` so the irrelevant-intent
 cases can correctly produce no call — and writes a
 `model` trace under `eval/traces/`, kept apart from the committed fixtures so no
