@@ -1,4 +1,3 @@
-
 import {
     applyInterpreterSnapshot,
     ExecutionAbortedError,
@@ -10,10 +9,120 @@ import type {
     AjisaiInterpreter,
     ExecuteResult,
     ProtocolDiagnosis,
-    UserWord
+    UserWord,
+    Value
 } from '../wasm-interpreter-types';
-import { renderDiagnosisReport } from './diagnosis-report';
-import { toError } from './to-error';
+import type { ExecutionSurfaceChanges } from './gui-layout-state';
+
+/** What was thrown, as an Error: a thrown non-Error is wrapped, never cast. */
+export const toError = (thrown: unknown): Error =>
+    thrown instanceof Error ? thrown : new Error(String(thrown));
+
+// A Record crosses the protocol as two aligned arrays of nodes
+// (LANG.RECORDS.STRUCTURE); either may be missing or malformed on an untrusted
+// payload, and then it reads as empty.
+export const readRecordParts = (value: unknown): { keys: Value[]; values: Value[] } => {
+    const record = value as { keys?: Value[]; values?: Value[] } | null;
+    return {
+        keys: Array.isArray(record?.keys) ? record.keys : [],
+        values: Array.isArray(record?.values) ? record.values : []
+    };
+};
+
+// ── Diagnosis report ────────────────────────────────────────────────────────
+// The one place that knows what a diagnosis looks like when it is read.
+//
+// The `[DIAGNOSIS]` heading, the three numbered questions and the `next:`
+// lines are a presentation contract: a reader learns the shape once and then
+// reads every refusal the same way. The shape is written once, here, so
+// renaming `Q3 why:` or adding a fourth question moves every diagnosis at
+// once — including the wall-clock timeout, the one refusal the interpreter
+// never gets to explain (the playground terminates the worker where it stands,
+// so no diagnosis arrives with the result) and the one a reader is least
+// likely to have seen before.
+//
+// So the timeout builds a `ProtocolDiagnosis` like any other and renders
+// through here. What is genuinely its own — a ceiling with no observed value,
+// enforced by the host rather than the language — arrives as `extraLines`
+// rather than as a second renderer.
+
+const evidenceValue = (
+    entries: readonly string[] | undefined,
+    key: string
+): string | null => {
+    const hit = entries?.find((entry) => entry.startsWith(`${key}=`));
+    return hit ? hit.slice(key.length + 1) : null;
+};
+
+export interface DiagnosisReportContext {
+    /**
+     * Stack depth at the failing step, from the error-flow event that carried
+     * the diagnosis. Absent when the diagnosis did not come from a step (the
+     * host-guard case).
+     */
+    readonly stackLenBefore?: number;
+    /**
+     * Lines to print where a protocol `resourceLimit` would go, for a ceiling
+     * the protocol cannot describe.
+     */
+    readonly extraLines?: readonly string[];
+}
+
+export const renderDiagnosisReport = (
+    diagnosis: ProtocolDiagnosis,
+    context: DiagnosisReportContext = {}
+): string => {
+    const where = diagnosis.where.word
+        ? `${diagnosis.where.word} (${diagnosis.where.kind})`
+        : diagnosis.where.kind;
+    const depth =
+        typeof context.stackLenBefore === 'number'
+            ? `, stack depth ${context.stackLenBefore}`
+            : '';
+    // Where in the source the run was when it failed. The host records it
+    // as evidence — the same `key=value` channel `stackLenBefore` uses.
+    const sourceLine = evidenceValue(diagnosis.evidence, 'sourceLine');
+    const sourceColumn = evidenceValue(diagnosis.evidence, 'sourceColumn');
+    const at = sourceLine
+        ? ` at line ${sourceLine}${sourceColumn ? `, column ${sourceColumn}` : ''}`
+        : '';
+    // The Words the failure happened *inside*, innermost first. A block and
+    // a Word body are each their own token stream with no source of their
+    // own, so the position above is the top-level token that reached the
+    // failure; this says which construct the failing word was written in.
+    const insideWords = evidenceValue(diagnosis.evidence, 'insideWords');
+    const inside = insideWords ? `, inside ${insideWords.split(',').join(', ')}` : '';
+    // The known Words closest to a name that did not resolve. Telling a
+    // reader to check the spelling without saying what it might have been
+    // is the one hint nobody can act on.
+    const candidates = diagnosis.candidates?.length
+        ? [`did you mean: ${diagnosis.candidates.join(', ')}`]
+        : [];
+    // Which declared ceiling fired, so "too big" says what was too big.
+    const limit = diagnosis.resourceLimit
+        ? [
+              `limit ${diagnosis.resourceLimit.resource}: ${
+                  diagnosis.resourceLimit.observed ?? '?'
+              } against ${diagnosis.resourceLimit.limit}`
+          ]
+        : [];
+    return [
+        `[DIAGNOSIS] ${diagnosis.summary}`,
+        `Q1 when: ${diagnosis.when}`,
+        `Q2 where: ${where}${inside}${at}${depth}`,
+        `Q3 why: ${diagnosis.why}`,
+        ...candidates,
+        ...limit,
+        ...(context.extraLines ?? []),
+        // One locale per line. Each check carries both; the playground's own
+        // text is English (`<html lang="en">`), so English is the side that
+        // matches its surroundings, and the `ja` half stays in the protocol
+        // for a host that renders in Japanese.
+        ...diagnosis.nextChecks.map((check) => `next: ${check.title.en} - ${check.detail.en}`)
+    ].join('\n');
+};
+
+// ── Snapshot, sync and the run's own explanations ───────────────────────────
 
 // Every User word with its definition and description, looked up by name.
 // `restore_user_words` skips a definition-less word, so a lookup that missed
@@ -171,3 +280,112 @@ export const resolveExecutionException = (
         showInfo(describeTimeoutDiagnosis(error.limitMs), true);
     }
 };
+
+// ── What a run changed ──────────────────────────────────────────────────────
+
+const toJson = (value: unknown): string => JSON.stringify(value ?? null);
+
+// Whether the stack changed, decided without building a string of it.
+//
+// A stack is not small by construction: `1 200000 RANGE` is a legal program
+// whose one value holds two hundred thousand elements, and serializing it
+// twice on every run would cost the better part of a second of frozen main
+// thread for an answer that a length mismatch settles immediately. A
+// structural walk with an early exit allocates nothing and stops at the first
+// difference — which for a run that produced anything is usually the first
+// slot it looks at.
+const checkValuesEqual = (left: unknown, right: unknown): boolean => {
+    if (left === right) return true;
+    // null and undefined are the same absence here (as they are in JSON), so
+    // the pair is equal rather than a change.
+    if (left === null || left === undefined) return right === null || right === undefined;
+    if (right === null || right === undefined) return false;
+    if (typeof left !== 'object' || typeof right !== 'object') return false;
+
+    if (Array.isArray(left) || Array.isArray(right)) {
+        if (!Array.isArray(left) || !Array.isArray(right)) return false;
+        if (left.length !== right.length) return false;
+        return left.every((element, index) => checkValuesEqual(element, right[index]));
+    }
+
+    const leftKeys = Object.keys(left as object);
+    const rightKeys = Object.keys(right as object);
+    if (leftKeys.length !== rightKeys.length) return false;
+    return leftKeys.every(key =>
+        Object.prototype.hasOwnProperty.call(right, key)
+        && checkValuesEqual(
+            (left as Record<string, unknown>)[key],
+            (right as Record<string, unknown>)[key]
+        ));
+};
+
+// Order-insensitive identity of the user dictionary. The pre-execution
+// snapshot and the post-execution read-back can enumerate words in different
+// orders (a synced interpreter rebuilds its dictionaries from scratch), so the
+// set is sorted by name before comparison — otherwise a pure stack op like
+// `2 3 ADD` would look like a dictionary change whenever any user word exists,
+// and wrongly pull the right column to the Words sheet.
+const normalizeUserWords = (words: readonly UserWord[]): string =>
+    toJson(
+        [...words]
+            .map(word => ({ name: word.name, definition: word.definition ?? null }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+    );
+
+// A view of the surfaces an execution can touch, read from one interpreter
+// instance so before/after are directly comparable.
+export interface ExecutionStateView {
+    readonly stack: Value[];
+    readonly userWords: UserWord[];
+}
+
+export const detectExecutionSurfaceChanges = (
+    before: ExecutionStateView,
+    after: ExecutionStateView,
+    result: ExecuteResult
+): ExecutionSurfaceChanges => {
+    const userWordsChanged = normalizeUserWords(before.userWords) !== normalizeUserWords(after.userWords);
+
+    // Errors and diagnostics render into the Output surface, so a failed run
+    // changes Output even when the program emitted no text of its own.
+    const hasError = isFailure(result);
+
+    // Any emission changes Output, an empty or whitespace-only one included:
+    // `'' PRINT` writes a line, so the surface it wrote to is shown
+    // (spec/gui-semantics.md, "a Run shows each surface it changed").
+    return {
+        outputChanged: hasError || Boolean(result.output),
+        stackChanged: !checkValuesEqual(before.stack, after.stack),
+        dictionaryChanged: userWordsChanged
+    };
+};
+
+// Whether a value is a NIL or holds one in some lane.
+const checkHoldsNil = (value: Value | undefined): boolean => {
+    if (!value) return false;
+    if (value.type === 'nil') return true;
+    if (value.type === 'vector' && Array.isArray(value.value)) {
+        return (value.value as Value[]).some(checkHoldsNil);
+    }
+    if (value.type === 'record') {
+        const { keys, values } = readRecordParts(value.value);
+        return [...keys, ...values].some(checkHoldsNil);
+    }
+    return false;
+};
+
+// Whether the run left a NIL of its own on the stack — the only NIL a "Why
+// NIL" can be about.
+//
+// The trace names a Word for every NIL left on top of the stack, including one
+// that was already there: on a stack holding an earlier run's NIL,
+// `[ 2 MUL ] 'G' DEF` reports that NIL against DEF. A slot the run did not
+// change still holds what the run was handed, so only a new or changed slot
+// holding a NIL counts.
+export const checkRunLeftOwnNil = (
+    before: ExecutionStateView,
+    after: ExecutionStateView
+): boolean =>
+    after.stack.some((value, index) =>
+        checkHoldsNil(value)
+        && (index >= before.stack.length || !checkValuesEqual(before.stack[index], value)));

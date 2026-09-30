@@ -1,15 +1,8 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import type { Value, ExecuteResult, ExactTerm } from '../wasm-interpreter-types';
-import { valueToLatex } from './value-latex';
-import { isFailure } from './interpreter-execution-utils';
-import { toError } from './to-error';
-import {
-    createRenderBudget,
-    formatElision,
-    planCollectionRender,
-    type RenderBudget
-} from './stack-render-budget';
+import type { Value, ExecuteResult, ExactTerm, Fraction } from '../wasm-interpreter-types';
+import { isFailure, readRecordParts, toError } from './interpreter-execution-utils';
+import { createEmptyWordsElement } from './vocabulary-state-controller';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -33,6 +26,78 @@ export interface Display {
     readonly renderStack: (stack: Value[]) => void;
     readonly extractState: () => DisplayState;
 }
+
+// A signed decimal string split into its sign and magnitude, so a `-` is
+// written once, in front, wherever a number is typeset from its parts.
+const splitSign = (numerator: string): { readonly negative: boolean; readonly magnitude: string } => {
+    const negative = numerator.startsWith('-');
+    return { negative, magnitude: negative ? numerator.slice(1) : numerator };
+};
+
+// ── Render budget ───────────────────────────────────────────────────────────
+// How much of a stack value the Stack area draws.
+//
+// The interpreter's materialization ceiling bounds what a generative Word may
+// build, not what the host can draw. `1 500000 RANGE` sits well inside that
+// ceiling and is an ordinary, correct program — drawn one DOM node per
+// element, it would lock the browser tab for tens of seconds with no way to
+// abort, clear the editor, or read the result. A safety mechanism that stops
+// the interpreter and then hands the host an unbounded drawing job has only
+// moved where the program hangs.
+//
+// So the Stack area draws a bounded prefix of any collection and says, in
+// place, how many elements it left out. This is presentation, in the same class
+// as the execution step limit: a host control, not a language constraint. The
+// value on the stack is whole and unmodified, every Word still sees all of it,
+// and `LENGTH` remains the way to ask how long it really is.
+
+/** Elements drawn from any one collection before the rest is summarized. */
+export const MAX_RENDERED_ELEMENTS_PER_COLLECTION = 100;
+
+/**
+ * Elements drawn across the whole Stack area in one render. A per-collection
+ * cap alone still admits a stack of ten thousand short vectors, so the budget
+ * is global to the render and every collection draws from it.
+ */
+export const MAX_RENDERED_ELEMENTS_PER_STACK = 2_000;
+
+export interface RenderBudget {
+    remaining: number;
+}
+
+export const createRenderBudget = (
+    total: number = MAX_RENDERED_ELEMENTS_PER_STACK
+): RenderBudget => ({ remaining: Math.max(0, total) });
+
+export interface CollectionRenderPlan {
+    /** Leading elements to draw. */
+    readonly shown: number;
+    /** Elements summarized instead of drawn; 0 means the collection is complete. */
+    readonly elided: number;
+}
+
+/**
+ * Decide how much of a `length`-element collection to draw, and charge the
+ * drawn part to the shared budget. A nested collection costs one element in its
+ * parent and then draws its own children from the same budget, so the total
+ * node count of one render stays bounded whatever the nesting looks like.
+ */
+export const planCollectionRender = (length: number, budget: RenderBudget): CollectionRenderPlan => {
+    const safeLength = Number.isFinite(length) && length > 0 ? Math.floor(length) : 0;
+    const shown = Math.min(safeLength, MAX_RENDERED_ELEMENTS_PER_COLLECTION, budget.remaining);
+    budget.remaining -= shown;
+    return { shown, elided: safeLength - shown };
+};
+
+/**
+ * The marker that stands in for the undrawn tail. It is deliberately not
+ * Ajisai-shaped — a reader must never mistake it for part of the value — and it
+ * states the exact count, so the display never implies the collection ends
+ * where the drawing does.
+ */
+export const formatElision = (elided: number): string => `… ${elided} more`;
+
+// ── Canonical text rendering ────────────────────────────────────────────────
 
 // Coloured by nesting depth in CSS (`--bracket-depth-N`).
 const createBracketSpan = (bracket: string, depth: number): HTMLSpanElement => {
@@ -58,6 +123,12 @@ const formatNumber = (value: unknown): string => {
     return `${fraction.numerator}/${fraction.denominator}`;
 };
 
+// One element of a collection's literal, one level deeper; an element the
+// renderer cannot read is drawn as `?` rather than taking the literal down.
+const formatElementAt = (item: Value, depth: number): string => {
+    try { return formatValue(item, depth); } catch { return '?'; }
+};
+
 // A Vector renders as source that rebuilds it — a bracket literal, whatever
 // it holds — matching the engine's own renderer
 // (`rust/src/types/display_source.rs`). A nested Record is one element,
@@ -68,55 +139,11 @@ const formatNumber = (value: unknown): string => {
 // rather than an empty Vector.
 const formatVector = (value: unknown, depth: number): string => {
     if (!Array.isArray(value) || value.length === 0) return '[ ]';
-    const formatSingleElement = (v: Value): string => {
-        try { return formatValue(v, depth + 1); } catch { return '?'; }
-    };
-    return `[ ${value.map(formatSingleElement).join(' ')} ]`;
-};
-
-// Math view (docs/dev/gui-current-design-memory.md): an alternate KaTeX
-// rendering of stack values, derived from the structured protocol form.
-// Presentation only — the canonical display strings stay untouched and
-// remain the conformance observation; the toggle swaps the view, never
-// the value. Output text is never scanned for delimiters.
-const MATH_VIEW_STORAGE_KEY = 'ajisai-stack-math-view';
-
-// The canonical protocol strings are the standard rendering; Math view is
-// an opt-in alternate so Ajisai's observable surface never depends on
-// KaTeX (portability: the GUI stays faithful without it).
-const readMathViewPreference = (): boolean => {
-    try {
-        return globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY) === '1';
-    } catch {
-        return false;
-    }
-};
-
-const writeMathViewPreference = (enabled: boolean): void => {
-    try {
-        globalThis.localStorage?.setItem(MATH_VIEW_STORAGE_KEY, enabled ? '1' : '0');
-    } catch {
-        // Preference is a convenience; rendering works without persistence.
-    }
-};
-
-const renderMathValueNode = (item: Value): HTMLElement | null => {
-    const tex = valueToLatex(item);
-    if (tex === null) return null;
-    const node = document.createElement('span');
-    node.className = 'stack-node stack-node-math';
-    // Tag the top-level node so the stack-top fill's selector
-    // (`.stack-item:last-child .stack-node[data-depth="1"]`) matches in LaTeX
-    // view exactly as it does for the canonical rendering.
-    node.dataset.depth = '1';
-    // Trusted markup: KaTeX output for TeX generated from the structured
-    // value by valueToLatex, never from user-supplied text.
-    node.innerHTML = katex.renderToString(tex, { throwOnError: false });
-    return node;
+    return `[ ${value.map((v: Value) => formatElementAt(v, depth + 1)).join(' ')} ]`;
 };
 
 // The undrawn tail of a collection, stated as a count rather than drawn. See
-// stack-render-budget.ts for why the Stack area is bounded at all.
+// the render budget above for why the Stack area is bounded at all.
 const createElisionSpan = (elided: number): HTMLSpanElement => {
     const span = document.createElement('span');
     span.className = 'stack-elision';
@@ -134,8 +161,7 @@ const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string |
     if (!terms || terms.length === 0) return null;
     let out = '';
     terms.forEach((term, index) => {
-        const negative = term.numerator.startsWith('-');
-        const magnitude = negative ? term.numerator.slice(1) : term.numerator;
+        const { negative, magnitude } = splitSign(term.numerator);
         if (index === 0) {
             if (negative) out += '-';
         } else {
@@ -195,9 +221,7 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     // interleaved, a missing value padded with NIL (see `formatRecord`). Each
     // pair counts as two children of the budget.
     if (item.type === 'record') {
-        const record = item.value as { keys?: Value[]; values?: Value[] } | null;
-        const keys = Array.isArray(record?.keys) ? record.keys : [];
-        const values = Array.isArray(record?.values) ? record.values : [];
+        const { keys, values } = readRecordParts(item.value);
         const pairs = keys.flatMap((key, index) => [key, values[index] ?? NIL]);
         node.classList.add('stack-node-record');
         return renderCollectionNode(node, '{', '}', pairs, depth, budget);
@@ -286,19 +310,278 @@ export const formatValue = (item: Value, depth: number): string => {
 // having been malformed, not a Record with fewer values than keys — and
 // neither `RECORD` nor the literal admits a length mismatch.
 const formatRecord = (value: unknown, depth: number): string => {
-    const record = value as { keys?: Value[]; values?: Value[] } | null;
-    const keys = Array.isArray(record?.keys) ? record!.keys : [];
-    const values = Array.isArray(record?.values) ? record!.values : [];
+    const { keys, values } = readRecordParts(value);
     if (keys.length === 0) return '{ }';
-    const formatSingleElement = (v: Value): string => {
-        try { return formatValue(v, depth + 1); } catch { return '?'; }
-    };
     const pairs: string[] = keys.map((key, index) => {
         const paired = values[index] ?? NIL;
-        return `${formatSingleElement(key)} ${formatSingleElement(paired)}`;
+        return `${formatElementAt(key, depth + 1)} ${formatElementAt(paired, depth + 1)}`;
     });
     return `{ ${pairs.join(' ')} }`;
 };
+
+// ── Math view (LaTeX) ───────────────────────────────────────────────────────
+// Derives a LaTeX reading of a stack value from its structured protocol form
+// (never by parsing display strings).
+//
+// Presentation only. The canonical display strings (`3/1`, `[ 1/1 2/1 ]`)
+// remain the observable semantics the conformance suite checks; the LaTeX
+// produced here is an alternate GUI rendering of the same structured `Value`.
+// Values without a faithful math reading return `null`, and the caller falls
+// back to the canonical text rendering.
+
+// Beyond this many numeric lanes a matrix stops being readable and the
+// bracket text form is the better surface.
+const MAX_MATH_LANES = 64;
+
+const INTEGER_PATTERN = /^-?\d+$/;
+
+// Digit count at which a numerator or denominator stops being readable as
+// a digit string and the math view switches to scientific notation.
+const SCIENTIFIC_DIGIT_THRESHOLD = 10;
+const MANTISSA_DIGITS = 6;
+
+// Stricter than `checkFractionObject` above: the math view typesets only a
+// rational whose parts are integers and whose denominator is not zero, and
+// falls back to the canonical text for anything else.
+const checkFractionShape = (value: unknown): Fraction | null => {
+    if (!value || typeof value !== 'object') return null;
+    const candidate = value as { numerator?: unknown; denominator?: unknown };
+    const numerator = String(candidate.numerator ?? '');
+    const denominator = String(candidate.denominator ?? '');
+    if (!INTEGER_PATTERN.test(numerator) || !INTEGER_PATTERN.test(denominator)) return null;
+    // A zero denominator is not a faithful rational (it is NIL occupancy /
+    // malformed state, never a canonical number). Reject it here so the math
+    // view falls back to the canonical text rendering instead of dividing by
+    // zero inside `scientificLatex`. Matches INTEGER_PATTERN-allowed forms like
+    // "0", "-0" and "0000000000".
+    if (/^-?0+$/.test(denominator)) return null;
+    return { numerator, denominator };
+};
+
+// Scientific reading of a huge ratio: mantissa times a power of ten,
+// computed exactly with BigInt long division and prefixed with \approx
+// whenever any precision is dropped — the math view never presents a
+// truncated value as exact.
+const scientificLatex = (numeratorStr: string, denominatorStr: string): string => {
+    let numerator = BigInt(numeratorStr);
+    let denominator = BigInt(denominatorStr);
+    // Defensive: a zero denominator would divide by zero below. Internal callers
+    // are pre-filtered by `checkFractionShape`, but `fractionToLatex` is exported
+    // and may be called directly, so keep this primitive total.
+    if (denominator === 0n) return '\\mathrm{NIL}';
+    if (denominator < 0n) {
+        denominator = -denominator;
+        numerator = -numerator;
+    }
+    const negative = numerator < 0n;
+    if (negative) numerator = -numerator;
+    if (numerator === 0n) return '0';
+
+    // Scale so the quotient carries one digit beyond the mantissa, then
+    // read mantissa and exponent off the quotient's decimal digits.
+    const digitGap = String(numerator).length - String(denominator).length;
+    const scale = MANTISSA_DIGITS + 1 - digitGap;
+    const scaled = scale >= 0
+        ? (numerator * 10n ** BigInt(scale)) / denominator
+        : numerator / (denominator * 10n ** BigInt(-scale));
+    const dividesExactly = scale >= 0
+        ? (numerator * 10n ** BigInt(scale)) % denominator === 0n
+        : numerator % (denominator * 10n ** BigInt(-scale)) === 0n;
+
+    const digits = String(scaled);
+    const exponent = digits.length - 1 - scale;
+    const kept = digits.slice(0, MANTISSA_DIGITS);
+    const dropped = digits.slice(MANTISSA_DIGITS);
+    const exact = dividesExactly && /^0*$/.test(dropped);
+
+    let significand = kept;
+    let exponentOut = exponent;
+    if (!exact && dropped.length > 0 && dropped[0]! >= '5') {
+        // Round half-up on the first dropped digit; a carry out of the top
+        // digit (9.99999... -> 10) bumps the exponent instead.
+        const rounded = String(BigInt(kept) + 1n);
+        if (rounded.length > kept.length) {
+            significand = '1';
+            exponentOut = exponent + 1;
+        } else {
+            significand = rounded;
+        }
+    }
+    significand = significand.replace(/0+$/, '') || '0';
+
+    // Huge components do not imply a huge value (a best rational
+    // approximation of sqrt(2) has ten-digit components and the value 1.41…),
+    // so a human-scale exponent renders as a plain decimal and only a
+    // genuinely large or tiny value gets the power of ten.
+    const sign = negative ? '-' : '';
+    let body: string;
+    if (exponentOut >= 0 && exponentOut <= 5) {
+        const integerLength = exponentOut + 1;
+        const padded = significand.padEnd(integerLength, '0');
+        const integerPart = padded.slice(0, integerLength);
+        const fractionalPart = padded.slice(integerLength);
+        body = `${sign}${integerPart}${fractionalPart ? `.${fractionalPart}` : ''}`;
+    } else if (exponentOut < 0 && exponentOut >= -4) {
+        body = `${sign}0.${'0'.repeat(-exponentOut - 1)}${significand}`;
+    } else {
+        const mantissa = significand.length > 1
+            ? `${significand[0]}.${significand.slice(1)}`
+            : significand;
+        body = mantissa === '1'
+            ? `${sign}10^{${exponentOut}}`
+            : `${sign}${mantissa} \\times 10^{${exponentOut}}`;
+    }
+    return exact ? body : `\\approx ${body}`;
+};
+
+const checkHugeDigits = (frac: Fraction): boolean => {
+    const numeratorDigits = frac.numerator.replace('-', '').length;
+    const denominatorDigits = frac.denominator.replace('-', '').length;
+    return numeratorDigits >= SCIENTIFIC_DIGIT_THRESHOLD
+        || denominatorDigits >= SCIENTIFIC_DIGIT_THRESHOLD;
+};
+
+// `3/1` reads as the integer 3; `-3/4` keeps its sign outside the bar.
+// Huge components switch to scientific notation so the rendering stays
+// inside the Stack area instead of running off its right edge.
+export const fractionToLatex = (frac: Fraction): string => {
+    if (checkHugeDigits(frac)) return scientificLatex(frac.numerator, frac.denominator);
+    if (frac.denominator === '1') return frac.numerator;
+    const { negative, magnitude } = splitSign(frac.numerator);
+    const body = `\\frac{${magnitude}}{${frac.denominator}}`;
+    return negative ? `-${body}` : body;
+};
+
+const rowsToMatrixLatex = (rows: string[][]): string => {
+    const body = rows.map(row => row.join(' & ')).join(' \\\\ ');
+    return `\\begin{bmatrix} ${body} \\end{bmatrix}`;
+};
+
+const numberElementToLatex = (item: Value): string | null => {
+    if (item.type !== 'number') return null;
+    const frac = checkFractionShape(item.value);
+    return frac === null ? null : fractionToLatex(frac);
+};
+
+const vectorToLatex = (elements: Value[]): string | null => {
+    if (elements.length === 0 || elements.length > MAX_MATH_LANES) return null;
+
+    // Homogeneous numeric vector: a one-row matrix.
+    const scalarRow = elements.map(numberElementToLatex);
+    if (scalarRow.every((tex): tex is string => tex !== null)) {
+        return rowsToMatrixLatex([scalarRow]);
+    }
+
+    // Rectangular vector-of-numeric-vectors: a rank-2 matrix.
+    const rows: string[][] = [];
+    let width: number | null = null;
+    for (const element of elements) {
+        if (element.type !== 'vector' || !Array.isArray(element.value)) return null;
+        const row = (element.value as Value[]).map(numberElementToLatex);
+        if (!row.every((tex): tex is string => tex !== null)) return null;
+        if (width === null) width = row.length;
+        if (row.length !== width || width === 0) return null;
+        rows.push(row);
+    }
+    if (rows.reduce((total, row) => total + row.length, 0) > MAX_MATH_LANES) return null;
+    return rowsToMatrixLatex(rows);
+};
+
+// Σ c·√r as typeset mathematics. A coefficient of one is left implicit, the
+// rational term (radicand 1) is drawn as an ordinary fraction, and a negative
+// term joins with a minus rather than `+ -`.
+const normalFormToLatex = (
+    terms: ReadonlyArray<ExactTerm> | undefined
+): string | null => {
+    if (!terms || terms.length === 0) return null;
+    let out = '';
+    for (const term of terms) {
+        const { negative, magnitude } = splitSign(term.numerator);
+        const root = term.radicand === '1' ? '' : `\\sqrt{${term.radicand}}`;
+        const unit = magnitude === '1' && term.denominator === '1' && root !== '';
+        const coefficient = unit
+            ? ''
+            : fractionToLatex({ numerator: magnitude, denominator: term.denominator });
+        if (out === '') {
+            out = `${negative ? '-' : ''}${coefficient}${root}`;
+        } else {
+            out += ` ${negative ? '-' : '+'} ${coefficient}${root}`;
+        }
+    }
+    return out;
+};
+
+// The LaTeX reading of a stack value, or `null` when the canonical text
+// rendering is the only faithful surface.
+export const valueToLatex = (item: Value): string | null => {
+    if (!item || !item.type) return null;
+
+    switch (item.type) {
+        case 'number': {
+            const semantics = item.semantics;
+            // An algebraic irrational carries its exact normal form, and that
+            // is what mathematics notation is for: `\sqrt{3}` says the whole
+            // value, where the approximation below can only gesture at it.
+            const exact = normalFormToLatex(semantics?.exactTerms);
+            if (exact !== null) return exact;
+            const frac = checkFractionShape(item.value);
+            if (frac === null) return null;
+            const tex = fractionToLatex(frac);
+            // Best rational approximation of an exact irrational under a
+            // lossy role (LANG.OBSERVATION.FIREWALL): make the approximation visible. The
+            // scientific form may already carry its own \approx.
+            const approximate = semantics?.approximate === true;
+            return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;
+        }
+        case 'vector':
+            return Array.isArray(item.value) ? vectorToLatex(item.value as Value[]) : null;
+        default:
+            return null;
+    }
+};
+
+// Math view (docs/dev/gui-current-design-memory.md): an alternate KaTeX
+// rendering of stack values, derived from the structured protocol form.
+// Presentation only — the canonical display strings stay untouched and
+// remain the conformance observation; the toggle swaps the view, never
+// the value. Output text is never scanned for delimiters.
+const MATH_VIEW_STORAGE_KEY = 'ajisai-stack-math-view';
+
+// The canonical protocol strings are the standard rendering; Math view is
+// an opt-in alternate so Ajisai's observable surface never depends on
+// KaTeX (portability: the GUI stays faithful without it).
+const readMathViewPreference = (): boolean => {
+    try {
+        return globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY) === '1';
+    } catch {
+        return false;
+    }
+};
+
+const writeMathViewPreference = (enabled: boolean): void => {
+    try {
+        globalThis.localStorage?.setItem(MATH_VIEW_STORAGE_KEY, enabled ? '1' : '0');
+    } catch {
+        // Preference is a convenience; rendering works without persistence.
+    }
+};
+
+const renderMathValueNode = (item: Value): HTMLElement | null => {
+    const tex = valueToLatex(item);
+    if (tex === null) return null;
+    const node = document.createElement('span');
+    node.className = 'stack-node stack-node-math';
+    // Tag the top-level node so the stack-top fill's selector
+    // (`.stack-item:last-child .stack-node[data-depth="1"]`) matches in LaTeX
+    // view exactly as it does for the canonical rendering.
+    node.dataset.depth = '1';
+    // Trusted markup: KaTeX output for TeX generated from the structured
+    // value by valueToLatex, never from user-supplied text.
+    node.innerHTML = katex.renderToString(tex, { throwOnError: false });
+    return node;
+};
+
+// ── The Output and Stack areas ──────────────────────────────────────────────
 
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
     `Error: ${typeof error === 'string' ? error : error.message || toError(error).message}`;
@@ -327,14 +610,14 @@ export const createDisplay = (elements: DisplayElements): Display => {
     let mathViewEnabled = readMathViewPreference();
     let lastStack: Value[] = [];
 
-    const createLatexToggle = (): void => {
+    // The LaTeX toggle: a labeled checkbox at the bottom-right of the Stack
+    // area. Checked means the LaTeX (KaTeX) rendering, unchecked the canonical
+    // protocol strings. The unchecked mode is deliberately unnamed — a
+    // checkbox states only what checking it adds.
+    const init = (): void => {
         const panel = elements.stackDisplay.parentElement;
         if (!panel || panel.querySelector('.stack-latex-toggle')) return;
 
-        // A labeled checkbox at the bottom-right of the Stack area: checked
-        // means the LaTeX (KaTeX) rendering, unchecked the canonical
-        // protocol strings. The unchecked mode is deliberately unnamed —
-        // a checkbox states only what checking it adds.
         const wrapper = document.createElement('label');
         wrapper.className = 'stack-latex-toggle';
 
@@ -352,10 +635,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         wrapper.append(checkbox, caption);
         panel.appendChild(wrapper);
-    };
-
-    const init = (): void => {
-        createLatexToggle();
     };
 
     const appendSpan = (text: string, kind: OutputKind): HTMLSpanElement => {
@@ -464,10 +743,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         if (lastStack.length === 0) {
             display.classList.add('is-empty');
-            const message = document.createElement('div');
-            message.className = 'empty-words-message';
-            message.textContent = 'No values on the stack yet.';
-            display.appendChild(message);
+            display.appendChild(createEmptyWordsElement('No values on the stack yet.'));
             return;
         }
 

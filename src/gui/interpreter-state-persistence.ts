@@ -1,10 +1,38 @@
 import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 import type { InterpreterStateSnapshot } from '../platform';
-import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
-import { Result, ok, err } from './functional-result-helpers';
-import { collectUserWords } from './interpreter-execution-utils';
-import { toError } from './to-error';
+import { collectUserWords, toError } from './interpreter-execution-utils';
+
+// These four words exist for one demonstration: a Word button's colour shows
+// that another Word calls it, and that is only visible once one seeded word
+// calls others. GREET over the three SAY words is the whole of it, so nothing
+// else is seeded — a fresh dictionary is for the reader to fill.
+export const EXAMPLE_USER_WORDS: UserWord[] = [
+    // Hello-World family: teaches how words depend on other words. GREET is
+    // built purely by chaining the three SAY words, so while GREET exists
+    // none of them can be redefined or deleted (definitionConflict): the
+    // three are coloured as words something depends on.
+    {
+        name: 'SAY-HELLO',
+        definition: "'Hello' PRINT",
+    },
+    {
+        name: 'SAY-WORLD',
+        definition: "'World' PRINT",
+    },
+    {
+        name: 'SAY-BANG',
+        definition: "'!' PRINT",
+    },
+    {
+        name: 'GREET',
+        definition: 'SAY-HELLO SAY-WORLD SAY-BANG',
+    },
+];
+
+export type Result<T, E = Error> =
+    | { ok: true; value: T }
+    | { ok: false; error: E };
 
 // The persisted session document. `stateVersion` identifies the format; a
 // document that does not carry the current version is not migrated — the beta
@@ -115,7 +143,6 @@ export interface ParsedImport {
     readonly embeddedIds: Map<string, string> | null;
 }
 
-const buildExportFilename = (name: string): string => `${name}.json`;
 const DEFAULT_EXPORT_NAME = 'user-words';
 // The whole key of a User-tier word: its normalized name.
 const buildWordKey = (name: string): string => name.toUpperCase();
@@ -217,7 +244,7 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
     try {
         parsed = JSON.parse(jsonString);
     } catch (e) {
-        return err(e instanceof Error ? e : new Error(String(e)));
+        return { ok: false, error: toError(e) };
     }
 
     // Malformed entries are dropped rather than thrown on or forwarded to
@@ -238,10 +265,13 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
     // A versioned export document carrying per-word content identities is the
     // only accepted form; the bare array of the alpha format is not read.
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as ExportDocument).words)) {
-        return ok(collect((parsed as ExportDocument).words as unknown[]));
+        return { ok: true, value: collect((parsed as ExportDocument).words as unknown[]) };
     }
 
-    return err(new Error('Invalid file format. Expected a versioned export document with a `words` array.'));
+    return {
+        ok: false,
+        error: new Error('Invalid file format. Expected a versioned export document with a `words` array.')
+    };
 };
 
 export const createPersistence = (
@@ -415,7 +445,7 @@ export const createPersistence = (
             return;
         }
         const exportData = createExportData(interpreter);
-        const filename = buildExportFilename(requestedName);
+        const filename = `${requestedName}.json`;
 
         getPlatform().fileIO.saveJson(filename, exportData)
             .then(() => showInfo?.(`User words exported as ${filename}`, true))

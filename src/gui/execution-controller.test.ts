@@ -21,6 +21,7 @@ import type { ExecutionSurfaceChanges } from './gui-layout-state';
 import { ExecutionTimeoutError } from '../workers/execution-contract';
 import { ExecutionAbortedError } from '../workers/execution-contract';
 import { createExecutionController } from './execution-controller';
+import { num } from '../test-support';
 
 type Answer = (code: string) => Promise<ExecuteResult>;
 
@@ -37,8 +38,6 @@ vi.mock('../workers/execution-worker-manager', () => ({
     }
 }));
 
-const num = (n: number): Value =>
-    ({ type: 'number', value: { numerator: String(n), denominator: '1' } } as unknown as Value);
 const nil = (reason: string): Value =>
     ({ type: 'nil', value: null, semantics: { absence: { reason } } } as unknown as Value);
 

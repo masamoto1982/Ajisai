@@ -1123,7 +1123,7 @@ footer {
     font-weight: var(--weight-regular);
 }
 
-/* The undrawn tail of a large collection (src/gui/stack-render-budget.ts),
+/* The undrawn tail of a large collection (the render budget in src/gui/output-display-renderer.ts),
    styled as commentary so it cannot be read as part of the value. */
 .stack-elision {
     font-style: italic;

@@ -3,11 +3,10 @@
 
 import { getPlatform } from '../platform';
 import { createGUI, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
-import { toError } from '../gui/to-error';
+import { toError } from '../gui/interpreter-execution-utils';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-contract';
 import { initWasm } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter } from '../wasm-interpreter-types';
-import { parseHostProfile } from './host-profile-parse';
+import { parseHostProfile, type AjisaiInterpreter } from '../wasm-interpreter-types';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
 declare const __AJISAI_RELEASE_VERSION__: string;
