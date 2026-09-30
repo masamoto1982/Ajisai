@@ -1,11 +1,10 @@
 
 import {
     applyInterpreterSnapshot,
-    createInterpreterSnapshot,
+    ExecutionTimeoutError,
     type InterpreterSnapshot
-} from '../workers/interpreter-snapshot';
+} from '../workers/execution-contract';
 import { getPlatform } from '../platform';
-import { ExecutionTimeoutError } from '../workers/execution-timeout';
 import type {
     AjisaiInterpreter,
     ExecuteResult,
@@ -32,18 +31,17 @@ export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => 
     }));
 };
 
-export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot =>
-    createInterpreterSnapshot({
-        stack: interpreter.collect_stack(),
-        // Carry the lossless snapshot into the worker so exact values on the
-        // stack (CodeBlock, ExactScalar) are not flattened by the observation
-        // format before this run executes (LANG.OBSERVATION.FIREWALL).
-        stackSnapshot: interpreter.snapshot_stack(),
-        userWords: collectUserWords(interpreter),
-        // Host-configured step budget (LANG.MACHINE.LIMITS water level); undefined
-        // keeps the interpreter's own default (`DEFAULT_MAX_EXECUTION_STEPS`).
-        stepLimit: getPlatform().executionConfig.stepLimit
-    });
+export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot => ({
+    stack: interpreter.collect_stack(),
+    // Carry the lossless snapshot into the worker so exact values on the
+    // stack (CodeBlock, ExactScalar) are not flattened by the observation
+    // format before this run executes (LANG.OBSERVATION.FIREWALL).
+    stackSnapshot: interpreter.snapshot_stack(),
+    userWords: collectUserWords(interpreter),
+    // Host-configured step budget (LANG.MACHINE.LIMITS water level); undefined
+    // keeps the interpreter's own default (`DEFAULT_MAX_EXECUTION_STEPS`).
+    stepLimit: getPlatform().executionConfig.stepLimit
+});
 
 // What a failed run printed, with its dictionary claims corrected.
 //

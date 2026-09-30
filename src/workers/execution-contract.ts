@@ -1,6 +1,41 @@
+// What passes between the page and the worker that runs a program: the
+// interpreter state a run starts from, and the wall-clock guard it runs under.
+//
+// Kept apart from the worker pool that enforces the guard because both halves
+// are also read where no pool exists: the worker restores from the snapshot,
+// the profile badge discloses the guard beside the interpreter's own ceilings,
+// and the diagnosis for a stopped run is written from it — none of which
+// should have to construct a worker pool, and none of which runs in a browser
+// during the tests.
+
 import type { AjisaiInterpreter, UserWord, Value } from '../wasm-interpreter-types';
 
+// Per-task wall-clock cap on worker execution. The recursion guard returns an
+// AjisaiError immediately for blown-stack programs; this is the second line of
+// defence for "still running" non-recursive loops that neither hit the
+// execution-step cap fast enough nor produce a recursion error. Set well above
+// the longest legitimate run so a legal program never trips it.
+export const EXECUTION_TIMEOUT_MS = 5_000;
 
+/**
+ * A run stopped by the wall-clock guard rather than by anything the
+ * interpreter decided.
+ *
+ * Distinguished by type because it is the one refusal that carries no
+ * diagnosis from the language: the worker is terminated where it stands, so
+ * the Rust side never builds one and never gets to name a ceiling. A host that
+ * cannot tell this apart from an ordinary failure can only print the sentence
+ * and leave the reader to guess whether their program is wrong or merely slow.
+ */
+export class ExecutionTimeoutError extends Error {
+    readonly limitMs: number;
+
+    constructor(limitMs: number) {
+        super(`Execution timed out after ${limitMs} ms`);
+        this.name = 'ExecutionTimeoutError';
+        this.limitMs = limitMs;
+    }
+}
 
 export interface InterpreterSnapshot {
     // The observation-format stack, carried for display on the main thread.
@@ -19,18 +54,6 @@ export interface InterpreterSnapshot {
      */
     readonly stepLimit?: number;
 }
-
-export const createInterpreterSnapshot = (snapshot: {
-    readonly stack: Value[];
-    readonly stackSnapshot?: string;
-    readonly userWords: UserWord[];
-    readonly stepLimit?: number;
-}): InterpreterSnapshot => ({
-    stack: snapshot.stack,
-    stackSnapshot: snapshot.stackSnapshot,
-    userWords: snapshot.userWords,
-    stepLimit: snapshot.stepLimit
-});
 
 export const applyInterpreterSnapshot = (
     interpreter: AjisaiInterpreter,

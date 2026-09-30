@@ -26,7 +26,7 @@ import {
     resolveExecutionException,
     syncInterpreterState
 } from './interpreter-execution-utils';
-import { ExecutionTimeoutError } from '../workers/execution-timeout';
+import { ExecutionTimeoutError } from '../workers/execution-contract';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 
 const num = (n: number): Value =>

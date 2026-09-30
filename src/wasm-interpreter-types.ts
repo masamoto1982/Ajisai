@@ -313,9 +313,11 @@ export interface Value {
     semantics?: ProtocolValueSemantics;
 }
 
+// The shape of the generated wasm-bindgen module (`wasm/generated/ajisai_core.js`):
+// its exports are `initSync` and a `default` async initializer, plus the
+// interpreter class and the panic hook.
 export interface WasmModule {
     AjisaiInterpreter: AjisaiInterpreterClass;
     default?: () => Promise<any>;
-    init?: () => Promise<any>;
     init_panic_hook?: () => void;
 }

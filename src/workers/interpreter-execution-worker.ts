@@ -5,7 +5,7 @@ import type {
     ExecuteResult,
     RuntimeMetricsSnapshot,
 } from '../wasm-interpreter-types';
-import { applyInterpreterSnapshot } from './interpreter-snapshot';
+import { applyInterpreterSnapshot } from './execution-contract';
 
 // Cost-model counters (LANG.AUTHORITY.FREEDOM) are session-cumulative on the interpreter,
 // and this worker's interpreter is reused across runs, so the per-run
