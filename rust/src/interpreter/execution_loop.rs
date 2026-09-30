@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::{Token, Value};
 
-use super::value_extraction_helpers::create_number_value;
 use super::Interpreter;
 
 /// If the bracketed literal spanning `tokens[start..start+consumed)` is
@@ -88,7 +87,7 @@ impl Interpreter {
                     // number. `parsed` only re-derives anything on the refusal
                     // path, which ends the program.
                     let frac = literal.parsed().map_err(AjisaiError::MalformedSource)?;
-                    self.stack.push(create_number_value(frac));
+                    self.stack.push(Value::from_fraction(frac));
                 }
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
@@ -230,5 +229,225 @@ impl Interpreter {
             }
         }
         Ok(())
+    }
+}
+
+// Building a Vector literal (`[ ... ]`) from source tokens.
+//
+// Split out of `execution_loop` when that file outgrew the file-size budget
+// in docs/dev/specification-implementation-rules.md. The two concerns are
+// genuinely separate: the execution loop decides *which* token runs next,
+// and this decides what a delimited token sequence denotes.
+//
+// What an *element* denotes is one piece of knowledge: a literal value, with
+// a bare name (other than `TRUE`/`FALSE`/`NIL`, which still denote their
+// values) becoming a `Value::Symbol` rather than a `Value::Text`. Nothing is
+// looked up: a literal denotes the same value under every dictionary state.
+impl Interpreter {
+    /// The elements of one Vector literal, and how many tokens it spans.
+    pub(crate) fn collect_bracketed_with_depth(
+        tokens: &[Token],
+        start_index: usize,
+        depth: usize,
+        limits: &crate::interpreter::RuntimeLimits,
+    ) -> Result<(Vec<Value>, usize)> {
+        if tokens.get(start_index) != Some(&Token::VectorStart) {
+            return Err(AjisaiError::MalformedSource(
+                "Expected a literal start".to_string(),
+            ));
+        }
+
+        // The nesting ceiling (LANG.MACHINE.LIMITS), checked before recursing:
+        // this builder descends one native frame per level, so a few thousand
+        // levels of `[ [ [ ... ] ] ]` would overflow the native stack here,
+        // before the value could be checked at all. It is the same ceiling a
+        // value Words build meets, and fails the same way.
+        limits.check_nesting_depth(depth)?;
+
+        let mut values = Vec::new();
+        let mut i = start_index + 1;
+
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart => {
+                    let (nested_values, consumed) =
+                        Self::collect_bracketed_with_depth(tokens, i, depth + 1, limits)?;
+                    values.push(Value::from_vector_promoted(nested_values));
+                    i += consumed;
+                }
+                Token::VectorEnd => {
+                    return Ok((values, i - start_index + 1));
+                }
+                Token::Value(value) => {
+                    values.push((**value).clone());
+                    i += 1;
+                }
+                Token::Number(literal) => {
+                    values.push(Value::from_number(
+                        literal.parsed().map_err(AjisaiError::MalformedSource)?,
+                    ));
+                    i += 1;
+                }
+                Token::String(s) => {
+                    values.push(Value::from_string(s));
+                    i += 1;
+                }
+                Token::Symbol(s) => {
+                    let upper = Self::normalize_symbol(s);
+                    match upper.as_ref() {
+                        "TRUE" => values.push(Value::from_bool(true)),
+                        "FALSE" => values.push(Value::from_bool(false)),
+                        "NIL" => values.push(Value::nil()),
+                        // A bare name is a Symbol: data until something
+                        // executes it, dictionary-independent (building the
+                        // literal never looks anything up).
+                        _ => values.push(Value::from_symbol(s)),
+                    }
+                    i += 1;
+                }
+            }
+        }
+        Err(AjisaiError::MalformedSource(
+            "Unclosed bracketed literal".to_string(),
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Tests for compile-time literal-vector lowering (`CompiledOp::PushVectorLiteral`).
+    //!
+    //! A fully-literal vector is prebuilt once at compile time with the same
+    //! promoted value `collect_vector` produces, so the line runs
+    //! compiled instead of falling back to the interpreter. These tests pin that the
+    //! lowered path is byte-for-byte identical to the interpreted one across element
+    //! kinds, that non-literal vectors still fall back, and that errors are kept.
+
+    use crate::agent::block_on;
+    use crate::interpreter::Interpreter;
+
+    /// Run `src` twice — lowering on and off — and assert the resulting stacks are
+    /// identical (value and rendered form).
+    fn assert_on_equals_off(src: &str) -> String {
+        let mut on = Interpreter::new();
+        on.set_vector_literal_enabled(true);
+        block_on(on.execute(src)).unwrap();
+
+        let mut off = Interpreter::new();
+        off.set_vector_literal_enabled(false);
+        block_on(off.execute(src)).unwrap();
+
+        assert_eq!(
+            format!("{:?}", on.get_stack()),
+            format!("{:?}", off.get_stack()),
+            "lowering ON vs OFF diverged for: {src}"
+        );
+        let render_on = render(&on);
+        assert_eq!(render_on, render(&off), "rendered form diverged for: {src}");
+        render_on
+    }
+
+    fn render(interp: &Interpreter) -> String {
+        interp
+            .get_stack()
+            .last()
+            .map(|v| format!("{v}"))
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn literal_vector_shapes_match_interpreter() {
+        // Numeric (tensor-promoted), boolean, string,
+        // NIL-bearing, nested, and arithmetic-over-literals all agree.
+        let cases = [
+            "[ [ 1 2 3 ] [ 4 5 6 ] ADD ] 'W' DEF W",
+            "[ [ TRUE FALSE TRUE ] ] 'W' DEF W",
+            "[ [ 'a' 'b' 'c' ] ] 'W' DEF W",
+            "[ [ 1 NIL 3 ] ] 'W' DEF W",
+            "[ [ [ 1 2 ] [ 3 4 ] ] ] 'W' DEF W",
+            "[ [ 1 2 3 4 ] [ 2 2 2 2 ] MUL [ 1 1 1 1 ] SUB ] 'W' DEF W",
+        ];
+        for src in cases {
+            assert_on_equals_off(src);
+        }
+    }
+
+    #[test]
+    fn boolean_vector_renders_its_booleans() {
+        let rendered = assert_on_equals_off("[ [ TRUE FALSE ] ] 'W' DEF W");
+        assert!(
+            rendered.contains("TRUE") && rendered.contains("FALSE"),
+            "boolean vector should render as TRUE/FALSE, got: {rendered}"
+        );
+    }
+
+    #[test]
+    fn symbol_in_vector_is_data_not_executed() {
+        // LANG.VALUES.VECTOR: a name inside a Vector literal is its own text as
+        // data, even when it names a defined user word. `[ TEN 2 3 ]`
+        // is therefore a fully literal vector — TEN is the string "TEN", never the
+        // word's result — and lowers identically on the compiled and interpreted
+        // paths. This is the regression guard for the retired word-execution behavior.
+        let src = "[ [ 10 ] ] 'TEN' DEF\n[ [ TEN 2 3 ] ] 'W' DEF\nW";
+        let rendered = assert_on_equals_off(src);
+        assert!(
+            rendered.contains("TEN"),
+            "the symbol must appear as data, got: {rendered}"
+        );
+        assert!(
+            !rendered.contains("10"),
+            "the user word must NOT be executed inside the vector, got: {rendered}"
+        );
+    }
+
+    #[test]
+    fn vector_literal_is_independent_of_dictionary_state() {
+        // The core of LANG.VALUES.VECTOR: the *same* source vector produces
+        // the *same* value whether or not the symbol names a defined word. Before,
+        // `[ FOO 1 ]` executed FOO when defined and was data otherwise — a
+        // dictionary-state-dependent meaning. Now both are the data `[ "FOO" 1 ]`.
+        let mut with_word = Interpreter::new();
+        block_on(with_word.execute("[ [ 99 ] ] 'FOO' DEF\n[ FOO 1 ]")).unwrap();
+
+        let mut without_word = Interpreter::new();
+        block_on(without_word.execute("[ FOO 1 ]")).unwrap();
+
+        assert_eq!(
+            format!("{}", with_word.get_stack().last().unwrap()),
+            format!("{}", without_word.get_stack().last().unwrap()),
+            "a vector literal must not depend on whether the symbol is a defined word"
+        );
+        assert!(
+            !format!("{}", with_word.get_stack().last().unwrap()).contains("99"),
+            "the defined word must not be executed inside the vector"
+        );
+    }
+
+    #[test]
+    fn empty_vector_lowers_identically_both_paths() {
+        // `[ ]` used to be rejected, and this pinned that the lowering did not
+        // paper over the rejection. It is a value now, so what must agree is the
+        // value both paths produce.
+        for enabled in [true, false] {
+            let mut interp = Interpreter::new();
+            interp.set_vector_literal_enabled(enabled);
+            block_on(interp.execute("[ [ ] ] 'W' DEF\nW")).expect("`[ ]` is a value");
+            let val = interp.get_stack().last().expect("a result").clone();
+            assert!(!val.is_nil(), "the empty vector is not an absence");
+            assert_eq!(
+                val.len(),
+                0,
+                "empty in both lowering modes (enabled={enabled})"
+            );
+        }
+    }
+
+    #[test]
+    fn matches_readme_vector_example() {
+        let rendered = assert_on_equals_off("[ [ 1 2 3 ] [ 4 5 6 ] ADD ] 'W' DEF W");
+        assert!(
+            rendered.contains("5/1") && rendered.contains("7/1") && rendered.contains("9/1"),
+            "expected [ 5/1 7/1 9/1 ], got: {rendered}"
+        );
     }
 }

@@ -4,7 +4,15 @@ use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::epoch::EpochSnapshot;
+/// The three epoch counters at one instant: what a compiled plan or a resolve
+/// cache entry records so it can tell later whether the dictionary it was
+/// built against is still the one in force.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct EpochSnapshot {
+    pub global_epoch: u64,
+    pub dictionary_epoch: u64,
+    pub execution_epoch: u64,
+}
 
 /// Re-exports `runtime_limits::DEFAULT_MAX_EXECUTION_STEPS` (see its doc
 /// comment for the host-time-budget derivation), mirroring

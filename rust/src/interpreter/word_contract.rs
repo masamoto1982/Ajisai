@@ -17,11 +17,11 @@ use crate::coreword_registry::{
 };
 use crate::types::{Token, WordDefinition};
 
-pub use super::word_contract_facets::{
-    ContractConfidence, ContractDeterminism, ContractPartiality, ContractPurity,
-};
 use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
 use super::word_contract_widen::{classify_vector_positions, runs_unread_code, LiteralContext};
+pub use super::word_contract_widen::{
+    ContractConfidence, ContractDeterminism, ContractPartiality, ContractPurity,
+};
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;

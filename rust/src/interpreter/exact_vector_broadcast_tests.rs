@@ -11,16 +11,8 @@
 
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
+use crate::test_support::run_ok;
 use crate::types::{Value, ValueData};
-
-async fn run_ok(code: &str) -> Vec<Value> {
-    let mut interp = Interpreter::new();
-    interp
-        .execute(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` unexpectedly errored: {e}"));
-    interp.get_stack().to_vec()
-}
 
 fn vector_children(value: &Value) -> &[Value] {
     match &value.data {

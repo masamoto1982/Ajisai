@@ -14,18 +14,13 @@
 use crate::coreword_registry::{get_builtin_word_registry, NilPolicy};
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
+use crate::test_support::{reason, run_ok, top_of};
 use crate::types::Value;
 
 async fn run(code: &str) -> Result<Vec<Value>, String> {
     let mut interp = Interpreter::new();
     interp.execute(code).await.map_err(|e| e.to_string())?;
     Ok(interp.get_stack().to_vec())
-}
-
-async fn run_ok(code: &str) -> Vec<Value> {
-    run(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` unexpectedly errored: {e}"))
 }
 
 fn is_nil(v: &Value) -> bool {
@@ -202,30 +197,9 @@ fn projecting_word_set_matches_registry() {
     );
 }
 
-/// Run `code`, require it to land on a NIL, and answer that NIL's reason.
-/// Shared by every NIL-projection probe below, since a projection is "NIL with
-/// the reason the contract registers" (LANG.FAILURE.PROJECT) and only the
-/// reason differs between them.
-async fn projected_reason(code: &str) -> Option<String> {
-    let answer = top_of(code).await;
-    assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
-    answer
-        .absence_metadata()
-        .and_then(|absence| absence.reason.as_ref())
-        .map(|reason| reason.as_protocol_str().to_string())
-}
-
 /// The Text `code` leaves on top, for the non-projecting half of a probe.
 async fn text_answer(code: &str) -> Option<String> {
     crate::interpreter::value_extraction_helpers::value_as_string(&top_of(code).await)
-}
-
-/// The value `code` leaves on top; a failure to run is the probe's own bug.
-async fn top_of(code: &str) -> crate::types::Value {
-    let mut interp = Interpreter::new();
-    let ran = interp.execute(code).await;
-    ran.unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-    interp.stack.last().cloned().expect("an answer was pushed")
 }
 
 /// `STR` projects on the condition it declares: the sealed numeric grammar
@@ -246,7 +220,7 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
         // A lifted STR projects per lane.
         "[ 1 2 ] 2 SQRT MUL STR 0 GET",
     ] {
-        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
+        assert_eq!(reason(code).await.as_deref(), Some("domainMiss"));
     }
 
     // An exact real that collapses to a rational *does* have a lexeme, and a
@@ -278,7 +252,7 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
 #[tokio::test]
 async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
-        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
+        assert_eq!(reason(code).await.as_deref(), Some("domainMiss"));
     }
 
     // Reading the projected NIL is what makes the registered reason
@@ -434,15 +408,9 @@ async fn direct_projection_preserves_its_own_reason() {
 #[cfg(test)]
 mod properties {
     use super::run;
+    use crate::agent::block_on;
     use crate::error::NilReason;
     use proptest::prelude::*;
-
-    fn block_on<F: std::future::Future>(f: F) -> F::Output {
-        tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap()
-            .block_on(f)
-    }
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(64))]

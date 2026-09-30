@@ -1,5 +1,4 @@
-use super::extract_vector_elements;
-use super::targeting::with_stacktop_vector_target_no_arg;
+use super::{extract_vector_elements, with_stacktop_vector_target_no_arg};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_bigint_from_value;
 use crate::interpreter::Interpreter;
@@ -68,9 +67,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     {
         // The operands were already taken off; put them back so the
         // stack a reader inspects after the error is the one they wrote.
-        for operand in operands {
-            interp.stack.push(operand);
-        }
+        interp.stack.extend(operands);
         return Err(AjisaiError::declared(
             "nonVector",
             format!("expected two Vectors, got {got}"),
@@ -87,9 +84,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
                 .copies(operands[1].len()),
         );
     if let Err(e) = crate::interpreter::collection_meter::charge(interp, units) {
-        for operand in operands {
-            interp.stack.push(operand);
-        }
+        interp.stack.extend(operands);
         return Err(e);
     }
 

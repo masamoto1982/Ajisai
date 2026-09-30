@@ -748,7 +748,7 @@
         "SPECIFICATION.html §7.15"
       ],
       "law_tests": [
-        "rust/src/interpreter/declared_outcomes_tests.rs"
+        "rust/src/interpreter/declared_nil_contract.rs"
       ],
       "conformance_cases": [
         "core-absent-declares-a-reasoned-nil",
@@ -1286,7 +1286,7 @@
         "SPECIFICATION.html §9.2"
       ],
       "law_tests": [
-        "rust/src/interpreter/declared_outcomes_tests.rs"
+        "rust/src/interpreter/declared_nil_contract.rs"
       ],
       "conformance_cases": [
         "core-fail-raises-declared-error"
@@ -2499,7 +2499,7 @@
         "SPECIFICATION.html §9.1"
       ],
       "law_tests": [
-        "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/src/interpreter/search_ops.rs",
         "rust/tests/structural_laws.rs",
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -2699,7 +2699,7 @@
         "SPECIFICATION.html §9.1"
       ],
       "law_tests": [
-        "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/src/interpreter/search_ops.rs",
         "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [

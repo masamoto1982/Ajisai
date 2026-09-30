@@ -1,12 +1,119 @@
+//! `STR` and `NUM` (LANG.VALUES.DISJOINT), and the value predicates and
+//! renderings the cast and text Words share.
+
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::cast::cast_value_helpers::{
-    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr, is_number_value,
-};
-use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
+use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
+
+/// Whether a value is a String (LANG.VALUES.DISJOINT).
+///
+/// String is a domain of its own, so the question is answered by the tag.
+pub(crate) fn is_string_value(val: &Value) -> bool {
+    val.is_text()
+}
+
+pub(crate) fn is_boolean_value(val: &Value) -> bool {
+    matches!(val.data, ValueData::Boolean(_))
+}
+
+pub(crate) fn is_number_value(val: &Value) -> bool {
+    val.is_scalar()
+}
+
+pub(crate) fn is_datetime_value(_val: &Value) -> bool {
+    false
+}
+
+pub(crate) fn apply_unary_cast(
+    interp: &mut Interpreter,
+    convert: fn(&Value) -> Result<Value>,
+) -> Result<()> {
+    let value: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+
+    match convert(&value) {
+        Ok(result) => {
+            interp.stack.push(result);
+            Ok(())
+        }
+        Err(error) => {
+            interp.stack.push(value);
+            Err(error)
+        }
+    }
+}
+
+pub(crate) fn format_fraction_to_string(f: &Fraction) -> String {
+    if f.is_integer() {
+        format!("{}", f.numerator())
+    } else {
+        format!("{}/{}", f.numerator(), f.denominator())
+    }
+}
+
+pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
+    if value.is_nil() {
+        return "NIL".to_string();
+    }
+
+    if is_boolean_value(value) {
+        if let Some(f) = value.as_scalar() {
+            return if !f.is_zero() {
+                "TRUE".to_string()
+            } else {
+                "FALSE".to_string()
+            };
+        }
+    }
+
+    if let Some(text) = value.as_text() {
+        return text.to_string();
+    }
+
+    if is_datetime_value(value) {
+        if let Some(f) = value.as_scalar() {
+            return format!("@{}", format_fraction_to_string(f));
+        }
+    }
+
+    if is_number_value(value) {
+        if let Some(f) = value.as_scalar() {
+            return format_fraction_to_string(f);
+        }
+    }
+
+    fn collect_fractions(val: &Value) -> Vec<String> {
+        match &val.data {
+            ValueData::Nil => vec!["NIL".to_string()],
+            ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
+            ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
+            ValueData::ExactScalar(er) => {
+                use num_bigint::BigInt;
+                match er.best_rational_approximation(&BigInt::from(1_000_000u64)) {
+                    Some(approx) => vec![format_fraction_to_string(&approx)],
+                    None => vec!["NIL".to_string()],
+                }
+            }
+            ValueData::Vector(children) => children.iter().flat_map(collect_fractions).collect(),
+            // Through the lane, not its `Fraction`: `format_fraction_to_string`
+            // renders the denominator-0 absence sentinel as the unreadable
+            // number `0/0`. `[ 1 NIL ] STR` is `'1 NIL'`, and used to be only
+            // because a vector holding a NIL was never stored densely.
+            ValueData::Tensor { data, .. } => (0..data.len())
+                .flat_map(|lane| collect_fractions(&Value::from_dense_lane(data, lane)))
+                .collect(),
+            ValueData::Text(s) => vec![s.to_string()],
+            ValueData::Symbol(name) => vec![name.to_string()],
+            // A Record casts as its display form, whole: it is not a sequence
+            // of lanes to join.
+            ValueData::Record(_) => vec![val.to_string()],
+        }
+    }
+
+    collect_fractions(value).join(" ")
+}
 
 /// Whether any number inside `value` has no lexeme in the sealed numeric
 /// grammar — an irrational the source language cannot spell.
@@ -91,7 +198,7 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
             None
         };
         match parsed {
-            Some(fraction) => return Ok(create_number_value(fraction)),
+            Some(fraction) => return Ok(Value::from_fraction(fraction)),
             None => {
                 return Ok(Value::nil_with_reason(
                     NilReason::InvalidEncoding,
@@ -133,4 +240,158 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     apply_unary_cast(interp, convert_value_to_number)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Test suite for `crate::interpreter::cast`.
+
+    use super::{format_value_to_string_repr, is_number_value, is_string_value, op_num, op_str};
+    use crate::interpreter::value_extraction_helpers::value_as_string;
+    use crate::interpreter::Interpreter;
+    use crate::types::fraction::Fraction;
+    use crate::types::Value;
+    use num_bigint::BigInt;
+    use num_traits::One;
+
+    #[test]
+    fn test_format_value_to_string_repr() {
+        let num = Value::from_fraction(Fraction::new(BigInt::from(42), BigInt::one()));
+        assert_eq!(format_value_to_string_repr(&num), "42");
+
+        let bool_val = Value::from_bool(true);
+        assert_eq!(format_value_to_string_repr(&bool_val), "TRUE");
+
+        let nil = Value::nil();
+        assert_eq!(format_value_to_string_repr(&nil), "NIL");
+    }
+
+    #[test]
+    fn test_str_conversion() {
+        let mut interp = Interpreter::new();
+
+        interp.stack.push(Value::from_fraction(Fraction::new(
+            BigInt::from(42),
+            BigInt::one(),
+        )));
+        op_str(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "42");
+        }
+    }
+
+    #[test]
+    fn test_num_conversion() {
+        let mut interp = Interpreter::new();
+
+        interp.stack.push(Value::from_string("42"));
+        op_num(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_number_value(val));
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.numerator(), BigInt::from(42));
+            }
+        }
+
+        interp.stack.clear();
+        interp.stack.push(Value::from_string("1/3"));
+        op_num(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            assert!(is_number_value(val));
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.numerator(), BigInt::from(1));
+                assert_eq!(f.denominator(), BigInt::from(3));
+            }
+        }
+
+        interp.stack.clear();
+        interp.stack.push(Value::from_string("ABC"));
+        let result = op_num(&mut interp);
+        assert!(result.is_ok());
+        if let Some(val) = interp.stack.last() {
+            assert!(val.is_nil());
+        }
+
+        interp.stack.clear();
+        interp.stack.push(Value::from_fraction(Fraction::new(
+            BigInt::from(123),
+            BigInt::one(),
+        )));
+        let result = op_num(&mut interp);
+        // NUM parses Text and nothing else: a number operand is `nonText`,
+        // as the contract declares, not a passthrough.
+        assert!(result.is_err());
+
+        interp.stack.clear();
+        interp.stack.push(Value::from_bool(true));
+        let result = op_num(&mut interp);
+        // NUM no longer accepts a Boolean: a truth value is not a number
+        // (finding B2). TRUE is distinct from the scalar 1.
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_num_str_roundtrip() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("'123' NUM STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "123");
+        }
+
+        interp.stack.clear();
+        interp.execute("'1/3' NUM STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "1/3");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_str_num_parse_fail() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("'ABC' NUM").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+        if let Some(val) = interp.stack.last() {
+            assert!(val.is_nil());
+        }
+    }
+    #[tokio::test]
+    async fn test_str_boolean() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("TRUE STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "TRUE");
+        }
+
+        interp.stack.clear();
+        interp.execute("FALSE STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "FALSE");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_str_nil() {
+        let mut interp = Interpreter::new();
+
+        interp.execute("NIL STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(val.is_nil(), "NIL STR should return NIL, not a string");
+        }
+    }
 }

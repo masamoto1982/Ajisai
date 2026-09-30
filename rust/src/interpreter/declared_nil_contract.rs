@@ -13,6 +13,8 @@ use crate::error::{AjisaiError, Result};
 use crate::kernel::generated::{Arity, GeneratedWord, OperandRole};
 use crate::types::Value;
 
+use super::lane_lift::lift_lanes_dyn;
+use super::ordering_ops::{restore, take_operand};
 use super::Interpreter;
 
 /// What the Word's declared operand roles require of the operands on the
@@ -162,6 +164,144 @@ impl Interpreter {
     }
 }
 
+// Lifting a Word over the Vectors and Records in its `leaf` and `truth`
+// operands (LANG.COLLECTIONS.LIFT).
+//
+// A `leaf` operand is read as one Scalar, String or Boolean, so a container
+// there means "apply the Word to each element". Every Word with a lifted
+// operand is lifted here, through `lift_lanes_dyn`, except the few whose
+// primitive already runs the same lift faster itself ([`LIFTS_NATIVELY`]);
+// one rule decides how `[ 'a' 'b' ] UPPER`,
+// `[ 1 2 ] 10 ADD` and `R [ 'x' 'y' ] GET` combine their elements. Each
+// element runs through the full dispatcher, so the NIL roles, the declared
+// conditions and the cost charges are exactly the Word's own.
+/// The primitives that lift their own `leaf` and `truth` operands: the tensor
+/// path of exact arithmetic, and `lane_lift` for comparison and logic. This is
+/// an implementation choice, not part of any contract — the specification says
+/// only which operands lift — and `rust/tests/lifting_laws.rs` holds these to
+/// the same answers the dispatcher's lift gives every other Word.
+const LIFTS_NATIVELY: &[&str] = &[
+    "ADD", "SUB", "MUL", "DIV", "FLOOR", "ROUND", "MIN", "MAX", "SQRT", "POW", "GCD", "RATIO",
+    "LT", "GT", "AND", "NOT", "SELECT",
+];
+
+fn is_container(value: &Value) -> bool {
+    value.is_vector() || value.as_record().is_some()
+}
+
+impl Interpreter {
+    /// Lift the Word over its operands when a `leaf` or `truth` operand holds
+    /// a Vector or Record and the Word does not lift natively. `None` means
+    /// there is nothing to lift here and the primitive runs.
+    pub(super) fn apply_declared_lift(
+        &mut self,
+        word: &'static GeneratedWord,
+    ) -> Option<Result<()>> {
+        if LIFTS_NATIVELY.contains(&word.name) {
+            return None;
+        }
+        let Arity::Fixed(arity) = word.stack_inputs else {
+            return None;
+        };
+        let arity = arity as usize;
+        if arity == 0 || self.stack.len() < arity {
+            return None;
+        }
+        let lifted: Vec<bool> = word
+            .operand_roles
+            .iter()
+            .map(|role| matches!(role, OperandRole::Leaf | OperandRole::Truth))
+            .collect();
+        let window = &self.stack.as_slice()[self.stack.len() - arity..];
+        if !window
+            .iter()
+            .zip(&lifted)
+            .any(|(operand, lifts)| *lifts && is_container(operand))
+        {
+            return None;
+        }
+
+        let start = self.stack.len() - arity;
+        let operands: Vec<Value> = self.stack.drain(start..).collect();
+        let refs: Vec<&Value> = operands.iter().collect();
+        let mut element = |lane: &[&Value]| -> Result<Value> {
+            let base = self.stack.len();
+            for operand in lane {
+                self.stack.push((*operand).clone());
+            }
+            match self.execute_generated_word(word) {
+                Ok(()) => {
+                    // Every lifted Word answers exactly one value
+                    // (word-schema:check), so the lane leaves one result.
+                    assert_eq!(
+                        self.stack.len(),
+                        base + 1,
+                        "{} answers one value",
+                        word.name
+                    );
+                    Ok(self.stack.pop().expect("the result just asserted"))
+                }
+                Err(e) => {
+                    self.stack.truncate(base);
+                    Err(e)
+                }
+            }
+        };
+        let outcome = lift_lanes_dyn(&refs, &lifted, &mut element);
+        Some(match outcome {
+            Ok(result) => {
+                self.stack.push(result);
+                Ok(())
+            }
+            Err(e) => {
+                self.stack.extend(operands);
+                Err(e)
+            }
+        })
+    }
+}
+
+// `ABSENT` and `FAIL`: the trichotomy, stated by the program (LANG.FAILURE.TRICHOTOMY).
+//
+// A Core Word's contract says which of the three outcomes each of its inputs
+// meets; until these two Words a user Word could say neither of the failing
+// two — it answered a bare literal NIL, or let some inner Word raise for it.
+// `ABSENT` is a reasoned absence whose reason the program states, recovered
+// like any other; `FAIL` is an ERROR the program raises, propagating like any
+// other. Neither evaluates anything and neither can catch anything.
+/// `ABSENT ( [ 'reason' ] -> [ NIL ] )`.
+pub fn op_absent(interp: &mut Interpreter) -> Result<()> {
+    let operand = take_operand(interp)?;
+    let Some(text) = operand.as_text() else {
+        let got = operand.domain_name();
+        restore(interp, operand);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String reason, got {got}"),
+        ));
+    };
+    let absence = Value::nil_user_declared(text);
+    interp.stack.push(absence);
+    Ok(())
+}
+
+/// `FAIL ( [ 'message' ] -> [ ] )`: raises `declaredFailure`. The operand is
+/// put back first, as every Word's operands are on an ERROR.
+pub fn op_fail(interp: &mut Interpreter) -> Result<()> {
+    let operand = take_operand(interp)?;
+    let Some(text) = operand.as_text() else {
+        let got = operand.domain_name();
+        restore(interp, operand);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String message, got {got}"),
+        ));
+    };
+    let message = text.to_string();
+    restore(interp, operand);
+    Err(AjisaiError::declared("declaredFailure", message))
+}
+
 #[cfg(test)]
 mod declared_nil_contract_tests {
     use super::nil_rejection_error;
@@ -189,6 +329,95 @@ mod declared_nil_contract_tests {
                     word.name
                 );
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod declared_outcomes_tests {
+    //! Behavioral probes for `ABSENT` and `FAIL`: the reason a program states is
+    //! the reason the value carries, observably and as part of its identity.
+
+    use crate::interpreter::Interpreter;
+    use crate::test_support::{run, top};
+    use crate::types::Value;
+
+    #[tokio::test]
+    async fn absent_carries_the_reason_the_program_states() {
+        assert_eq!(
+            top("'rate not quoted' ABSENT NIL-REASON").await,
+            "'rate not quoted'"
+        );
+        assert_eq!(top("'why' ABSENT NIL?").await, "TRUE");
+        assert_eq!(top("'why' ABSENT 'S' BIND 0 S S NIL? SELECT").await, "0/1");
+        let interp = run("'why' ABSENT").await;
+        let value = interp.stack.last().cloned().expect("an answer");
+        assert_eq!(
+            value.nil_reason().map(|r| r.as_protocol_str()),
+            Some("userDeclared")
+        );
+        assert_eq!(value.absence_detail(), Some("why"));
+    }
+
+    /// LANG.VALUES.NIL: the reason is the value's entire observable content,
+    /// and the text is the reason, so it decides identity.
+    #[tokio::test]
+    async fn the_text_is_part_of_the_value() {
+        assert_eq!(
+            top("'a' ABSENT 'b' ABSENT 2 COLLECT UNIQUE LENGTH").await,
+            "2/1"
+        );
+        assert_eq!(
+            top("'a' ABSENT 'a' ABSENT 2 COLLECT UNIQUE LENGTH").await,
+            "1/1"
+        );
+        assert_ne!(Value::nil_user_declared("a"), Value::nil_user_declared("b"));
+        assert_eq!(Value::nil_user_declared("a"), Value::nil_user_declared("a"));
+    }
+
+    /// The detail survives the two places a value can be stored other than
+    /// the stack: a dense lane, and the persistence codec.
+    #[tokio::test]
+    async fn the_detail_survives_a_dense_lane() {
+        assert_eq!(
+            top("1 'why' ABSENT 2 COLLECT 1 GET NIL-REASON").await,
+            "'why'"
+        );
+    }
+
+    #[tokio::test]
+    async fn fail_raises_the_declared_category_with_the_message() {
+        let mut interp = Interpreter::new();
+        let error = interp
+            .execute("1 'width must be positive' FAIL 2")
+            .await
+            .expect_err("FAIL must raise");
+        let text = error.to_string();
+        assert!(text.contains("width must be positive"), "got: {text}");
+        // The operand is restored, and nothing after FAIL ran.
+        assert_eq!(
+            interp
+                .get_stack()
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            ["1/1", "'width must be positive'"]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_non_text_operand_is_the_program_being_wrong() {
+        for code in ["1 ABSENT", "1 FAIL", "NIL ABSENT"] {
+            let mut interp = Interpreter::new();
+            let text = interp
+                .execute(code)
+                .await
+                .expect_err(&format!("`{code}` must raise"))
+                .to_string();
+            assert!(
+                text.contains("String"),
+                "`{code}` must name the String it expected, got: {text}"
+            );
         }
     }
 }

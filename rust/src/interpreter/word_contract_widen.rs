@@ -1,3 +1,9 @@
+//! The helpers of contract inference that `word_contract.rs` calls but does
+//! not itself hold (that file sits at the per-file line budget): the facet
+//! vocabulary an inferred contract is stated in, the data-or-code
+//! classification of a `[ ... ]` literal, the resolve-then-widen step for a
+//! Symbol inside a code operand, and `CONTRACT`'s block-inference entry point.
+//!
 //! What a resolved dependency contributes to the accumulator during contract
 //! inference (`word_contract.rs`'s widen step) — two independent decisions,
 //! both about the *acc-relevant* axes (purity/effects/capabilities/
@@ -47,7 +53,121 @@
 //! since no builtin's own registered contract describes what a *caller-
 //! supplied* code operand does.
 
-use crate::types::Token;
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use crate::agent::contract_gap::GapCode;
+use crate::types::{Token, WordDefinition};
+
+use super::word_contract::{static_word_contract, AccumulatedContract, WordContract};
+use super::Interpreter;
+
+// The facets of an inferred contract, in the registry's own vocabulary.
+//
+// Split out of `word_contract.rs` for the file-size budget; the types are
+// re-exported from there.
+// The inferred facets speak the registry's own vocabulary
+// (`spec/words.schema.json`): a User Word's or a block's contract and a Core
+// Word's are answered with the same keys and the same values, so a caller
+// compares them without translating. Each enum is ordered tightest to
+// loosest, and the derived `Ord` is the join a body's contract widens by.
+
+/// `purity`: a block is never `conditional` — its body is known, and the
+/// inference walks it — so only the two ends of the registry's scale occur.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ContractPurity {
+    Pure,
+    Effectful,
+}
+
+impl ContractPurity {
+    pub const fn as_spec_str(self) -> &'static str {
+        match self {
+            ContractPurity::Pure => "pure",
+            ContractPurity::Effectful => "effectful",
+        }
+    }
+
+    pub fn from_spec_str(s: &str) -> Option<Self> {
+        [ContractPurity::Pure, ContractPurity::Effectful]
+            .into_iter()
+            .find(|p| p.as_spec_str() == s)
+    }
+}
+
+/// `determinism`: what else, beyond the operands, decides the result.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ContractDeterminism {
+    Deterministic,
+    StateRelative,
+    HostRelative,
+}
+
+impl ContractDeterminism {
+    pub const fn as_spec_str(self) -> &'static str {
+        match self {
+            ContractDeterminism::Deterministic => "deterministic",
+            ContractDeterminism::StateRelative => "stateRelative",
+            ContractDeterminism::HostRelative => "hostRelative",
+        }
+    }
+
+    pub fn from_spec_str(s: &str) -> Option<Self> {
+        [
+            ContractDeterminism::Deterministic,
+            ContractDeterminism::StateRelative,
+            ContractDeterminism::HostRelative,
+        ]
+        .into_iter()
+        .find(|d| d.as_spec_str() == s)
+    }
+}
+
+/// `partiality`: `projecting` when some call can answer a reasoned NIL of
+/// its own, `partial` when one can raise on operands of the right kind, and
+/// `total` otherwise — the registry's derivation, with `projecting` taking
+/// precedence exactly as it does there.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ContractPartiality {
+    Total,
+    Partial,
+    Projecting,
+}
+
+impl ContractPartiality {
+    pub const fn as_spec_str(self) -> &'static str {
+        match self {
+            ContractPartiality::Total => "total",
+            ContractPartiality::Partial => "partial",
+            ContractPartiality::Projecting => "projecting",
+        }
+    }
+
+    pub fn from_spec_str(s: &str) -> Option<Self> {
+        [
+            ContractPartiality::Total,
+            ContractPartiality::Partial,
+            ContractPartiality::Projecting,
+        ]
+        .into_iter()
+        .find(|p| p.as_spec_str() == s)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ContractConfidence {
+    Complete,
+    Conservative,
+}
+
+impl ContractConfidence {
+    pub const fn as_spec_str(self) -> &'static str {
+        match self {
+            ContractConfidence::Complete => "complete",
+            ContractConfidence::Conservative => "conservative",
+        }
+    }
+}
 
 /// Which `[ ... ]`, if any, a token sits inside, and whether that vector is
 /// inert data or a code operand about to run. See the module doc.
@@ -181,4 +301,115 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
         }
     }
     contexts
+}
+
+// Resolves a `[ ... ]` code operand's Symbols into the enclosing Word's
+// contract, split from `word_contract.rs` to keep that file under the
+// per-file line budget (the file-size budget in docs/dev/specification-implementation-rules.md). The algorithm itself is unchanged: this is
+// the same resolve-then-widen step `infer_word_contract_inner` already runs
+// for an ordinary body-level dependency, applied instead to a Symbol found
+// inside a literal that `word_contract_widen.rs` classified as
+// `LiteralContext::Code`.
+impl Interpreter {
+    /// Resolve `symbol` and widen `acc` with its contract, for a Symbol found
+    /// inside a `[ ... ]` classified `LiteralContext::Code` (`word_contract_
+    /// widen.rs`) — a fixed-position code operand the enclosing call (`MAP`,
+    /// `EXEC`, ...) will actually run, unlike an ordinary data literal. Only
+    /// `acc` is touched: arity/space/cost already treated the whole literal
+    /// as one opaque value (the caller's `flow`/`sim`/`cost_sim.feed_literal`
+    /// calls), and stay attributed at that Word's own call site rather than
+    /// unrolled here, exactly as for a ordinary body-level dependency's own
+    /// internal cost.
+    pub(crate) fn widen_with_code_operand_symbol(
+        &mut self,
+        symbol: &str,
+        visiting: &mut HashSet<String>,
+        acc: &mut AccumulatedContract,
+        complete: &mut bool,
+    ) {
+        let canonical = crate::word_name::canonical_word_name(symbol);
+        let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
+            *complete = false;
+            acc.note_unresolved_word();
+            return;
+        };
+        let dep_contract = if dep_def.is_builtin {
+            Arc::new(static_word_contract(&dep_name, &dep_def))
+        } else if visiting.contains(dep_name.as_ref()) {
+            *complete = false;
+            acc.gaps.push(GapCode::RecursiveDependency);
+            let mut placeholder =
+                WordContract::conservative(self.contract_cache_key(&dep_name, &dep_def));
+            placeholder.gaps.clear();
+            Arc::new(placeholder)
+        } else {
+            match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
+                Some(contract) => contract,
+                None => {
+                    *complete = false;
+                    acc.gaps.push(GapCode::DependencyUnknown);
+                    return;
+                }
+            }
+        };
+        acc.widen_with(&dep_contract);
+    }
+
+    /// Widen `acc` for a code operand this walk never read
+    /// (`word_contract_widen::runs_unread_code`): nothing is known about what
+    /// it does, so the widening is the conservative contract's, and the
+    /// inference is incomplete for a reason of its own.
+    pub(crate) fn widen_with_unread_code_operand(
+        &self,
+        acc: &mut AccumulatedContract,
+        complete: &mut bool,
+    ) {
+        *complete = false;
+        let mut unknown = WordContract::conservative(super::word_contract::leaf_cache_key(
+            "unread-code-operand".to_string(),
+        ));
+        unknown.gaps.clear();
+        acc.widen_with(&unknown);
+        acc.gaps.push(GapCode::UnmodelledControlFlow);
+    }
+}
+
+// `CONTRACT`'s block-inference entry point, split from `word_contract.rs` to keep
+// that file under the per-file line budget (the file-size budget in docs/dev/specification-implementation-rules.md). The algorithm itself is
+// unchanged: this is a thin adapter that lets `infer_word_contract_inner`
+// walk an anonymous CodeBlock's tokens the same way it already walks a
+// named dictionary Word's body.
+impl Interpreter {
+    /// The same walk `infer_word_contract` runs for a named dictionary Word,
+    /// run instead over an anonymous CodeBlock's own tokens. The block is
+    /// wrapped in a throwaway `WordDefinition` that is never inserted into
+    /// the dictionary — probing resolves the names the block calls but
+    /// writes nothing back, matching `CONTRACT`'s declared purity.
+    ///
+    /// The synthetic definition's `registration_order` is freshly drawn from
+    /// the interpreter's own counter (`next_registration_order`) on every
+    /// call. That is not incidental: `contract_cache_key` falls back to
+    /// `"unidentified:{name}:{registration_order}"` whenever `word_identity`
+    /// has nothing to look up — true for every anonymous block, which is
+    /// never named — and two different code blocks that happen to call the
+    /// same dependencies would otherwise collide on the same cache key and
+    /// silently return each other's inferred contract. A fresh order per
+    /// call makes that collision impossible at the cost of never sharing the
+    /// cache across probes, which is the correct trade for a Word whose
+    /// input is, by construction, unnamed.
+    pub(crate) fn infer_contract_for_block(&mut self, tokens: &[Token]) -> Arc<WordContract> {
+        let def = Arc::new(WordDefinition {
+            body: Arc::from(tokens),
+            is_builtin: false,
+            description: None,
+            dependencies: HashSet::new(),
+            text_references: HashSet::new(),
+            registration_order: self.next_registration_order(),
+            compiled_plan: None,
+            generated: None,
+        });
+        let mut visiting = HashSet::new();
+        self.infer_word_contract_inner("", &def, &mut visiting)
+            .expect("a freshly synthesized WordDefinition always yields Some")
+    }
 }

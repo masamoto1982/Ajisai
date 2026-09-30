@@ -14,28 +14,7 @@
 //! behavior: a future change that splits them again fails here.
 
 use crate::interpreter::Interpreter;
-use crate::types::Value;
-
-/// Run `code` and answer the value it leaves on top; failing to run is the
-/// probe's own bug.
-async fn top_of(code: &str) -> Value {
-    let mut interp = Interpreter::new();
-    interp
-        .execute(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-    interp.stack.last().cloned().expect("an answer was pushed")
-}
-
-/// The reason of the NIL `code` projects, or `None` if it carries none.
-async fn projected_reason(code: &str) -> Option<String> {
-    let answer = top_of(code).await;
-    assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
-    answer
-        .absence_metadata()
-        .and_then(|absence| absence.reason.as_ref())
-        .map(|reason| reason.as_protocol_str().to_string())
-}
+use crate::test_support::{reason, top_of};
 
 async fn raises(code: &str) -> bool {
     Interpreter::new().execute(code).await.is_err()
@@ -64,7 +43,7 @@ async fn past_the_end_projects_the_same_reason_from_every_addressing_word() {
         "[ 1 2 3 ] -9 5 PUT",
     ] {
         assert_eq!(
-            projected_reason(code).await.as_deref(),
+            reason(code).await.as_deref(),
             Some("indexOutOfBounds"),
             "`{code}` must project past-the-end"
         );

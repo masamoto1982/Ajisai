@@ -1,16 +1,14 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::arithmetic_division::{
-    apply_division_schema, build_scalar_fast_projection, division_by_zero_projection,
-};
 use crate::interpreter::arithmetic_meter::{
-    charge_binary_schema, check_result_size, measure_operand,
+    apply_division_schema, build_scalar_fast_projection, charge_binary_schema, check_result_size,
+    division_by_zero_projection, measure_operand,
 };
-use crate::interpreter::record_lift;
+use crate::interpreter::record_ops;
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_lane_ops::lane_nil_passthrough;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
-    extract_operands, nil_passthrough_binary, push_result,
+    exact_real_of, extract_operands, nil_passthrough_binary,
 };
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
@@ -57,13 +55,9 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
     interp.stack.pop();
 }
 
-/// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
-/// the native multi-core kernel actually fired for this operation.
-fn simd_schema_candidate(
-    schema: ExactArithmeticSchema,
-    a: &Value,
-    b: &Value,
-) -> Option<(Value, bool)> {
+/// The integer-lane answer for a schema, or `None` when no lane kernel takes
+/// the operands (non-integer, too short, or an overflow to decline on).
+fn simd_schema_candidate(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Option<Value> {
     match schema {
         ExactArithmeticSchema::Add => simd_ops::apply_simd_add(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_add(a, b))
@@ -83,7 +77,7 @@ fn push_simd_schema_result(
     a: &Value,
     b: &Value,
 ) -> Result<bool> {
-    let Some((result, _parallel_used)) = simd_schema_candidate(schema, a, b) else {
+    let Some(result) = simd_schema_candidate(schema, a, b) else {
         return Ok(false);
     };
     check_result_size(interp, &result)?;
@@ -103,10 +97,10 @@ fn push_exact_real_schema_result(
     if !has_exact {
         return Ok(false);
     }
-    let Some(a_exact) = extract_exact_real_from_value(a) else {
+    let Some(a_exact) = exact_real_of(a) else {
         return Ok(false);
     };
-    let Some(b_exact) = extract_exact_real_from_value(b) else {
+    let Some(b_exact) = exact_real_of(b) else {
         return Ok(false);
     };
 
@@ -246,7 +240,7 @@ fn push_scalar_fastpath_result(
     check_result_size(interp, &result)?;
     interp.stack.pop();
     interp.stack.pop();
-    push_result(interp, result);
+    interp.stack.push(result);
     interp.runtime_metrics.scalar_fastpath_count = interp
         .runtime_metrics
         .scalar_fastpath_count
@@ -262,7 +256,7 @@ fn apply_exact_arithmetic_schema(
         return Ok(());
     }
     // A Record operand lifts the Word over its values (LANG.COLLECTIONS.LIFT).
-    if record_lift::lift_binary(interp, &|interp| {
+    if record_ops::lift_binary(interp, &|interp| {
         apply_exact_arithmetic_schema(interp, schema)
     })? {
         return Ok(());
@@ -331,14 +325,6 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Tensor { .. } => None,
         ValueData::Nil => None,
         ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
-    }
-}
-
-fn extract_exact_real_from_value(val: &Value) -> Option<ExactReal> {
-    match &val.data {
-        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-        ValueData::ExactScalar(er) => Some(er.clone()),
-        _ => None,
     }
 }
 
@@ -529,7 +515,7 @@ pub(crate) fn push_exact_real_broadcast_result(
     // literal turned off.
     check_result_size(interp, &result)?;
     consume_stacktop_binary(interp);
-    push_result(interp, result);
+    interp.stack.push(result);
     Ok(true)
 }
 
@@ -616,7 +602,7 @@ where
         }
     };
 
-    push_result(interp, result);
+    interp.stack.push(result);
 
     Ok(())
 }

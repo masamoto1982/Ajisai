@@ -1,62 +1,51 @@
-pub mod algo_ops;
 pub mod arithmetic;
-pub(crate) mod arithmetic_division;
 pub(crate) mod arithmetic_meter;
 pub(crate) mod bindings;
 mod body_symbols;
 pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;
-pub(crate) mod comparison_scalar;
-pub(crate) mod compiled_call;
 pub mod compiled_plan;
 mod contract_record;
 pub mod control;
 mod debug_declared_checks;
 pub mod debug_diagnosis;
-mod debug_limit_checks;
 mod debug_next_checks;
-mod declared_lift;
 pub(crate) mod declared_nil_contract;
-mod declared_outcomes;
-#[cfg(test)]
-mod declared_outcomes_tests;
-pub mod epoch;
 pub mod error_flow_trace;
 #[cfg(test)]
 mod error_message_format_tests;
 #[cfg(test)]
 mod error_operand_restore_tests;
 pub mod execute_def;
-pub mod execute_del;
 #[cfg(test)]
 mod format_json_tests;
 mod format_ops;
 pub mod higher_order;
 pub mod higher_order_fold;
 pub mod host;
-pub mod host_lookup;
-mod host_profile_defaults;
+// The host-side Word lookup lives in `host.rs`; the module path it used to
+// have is kept for the hosts (`wasm_interpreter_bindings`, `rust/tests`) that
+// import it by that name.
+pub use self::host as host_lookup;
+pub(crate) mod host_profile_defaults;
 pub mod io;
 mod json_decode;
 mod json_encode;
 pub(crate) mod lane_lift;
-pub(crate) mod limit_profile;
+// The limit-profile enumeration lives in `host_profile_defaults.rs`; the
+// module path it used to have is kept for `agent::execution_receipt` and the
+// wasm bindings, which import it by that name.
+pub(crate) use self::host_profile_defaults as limit_profile;
 pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
 mod ordering_ops;
 #[cfg(test)]
 mod ordering_ops_tests;
-pub(crate) mod outcome_repair;
-mod power_ops;
 #[cfg(test)]
 mod power_words_tests;
 pub(crate) mod predict_program_outcomes;
-#[cfg(test)]
-mod predict_program_outcomes_tests;
-mod radicand_budget;
-mod record_lift;
 mod record_ops;
 #[cfg(test)]
 mod record_words_tests;
@@ -65,32 +54,24 @@ mod reflection_ops;
 mod reflection_words_tests;
 pub mod runtime_limits;
 mod search_ops;
-#[cfg(test)]
-mod search_words_tests;
 mod session_lifecycle;
-mod shape_ops;
 mod shape_words;
 #[cfg(test)]
 mod shape_words_tests;
 pub(crate) mod simd_ops;
 pub mod sort;
-#[cfg(test)]
-mod sort_tests;
 mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
-pub mod upstream_nil_link;
-#[cfg(test)]
-mod upstream_nil_link_tests;
+// The upstream-NIL link lives in `nil_diagnostics.rs`; the module path it
+// used to have is kept for `agent::run_render`, which imports it by that name.
+pub(crate) use self::nil_diagnostics as upstream_nil_link;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
 mod word_candidates;
 pub mod word_contract;
-mod word_contract_code_operand;
-mod word_contract_facets;
 mod word_contract_flow;
-mod word_contract_probe;
 #[cfg(test)]
 mod word_contract_tests;
 mod word_contract_widen;
@@ -98,8 +79,6 @@ pub(crate) mod word_cost;
 #[cfg(test)]
 mod word_cost_tests;
 pub(crate) mod word_outcome_vocabulary;
-#[cfg(test)]
-mod word_outcome_vocabulary_tests;
 // `pub(crate)`, not private: `agent::observation_digest` (Phase 1,
 // competitive-advantage-work-order-2026-08.md) calls
 // `word_identity::content_digest` and `word_identity::encode_token` directly,
@@ -123,27 +102,16 @@ mod resolve_word;
 mod execution_loop;
 #[cfg(test)]
 mod execution_step_parity_tests;
-mod nil_trace;
-#[cfg(test)]
-mod nil_trace_tests;
 mod value_as_code;
-pub(crate) mod vector_literal;
 
 mod execute_builtin;
 
 pub(crate) mod nil_diagnostics;
 
 #[cfg(test)]
-mod algo_ops_tests;
-#[cfg(test)]
-mod arithmetic_exact_div_tests;
-#[cfg(test)]
 mod arithmetic_meter_tests;
 #[cfg(test)]
 mod collection_meter_tests;
-#[cfg(test)]
-mod control_exec_eval_tests;
-mod debug_diagnosis_annotations;
 #[cfg(test)]
 mod debug_diagnosis_tests;
 #[cfg(test)]
@@ -168,10 +136,6 @@ mod error_flow_trace_tests;
 mod exact_vector_broadcast_tests;
 #[cfg(test)]
 mod higher_order_block_plan_tests;
-#[cfg(test)]
-mod higher_order_fold_tests;
-#[cfg(test)]
-mod higher_order_map_tests;
 #[cfg(test)]
 mod index_projection_tests;
 #[cfg(test)]
@@ -204,19 +168,10 @@ pub use compiled_plan::{
     compile_token_block, compile_word_definition, execute_compiled_plan, is_plan_valid,
     CompiledLine, CompiledOp, CompiledPlan,
 };
-pub use epoch::EpochSnapshot;
 
 #[cfg(test)]
 mod builtin_dispatch_tests;
 #[cfg(test)]
-mod comparison_rational_screen_tests;
-#[cfg(test)]
-mod compiled_plan_tests;
-#[cfg(test)]
 mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod scalar_fastpath_tests;
-#[cfg(test)]
-mod session_restore_tests;
-#[cfg(test)]
-mod vector_literal_tests;
