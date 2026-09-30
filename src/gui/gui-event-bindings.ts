@@ -1,4 +1,3 @@
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { Display } from './output-display-renderer';
 import type { Editor } from './code-input-editor';
 import type { MobileHandler, ViewMode } from './mobile-view-switcher';
@@ -6,8 +5,7 @@ import type { Persistence } from './interpreter-state-persistence';
 import type { ExecutionController } from './execution-controller';
 import type { VocabularyManager } from './vocabulary-state-controller';
 import type { GUIElements } from './gui-dom-cache';
-import type { LayoutState } from './gui-layout-state';
-import type { LayoutController } from './layout/layout-controller';
+import type { LayoutController, LayoutState } from './gui-layout-state';
 import { createEditorHistory } from './editor-history';
 import {
     checkIsStationary,
@@ -22,6 +20,24 @@ import {
 // taps in a row.
 const MULTI_TAP_INTERVAL_MS = 500;
 const TAP_MOVEMENT_TOLERANCE_PX = 24;
+const TAP_OPTIONS = { intervalMs: MULTI_TAP_INTERVAL_MS, movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX };
+
+// `action` runs on the `count`th click of a run, while `enabled` holds.
+const bindClickCount = (
+    target: HTMLElement,
+    count: number,
+    enabled: (e: MouseEvent) => boolean,
+    action: () => void
+): void => {
+    const recognizer = createMultiTapRecognizer(TAP_OPTIONS);
+    target.addEventListener('click', (e: MouseEvent) => {
+        if (!enabled(e)) return;
+        if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= count) {
+            recognizer.reset();
+            action();
+        }
+    });
+};
 
 // Reset is the one operation that throws away the stack *and* the dictionary,
 // so it asks first.
@@ -37,13 +53,8 @@ export type GuiEventBindingContext = {
     readonly editor: Editor;
     readonly executionController: ExecutionController;
     readonly persistence: Persistence;
-    readonly switchArea: (mode: ViewMode) => void;
-    readonly updateAllDisplays: () => void;
-    /// Discard every value on the stack, leaving the dictionary alone. Lives on
-    /// the context rather than being reached from here because the interpreter
-    /// client is owned by the application module.
+    // Discard every value on the stack, leaving the dictionary alone.
     readonly clearStack: () => void;
-    readonly doSwitchDictionarySheet: (sheetId: string) => void;
 };
 
 const debounce = <T extends (...args: unknown[]) => void>(
@@ -58,55 +69,25 @@ const debounce = <T extends (...args: unknown[]) => void>(
 };
 
 function bindLayoutEvents(context: GuiEventBindingContext): void {
-    const {
-        elements,
-        mobile,
-        layoutState,
-        switchArea,
-        doSwitchDictionarySheet,
-        layoutController,
-        persistence
-    } = context;
+    const { elements, mobile, layoutState, layoutController } = context;
+    const switchArea = layoutController.setArea;
 
-    elements.leftPanelSelect.addEventListener('change', () => {
-        switchArea(elements.leftPanelSelect.value as ViewMode);
-    });
-    elements.rightPanelSelect.addEventListener('change', () => {
-        switchArea(elements.rightPanelSelect.value as ViewMode);
-    });
-    elements.mobilePanelSelect.addEventListener('change', () => {
-        switchArea(elements.mobilePanelSelect.value as ViewMode);
-    });
+    for (const select of [elements.leftPanelSelect, elements.rightPanelSelect, elements.mobilePanelSelect]) {
+        select.addEventListener('change', () => switchArea(select.value as ViewMode));
+    }
 
-    elements.dictionarySheetSelect.addEventListener('change', () => {
-        doSwitchDictionarySheet(elements.dictionarySheetSelect.value);
-        void persistence.saveCurrentState();
-    });
-
-    const setupDoubleTapToTransition = (
-        target: HTMLElement,
-        activeMode: ViewMode,
-        nextMode: ViewMode
-    ): void => {
-        const recognizer = createMultiTapRecognizer({
-            intervalMs: MULTI_TAP_INTERVAL_MS,
-            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
-        });
-
-        target.addEventListener('click', (e: MouseEvent) => {
-            if (!mobile.isMobile()) return;
-            if (layoutState.currentMode !== activeMode) return;
-            if ((e.target as HTMLElement).closest('button, a')) return;
-
-            if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= 2) {
-                recognizer.reset();
-                switchArea(nextMode);
-            }
-        });
-    };
-
-    setupDoubleTapToTransition(elements.stackDisplay, 'stack', 'output');
-    setupDoubleTapToTransition(elements.outputDisplay, 'output', 'input');
+    // On mobile a double-tap on Stack shows Output, and on Output shows Input.
+    const bindDoubleTapTransition = (target: HTMLElement, activeMode: ViewMode, nextMode: ViewMode): void =>
+        bindClickCount(
+            target,
+            2,
+            (e) => mobile.isMobile()
+                && layoutState.currentMode === activeMode
+                && !(e.target as HTMLElement).closest('button, a'),
+            () => switchArea(nextMode)
+        );
+    bindDoubleTapTransition(elements.stackDisplay, 'stack', 'output');
+    bindDoubleTapTransition(elements.outputDisplay, 'output', 'input');
 
     window.addEventListener('resize', () => {
         layoutController.handleResize();
@@ -114,13 +95,14 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 }
 
 function bindInteractionEvents(context: GuiEventBindingContext): void {
-    const { elements, vocabulary, editor, mobile, layoutState, switchArea, display, persistence, executionController, clearStack } = context;
+    const { elements, vocabulary, editor, mobile, layoutState, layoutController, display, persistence, executionController, clearStack } = context;
+    const switchArea = layoutController.setArea;
     // Session-lived recall of submitted programs, so a run (which clears the
     // editor) and a Reset are both recoverable. See editor-history.ts.
     const history = createEditorHistory();
+    // One word search, in the Dictionary area itself, for both presentations.
     const applySearchFilter = (filter: string): void => {
         elements.dictionarySearch.value = filter;
-        elements.mobileDictionarySearch.value = filter;
         vocabulary.updateSearchFilter(filter);
     };
 
@@ -128,14 +110,8 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         applySearchFilter(elements.dictionarySearch.value);
     }, 150);
 
-    const applyMobileSearchInput = debounce(() => {
-        applySearchFilter(elements.mobileDictionarySearch.value);
-    }, 150);
-
     elements.dictionarySearch.addEventListener('input', applySearchInput);
-    elements.mobileDictionarySearch.addEventListener('input', applyMobileSearchInput);
     elements.dictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
-    elements.mobileDictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
 
     elements.editorClearBtn.addEventListener('click', () => editor.clear());
     // Same control, same corner, same gesture as clearing the editor — the
@@ -188,10 +164,8 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         });
     });
 
-    elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
-    elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
-
-
+    elements.exportBtn.addEventListener('click', () => persistence.exportUserWords());
+    elements.importBtn.addEventListener('click', () => persistence.importUserWords());
 
     elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && e.shiftKey) {
@@ -213,18 +187,14 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         }
     });
 
-    // Triple-tap the editor to Run. This is the shortcut, not the only way in:
-    // the Run button below the editor is, and a gesture that shares its shape
-    // with the OS's own paragraph-select must never be the sole route to
-    // running a program. What it must be is deliberate, so a tap here is a
-    // touch that went down and came up in the same place, on its own: the end
-    // of a drag-to-select and one release out of a pinch are not taps, and
-    // before this guard three of either ran the program.
+    // Triple-tap the editor to Run — on mobile the one route, which the Input
+    // surface's own text names (spec/gui-semantics.md, rule 4). A gesture that
+    // shares its shape with the OS's own paragraph-select must therefore be
+    // deliberate, so a tap here is a touch that went down and came up in the
+    // same place, on its own: the end of a drag-to-select and one release out
+    // of a pinch are not taps.
     {
-        const recognizer = createMultiTapRecognizer({
-            intervalMs: MULTI_TAP_INTERVAL_MS,
-            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
-        });
+        const recognizer = createMultiTapRecognizer(TAP_OPTIONS);
         let touchOrigin: GesturePoint | null = null;
 
         elements.codeInput.addEventListener('touchstart', (e: TouchEvent) => {
@@ -264,36 +234,23 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         }, { passive: true });
     }
 
-    {
-        const recognizer = createMultiTapRecognizer({
-            intervalMs: MULTI_TAP_INTERVAL_MS,
-            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
-        });
-
-        elements.codeInput.addEventListener('click', (e: MouseEvent) => {
-            if (mobile.isMobile()) return;
-
-            if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= 3) {
-                recognizer.reset();
-                runEditorCode();
-            }
-        });
-    }
+    // There is no desktop triple-click Run. A triple-click selects a line in
+    // every text field, and a Run cannot be taken back — it changes the stack
+    // and the dictionary — so the gesture that means "select" must not mean
+    // "execute". Shift+Enter is the one desktop Run; triple-tap stays on touch,
+    // where no line-select gesture competes with it.
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
             // This listener captures and stops propagation, so the editor's own
-            // Escape branch never sees the key: an open suggestion panel could
-            // not be dismissed the way every other editor dismisses one, and the
-            // panel stayed over the code while the user pressed Escape at it.
-            // Dismissing takes priority; Abort still gets Escape whenever there
-            // is no panel to close.
+            // Escape branch never sees the key. Dismissing an open suggestion
+            // panel takes priority; Abort still gets Escape whenever there is
+            // no panel to close.
             if (editor.dismissSuggestions()) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 return;
             }
-            WORKER_MANAGER.abortAll();
             executionController.abortExecution();
             e.preventDefault();
             e.stopImmediatePropagation();
@@ -309,8 +266,9 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         // bound on the window rather than their buttons because the Stack area
         // can hold focus, and `e.code` so the binding does not move with the
         // layout. Neither confirms: unlike Reset, Stack clear loses only values
-        // (one re-run away) and Editor clear loses only unsaved typing
-        // (recoverable via Recall).
+        // (one re-run away) and Editor clear is an ordinary edit that Ctrl+Z
+        // takes back. (Recall brings back submitted programs, not unsaved
+        // typing, so it never recovered an Editor clear.)
         if (e.code === 'KeyS' && e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey) {
             clearStack();
             e.preventDefault();

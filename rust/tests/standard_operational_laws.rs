@@ -19,11 +19,13 @@ fn effect_payloads(interpreter: &Interpreter) -> Vec<&str> {
         .collect()
 }
 
+/// `MAP` is a Kernel Word; it is pinned here beside `FILTER`, whose visiting
+/// order and isolated per-element stacks it shares.
 #[tokio::test]
 async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] [ KEEP PRINT 10 ADD ] MAP")
+        .execute("[ 3 1 2 ] [ 'E' BIND E PRINT E 10 ADD ] MAP")
         .await
         .unwrap();
 
@@ -35,29 +37,12 @@ async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
 async fn filter_visits_in_index_order_and_observes_predicate_truth() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] [ KEEP PRINT 1 GT ] FILTER")
+        .execute("[ 3 1 2 ] [ 'E' BIND E PRINT E 1 GT ] FILTER")
         .await
         .unwrap();
 
     assert_eq!(effect_payloads(&interpreter), ["3/1", "1/1", "2/1"]);
     assert_eq!(rendered_stack(&interpreter), ["[ 3/1 2/1 ]"]);
-}
-
-#[tokio::test]
-async fn any_and_all_short_circuit_before_unvisited_effects() {
-    let mut any = Interpreter::new();
-    any.execute("[ 1 2 3 ] [ KEEP PRINT 2 EQ ] ANY")
-        .await
-        .unwrap();
-    assert_eq!(effect_payloads(&any), ["1/1", "2/1"]);
-    assert_eq!(rendered_stack(&any), ["TRUE"]);
-
-    let mut all = Interpreter::new();
-    all.execute("[ 1 2 3 ] [ KEEP PRINT 2 LT ] ALL")
-        .await
-        .unwrap();
-    assert_eq!(effect_payloads(&all), ["1/1", "2/1"]);
-    assert_eq!(rendered_stack(&all), ["FALSE"]);
 }
 
 /// `SCAN` answers the accumulator after each element, in index order, with one
@@ -77,7 +62,7 @@ async fn any_and_all_short_circuit_before_unvisited_effects() {
 async fn scan_walks_in_index_order_and_answers_one_lane_per_element() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] 0 [ KEEP PRINT ADD ] SCAN")
+        .execute("[ 3 1 2 ] 0 [ 'E' BIND E PRINT E ADD ] SCAN")
         .await
         .unwrap();
 
@@ -88,7 +73,7 @@ async fn scan_walks_in_index_order_and_answers_one_lane_per_element() {
     // The same answer, derived: fold each prefix from the start.
     let mut derived = Interpreter::new();
     derived
-        .execute("[ 3 1 2 ] 'V' BIND [ 1 3 ] RANGE [ 'K' BIND V K TAKE 0 [ ADD ] FOLD ] MAP")
+        .execute("[ 3 1 2 ] 'V' BIND 1 3 RANGE [ 'K' BIND V K TAKE 0 [ ADD ] FOLD ] MAP")
         .await
         .unwrap();
     assert_eq!(rendered_stack(&derived), ["[ 3/1 4/1 6/1 ]"]);
@@ -112,14 +97,16 @@ async fn scan_is_lane_for_lane_where_fold_is_seed_shaped() {
     absent_scan.execute("NIL 7 [ ADD ] SCAN").await.unwrap();
     assert_eq!(rendered_stack(&absent_scan), ["NIL"]);
 
+    // An absent Vector is data to both (LANG.FAILURE.PASSTHROUGH): the
+    // absence is the result, not the seed standing in for an empty fold.
     let mut absent_fold = Interpreter::new();
     absent_fold.execute("NIL 7 [ ADD ] FOLD").await.unwrap();
-    assert_eq!(rendered_stack(&absent_fold), ["7/1"]);
+    assert_eq!(rendered_stack(&absent_fold), ["NIL"]);
 }
 
 #[tokio::test]
 async fn higher_order_errors_restore_the_original_operand_atomically() {
-    for word in ["MAP", "FILTER", "ANY", "ALL"] {
+    for word in ["MAP", "FILTER"] {
         let mut interpreter = Interpreter::new();
         let source = format!("[ 3 1 2 ] [ UNKNOWN-CALLBACK ] {word}");
         assert!(interpreter.execute(&source).await.is_err(), "{word}");
@@ -134,8 +121,8 @@ async fn higher_order_errors_restore_the_original_operand_atomically() {
 #[tokio::test]
 async fn fill_checks_overflow_and_ceiling_before_materializing() {
     for source in [
-        "[ 1000000 1000000 7 ] FILL",
-        "[ 99999999 99999999 99999999 1 ] FILL",
+        "[ 1000000 1000000 ] 7 FILL",
+        "[ 99999999 99999999 99999999 ] 1 FILL",
     ] {
         let mut interpreter = Interpreter::new();
         interpreter.execute(source).await.unwrap();
@@ -182,7 +169,7 @@ async fn order_is_the_stable_permutation_sort_applies() {
     // Applying the permutation reproduces SORT exactly.
     let mut applied = Interpreter::new();
     applied
-        .execute("[ 18 13 1 1 13 2 ] KEEP ORDER GET")
+        .execute("[ 18 13 1 1 13 2 ] 'V' BIND V V ORDER GET")
         .await
         .unwrap();
     let mut sorted = Interpreter::new();
@@ -267,7 +254,7 @@ async fn put_replaces_exactly_one_position() {
 async fn group_partitions_without_loss() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP")
+        .execute("[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP")
         .await
         .unwrap();
     assert_eq!(
@@ -277,33 +264,13 @@ async fn group_partitions_without_loss() {
 
     let mut mismatched = Interpreter::new();
     assert!(mismatched
-        .execute("[ 1 2 3 ] [ 'a' 'b' ] GROUP")
+        .execute("[ 'a' 'b' ] [ 1 2 3 ] GROUP")
         .await
         .is_err());
 }
 
-/// `MEMBER` indexes the vector once and answers every probe from that index,
-/// so a probe set of any size costs one pass over the vector; the Kernel-only
-/// spelling scans the vector once per probe. Same answer, lane for lane.
-#[tokio::test]
-async fn member_is_one_pass_and_agrees_with_index_of_per_probe() {
-    let mut interpreter = Interpreter::new();
-    interpreter
-        .execute(
-            "[ 5 7 9 ] [ 7 4 9 ] MEMBER \
-             [ 5 7 9 ] 7 INDEX-OF NIL? NOT [ 5 7 9 ] 4 INDEX-OF NIL? NOT [ 5 7 9 ] 9 INDEX-OF NIL? NOT",
-        )
-        .await
-        .unwrap();
-    let stack = rendered_stack(&interpreter);
-    assert_eq!(stack[0], "[ TRUE FALSE TRUE ]");
-    // `NIL?` answers its subject together with the truth, so each probe leaves
-    // INDEX-OF's answer and the negated absence beside it.
-    assert_eq!(&stack[1..], ["1/1", "TRUE", "NIL", "FALSE", "2/1", "TRUE"]);
-}
-
 /// `BSEARCH` answers what `INDEX-OF` answers on an ascending vector — the
-/// first index of the key, or a `missingField` absence — and refuses an
+/// first index of the key, or a `notFound` absence — and refuses an
 /// unsorted operand rather than answering from it.
 #[tokio::test]
 async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() {
@@ -314,7 +281,7 @@ async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() 
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "NIL", "'missingField'"]
+        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "'notFound'"]
     );
 
     let mut interpreter = Interpreter::new();
@@ -339,55 +306,23 @@ async fn search_and_replace_are_the_one_pass_forms_of_the_window_scan() {
     assert_eq!(rendered_stack(&interpreter), ["2/1", "'abXbc'", "'bb'"]);
 }
 
-/// `RANDOM` is a function of its operands: the same seed draws the same
-/// rationals, every time, in any interpreter. That is what lets it into a
-/// language with no hidden state — and the draws are exact rationals in
-/// [0, 1), so nothing about them is approximate either.
-#[tokio::test]
-async fn random_is_a_pure_function_of_its_seed() {
-    let mut first = Interpreter::new();
-    first.execute("7 4 RANDOM").await.unwrap();
-    let mut again = Interpreter::new();
-    again.execute("7 4 RANDOM").await.unwrap();
-    assert_eq!(rendered_stack(&first), rendered_stack(&again));
-
-    let mut other_seed = Interpreter::new();
-    other_seed.execute("8 4 RANDOM").await.unwrap();
-    assert_ne!(rendered_stack(&first), rendered_stack(&other_seed));
-
-    let mut in_unit_interval = Interpreter::new();
-    in_unit_interval
-        .execute("7 64 RANDOM KEEP [ 0 LT ] ANY 'BELOW' BIND [ 1 GTE ] ANY")
-        .await
-        .unwrap();
-    assert_eq!(rendered_stack(&in_unit_interval), ["FALSE"]);
-
-    // Beyond the space water level a well-formed request projects onto NIL
-    // rather than exhausting the host, the same answer RANGE and FILL give.
-    let mut too_many = Interpreter::new();
-    too_many.execute("7 99999999 RANDOM").await.unwrap();
-    let value = too_many.get_stack().last().expect("RANDOM result");
-    assert!(value.is_nil());
-    assert_eq!(value.nil_reason(), Some(&NilReason::SpaceExhausted));
-}
-
-/// `FORMAT` answers what `QUANTIZE` to `10^digits` followed by a decimal
+/// `FORMAT` answers what `ROUND` scaled to `10^digits` followed by a decimal
 /// spelling of the result would answer — the same rounded quantity, under the
 /// same tie rule — in one place, as text, so the rounding never re-enters
-/// arithmetic. The last digit of a computable real is settled under the
-/// comparison budget or projected, never guessed.
+/// arithmetic. The last digit of an irrational is decided exactly, never
+/// guessed.
 #[tokio::test]
-async fn format_agrees_with_quantize_and_rounds_half_to_even() {
+async fn format_agrees_with_scaled_round() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "2/3 2 FORMAT 2/3 100 QUANTIZE 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT",
+            "2/3 2 FORMAT 2/3 100 MUL ROUND 100 DIV 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT 2 SQRT 3 SQRT ADD 2 FORMAT",
         )
         .await
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["'0.67'", "67/100", "'3'", "'4'", "'1.414'", "'3.14'"]
+        ["'0.67'", "67/100", "'3'", "'4'", "'1.414'", "'3.15'"]
     );
 
     let mut interpreter = Interpreter::new();
@@ -406,10 +341,10 @@ async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "'{\"a\": 0.1, \"b\": [true, null, \"x\"]}' JSON-DECODE 'a' AT 10 MUL \
+            "'{\"a\": 0.1, \"b\": [true, null, \"x\"]}' JSON-DECODE 'a' GET 10 MUL \
              [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD JSON-ENCODE \
-             [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ \
-             1/3 JSON-ENCODE KEEP JSON-DECODE NUM \
+             [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD 'V' BIND V V JSON-ENCODE JSON-DECODE EQ \
+             1/3 JSON-ENCODE 'J' BIND J J JSON-DECODE NUM \
              2 SQRT JSON-ENCODE NIL-REASON \
              '[1,' JSON-DECODE NIL-REASON",
         )
@@ -423,9 +358,7 @@ async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
             "TRUE",
             "'\"1/3\"'",
             "1/3",
-            "NIL",
             "'domainMiss'",
-            "NIL",
             "'invalidEncoding'",
         ]
     );
@@ -440,49 +373,15 @@ async fn gcd_and_ratio_agree_with_the_kernel_spellings() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "12 18 GCD 18 12 MOD 12 GCD \
+            "12 18 GCD 18 18 12 DIV FLOOR 12 MUL SUB 12 GCD \
              6/4 RATIO 0 GET 6/4 RATIO 1 GET DIV 3/2 EQ \
-             2 SQRT RATIO NIL-REASON PI 4 GCD NIL-REASON",
+             2 SQRT RATIO NIL-REASON 1/2 4 GCD NIL-REASON",
         )
         .await
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        [
-            "6/1",
-            "6/1",
-            "TRUE",
-            "NIL",
-            "'domainMiss'",
-            "NIL",
-            "'undecidable'"
-        ]
-    );
-}
-
-/// The transcendental Words answer computable reals whose enclosures a
-/// comparison refines under the water budget: decisive against separated
-/// rationals, honestly UNKNOWN against values they cannot be told from, and
-/// exact where the argument makes the answer rational.
-#[tokio::test]
-async fn transcendentals_decide_against_rationals_and_starve_against_themselves() {
-    let mut interpreter = Interpreter::new();
-    interpreter
-        .execute(
-            "1 EXP 2 GT 1 EXP 3 LT 1 EXP 1 EXP EQ 0 EXP \
-             10 LN 2 LN DIV 3 GT 1 LN \
-             PI 2 DIV SIN 1 LT 0 SIN 0 COS PI COS -1 LT \
-             1 ATAN 4 MUL PI EQ 0 ATAN \
-             2 1/3 POW 3 POW 2 EQ 8 1/3 POW 2 1/2 POW 2 SQRT EQ",
-        )
-        .await
-        .unwrap();
-    assert_eq!(
-        rendered_stack(&interpreter),
-        [
-            "TRUE", "TRUE", "NIL", "1/1", "TRUE", "0/1", "NIL", "0/1", "1/1", "NIL", "NIL", "0/1",
-            "NIL", "2/1", "TRUE",
-        ]
+        ["6/1", "6/1", "TRUE", "'domainMiss'", "'domainMiss'"]
     );
 }
 

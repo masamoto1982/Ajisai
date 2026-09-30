@@ -51,35 +51,12 @@
       ]
     },
     {
-      "id": "scalarComputableReal",
-      "subject": "Two scalars of which at least one is a general computable real",
-      "procedure": "Refine a bounding interval until the two separate, or until the comparison budget is spent.",
-      "decides": ["same", "different", "unknown"],
-      "total": false,
-      "unknownArrivesAs": {
-        "kind": "nilReason",
-        "reason": "undecidable"
-      },
-      "note": "The only level whose `unknown` is a value the program can hold: the comparison yields NIL carrying `undecidable`, which reads as the logical UNKNOWN of LANG.VALUES.TRUTH. This is the language already doing what the law asks — a procedure that could not decide says so rather than guessing.",
-      "witnesses": [
-        {
-          "source": "PI PI EQ",
-          "expect": "nil:undecidable",
-          "note": "Two independently constructed computable reals with identical enclosures never separate, so refinement starves. Answering FALSE here would be wrong, and answering TRUE would be unjustified."
-        }
-      ]
-    },
-    {
       "id": "recordDenotation",
       "subject": "Two Records",
       "procedure": "Compare the key sequences position by position, then the value sequences, each pair by the procedure its own domain provides.",
-      "decides": ["same", "different", "unknown"],
-      "total": false,
-      "unknownArrivesAs": {
-        "kind": "nilReason",
-        "reason": "undecidable"
-      },
-      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by WITH in one order is different from one built in another, and construction history beyond that is unobservable. Where a key or a value is a computable real the pair inherits scalarComputableReal's `unknown`, and one undecided pair with every other pair equal makes the whole comparison UNKNOWN — never `different`.",
+      "decides": ["same", "different"],
+      "total": true,
+      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by PUT in one order is different from one built in another, and construction history beyond that is unobservable. Every key and value is compared by a procedure that decides, so the Record comparison decides too.",
       "witnesses": [
         {
           "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD EQ",
@@ -90,11 +67,6 @@
           "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 2 1 ] RECORD EQ",
           "expect": "FALSE",
           "note": "The same correspondence in a different key order is a different Record: order is observable structure, as it is for a Vector."
-        },
-        {
-          "source": "[ 'x' ] PI 1 COLLECT RECORD [ 'x' ] PI 1 COLLECT RECORD EQ",
-          "expect": "nil:undecidable",
-          "note": "The one undecided pair is a computable real, so the Record comparison answers what that pair answers."
         }
       ]
     },
@@ -105,8 +77,8 @@
       "decides": ["same", "unknown"],
       "total": false,
       "unknownArrivesAs": {
-        "kind": "hostJudgement",
-        "note": "Comparing two definitions is not an operation the language has — no Word takes two Words and answers whether they are one. The question is asked by a host reading the identities it is given, so this level's `unknown` is not a value a program can hold and has no NIL reason. It is a rule about what a host may conclude: from equal identities, that the definitions are one; from unequal ones, nothing."
+        "kind": "readingRule",
+        "note": "Comparing two definitions is not an operation the language has — no Word takes two Words and answers whether they are one. A program can read the identities (`DIGEST` answers a Word's content identity as text) and compare the texts with `EQ`, but that `EQ` decides whether two digests are one text, which is the question of the level below it, not this one: its FALSE is not a value this level produces and carries no NIL reason. So this level's `unknown` is a rule about what any reader of identities — a host or a program — may conclude: from equal identities, that the definitions are one; from unequal ones, nothing."
       },
       "soundness": "Equal identities imply equal denotations. This direction is what the host's import deduplication rests on (src/gui/interpreter-state-persistence.ts merges words that share an identity), so an unsound identity would silently merge two different Words in a reader's dictionary.",
       "incompleteness": "Unequal identities imply nothing. Two definitions that denote the same function can carry different identities, because the digest sees normalized structure and structure is finer than denotation. A consumer must read an identity mismatch as `unknown`, never as `different`.",
@@ -115,41 +87,33 @@
         {
           "id": "wordName",
           "note": "The name the definition is bound to.",
-          "left": "[ X | X 1 ADD ] 'IDA' DEF",
+          "left": "[ 1 ADD ] 'IDA' DEF",
           "leftWord": "IDA",
-          "right": "[ X | X 1 ADD ] 'IDB' DEF",
+          "right": "[ 1 ADD ] 'IDB' DEF",
           "rightWord": "IDB"
-        },
-        {
-          "id": "aliasSpelling",
-          "note": "A symbolic alias and its canonical Word are one name (LANG.SOURCE.NORMALIZE).",
-          "left": "[ X | X 1 ADD ] 'IDC' DEF",
-          "leftWord": "IDC",
-          "right": "[ X | X 1 + ] 'IDD' DEF",
-          "rightWord": "IDD"
         },
         {
           "id": "numericSpelling",
           "note": "A number is its value, not its lexeme (LANG.VALUES.DENOTATION applied inside the body).",
-          "left": "[ X | X 1 ADD ] 'IDE' DEF",
+          "left": "[ 1 ADD ] 'IDE' DEF",
           "leftWord": "IDE",
-          "right": "[ X | X 1/1 ADD ] 'IDF' DEF",
+          "right": "[ 1/1 ADD ] 'IDF' DEF",
           "rightWord": "IDF"
         },
         {
           "id": "layout",
           "note": "Whitespace is not part of a definition.",
-          "left": "[ X | X 1 ADD ] 'IDG' DEF",
+          "left": "[ 1 ADD ] 'IDG' DEF",
           "leftWord": "IDG",
-          "right": "[ X | X 1   ADD ] 'IDH' DEF",
+          "right": "[ 1   ADD ] 'IDH' DEF",
           "rightWord": "IDH"
         },
         {
           "id": "dependencyName",
           "note": "A reference is replaced by the identity of its target before hashing, so what a dependency is called does not reach the digest.",
-          "left": "[ X | X 1 ADD ] 'IDP' DEF\n[ X | X IDP ] 'IDUSEP' DEF",
+          "left": "[ 1 ADD ] 'IDP' DEF\n[ IDP ] 'IDUSEP' DEF",
           "leftWord": "IDUSEP",
-          "right": "[ X | X 1 ADD ] 'IDQ' DEF\n[ X | X IDQ ] 'IDUSEQ' DEF",
+          "right": "[ 1 ADD ] 'IDQ' DEF\n[ IDQ ] 'IDUSEQ' DEF",
           "rightWord": "IDUSEQ"
         }
       ],
@@ -157,19 +121,19 @@
         {
           "id": "dependencyBody",
           "note": "A change to a dependency changes the identity of everything that depends on it, which is the property LANG.DICTIONARY.MUTATION names.",
-          "left": "[ X | X 1 ADD ] 'IDR' DEF\n[ X | X IDR ] 'IDUSER' DEF",
+          "left": "[ 1 ADD ] 'IDR' DEF\n[ IDR ] 'IDUSER' DEF",
           "leftWord": "IDUSER",
-          "right": "[ X | X 2 ADD ] 'IDS' DEF\n[ X | X IDS ] 'IDUSES' DEF",
+          "right": "[ 2 ADD ] 'IDS' DEF\n[ IDS ] 'IDUSES' DEF",
           "rightWord": "IDUSES"
         }
       ],
       "incompletenessWitness": {
         "note": "Adding zero changes no denotation and changes the structure, so these two denote one function and carry two identities. This is the witness that an identity mismatch means `unknown`.",
-        "left": "[ X | X 1 ADD ] 'IDX' DEF",
+        "left": "[ 1 ADD ] 'IDX' DEF",
         "leftWord": "IDX",
-        "right": "[ X | X 1 ADD 0 ADD ] 'IDY' DEF",
+        "right": "[ 1 ADD 0 ADD ] 'IDY' DEF",
         "rightWord": "IDY",
-        "agreeOn": ["0", "1", "5", "1/2", "1 NEG", "[ 1 2 3 ]"]
+        "agreeOn": ["0", "1", "5", "1/2", "-1", "[ 1 2 3 ]"]
       }
     }
   ]

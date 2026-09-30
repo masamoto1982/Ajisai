@@ -15,7 +15,7 @@ use super::tensor_cmds::checked_shape_product;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::charge_materialization;
 use crate::interpreter::value_extraction_helpers::is_vector_value;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
 
@@ -71,30 +71,44 @@ fn flatten_into(value: &Value, out: &mut Vec<Value>) {
 }
 
 /// `leaves`, regrouped under `shape` in row-major order. The caller has already
-/// checked that the product of `shape` is `leaves.len()`.
-fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
-    if shape.len() <= 1 {
-        return Value::from_vector_promoted(leaves.to_vec());
+/// checked that the product of `shape` is `leaves.len()`. The empty shape is
+/// rank 0 — the lone leaf itself, as `5 SHAPE` is `[ ]` — and an axis of
+/// length 0 answers empty Vectors below it, as `[ [ ] [ ] ] SHAPE` is `[ 2 0 ]`.
+pub(super) fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
+    match shape.split_first() {
+        None => leaves[0].clone(),
+        Some((_, [])) => Value::from_vector_promoted(leaves.to_vec()),
+        Some((&outer, inner)) => {
+            let stride: usize = inner.iter().product();
+            Value::from_vector_promoted(
+                (0..outer)
+                    .map(|i| regroup(&leaves[i * stride..(i + 1) * stride], inner))
+                    .collect(),
+            )
+        }
     }
-    let stride: usize = shape[1..].iter().product();
-    Value::from_vector_promoted(
-        leaves
-            .chunks(stride)
-            .map(|chunk| regroup(chunk, &shape[1..]))
-            .collect(),
-    )
+}
+
+/// A shape operand: a Vector of non-negative integers — exactly what `SHAPE`
+/// answers, the empty shape of a leaf and a zero-length axis included — or
+/// `None` for anything else (`invalidShape`).
+pub(super) fn parse_shape(shape_val: &Value) -> Option<Vec<usize>> {
+    shape_val
+        .as_vector_view()?
+        .iter()
+        .map(|dim| dim.as_usize())
+        .collect()
 }
 
 /// `SHAPE ( [ vec ] -> [ shape ] )`: the axis lengths of a rectangular Vector,
 /// outermost first; a ragged Vector has no shape and projects `domainMiss`.
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     let value = take_operand(interp)?;
+    // A value that is not a Vector has no axes: its shape is the empty one,
+    // rank 0, the shape `DEPTH` already reports as depth 0.
     if !is_vector_value(&value) {
-        restore(interp, value);
-        return Err(AjisaiError::declared(
-            "nonVector",
-            "SHAPE: expected a Vector, got a non-vector value",
-        ));
+        interp.stack.push(Value::from_vector(Vec::new()));
+        return Ok(());
     }
     let answer = match rectangular_shape(&value) {
         Some(shape) => Value::from_vector_promoted(
@@ -148,29 +162,16 @@ pub fn op_flatten(interp: &mut Interpreter) -> Result<()> {
 /// leaf count — nothing is padded or repeated — and a well-formed shape too
 /// large to materialize projects `spaceExhausted`, as `FILL` and `RANGE` do.
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
-    let keep = interp.consumption_mode == ConsumptionMode::Keep;
-    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let target = if keep {
-        match interp.stack.last().cloned() {
-            Some(target) => target,
-            None => {
-                interp.stack.push(shape_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-        }
-    } else {
-        match interp.stack.pop() {
-            Some(target) => target,
-            None => {
-                interp.stack.push(shape_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let target = match interp.stack.pop() {
+        Some(target) => target,
+        None => {
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::stack_underflow());
         }
     };
     let put_back = |interp: &mut Interpreter, target: Value, shape_val: Value| {
-        if !keep {
-            interp.stack.push(target);
-        }
+        interp.stack.push(target);
         interp.stack.push(shape_val);
     };
 
@@ -182,20 +183,28 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let shape: Vec<usize> = match shape_val.as_vector_view().and_then(|dims| {
-        dims.iter()
-            .map(|dim| dim.as_usize().filter(|n| *n > 0))
-            .collect::<Option<Vec<usize>>>()
-    }) {
-        Some(shape) if !shape.is_empty() => shape,
-        _ => {
-            put_back(interp, target, shape_val);
-            return Err(AjisaiError::declared(
-                "invalidShape",
-                "RESHAPE: expected a shape — a Vector of positive integers — got an invalid shape",
-            ));
-        }
+    let Some(shape) = parse_shape(&shape_val) else {
+        put_back(interp, target, shape_val);
+        return Err(AjisaiError::declared(
+            "invalidShape",
+            "expected a shape: a Vector of non-negative integers",
+        ));
     };
+    // A shape's rank is the nesting of the value it builds, so a rank past the
+    // nesting ceiling is declined before the value is built — building it is
+    // itself a walk one native frame per axis (`regroup`) — the way a count
+    // past the materialization ceiling is.
+    let max_nesting = interp.runtime_limits.max_nesting_depth;
+    if shape.len() > max_nesting {
+        interp
+            .stack
+            .push(crate::interpreter::space_projection::nesting_exhausted_nil(
+                "RESHAPE",
+                max_nesting,
+                shape.len(),
+            ));
+        return Ok(());
+    }
 
     let max_materialized = interp.runtime_limits.max_materialized_elements;
     let total = match checked_shape_product(&shape) {
@@ -203,10 +212,6 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         _ => {
             // The same projection FILL makes for the same reason: a
             // well-formed request the host declines (LANG.COLLECTIONS.BUDGET).
-            // Under KEEP the operands stay, as on the success path.
-            if keep {
-                interp.stack.push(shape_val);
-            }
             interp
                 .stack
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
@@ -227,7 +232,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::declared(
             "invalidShape",
             format!(
-                "RESHAPE: the shape holds {} element(s) but the Vector has {} leaf value(s)",
+                "the shape holds {} element(s) but the Vector has {} leaf value(s)",
                 total,
                 leaves.len()
             ),
@@ -239,9 +244,6 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     let result = regroup(&leaves, &shape);
-    if keep {
-        interp.stack.push(shape_val);
-    }
     interp.stack.push(result);
     Ok(())
 }

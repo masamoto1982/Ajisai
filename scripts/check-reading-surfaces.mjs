@@ -47,11 +47,12 @@ const EXAMPLE_NAMES = new Set([
   'ADDW', 'PSUM', 'PDIFF', 'PMAX',
   // the relaxation loop of the Iterative Numerics clause
   'DELTA', 'STEP',
-  // parameter names and the two-operand example of the parameter header
-  // (LANG.SOURCE.FRAME): `[ A B | A B - ] 'DIFF' DEF`, and the `X`/`Y` the
-  // header migration gave point-free example bodies
-  'X', 'Y', 'DIFF',
-  // the identity word the Stack clause uses to show KEEP copying any value
+  // names bound with BIND so a worked example can read a value twice
+  'N', 'V', 'R', 'X',
+  // the subject the recovery phrase names once and reads twice:
+  // `subject 'S' BIND fallback S S NIL? SELECT`
+  'S',
+  // identity and doubling words of the worked examples
   'ID', 'DOUBLE',
   // the doubling word of the MAP and FOLD examples. It only became visible to
   // this check when those examples stopped spelling their code operand as the
@@ -65,11 +66,10 @@ const EXAMPLE_NAMES = new Set([
   'W', 'B', 'A', 'T', 'LIMIT', 'DX', 'XS', 'K', 'I', 'YS',
   // binding names from the pattern clause, likewise locals rather than Words
   'P', 'M', 'D',
-  // the seed and count of the RANDOM clause, written as names to show the shape
-  'SEED', 'N',
+  'N',
   // the reflection clause's worked example: TWICE is defined and asked about
-  // by DEFINED?, DIGEST and CONTRACT; NOPE is written precisely because it is
-  // never defined, to show CONTRACT projecting missingField for it.
+  // by DIGEST and CONTRACT; NOPE is written precisely because it is
+  // never defined, to show CONTRACT projecting notFound for it.
   'TWICE', 'NOPE',
 ]);
 
@@ -114,22 +114,23 @@ const UNALLOCATED_MENTIONS = new Set([
   // arrives with, and each is a statement that the language does not allocate
   // it — the case this list exists for.
   'DUP', 'SWAP', 'DROP', 'ROT',
+  // `+ - * / = < >` were once second spellings of ADD SUB MUL DIV EQ LT GT
+  // and are ordinary names now. The reference names `+`, `<` and a bare `/`
+  // to say exactly that (its lexeme section), and writes `-` in notation that
+  // is not a program (the remainder formula `a - floor(a/b)·b`).
+  '+', '-', '<', '/',
   // named once by the recovery clause to say it is retired: `OR-NIL` was the
-  // lazy NIL-coalescing directive, replaced by the `NIL? SELECT` phrase. A
+  // lazy NIL-coalescing directive, replaced by the `BIND` `NIL?` `SELECT` phrase. A
   // reader meeting it in older material needs the clause to say so.
   'OR-NIL',
   // named once beside it for the same reason: `COND` was the branch `SELECT`
   // replaced.
   'COND',
-  // the two brackets Ajisai gives no role to. `(`, `)`, `{`, `}` were carried
-  // in the vocabulary registry as reserved markers and retired forms until the
-  // per-character rule that refused them was removed; `(` and `)` are ordinary
-  // name characters now, so the registry no longer knows them and the
-  // reference names them precisely to say the language allocates them nothing.
-  // `{` and `}` are not in this list: they were allocated to the Record
-  // literal and are registered surfaces again, so a document naming them is
-  // making a claim the registry answers.
-  '(', ')',
+  // the brackets Ajisai gives no role to. They are ordinary name characters,
+  // so the registry does not know them; the reference names them to say the
+  // language allocates them nothing, and `{ }` also appears as the Record's
+  // display, which is not source.
+  '(', ')', '{', '}',
 ]);
 
 const errors = [];

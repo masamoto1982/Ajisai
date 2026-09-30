@@ -2,9 +2,10 @@
 //!
 //! The contract half of that — stack arity, NIL policy, purity, determinism —
 //! is **not** written here. It is read from `kernel::generated`, projected from
-//! `spec/words.json`, and this module joins it with the runtime-local
-//! classifications that the specification does not declare (`category`,
-//! `partiality`, `safety_level`, `safe_preview`).
+//! `spec/words.json`, and this module joins it with the runtime-local facts
+//! derived from it (the flow-mass contract the analyzers read). It adds no
+//! classification of its own: a label the registry does not declare is one a
+//! reader cannot check against the specification.
 //!
 //! Two of the vocabularies that used to be declared in this file were narrower
 //! than the canonical ones and mislabelled Words as a result: the hand-written
@@ -20,37 +21,17 @@ mod contract;
 
 use contract::mass_from_arity;
 pub use contract::{mass_contract, MassContract};
-pub(crate) use contract::{
-    partiality_from_contract, safe_preview_from_contract, safety_from_contract,
-    stability_from_contract,
-};
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
 
 pub use crate::kernel::generated::{Determinism, GeneratedWord, NilPolicy, Partiality, Purity};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-pub enum SafetyLevel {
-    A,
-    B,
-    D,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum WordProfile {
-    /// Host-independent, portable Ajisai semantics.
-    Core,
-    /// Requires an explicit host capability before execution.
-    Hosted,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CorewordMetadata {
     pub name: String,
-    pub category: String,
+    pub family: String,
     /// Declared in `spec/words.json`.
     pub purity: Purity,
     /// Declared in `spec/words.json`, in the specification's own spelling.
@@ -59,18 +40,12 @@ pub struct CorewordMetadata {
     /// the specification's distinction between a Word that reads runtime state
     /// (`stateRelative`) and one that reads the host (`hostRelative`).
     pub determinism: Determinism,
-    pub safe_preview: bool,
     pub partiality: Partiality,
     /// Declared in `spec/words.json`.
     pub nil_policy: NilPolicy,
-    pub safety_level: SafetyLevel,
-    /// Static flow-mass contract: arity / production, with retention
-    /// governed by the `KEEP` modifier (LANG.MODIFIERS.CONSUMPTION). Derived
-    /// from the declared stack arity (LANG.MACHINE.WORD).
+    /// Static flow-mass contract: arity / production (LANG.STACK.CONSUMPTION).
+    /// Derived from the declared stack arity (LANG.MACHINE.WORD).
     pub mass: MassContract,
-    /// Portability profile used by conformance tooling to keep the Core
-    /// profile free of host-boundary words.
-    pub profile: WordProfile,
 }
 
 /// The registry is built by walking the *generated* inventory and joining each
@@ -90,19 +65,13 @@ pub fn get_builtin_word_registry() -> &'static [CorewordMetadata] {
 /// Metadata lookup by bare word name.
 ///
 /// Built-in words form a single flat namespace, so lookup is an exact match on
-/// the upper-cased name. A qualified `DICTIONARY@WORD` token never names a
-/// built-in — it addresses a User dictionary word — and so resolves to `None`.
+/// the upper-cased name.
 pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
     let upper = name.to_uppercase();
     get_builtin_word_registry()
         .iter()
         .find(|m| m.name == upper)
         .cloned()
-}
-
-/// Alias of `get_coreword_metadata`. Use this in new code.
-pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
-    get_coreword_metadata(name)
 }
 
 /// The declared contract row for a Word, by bare name.
@@ -133,16 +102,6 @@ fn collect_duplicate_entries(registry: &[CorewordMetadata]) -> Vec<String> {
     dupes
 }
 
-fn builtin_profile(name: &str) -> WordProfile {
-    // Output is the only hosted effect, so PRINT is the only non-Core-profile
-    // Word. Dictionary mutation is an effect too, but not a hosted one.
-    if name == "PRINT" {
-        WordProfile::Hosted
-    } else {
-        WordProfile::Core
-    }
-}
-
 /// Join a declared Word with its hand-written prose entry.
 ///
 /// Every declared Word must have one: the inventory equivalence is asserted in
@@ -153,16 +112,13 @@ fn core_word_metadata(word: &GeneratedWord) -> CorewordMetadata {
         .unwrap_or_else(|| panic!("declared Word {} has no runtime spec entry", word.name));
     CorewordMetadata {
         name: word.name.to_string(),
-        category: spec.category.to_lowercase(),
+        family: spec.family.to_string(),
         purity: word.purity,
         effects: word.effects.iter().map(|e| e.to_string()).collect(),
         determinism: word.determinism,
-        safe_preview: safe_preview_from_contract(word),
-        partiality: partiality_from_contract(word),
+        partiality: word.partiality,
         nil_policy: word.nil_policy,
-        safety_level: safety_from_contract(word),
         mass: mass_from_arity(word),
-        profile: builtin_profile(word.name),
     }
 }
 

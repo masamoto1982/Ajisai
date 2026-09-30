@@ -4,11 +4,12 @@
 //! execution and report assembly. It performs no filesystem or terminal I/O.
 
 use super::{
-    check_structure, contract_decl, contract_report, error_report, outcome_report, print_payloads,
-    report::Report, resolve_words, run_render,
+    contract_decl, contract_report, error_report, outcome_report, print_payloads, report::Report,
+    resolve_words, run_render,
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
+use crate::interpreter::runtime_limits::DEFAULT_MAX_NESTING_DEPTH;
 use crate::interpreter::{Interpreter, RuntimeLimits};
 
 /// Tighter internal-cost profile for untrusted, agent-generated programs.
@@ -35,6 +36,7 @@ pub const LOCAL_AGENT_RUNTIME_LIMITS: RuntimeLimits = RuntimeLimits {
     // so `numericWork` always answered first and this limit was a claim rather
     // than a control. See `profile_liveness_tests`.
     max_algebraic_terms: 512,
+    max_nesting_depth: DEFAULT_MAX_NESTING_DEPTH,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -48,22 +50,29 @@ pub struct AgentResponse {
 }
 
 pub struct ContractResponse {
-    contracts: serde_json::Value,
+    /// The inferred contracts, or the source-form error that stopped
+    /// inference before it began — the same report `check` gives.
+    result: Result<serde_json::Value, Box<AgentResponse>>,
 }
 
 impl ContractResponse {
-    /// Common agent envelope. The native schema-1 CLI keeps emitting the bare
-    /// `contracts` array for compatibility; new hosts should use this shape.
+    /// The agent envelope around the inferred contracts, or the error report.
     pub fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
-            "schemaVersion": super::report::SCHEMA_VERSION,
-            "status": "ok",
-            "contracts": self.contracts,
-        })
+        match &self.result {
+            Ok(contracts) => serde_json::json!({
+                "schemaVersion": super::report::SCHEMA_VERSION,
+                "status": "ok",
+                "contracts": contracts,
+            }),
+            Err(report) => report.to_json(),
+        }
     }
 
-    pub(crate) fn contracts(&self) -> &serde_json::Value {
-        &self.contracts
+    pub fn exit_code(&self) -> i32 {
+        match &self.result {
+            Ok(_) => 0,
+            Err(report) => report.exit_code(),
+        }
     }
 }
 
@@ -136,61 +145,70 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
     }
 }
 
+/// The source-form gate every execution-free operation shares: a source that
+/// does not tokenize, or whose vector delimiters do not balance, is
+/// `malformedSource` before anything else can be said about it. `Err` carries
+/// the finished error report.
+///
+/// Both refusals come from the one call: the tokenizer's structural phase
+/// (`spec/grammar.json`, structuralValidation) runs on every `tokenize`
+/// result, so an unbalanced bracket is a tokenize failure here exactly as it
+/// is to `compute` — one phase, one message, for every tool.
+///
+/// `check` had this gate and `infer_contracts` did not, so `[ 1 2` was a
+/// `malformedSource` error to `compute`, `check` and `outcomes` and an `ok`
+/// with no contracts to inference — four tools, two answers about one source.
+fn tokens_of_well_formed(
+    interp: &Interpreter,
+    source: &str,
+) -> Result<Vec<crate::types::Token>, Box<AgentResponse>> {
+    let message = match crate::tokenizer::tokenize(source) {
+        Ok(tokens) => return Ok(tokens),
+        Err(message) => message,
+    };
+    // The same category `run` reports for an unbalanced bracket.
+    let category = ErrorCategory::MalformedSource;
+    let diagnosis = DebugDiagnosis::from_error_category(
+        ErrorPhase::Tokenize,
+        None,
+        Some(&category),
+        None,
+        0,
+        0,
+        Some(message.clone()),
+    );
+    Err(Box::new(AgentResponse {
+        report: error_report(
+            interp,
+            &diagnosis,
+            Some(&category),
+            message,
+            Vec::new(),
+            Vec::new(),
+            None,
+        ),
+    }))
+}
+
 /// Validate source without executing it and return the standard report shape.
 pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
     let interp = Interpreter::new();
-    let tokens = match crate::tokenizer::tokenize(source) {
+    let tokens = match tokens_of_well_formed(&interp, source) {
         Ok(tokens) => tokens,
-        Err(message) => {
-            let diagnosis = DebugDiagnosis::from_error_category(
-                ErrorPhase::Tokenize,
-                None,
-                Some(&ErrorCategory::MalformedSource),
-                None,
-                0,
-                0,
-                Some(message.clone()),
-            );
-            return AgentResponse {
-                report: error_report(
-                    &interp,
-                    &diagnosis,
-                    Some(&ErrorCategory::MalformedSource),
-                    message,
-                    Vec::new(),
-                    Vec::new(),
-                    None,
-                ),
-            };
-        }
+        Err(report) => return *report,
     };
-    if let Err(message) = check_structure(&tokens) {
-        let category = ErrorCategory::StructureError;
-        let diagnosis = DebugDiagnosis::from_error_category(
-            ErrorPhase::ParseStructure,
-            None,
-            Some(&category),
-            None,
-            0,
-            0,
-            Some(message.clone()),
-        );
-        return AgentResponse {
-            report: error_report(
-                &interp,
-                &diagnosis,
-                Some(&category),
-                message,
-                Vec::new(),
-                Vec::new(),
-                None,
-            ),
-        };
-    }
     let resolved = resolve_words(&interp, &tokens);
     let unknown = &resolved.unknown;
     if let Some(first) = unknown.first() {
-        let message = format!("Unknown words: {}", unknown.join(", "));
+        let mut message = format!("Unknown words: {}", unknown.join(", "));
+        if !resolved.bound_elsewhere.is_empty() {
+            message.push_str(&format!(
+                ". {} is bound in another frame: a binding is reachable in the frame that made it \
+                 and in the blocks written there, never inside a Word it calls — pass the value \
+                 as an operand instead",
+                resolved.bound_elsewhere.join(", ")
+            ));
+        }
         let category = ErrorCategory::UnknownWord;
         let mut diagnosis = DebugDiagnosis::from_error_category(
             ErrorPhase::ResolveWord,
@@ -259,9 +277,14 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
 
 /// Infer user-Word contracts without executing definitions or top-level code.
 pub fn infer_contracts(source: &str) -> ContractResponse {
+    if let Err(report) = tokens_of_well_formed(&Interpreter::new(), source) {
+        return ContractResponse {
+            result: Err(report),
+        };
+    }
     let reports = contract_report::report_contracts(source);
     ContractResponse {
-        contracts: contract_report::reports_json(&reports),
+        result: Ok(contract_report::reports_json(&reports)),
     }
 }
 
@@ -278,11 +301,13 @@ impl OutcomesResponse {
 /// Predict the finite set of outcome ids `source` could produce without
 /// executing it (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 5).
 /// Always succeeds — an unresolvable program still has an exact, single
-/// predicted outcome (`error:malformedSource`, `error:structureError`, or
-/// `error:unknownWord`); see `outcome_report::predict_outcomes`.
-pub fn predict_outcomes(source: &str) -> OutcomesResponse {
+/// predicted outcome (`error:malformedSource` or `error:unknownWord`); see `outcome_report::predict_outcomes`.
+/// Predict `source`'s outcome set under `options`' ceilings, without
+/// executing it. The reported `limitProfile` is the profile the prediction
+/// assumed, so it must be the one the caller would compute under.
+pub fn predict_outcomes(source: &str, options: ComputeOptions) -> OutcomesResponse {
     OutcomesResponse {
-        report: outcome_report::predict_outcomes(source),
+        report: outcome_report::predict_outcomes(source, &options),
     }
 }
 
@@ -314,7 +339,7 @@ mod tests {
     #[tokio::test]
     async fn compute_applies_injected_internal_cost_limits() {
         let response = compute(
-            "[ 0 11 ] RANGE",
+            "0 11 RANGE",
             ComputeOptions {
                 runtime_limits: Some(RuntimeLimits {
                     max_materialized_elements: 10,
@@ -334,7 +359,7 @@ mod tests {
 
     #[test]
     fn check_is_execution_free_and_structured() {
-        let response = check("[ X | X [ 1 ] + ] 'INC' DEF 'must-not-print' PRINT", true);
+        let response = check("[ [ 1 ] ADD ] 'INC' DEF 'must-not-print' PRINT", true);
         let json = response.to_json();
         assert_eq!(response.exit_code(), 0);
         assert_eq!(json["status"], "ok");
@@ -343,8 +368,40 @@ mod tests {
 
     #[test]
     fn infer_contracts_returns_a_common_agent_envelope() {
-        let response = infer_contracts("[ X | X [ 1 ] + ] 'INC' DEF").to_json();
+        let response = infer_contracts("[ [ 1 ] ADD ] 'INC' DEF").to_json();
         assert_eq!(response["status"], "ok");
         assert_eq!(response["contracts"][0]["name"], "INC");
+    }
+
+    /// Source that does not read is `malformedSource` to every execution-free
+    /// operation, exactly as `check` reports it — not an empty success.
+    #[test]
+    fn infer_contracts_reports_malformed_source_as_check_does() {
+        for source in ["[ 1 2", "1 2 ]", "'unterminated"] {
+            let inferred = infer_contracts(source);
+            let checked = check(source, false);
+            let inferred_json = inferred.to_json();
+            assert_eq!(inferred_json["status"], "error", "{source}");
+            assert_eq!(
+                inferred_json["aiDiagnostic"]["category"], "malformedSource",
+                "{source}"
+            );
+            assert_eq!(inferred_json, checked.to_json(), "{source}");
+            assert_eq!(inferred.exit_code(), checked.exit_code(), "{source}");
+        }
+    }
+
+    /// A body naming a Word nothing defines raises `unknownWord` when it
+    /// runs, so its contract is `partial`, never `total`.
+    #[test]
+    fn an_unresolved_word_makes_a_contract_partial() {
+        let response = infer_contracts("[ FOO ] 'W' DEF").to_json();
+        let contract = &response["contracts"][0];
+        assert_eq!(contract["name"], "W");
+        assert_eq!(contract["partiality"], "partial");
+        assert_eq!(contract["gaps"], serde_json::json!(["gap.unresolvedWord"]));
+        // A body whose every name resolves keeps the registry's derivation.
+        let resolved = infer_contracts("[ 1 ADD ] 'W' DEF").to_json();
+        assert_eq!(resolved["contracts"][0]["partiality"], "total");
     }
 }

@@ -10,6 +10,7 @@
 
 use ajisai_core::interpreter::Interpreter;
 
+/// The Semantic Kernel: the 48 Words every Standard must be derivable from.
 const KERNEL_WORDS: &[&str] = &[
     "TRUE",
     "FALSE",
@@ -22,29 +23,43 @@ const KERNEL_WORDS: &[&str] = &[
     "MUL",
     "DIV",
     "FLOOR",
-    "NEG",
     "SQRT",
+    "POW",
     "GET",
     "LENGTH",
     "CONCAT",
     "COLLECT",
     "RANGE",
     "FOLD",
+    "MAP",
+    "SHAPE",
+    "RESHAPE",
+    "FLATTEN",
+    "DEPTH",
+    "RECORD",
+    "KEYS",
+    "VALUES",
+    "PUT",
+    "WITHOUT",
+    "HAS?",
+    "MERGE",
     "CHARS",
     "JOIN",
     "NUM",
     "STR",
     "SELECT",
     "EXEC",
+    "CONTRACT",
+    "FAIL",
     "NIL",
     "NIL?",
     "NIL-REASON",
-    "OR-NIL",
-    "KEEP",
+    "ABSENT",
+    "BIND",
     "DEF",
     "DEL",
+    "DIGEST",
     "PRINT",
-    "REFLECT",
 ];
 
 async fn observe(source: &str) -> Vec<String> {
@@ -93,65 +108,32 @@ async fn equivalent(native: &str, witness: &str) {
 }
 
 #[tokio::test]
-async fn truth_standards_have_kernel_only_witnesses() {
-    for (native, witness) in [
-        ("TRUE FALSE OR", "TRUE NOT FALSE NOT AND NOT"),
-        ("FALSE FALSE OR", "FALSE NOT FALSE NOT AND NOT"),
-        ("2 3 LTE", "2 3 GT NOT"),
-        ("3 2 LTE", "3 2 GT NOT"),
-        ("3 2 GTE", "3 2 LT NOT"),
-        ("2 3 GTE", "2 3 LT NOT"),
-    ] {
-        equivalent(native, witness).await;
-    }
-}
-
-#[tokio::test]
 async fn arithmetic_standards_have_kernel_only_witnesses() {
     for (native, witness) in [
-        ("7 3 SUB", "7 3 NEG ADD"),
-        ("-7 3 SUB", "-7 3 NEG ADD"),
-        ("7 3 MOD", "7 3 DIV FLOOR 3 MUL NEG 7 ADD"),
-        ("-7 3 MOD", "-7 3 DIV FLOOR 3 MUL NEG -7 ADD"),
+        // Subtraction is adding the additive inverse, and the inverse is a
+        // multiplication by -1.
+        ("7 3 SUB", "7 3 -1 MUL ADD"),
+        ("-7 3 SUB", "-7 3 -1 MUL ADD"),
         ("5/2 ROUND", "5/2 1/2 ADD FLOOR"),
-        // CEIL is FLOOR reflected through zero: ceil(x) = -floor(-x).
-        ("7/3 CEIL", "7/3 NEG FLOOR NEG"),
-        ("-7/3 CEIL", "-7/3 NEG FLOOR NEG"),
-        ("3 CEIL", "3 NEG FLOOR NEG"),
-        ("-5/2 ROUND", "-5/2 NEG 1/2 ADD FLOOR NEG"),
-        // QUANTIZE is ROUND scaled by the denominator: round(x*d)/d. Written
-        // in the Kernel the scaling is explicit, which is the point — the
-        // Standard Word exists so the resolution is named once instead of
-        // spelled out with a magic constant at every step of a loop.
-        ("119/125 10 QUANTIZE", "119/125 10 MUL 1/2 ADD FLOOR 10 DIV"),
-        ("32/125 10 QUANTIZE", "32/125 10 MUL 1/2 ADD FLOOR 10 DIV"),
-        (
-            "-32/125 10 QUANTIZE",
-            "-32/125 NEG 10 MUL 1/2 ADD FLOOR NEG 10 DIV",
-        ),
-        // At d = 1 the two Words coincide, which is the boundary that makes
-        // QUANTIZE a generalization rather than a second rounding rule.
-        ("5/2 1 QUANTIZE", "5/2 1/2 ADD FLOOR"),
-        // |x| = sqrt(x*x): exact over the rationals closed under SQRT, so the
-        // witness needs no case split on the sign.
-        ("-7 ABS", "-7 -7 MUL SQRT"),
-        ("7 ABS", "7 7 MUL SQRT"),
-        // min(a,b) = ((a+b) - |a-b|) / 2 and max(a,b) = ((a+b) + |a-b|) / 2.
+        ("-5/2 ROUND", "-5/2 -1 MUL 1/2 ADD FLOOR -1 MUL"),
+        // min(a,b) = ((a+b) - |a-b|) / 2 and max(a,b) = ((a+b) + |a-b|) / 2,
+        // with |x| = sqrt(x*x): exact over the rationals closed under SQRT, so
+        // the witness needs no case split on the sign.
         (
             "2 5 MIN",
-            "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT NEG ADD 2 DIV",
+            "2 5 ADD 2 5 -1 MUL ADD 2 5 -1 MUL ADD MUL SQRT -1 MUL ADD 2 DIV",
         ),
         (
             "5 2 MIN",
-            "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT NEG ADD 2 DIV",
+            "5 2 ADD 5 2 -1 MUL ADD 5 2 -1 MUL ADD MUL SQRT -1 MUL ADD 2 DIV",
         ),
         (
             "2 5 MAX",
-            "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT ADD 2 DIV",
+            "2 5 ADD 2 5 -1 MUL ADD 2 5 -1 MUL ADD MUL SQRT ADD 2 DIV",
         ),
         (
             "5 2 MAX",
-            "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT ADD 2 DIV",
+            "5 2 ADD 5 2 -1 MUL ADD 5 2 -1 MUL ADD MUL SQRT ADD 2 DIV",
         ),
     ] {
         equivalent(native, witness).await;
@@ -164,28 +146,28 @@ async fn collection_standards_have_kernel_only_witnesses() {
         // TAKE is the prefix (or, for a negative count, the suffix) that GET
         // and COLLECT already reach index by index.
         (
-            "[ 10 20 30 40 50 ] [ 3 ] TAKE",
-            "[ 10 20 30 40 50 ] [ 0 ] GET [ 10 20 30 40 50 ] [ 1 ] GET \
-             [ 10 20 30 40 50 ] [ 2 ] GET 3 COLLECT",
+            "[ 10 20 30 40 50 ] 3 TAKE",
+            "[ 10 20 30 40 50 ] 0 GET [ 10 20 30 40 50 ] 1 GET \
+             [ 10 20 30 40 50 ] 2 GET 3 COLLECT",
         ),
         (
-            "[ 10 20 30 40 50 ] [ -2 ] TAKE",
-            "[ 10 20 30 40 50 ] [ 3 ] GET [ 10 20 30 40 50 ] [ 4 ] GET 2 COLLECT",
+            "[ 10 20 30 40 50 ] -2 TAKE",
+            "[ 10 20 30 40 50 ] 3 GET [ 10 20 30 40 50 ] 4 GET 2 COLLECT",
         ),
         // DROP is the other half of the same cut.
         (
-            "[ 10 20 30 40 50 ] [ 3 ] DROP",
-            "[ 10 20 30 40 50 ] [ 3 ] GET [ 10 20 30 40 50 ] [ 4 ] GET 2 COLLECT",
+            "[ 10 20 30 40 50 ] 3 DROP",
+            "[ 10 20 30 40 50 ] 3 GET [ 10 20 30 40 50 ] 4 GET 2 COLLECT",
         ),
         (
-            "[ 10 20 30 40 50 ] [ -2 ] DROP",
-            "[ 10 20 30 40 50 ] [ 0 ] GET [ 10 20 30 40 50 ] [ 1 ] GET \
-             [ 10 20 30 40 50 ] [ 2 ] GET 3 COLLECT",
+            "[ 10 20 30 40 50 ] -2 DROP",
+            "[ 10 20 30 40 50 ] 0 GET [ 10 20 30 40 50 ] 1 GET \
+             [ 10 20 30 40 50 ] 2 GET 3 COLLECT",
         ),
         // REVERSE reads the same indices in descending order.
         (
             "[ 1 2 3 ] REVERSE",
-            "[ 1 2 3 ] [ 2 ] GET [ 1 2 3 ] [ 1 ] GET [ 1 2 3 ] [ 0 ] GET 3 COLLECT",
+            "[ 1 2 3 ] 2 GET [ 1 2 3 ] 1 GET [ 1 2 3 ] 0 GET 3 COLLECT",
         ),
         // INDEX-OF is a first match over GET and EQ, which is a chain of
         // SELECTs: each one answers its own index or defers to the rest, and
@@ -194,13 +176,25 @@ async fn collection_standards_have_kernel_only_witnesses() {
         // because SELECT takes its candidates before the truth that chooses.
         (
             "[ 5 7 9 ] 7 INDEX-OF",
-            "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 7 EQ SELECT \
-             [ 5 7 9 ] [ 1 ] GET 7 EQ SELECT [ 5 7 9 ] [ 0 ] GET 7 EQ SELECT",
+            "0 1 2 NIL [ 5 7 9 ] 2 GET 7 EQ SELECT \
+             [ 5 7 9 ] 1 GET 7 EQ SELECT [ 5 7 9 ] 0 GET 7 EQ SELECT",
         ),
         (
             "[ 5 7 9 ] 4 INDEX-OF",
-            "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 4 EQ SELECT \
-             [ 5 7 9 ] [ 1 ] GET 4 EQ SELECT [ 5 7 9 ] [ 0 ] GET 4 EQ SELECT",
+            "0 1 2 NIL [ 5 7 9 ] 2 GET 4 EQ SELECT \
+             [ 5 7 9 ] 1 GET 4 EQ SELECT [ 5 7 9 ] 0 GET 4 EQ SELECT",
+        ),
+        // MEMBER? is the same chain answering TRUE instead of an index, with
+        // FALSE where INDEX-OF's chain ends in NIL.
+        (
+            "[ 5 7 9 ] 7 MEMBER?",
+            "TRUE TRUE TRUE FALSE [ 5 7 9 ] 2 GET 7 EQ SELECT \
+             [ 5 7 9 ] 1 GET 7 EQ SELECT [ 5 7 9 ] 0 GET 7 EQ SELECT",
+        ),
+        (
+            "[ 5 7 9 ] 4 MEMBER?",
+            "TRUE TRUE TRUE FALSE [ 5 7 9 ] 2 GET 4 EQ SELECT \
+             [ 5 7 9 ] 1 GET 4 EQ SELECT [ 5 7 9 ] 0 GET 4 EQ SELECT",
         ),
     ] {
         equivalent(native, witness).await;
@@ -214,12 +208,12 @@ async fn text_standards_have_kernel_only_witnesses() {
         // CHARS exposes and JOIN closes again.
         (
             "'  hi  ' TRIM",
-            "'  hi  ' CHARS [ 2 ] GET '  hi  ' CHARS [ 3 ] GET 2 COLLECT JOIN",
+            "'  hi  ' CHARS 2 GET '  hi  ' CHARS 3 GET 2 COLLECT JOIN",
         ),
         (
             "'a,b,c' ',' TOKENIZE",
-            "'a,b,c' CHARS [ 0 ] GET 'a,b,c' CHARS [ 2 ] GET \
-             'a,b,c' CHARS [ 4 ] GET 3 COLLECT",
+            "'a,b,c' CHARS 0 GET 'a,b,c' CHARS 2 GET \
+             'a,b,c' CHARS 4 GET 3 COLLECT",
         ),
     ] {
         equivalent(native, witness).await;

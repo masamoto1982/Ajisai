@@ -82,7 +82,6 @@ proptest! {
         assert_law("reshape-through-own-shape", &format!("{v} {v} SHAPE RESHAPE"), &v);
         assert_law("flatten-flat", &format!("{v} FLATTEN"), &v);
         assert_law("depth-flat", &format!("{v} DEPTH"), "1");
-        assert_law("rank-1-is-map", &format!("{v} 1 [ 2 MUL ] RANK"), &format!("{v} [ 2 MUL ] MAP"));
     }
 
     /// Nesting a Vector inside another raises its depth by one, prefixes its
@@ -178,8 +177,8 @@ fn get_gathers_in_the_order_its_indices_name() {
     assert_law(
         "gather = collect of selections",
         "[ 10 20 30 40 ] [ 2 0 3 ] GET",
-        "[ 10 20 30 40 ] [ 2 ] GET [ 10 20 30 40 ] [ 0 ] GET \
-         [ 10 20 30 40 ] [ 3 ] GET 3 COLLECT",
+        "[ 10 20 30 40 ] 2 GET [ 10 20 30 40 ] 0 GET \
+         [ 10 20 30 40 ] 3 GET 3 COLLECT",
     );
     // Selecting every position in order is the vector itself, so a gather can
     // express the identity permutation.
@@ -190,7 +189,7 @@ fn get_gathers_in_the_order_its_indices_name() {
     );
     // A single index still answers with the element, not a one-element vector:
     // the generalization does not move the existing case.
-    assert_law("one index selects a value", "[ 10 20 30 ] [ 1 ] GET", "20");
+    assert_law("one index selects a value", "[ 10 20 30 ] 1 GET", "20");
     // Reversal is a gather, which is the point of allowing one.
     assert_law(
         "gather can reverse",

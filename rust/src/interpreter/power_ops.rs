@@ -1,13 +1,11 @@
 //! `POW`, `GCD`, `RATIO` — the Words that close the number concept
-//! (LANG.VALUES.EXACT, Phase 7 of the vocabulary-100 work order).
+//! (LANG.VALUES.EXACT).
 //!
 //! `POW` is the kernel's `ExactReal::pow` lifted like every binary
 //! arithmetic Word. `GCD` exposes the reduction the machine already performs
 //! on every rational, and `RATIO` reads a rational's two parts back as a
 //! Vector, so that arithmetic lifts over the answer. Both refuse what is not
-//! a rational integer or rational: an irrational projects `domainMiss`, and
-//! a computable real — whose integrality or rationality no budget proves —
-//! projects `undecidable`.
+//! a rational integer or rational: an irrational projects `domainMiss`.
 
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -16,34 +14,49 @@ use num_traits::Signed;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::math_ops::{lift_binary_numeric, lift_unary_numeric};
 use crate::interpreter::record_lift;
-use crate::interpreter::transcendental_ops::exact_real_of;
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactReal, PowOutcome};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::{Value, ValueData};
 
-fn non_numeric(word: &str) -> AjisaiError {
-    AjisaiError::declared(
-        "nonNumeric",
-        format!("{word}: expected a number, got a non-numeric value"),
-    )
+fn exact_real_of(value: &Value) -> Option<ExactReal> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        _ => None,
+    }
+}
+
+fn non_numeric(operands: &[&Value]) -> AjisaiError {
+    let got = operands
+        .iter()
+        .find(|operand| exact_real_of(operand).is_none())
+        .map_or("NIL", |operand| operand.domain_name());
+    AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {got}"))
 }
 
 fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
     Value::nil_with_reason(reason, recoverability)
 }
 
-fn pow_scalar(x: &Value, y: &Value) -> Result<Value> {
+fn pow_scalar(
+    x: &Value,
+    y: &Value,
+    budget: &crate::interpreter::radicand_budget::RadicandBudget,
+) -> Result<Value> {
     let (Some(base), Some(exponent)) = (exact_real_of(x), exact_real_of(y)) else {
-        return Err(non_numeric("POW"));
+        return Err(non_numeric(&[x, y]));
     };
-    Ok(match base.pow(&exponent) {
+    let mut left = budget.take();
+    let outcome = base.pow_within(&exponent, &mut left);
+    budget.spent(left, matches!(outcome, PowOutcome::WorkExhausted));
+    Ok(match outcome {
+        PowOutcome::WorkExhausted => return Err(budget.exhausted_error()),
         PowOutcome::Value(er) => Value::from_exact_real(er),
         PowOutcome::DivisionByZero => nil(NilReason::DivisionByZero, Recoverability::Recoverable),
         PowOutcome::DomainMiss => nil(NilReason::DomainMiss, Recoverability::Recoverable),
-        PowOutcome::Undecidable => nil(NilReason::Undecidable, Recoverability::Retryable),
         PowOutcome::SpaceExhausted => nil(NilReason::SpaceExhausted, Recoverability::Unknown),
     })
 }
@@ -52,9 +65,6 @@ fn pow_scalar(x: &Value, y: &Value) -> Result<Value> {
 fn integer_of(value: &Value) -> std::result::Result<BigInt, Value> {
     match exact_real_of(value) {
         Some(ExactReal::Rational(q)) if q.is_integer() => Ok(q.numerator()),
-        Some(ExactReal::Computable(_)) => {
-            Err(nil(NilReason::Undecidable, Recoverability::Retryable))
-        }
         Some(_) => Err(nil(NilReason::DomainMiss, Recoverability::Recoverable)),
         None => Err(non_numeric_value()),
     }
@@ -68,7 +78,7 @@ fn non_numeric_value() -> Value {
 
 fn gcd_scalar(a: &Value, b: &Value) -> Result<Value> {
     if exact_real_of(a).is_none() || exact_real_of(b).is_none() {
-        return Err(non_numeric("GCD"));
+        return Err(non_numeric(&[a, b]));
     }
     match (integer_of(a), integer_of(b)) {
         (Ok(x), Ok(y)) => Ok(Value::from_fraction(Fraction::new(
@@ -90,25 +100,16 @@ fn ratio_scalar(value: &Value) -> Result<Value> {
             ])
         }
         Some(ExactReal::Algebraic(_)) => nil(NilReason::DomainMiss, Recoverability::Recoverable),
-        Some(ExactReal::Computable(_)) => nil(NilReason::Undecidable, Recoverability::Retryable),
-        None => return Err(non_numeric("RATIO")),
+        None => return Err(non_numeric(&[value])),
     })
 }
 
 fn restore(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.extend(operands);
-    }
+    interp.stack.extend(operands);
 }
 
 fn finish(interp: &mut Interpreter, result: Value) {
-    let role = if result.is_nil() {
-        Interpretation::Nil
-    } else {
-        Interpretation::RawNumber
-    };
     push_result(interp, result);
-    interp.stack.set_last_role(role);
 }
 
 fn binary(interp: &mut Interpreter, leaf: &dyn Fn(&Value, &Value) -> Result<Value>) -> Result<()> {
@@ -129,7 +130,21 @@ pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_binary(interp, &op_pow)? {
         return Ok(());
     }
-    binary(interp, &pow_scalar)
+    let budget = crate::interpreter::radicand_budget::RadicandBudget::of(interp);
+    let operands = extract_operands(interp, 2)?;
+    let lifted = lift_binary_numeric(&operands[0], &operands[1], &|x, y| {
+        pow_scalar(x, y, &budget)
+    });
+    match budget.settle(interp).and(lifted) {
+        Ok(result) => {
+            finish(interp, result);
+            Ok(())
+        }
+        Err(e) => {
+            restore(interp, operands);
+            Err(e)
+        }
+    }
 }
 
 pub(crate) fn op_gcd(interp: &mut Interpreter) -> Result<()> {
@@ -146,13 +161,7 @@ pub(crate) fn op_ratio(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 1)?;
     match lift_unary_numeric(&operands[0], &ratio_scalar) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::Unassigned
-            };
             push_result(interp, result);
-            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {

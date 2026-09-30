@@ -78,10 +78,10 @@ Both directions have a cost and neither is free:
 
 Where a second representation is genuinely unavoidable, it is allowed with a
 mechanical gate that fails on disagreement, and a comment saying why it
-exists. `src/gui/core-word-name.ts` restates the canonical-name grammar from
-`spec/words.schema.json` because the GUI cannot read the spec at runtime, and
-`core-word-name.test.ts` asserts the predicate against `spec/words.json`
-itself. Deliberate non-sharing is recorded the same way:
+exists. `scripts/lib/reference-lexer.mjs` executes `spec/grammar.json` as a
+second lexer beside the Rust tokenizer, because a grammar file nothing runs is
+only a description, and `scripts/check-grammar.mjs` fails when the two lexers
+disagree. Deliberate non-sharing is recorded the same way:
 `rust/src/interpreter/word_outcome_vocabulary.rs` opens by saying it is
 deliberately independent of `word_contract.rs` rather than leaving a reader to
 assume the overlap was missed.

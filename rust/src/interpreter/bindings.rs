@@ -6,13 +6,13 @@
 //! the report. Every one of those needs a value more than once, and the stack
 //! answers only for the value on top.
 //!
-//! `KEEP` duplicates, which sounds like enough and is not. Copy a value, derive
+//! Duplicating a value sounds like enough and is not. Copy a value, derive
 //! something from the upper copy, and the derived value lands *on* the lower
 //! copy — the second use is now buried under the first result and cannot be
 //! reached. Three copies do not help: consuming the first buries the second.
 //! The workaround is to pack the values into a matrix and recover them with a
-//! weighted fold, so `a - b` is written as
-//! `CP DLS * 2 * 2 COLLECT [ [ -1 ] [ 1 ] ] * 0 { + } FOLD`. That is not a
+//! weighted fold, so `a SUB b` is written as
+//! `CP DLS MUL 2 MUL 2 COLLECT [ [ -1 ] [ 1 ] ] MUL 0 { ADD } FOLD`. That is not a
 //! program anyone can read, and it is what the third test report was reduced to.
 //!
 //! So a value gets a name. What makes this a dictionary operation rather than a
@@ -23,10 +23,7 @@
 //! name is text in the body like every other name.
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{
-    keep_mode_operands, restore_keep_mode_operands,
-};
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 use std::collections::HashMap;
 
 use super::Interpreter;
@@ -41,7 +38,7 @@ use super::Interpreter;
 /// the blocks written beneath it and never into a Word called from it.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct BindingScope {
-    names: HashMap<String, (Value, Interpretation)>,
+    names: HashMap<String, Value>,
     barrier: bool,
 }
 
@@ -82,7 +79,7 @@ impl Interpreter {
     }
 
     /// The value bound to `name` in the frames this one can see.
-    pub(crate) fn lookup_binding(&self, name: &str) -> Option<(Value, Interpretation)> {
+    pub(crate) fn lookup_binding(&self, name: &str) -> Option<Value> {
         for scope in self.binding_scopes.iter().rev() {
             if let Some(bound) = scope.names.get(name) {
                 return Some(bound.clone());
@@ -113,9 +110,9 @@ impl Interpreter {
     /// would buy nothing. This is a local, not a definition: the rule that
     /// protects a referenced Word from being redefined is about names other
     /// code can reach, and nothing outside this frame can reach this one.
-    pub(crate) fn bind_local(&mut self, name: String, value: Value, role: Interpretation) {
+    pub(crate) fn bind_local(&mut self, name: String, value: Value) {
         if let Some(scope) = self.binding_scopes.last_mut() {
-            scope.names.insert(name, (value, role));
+            scope.names.insert(name, value);
         }
     }
 
@@ -128,9 +125,8 @@ impl Interpreter {
     /// the question of which one they got: within a program, a name is a Word
     /// or a binding and never both.
     pub(crate) fn check_bindable_name(&self, name: &str) -> Result<()> {
-        // Both checks mirror `op_def_inner`'s identical two, which declares
-        // them `invalidName` / `protectedWord` — BIND's contract now
-        // declares the same pair, closing the gap the two used to sit in.
+        // The name check mirrors `op_def_inner`'s, which declares it
+        // `invalidName`; a Core or User Word's name is `nameConflict` below.
         if !crate::tokenizer::is_symbol_token_lexeme(name) {
             return Err(AjisaiError::declared(
                 "invalidName",
@@ -140,15 +136,10 @@ impl Interpreter {
                 ),
             ));
         }
-        if let Some(message) =
-            crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "bind")
-        {
-            return Err(AjisaiError::declared("protectedWord", message));
-        }
         let upper = name.to_uppercase();
         if self.core_vocabulary.contains_key(&upper) {
             return Err(AjisaiError::declared(
-                "nameIsAWord",
+                "nameConflict",
                 format!(
                     "Cannot bind '{}': it is a Core Word, and a binding may not shadow one.",
                     upper
@@ -157,7 +148,7 @@ impl Interpreter {
         }
         if self.user_words.contains_key(&upper) {
             return Err(AjisaiError::declared(
-                "nameIsAWord",
+                "nameConflict",
                 format!(
                     "Cannot bind '{}': it is a User Word. Delete it first, or bind another name.",
                     upper
@@ -182,15 +173,10 @@ impl Interpreter {
 /// stack cannot offer and what a DAG-shaped expression needs.
 pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
-    // `KEEP` has no exception for a Word that answers with nothing: under it
-    // the subject and the name stay where they were, and the name is bound as
-    // well. See `keep_mode_operands`.
-    let kept = keep_mode_operands(interp, 2);
-
-    let (name_value, name_role) = interp.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
+    let name_value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let names = match binding_names(&name_value).and_then(|names| {
         for name in &names {
             interp.check_bindable_name(name)?;
@@ -199,15 +185,21 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
     }) {
         Ok(names) => names,
         Err(error) => {
-            interp.stack.push_with_role(name_value, name_role);
+            interp.stack.push(name_value);
             return Err(error);
         }
     };
 
-    let (subject, role) = interp.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
+    let subject = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+
+    if let Err(error) = check_binding_acyclic(interp, &names, &subject) {
+        interp.stack.push(subject);
+        interp.stack.push(name_value);
+        return Err(error);
+    }
 
     match names.as_slice() {
-        [only] => interp.bind_local(only.to_uppercase(), subject, role),
+        [only] => interp.bind_local(only.to_uppercase(), subject),
         several => {
             // Destructuring is exact. A Vector longer than the name list would
             // otherwise drop its tail silently, and a shorter one would bind a
@@ -219,28 +211,88 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 0
             };
             if width != several.len() {
-                interp.stack.push_with_role(subject, role);
-                interp.stack.push_with_role(name_value, name_role);
-                // Structural, not `declared()` (see `error.rs`'s `kind`
-                // note): BIND's destructuring length mismatch is the same
-                // one-dimensional `shapeMismatch` a broadcast failure is,
-                // even though the message here isn't about broadcasting.
-                return Err(AjisaiError::ShapeMismatch {
-                    left: vec![several.len()],
-                    right: vec![width],
-                    axis: 0,
-                });
+                let is_vector = subject.is_vector();
+                interp.stack.push(subject);
+                interp.stack.push(name_value);
+                // `shapeMismatch`, with a message about destructuring rather
+                // than the broadcast wording of `AjisaiError::shape_mismatch`,
+                // which would describe a failure BIND never performs.
+                let what = if is_vector {
+                    format!("a Vector of {} elements", width)
+                } else {
+                    "a non-Vector value".to_string()
+                };
+                return Err(AjisaiError::declared(
+                    "shapeMismatch",
+                    format!("{} names cannot destructure {}", several.len(), what),
+                ));
             }
             for (position, name) in several.iter().enumerate() {
                 let part = subject
                     .child(position)
                     .expect("the element count was checked against the name count");
-                let part_role = part.hint;
-                interp.bind_local(name.to_uppercase(), part, part_role);
+                interp.bind_local(name.to_uppercase(), part);
             }
         }
     }
-    restore_keep_mode_operands(interp, kept);
+    Ok(())
+}
+
+/// Refuse a binding whose value reaches its own name.
+///
+/// A binding is looked up before the dictionary, and a Symbol inside a bound
+/// Vector resolves when that Vector runs, not when it is bound. So
+/// `[ F EXEC ] 'F' BIND F EXEC` would call itself with no Word in between, and
+/// the DEF-time acyclicity check (LANG.DICTIONARY.ACYCLIC) never sees it: it
+/// reads definitions, and a binding is not one. The same rule is applied here,
+/// at the same moment — when the name is given — over the same graph: the
+/// Symbols the value holds, followed through the bindings this frame can see
+/// (a User Word's body cannot see them, so the walk stops at the dictionary).
+/// The names being bound together count as bound already, so destructuring
+/// cannot close a cycle between its own parts either.
+fn check_binding_acyclic(interp: &Interpreter, names: &[String], subject: &Value) -> Result<()> {
+    use super::body_symbols::value_symbol_names;
+    use std::collections::HashSet;
+    let pending: Vec<(String, Value)> = match names {
+        [only] => vec![(only.to_uppercase(), subject.clone())],
+        several => several
+            .iter()
+            .enumerate()
+            .filter_map(|(position, name)| Some((name.to_uppercase(), subject.child(position)?)))
+            .collect(),
+    };
+    let bound_value = |name: &str| -> Option<Value> {
+        match pending
+            .iter()
+            .find(|(pending_name, _)| pending_name == name)
+        {
+            Some((_, value)) => Some(value.clone()),
+            None => interp.lookup_binding(name),
+        }
+    };
+    for (target, value) in &pending {
+        let mut visited: HashSet<String> = HashSet::new();
+        let mut frontier = Vec::new();
+        value_symbol_names(value, &mut frontier);
+        while let Some(symbol) = frontier.pop() {
+            let symbol = symbol.to_uppercase();
+            if symbol == *target {
+                return Err(AjisaiError::declared(
+                    "selfReferentialDefinition",
+                    format!(
+                        "Cannot bind '{}': the value names '{}' itself, directly or through other bindings, so running it would never end.",
+                        target, target
+                    ),
+                ));
+            }
+            if !visited.insert(symbol.clone()) {
+                continue;
+            }
+            if let Some(next) = bound_value(&symbol) {
+                value_symbol_names(&next, &mut frontier);
+            }
+        }
+    }
     Ok(())
 }
 
@@ -255,7 +307,10 @@ fn binding_names(value: &Value) -> Result<Vec<String>> {
     let Some(children) = value.as_vector() else {
         return Err(AjisaiError::declared(
             "nonText",
-            "BIND: expected a name (String) or a Vector of names, got a non-text, non-vector value",
+            format!(
+                "expected a name (String) or a Vector of names, got {}",
+                value.domain_name()
+            ),
         ));
     };
     children
@@ -266,7 +321,10 @@ fn binding_names(value: &Value) -> Result<Vec<String>> {
             } else {
                 Err(AjisaiError::declared(
                     "nonText",
-                    "BIND: expected each name to be a String, got a non-text value",
+                    format!(
+                        "expected each name to be a String, got {}",
+                        child.domain_name()
+                    ),
                 ))
             }
         })

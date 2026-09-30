@@ -1,7 +1,7 @@
 use super::higher_order::{execute_executable_code, extract_executable_code, ExecutableCode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::Stack;
 use crate::types::Value;
 
@@ -80,7 +80,7 @@ fn run_accumulator_walk(
     word: &'static str,
     answer: Answer,
 ) -> Result<()> {
-    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -90,22 +90,15 @@ fn run_accumulator_walk(
         }
     };
 
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let target_val: Value = if is_keep_mode {
-        interp.stack.last().cloned().ok_or_else(|| {
-            interp.stack.push(init_val.clone());
-            interp.stack.push(code_val.clone());
-            AjisaiError::StackUnderflow
-        })?
-    } else {
-        interp.stack.pop().ok_or_else(|| {
-            interp.stack.push(init_val.clone());
-            interp.stack.push(code_val.clone());
-            AjisaiError::StackUnderflow
-        })?
-    };
+    let init_val: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(code_val.clone());
+        AjisaiError::stack_underflow()
+    })?;
+    let target_val: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(init_val.clone());
+        interp.stack.push(code_val.clone());
+        AjisaiError::stack_underflow()
+    })?;
 
     if target_val.is_nil() {
         interp
@@ -115,14 +108,13 @@ fn run_accumulator_walk(
     }
 
     if !is_vector_value(&target_val) {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
+        let got = target_val.domain_name();
+        interp.stack.push(target_val);
         interp.stack.push(init_val);
         interp.stack.push(code_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            format!("{word}: expected a Vector, got a non-vector value"),
+            format!("expected a Vector, got {got}"),
         ));
     }
 
@@ -132,7 +124,10 @@ fn run_accumulator_walk(
         return Ok(());
     }
 
-    let mut accumulator: Value = init_val;
+    // The seed is kept apart from the running accumulator: a failure part way
+    // through the walk puts the operands back as they were written, and the
+    // seed is the operand, not whatever the walk had made of it by then.
+    let mut accumulator: Value = init_val.clone();
     let mut visited: Vec<Value> = Vec::new();
     if answer == Answer::Every {
         visited.reserve(n_elements);
@@ -161,7 +156,7 @@ fn run_accumulator_walk(
                 None => {
                     error = Some(AjisaiError::declared(
                         "blockContractViolation",
-                        format!("{word}: expected return value, got empty stack"),
+                        "expected the block to leave one value, and it left none",
                     ));
                     break;
                 }
@@ -176,10 +171,8 @@ fn run_accumulator_walk(
     interp.stack = saved_stack;
 
     if let Some(e) = error {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
-        interp.stack.push(accumulator);
+        interp.stack.push(target_val);
+        interp.stack.push(init_val);
         interp.stack.push(code_val);
         return Err(e);
     }

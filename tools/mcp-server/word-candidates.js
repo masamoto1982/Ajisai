@@ -42,9 +42,8 @@ export function editDistance(left, right) {
 
 /**
  * Registry names within a plausible typo distance of `word`, best match first.
- * `entries` are `spec/words.json` entries; both canonical names and aliases
- * are considered, and a purely symbolic alias (`+`, `^`) is never offered as
- * the correction of an alphabetic name.
+ * `entries` are `spec/words.json` entries, and a Word is considered under its
+ * one name.
  */
 export function suggestWords(word, entries) {
   const needle = String(word ?? "").trim().toUpperCase();
@@ -54,15 +53,12 @@ export function suggestWords(word, entries) {
   const scored = [];
   const seen = new Set();
   for (const entry of entries ?? []) {
-    for (const name of [entry.name, ...(entry.aliases ?? [])]) {
-      const upper = String(name).toUpperCase();
-      if (upper === needle || seen.has(upper)) continue;
-      if (!/[a-z0-9]/i.test(upper)) continue;
-      const distance = editDistance(needle, upper);
-      if (distance > ceiling) continue;
-      seen.add(upper);
-      scored.push([distance, upper]);
-    }
+    const upper = String(entry.name).toUpperCase();
+    if (upper === needle || seen.has(upper)) continue;
+    const distance = editDistance(needle, upper);
+    if (distance > ceiling) continue;
+    seen.add(upper);
+    scored.push([distance, upper]);
   }
   scored.sort((left, right) => left[0] - right[0] || left[1].localeCompare(right[1]));
   return scored.slice(0, MAX_CANDIDATES).map(([, name]) => name);

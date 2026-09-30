@@ -13,17 +13,15 @@ use std::sync::Arc;
 
 use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
-    get_coreword_metadata, Determinism, MassContract, NilPolicy, Purity,
+    get_coreword_metadata, Determinism, MassContract, Partiality, Purity,
 };
 use crate::types::{Token, WordDefinition};
 
-use super::word_contract_flow::{
-    declared_flow, feed_value_read, header_locals, note_bound_name, value_read, FlowSim,
+pub use super::word_contract_facets::{
+    ContractConfidence, ContractDeterminism, ContractPartiality, ContractPurity,
 };
-use super::word_contract_lattice::{
-    widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
-};
-use super::word_contract_widen::{classify_vector_positions, LiteralContext};
+use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
+use super::word_contract_widen::{classify_vector_positions, runs_unread_code, LiteralContext};
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
@@ -40,8 +38,7 @@ pub struct WordContract {
     pub purity: ContractPurity,
     pub effects: Vec<String>,
     pub determinism: ContractDeterminism,
-    pub order_sensitivity: OrderSensitivity,
-    pub nil_behavior: NilBehavior,
+    pub partiality: ContractPartiality,
     /// Sound upper bound on the word's space growth (Phase 2.2; `word_space`).
     pub space: SpaceClass,
     /// True when the bound is provably attained, licensing a declaration error.
@@ -62,40 +59,6 @@ pub enum ContractFlow {
     Dynamic,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ContractPurity {
-    Pure,
-    Observable,
-    Effectful,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ContractDeterminism {
-    Deterministic,
-    NonDeterministic,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum OrderSensitivity {
-    OrderIndependent,
-    OrderSensitive,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NilBehavior {
-    NeverCreates,
-    Propagates,
-    MayCreate,
-    RejectsNil,
-    ConsumesNil,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ContractConfidence {
-    Complete,
-    Conservative,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WordContractCacheKey {
     pub word_identity: String,
@@ -105,7 +68,7 @@ pub struct WordContractCacheKey {
 }
 
 /// A cache key for a builtin/leaf contract: no dependencies, current schema.
-fn leaf_cache_key(word_identity: String) -> WordContractCacheKey {
+pub(super) fn leaf_cache_key(word_identity: String) -> WordContractCacheKey {
     WordContractCacheKey {
         word_identity,
         dependency_identities: Vec::new(),
@@ -120,9 +83,8 @@ impl WordContract {
             flow: ContractFlow::Dynamic,
             purity: ContractPurity::Effectful,
             effects: vec!["conservative".to_string()],
-            determinism: ContractDeterminism::NonDeterministic,
-            order_sensitivity: OrderSensitivity::OrderSensitive,
-            nil_behavior: NilBehavior::MayCreate,
+            determinism: ContractDeterminism::HostRelative,
+            partiality: ContractPartiality::Projecting,
             space: SpaceClass::Unbounded,
             space_exact: false,
             cost: CostBound::CONSERVATIVE,
@@ -142,8 +104,7 @@ impl WordContract {
             purity: ContractPurity::Pure,
             effects: Vec::new(),
             determinism: ContractDeterminism::Deterministic,
-            order_sensitivity: OrderSensitivity::OrderIndependent,
-            nil_behavior: NilBehavior::NeverCreates,
+            partiality: ContractPartiality::Total,
             space: SpaceClass::Const,
             space_exact: true,
             cost: CostBound::IDENTITY,
@@ -164,7 +125,6 @@ impl From<Purity> for ContractPurity {
             // double-count — a `MAP` over a pure block is pure, and over an
             // effectful one the block's own effects make the caller effectful.
             Purity::Conditional => ContractPurity::Pure,
-            Purity::Observational => ContractPurity::Observable,
             Purity::Effectful => ContractPurity::Effectful,
         }
     }
@@ -174,11 +134,18 @@ impl From<Determinism> for ContractDeterminism {
     fn from(value: Determinism) -> Self {
         match value {
             Determinism::Deterministic => ContractDeterminism::Deterministic,
-            // Both non-deterministic classes collapse here: the lattice asks
-            // only whether a result is reproducible from its operands.
-            Determinism::StateRelative | Determinism::HostRelative => {
-                ContractDeterminism::NonDeterministic
-            }
+            Determinism::StateRelative => ContractDeterminism::StateRelative,
+            Determinism::HostRelative => ContractDeterminism::HostRelative,
+        }
+    }
+}
+
+impl From<Partiality> for ContractPartiality {
+    fn from(value: Partiality) -> Self {
+        match value {
+            Partiality::Total => ContractPartiality::Total,
+            Partiality::Partial => ContractPartiality::Partial,
+            Partiality::Projecting => ContractPartiality::Projecting,
         }
     }
 }
@@ -201,8 +168,7 @@ pub(crate) struct AccumulatedContract {
     purity: ContractPurity,
     effects: Vec<String>,
     determinism: ContractDeterminism,
-    order_sensitivity: OrderSensitivity,
-    nil_behavior: NilBehavior,
+    partiality: ContractPartiality,
     confidence: ContractConfidence,
     pub(crate) gaps: Vec<GapCode>,
 }
@@ -214,24 +180,33 @@ impl AccumulatedContract {
             purity: contract.purity,
             effects: contract.effects.clone(),
             determinism: contract.determinism,
-            order_sensitivity: contract.order_sensitivity,
-            nil_behavior: contract.nil_behavior,
+            partiality: contract.partiality,
             confidence: contract.confidence,
             gaps: contract.gaps.clone(),
         }
     }
 
+    /// A name the body calls that nothing defines. The call raises
+    /// `unknownWord` when it is reached — a `repair: program` category — so
+    /// the Word is `partial` by the registry's own derivation, as a builtin
+    /// that declares such a condition is. It used to stay `total` with the
+    /// gap noted beside it: a contract that promised no failure for a body
+    /// `check` rejects and `compute` fails on the moment the Word runs.
+    pub(crate) fn note_unresolved_word(&mut self) {
+        self.partiality = self.partiality.max(ContractPartiality::Partial);
+        self.gaps.push(GapCode::UnresolvedWord);
+    }
+
     pub(crate) fn widen_with(&mut self, other: &WordContract) {
-        self.purity = widen_purity(self.purity, other.purity);
+        self.purity = self.purity.max(other.purity);
         for effect in &other.effects {
             if !self.effects.contains(effect) {
                 self.effects.push(effect.clone());
             }
         }
-        self.determinism = widen_determinism(self.determinism, other.determinism);
-        self.order_sensitivity = widen_order(self.order_sensitivity, other.order_sensitivity);
-        self.nil_behavior = widen_nil(self.nil_behavior, other.nil_behavior);
-        self.confidence = widen_confidence(self.confidence, other.confidence);
+        self.determinism = self.determinism.max(other.determinism);
+        self.partiality = self.partiality.max(other.partiality);
+        self.confidence = self.confidence.max(other.confidence);
         // Incompleteness propagates like a NIL reason; canonicalized once at
         // the end of accumulation, not per widen.
         self.gaps.extend(other.gaps.iter().copied());
@@ -243,20 +218,6 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
     let Some(meta) = get_coreword_metadata(name) else {
         return WordContract::conservative(key);
     };
-    let nil_behavior = match meta.nil_policy {
-        NilPolicy::Passthrough | NilPolicy::PreserveReason => NilBehavior::Propagates,
-        // `passthroughThenProject` does both: a NIL operand flows through,
-        // and a well-formed operand may still project onto one — `MayCreate`
-        // is the wider of the two, the one a caller has to plan for.
-        NilPolicy::PassthroughThenProject | NilPolicy::CreatesNil => NilBehavior::MayCreate,
-        NilPolicy::RejectNil => NilBehavior::RejectsNil,
-        // `inspectNil` reads NIL-ness rather than propagating it — `ConsumesNil`.
-        NilPolicy::ConsumeNil => NilBehavior::ConsumesNil,
-        // `kleeneAbsorbing` may or may not produce a NIL depending on the
-        // other operand (LANG.VALUES.TRUTH) — the same "plan for either"
-        // shape as `passthroughThenProject`, so it widens the same way.
-        NilPolicy::KleeneAbsorbing => NilBehavior::MayCreate,
-    };
     let (space, space_exact) = super::word_space::builtin_space_for(name);
     let cost = super::word_cost::builtin_cost_for(name);
     WordContract {
@@ -264,8 +225,7 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         purity: meta.purity.into(),
         effects: meta.effects,
         determinism: meta.determinism.into(),
-        order_sensitivity: OrderSensitivity::OrderIndependent,
-        nil_behavior,
+        partiality: meta.partiality.into(),
         space,
         space_exact,
         cost,
@@ -334,106 +294,108 @@ impl Interpreter {
         let mut sim = SpaceSim::new();
         let mut cost_sim = CostSim::new();
         let mut complete = true;
-        let mut locals = header_locals(def);
+        let mut bound = BoundNames::new();
 
-        'lines: for line in def.lines.iter() {
-            let contexts = classify_vector_positions(&line.body_tokens);
-            for (idx, token) in line.body_tokens.iter().enumerate() {
-                match token {
-                    // A literal, or a bound name (a header parameter, or one
-                    // a `BIND` in the body made): one value, no call.
-                    token if value_read(token, &locals).is_some() => {
-                        let read = value_read(token, &locals).flatten();
-                        feed_value_read(read, &mut flow, &mut sim, &mut cost_sim);
-                    }
-                    Token::Number(_) | Token::String(_) => {
-                        unreachable!("a literal reads as a value")
-                    }
-                    // A vector-literal interior pushes one opaque value as
-                    // far as arity/space/cost are concerned, whatever it
-                    // contains (`word_contract_widen.rs`). Whether the
-                    // Symbol itself ever runs — and so contributes to `acc`
-                    // — depends on whether this `[ ]` is inert data or a
-                    // higher-order Word's code operand.
-                    Token::Symbol(symbol) if contexts[idx].in_vector_literal() => {
-                        flow.feed_literal();
-                        sim.feed_literal();
-                        cost_sim.feed_literal();
-                        if contexts[idx] == LiteralContext::Code {
-                            self.widen_with_code_operand_symbol(
-                                symbol,
-                                visiting,
-                                &mut acc,
-                                &mut complete,
-                            );
+        let contexts = classify_vector_positions(&def.body);
+        'body: for (idx, token) in def.body.iter().enumerate() {
+            match token {
+                Token::Number(_) | Token::String(_) | Token::Value(_) => {
+                    flow.feed_literal();
+                    sim.feed_literal();
+                    cost_sim.feed_literal();
+                }
+                // A vector-literal interior pushes one opaque value as
+                // far as arity/space/cost are concerned, whatever it
+                // contains (`word_contract_widen.rs`). Whether the
+                // Symbol itself ever runs — and so contributes to `acc`
+                // — depends on whether this `[ ]` is inert data or a
+                // higher-order Word's code operand.
+                Token::Symbol(symbol) if contexts[idx].in_vector_literal() => {
+                    flow.feed_literal();
+                    sim.feed_literal();
+                    cost_sim.feed_literal();
+                    if contexts[idx] == LiteralContext::Code {
+                        let canonical = crate::word_name::canonical_word_name(symbol);
+                        if runs_unread_code(&def.body, &contexts, idx, &canonical) {
+                            self.widen_with_unread_code_operand(&mut acc, &mut complete);
                         }
+                        self.widen_with_code_operand_symbol(
+                            symbol,
+                            visiting,
+                            &mut acc,
+                            &mut complete,
+                        );
                     }
-                    Token::Symbol(symbol) => {
-                        let canonical =
-                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
-                        note_bound_name(&mut locals, &canonical, &line.body_tokens, idx);
-                        let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
-                            complete = false;
-                            flow.go_dynamic();
-                            sim.feed_unresolved();
-                            cost_sim.feed_unresolved();
-                            acc.gaps.push(GapCode::UnresolvedWord);
-                            continue;
-                        };
-                        let dep_contract = if dep_def.is_builtin {
-                            Arc::new(static_word_contract(&dep_name, &dep_def))
-                        } else if visiting.contains(dep_name.as_ref()) {
-                            complete = false;
-                            acc.gaps.push(GapCode::RecursiveDependency);
-                            // Cleared, not merged: incompleteness here is
-                            // attributed above, not the placeholder's own seed.
-                            let mut placeholder = WordContract::conservative(
-                                self.contract_cache_key(&dep_name, &dep_def),
-                            );
-                            placeholder.gaps.clear();
-                            Arc::new(placeholder)
-                        } else {
-                            match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
-                                Some(contract) => contract,
-                                None => {
-                                    complete = false;
-                                    flow.abandon_line();
-                                    sim.abandon_line();
-                                    cost_sim.abandon_line();
-                                    acc.gaps.push(GapCode::DependencyUnknown);
-                                    continue 'lines;
-                                }
+                }
+                // A name a `BIND` made: one value of unknown size, no call.
+                Token::Symbol(symbol) if bound.contains(&symbol.to_uppercase()) => {
+                    flow.feed_literal();
+                    sim.feed_bound();
+                    cost_sim.feed_literal();
+                }
+                Token::Symbol(symbol) => {
+                    let canonical = crate::word_name::canonical_word_name(symbol);
+                    note_bound_names(&mut bound, &canonical, &def.body, idx);
+                    if runs_unread_code(&def.body, &contexts, idx, &canonical) {
+                        self.widen_with_unread_code_operand(&mut acc, &mut complete);
+                    }
+                    let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
+                        complete = false;
+                        flow.go_dynamic();
+                        sim.feed_unresolved();
+                        cost_sim.feed_unresolved();
+                        acc.note_unresolved_word();
+                        continue;
+                    };
+                    let dep_contract = if dep_def.is_builtin {
+                        Arc::new(static_word_contract(&dep_name, &dep_def))
+                    } else if visiting.contains(dep_name.as_ref()) {
+                        complete = false;
+                        acc.gaps.push(GapCode::RecursiveDependency);
+                        // Cleared, not merged: incompleteness here is
+                        // attributed above, not the placeholder's own seed.
+                        let mut placeholder = WordContract::conservative(
+                            self.contract_cache_key(&dep_name, &dep_def),
+                        );
+                        placeholder.gaps.clear();
+                        Arc::new(placeholder)
+                    } else {
+                        match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
+                            Some(contract) => contract,
+                            None => {
+                                complete = false;
+                                flow.abandon();
+                                sim.abandon();
+                                cost_sim.abandon();
+                                acc.gaps.push(GapCode::DependencyUnknown);
+                                continue 'body;
                             }
-                        };
-                        flow.feed_word(&dep_name, &dep_contract.flow);
-                        let builtin = dep_def.is_builtin;
-                        // One slot model, two bounds: the space walk computes
-                        // the operand provenance and the cost walk refines
-                        // against the very same reading.
-                        let operands = sim.feed_word(&if builtin {
-                            DepSpace::of_builtin(&dep_name, &dep_contract)
-                        } else {
-                            DepSpace::of_user_word(&dep_contract)
-                        });
-                        cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
-                        acc.widen_with(&dep_contract);
-                    }
-                    Token::VectorStart
-                    | Token::VectorEnd
-                    | Token::RecordStart
-                    | Token::RecordEnd
-                    | Token::LineBreak => {
-                        flow.feed_structural(token);
-                        sim.feed_structural(token);
-                        cost_sim.feed_structural(token);
-                    }
+                        }
+                    };
+                    flow.feed_word(&dep_contract.flow);
+                    let builtin = dep_def.is_builtin;
+                    // One slot model, two bounds: the space walk computes
+                    // the operand provenance and the cost walk refines
+                    // against the very same reading.
+                    let operands = sim.feed_word(&if builtin {
+                        DepSpace::of_builtin(&dep_name, &dep_contract)
+                    } else {
+                        DepSpace::of_user_word(&dep_contract)
+                    });
+                    cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
+                    acc.widen_with(&dep_contract);
+                }
+                Token::VectorStart | Token::VectorEnd => {
+                    flow.feed_structural(token);
+                    sim.feed_structural(token);
+                    cost_sim.feed_structural(token);
                 }
             }
         }
 
         visiting.remove(resolved_name);
         let (inferred_flow, flow_unmodelled) = flow.finish();
-        acc.flow = declared_flow(def, inferred_flow);
+        acc.flow = inferred_flow;
         if flow_unmodelled {
             // A `Dynamic` the simulation *gave up* on, unlike one derived
             // from a dependency's own mass contract: it may only ever produce
@@ -457,8 +419,7 @@ impl Interpreter {
             purity: acc.purity,
             effects: acc.effects,
             determinism: acc.determinism,
-            order_sensitivity: acc.order_sensitivity,
-            nil_behavior: acc.nil_behavior,
+            partiality: acc.partiality,
             space,
             space_exact,
             cost,

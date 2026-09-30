@@ -7,7 +7,7 @@
 // three times per call, and left the program on disk for the duration; the
 // pipe needs none of that and the CLI reads it identically.
 //
-// Every method resolves to the parsed schema-1 JSON envelope on success —
+// Every method resolves to the parsed JSON envelope on success —
 // including a language-level `NIL` or `ERROR` result, which is still a
 // *successful* MCP tool call. A thrown `HostError` means a host failure
 // (timeout, spawn failure, an oversized or non-JSON response), never a
@@ -121,6 +121,9 @@ export class NativeCliBackend {
   }
 
   outcomes(source) {
-    return this.#runAgent(source, "outcomes", []);
+    // The prediction reports the ceilings it assumed, so it runs under the
+    // same step budget `compute` does or its `limitProfile` would name a
+    // budget this server never applies.
+    return this.#runAgent(source, "outcomes", ["--step-limit", String(this.executionSteps)]);
   }
 }

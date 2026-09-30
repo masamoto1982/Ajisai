@@ -1,39 +1,34 @@
-
-
-import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
+import type { InterpreterStateSnapshot } from '../platform/platform-adapter';
 import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
+import { collectUserWords } from './interpreter-execution-utils';
+import { toError } from './to-error';
 
 // The persisted session document. `stateVersion` identifies the format; a
 // document that does not carry the current version is not migrated — the beta
 // reads one format only (LANG.OBSERVATION.FIREWALL).
 //
-// 4: the dense-tensor node dropped its `mask` field. A tensor's absence is the
-// 0 denominator its `dens` array already carries, and the bitmap beside it was
-// a second record of that fact which nothing ever wrote to. A version-3
-// document therefore starts a fresh session rather than being migrated, as any
-// other format change does.
-//
 // A bump discards every existing session, so it gates readability, not
-// changes: bump it only when an older document can no longer be read — `mask`
-// above sat inside the stack snapshot, so a version-3 payload could not be
-// parsed — never to record that a field went away. Dropping
-// `activeUserDictionary` kept this at 4 for that reason: a version-4 document
-// still carries everything a reader looks at, and the abandoned key beside
-// them is simply never read.
-export const STATE_FORMAT_VERSION = 4;
+// changes: bump it only when an older document cannot be parsed (a field
+// inside the stack snapshot changed shape), never to record that a key went
+// away — an abandoned key beside the ones a reader looks at is simply never
+// read.
+export const STATE_FORMAT_VERSION = 5;
 
-export interface InterpreterState {
-    readonly stateVersion: number;
-    // The observation-format stack, persisted for display only.
-    readonly stack: Value[];
-    // The lossless stack snapshot (opaque string) and the only format restore
-    // accepts.
-    readonly stackSnapshot: string;
-    readonly userWords: UserWord[];
-    readonly activeDictionarySheet?: string;
-}
+// The document itself is the shape both stores write (`InterpreterStateSnapshot`).
+export type InterpreterState = InterpreterStateSnapshot;
+
+// Whether a saved session carries a dictionary of its own — including an
+// empty one. An empty dictionary is a choice the user made by deleting every
+// User Word, and restoring it as empty is what keeps that choice: reseeding
+// the Example Words whenever the saved list was empty brought back, on every
+// reload, the words the user had just deleted. The Example Words seed a
+// session that has no saved dictionary at all — a first visit, or a document
+// of another format — and Reset, which asks for them.
+export const checkHasSavedDictionary = (state: Pick<InterpreterState, 'userWords'>): boolean =>
+    Array.isArray(state.userWords);
 
 export interface RestoredSelection {
     readonly activeDictionarySheet?: string;
@@ -43,6 +38,8 @@ export interface PersistenceCallbacks {
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
     readonly showInfo?: (text: string, append: boolean) => void;
+    /** The dictionary sheet currently selected, saved with the session. */
+    readonly readActiveDictionarySheet?: () => string;
 }
 
 export interface Persistence {
@@ -54,45 +51,18 @@ export interface Persistence {
     readonly importUserWords: () => void;
 }
 
-declare global {
-    interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
-
-// Words are addressed by bare name (LANG.DICTIONARY.RESOLUTION: two tiers, and
-// User is one of them). A `DICT@NAME` prefix resolves to nothing, so composing
-// one here persisted every definition as null and lost the user's words on the
-// next load.
-const toUserWord = (
-    wordData: [string, string, boolean],
-    getDefinition: (name: string) => string | null
-): UserWord => ({
-    dictionary: wordData[0],
-    name: wordData[1],
-    definition: getDefinition(wordData[1])
+const collectCurrentState = (
+    interpreter: AjisaiInterpreter,
+    activeDictionarySheet: string | undefined
+): InterpreterState => ({
+    stateVersion: STATE_FORMAT_VERSION,
+    // The lossless snapshot is what restore reads. The observation-format
+    // stack used to be saved beside it "for display", and nothing ever read
+    // it back: a 200,000-element stack was serialized twice on every save.
+    stackSnapshot: interpreter.snapshot_stack(),
+    userWords: collectUserWords(interpreter),
+    activeDictionarySheet
 });
-
-const readActiveDictionarySheet = (): string | undefined => {
-    const sheetSelect = document.getElementById('dictionary-sheet-select') as HTMLSelectElement | null;
-    return sheetSelect?.value || undefined;
-};
-
-const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    const userWords: UserWord[] = userWordsInfo.map(wordData =>
-        toUserWord(wordData, name => interpreter.lookup_word_definition(name))
-    );
-
-    return {
-        stateVersion: STATE_FORMAT_VERSION,
-        // The lossless snapshot is what restore reads; `stack` is display data.
-        stack: interpreter.collect_stack(),
-        stackSnapshot: interpreter.snapshot_stack(),
-        userWords,
-        activeDictionarySheet: readActiveDictionarySheet()
-    };
-};
 
 // Identity-keyed export/import (LANG.AUTHORITY.FREEDOM). The export document
 // carries each word's content identity so a shared group is content-addressed:
@@ -109,31 +79,24 @@ interface ExportWord {
 
 interface ExportDocument {
     readonly formatVersion: number;
-    readonly dictionary: string;
     readonly words: ExportWord[];
 }
 
-// Keyed by bare name, matching `collect_word_identities`, which reports the
-// User-tier key itself rather than a `DICT@NAME` composite.
+// Keyed by name, as `collect_word_identities` reports it.
 const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, string> => {
     const map = new Map<string, string>();
-    for (const [fqName, id] of interpreter.collect_word_identities()) {
-        map.set(buildWordKey(fqName), id);
+    for (const [name, id] of interpreter.collect_word_identities()) {
+        map.set(buildWordKey(name), id);
     }
     return map;
 };
 
-// Every User Word, unconditionally. There used to be a per-dictionary
-// filter here, from the module/multi-dictionary era; the dictionary has two
-// tiers and User is the only exportable one (`collect_user_words_info`
-// reports a constant "USER" label for all of them), so a filter could only
-// ever keep everything or — if the label it filtered against came from
-// somewhere that was not also "USER" — silently drop everything. `dictionary`
-// stays in the document for format continuity but is no longer a selection.
+// Every User Word, unconditionally: User is the only exportable tier, so there
+// is nothing to filter by.
 export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument => {
     const identities = collectWordIdentityMap(interpreter);
     const words: ExportWord[] = interpreter.collect_user_words_info()
-        .map(([, name]) => {
+        .map(([name]) => {
             const id = identities.get(buildWordKey(name));
             return {
                 name,
@@ -142,7 +105,7 @@ export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument
                 ...(id ? { id } : {})
             };
         });
-    return { formatVersion: EXPORT_FORMAT_VERSION, dictionary: 'USER', words };
+    return { formatVersion: EXPORT_FORMAT_VERSION, words };
 };
 
 export interface ParsedImport {
@@ -157,43 +120,87 @@ const DEFAULT_EXPORT_NAME = 'user-words';
 // The whole key of a User-tier word: its normalized name.
 const buildWordKey = (name: string): string => name.toUpperCase();
 
-// Names that were handed to `restore_user_words` with a body but are not in the
-// dictionary afterwards.
-//
-// A saved definition is source text, so a restore re-runs the lexer and `DEF`
-// against today's rules: a dictionary saved before a lexical or naming rule
-// changed can hold an entry this build no longer accepts. The interpreter skips
-// such an entry rather than abandoning the rest of the dictionary with it —
-// which is what keeps `parseImportDocument`'s promise (valid words in a
-// partially corrupt file still import) true for corruption only the lexer can
-// see. Nothing is lost silently, so ask which names did not arrive.
-//
-// This sees an entry that is simply absent. It does not see a *redefinition*
-// that was skipped — the previous definition of that name is still there, and
-// keeping it is the right outcome — but on the import path the identity check
-// against the exported `id` already reports that as a mismatch.
-export const namesThatDidNotRestore = (
-    interpreter: AjisaiInterpreter,
-    requested: readonly UserWord[]
-): string[] => {
-    const present = new Set(
-        interpreter.collect_user_words_info().map(([, name]) => buildWordKey(name))
-    );
-    return requested
-        .filter(word => word.definition && !present.has(buildWordKey(word.name)))
-        .map(word => word.name);
-};
-const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
+// `NAME (why)` for each entry, in the order the interpreter gave them.
+const describeSkipped = (skipped: readonly SkippedWord[]): string =>
+    skipped.map(({ name, reason }) => `${name} (${reason})`).join('; ');
 
-// Validate a single raw word entry from an (untrusted) import file. Returns a
-// normalized word, or null when the entry is malformed. A word is only usable
-// downstream if it has a string `name`; `definition` and `id` are optional and
-// must be strings when present. This keeps `parseImportDocument` a total
-// function — a hostile or hand-corrupted file with `null`, numeric, or
-// name-less entries previously threw a TypeError out of the `.map` (and
-// would have thrown again at `word.name.toUpperCase()` in `importUserWords`)
-// instead of being parsed or cleanly rejected.
-const normalizeImportWord = (
+/** One saved entry the interpreter could not restore, and its reason. */
+export interface SkippedWord {
+    readonly name: string;
+    readonly reason: string;
+}
+
+export interface ImportSummary {
+    /** Words the dictionary holds now and did not hold with this content before. */
+    readonly added: string[];
+    /** Words already present with identical content (deduplicated by content identity). */
+    readonly unchanged: string[];
+    /** Entries the interpreter refused, with its reason for each. */
+    readonly skipped: SkippedWord[];
+    /** Words whose embedded content identity is not the identity they have here. */
+    readonly idMismatches: string[];
+}
+
+export const toSkippedWords = (
+    skipped: ReadonlyArray<readonly [name: string, reason: string]>
+): SkippedWord[] => skipped.map(([name, reason]) => ({ name, reason }));
+
+// What an import did, told from what the interpreter answered rather than
+// guessed from the dictionary afterwards.
+//
+// A restore skips an entry it cannot take and names it; comparing identities
+// before and after tells an added word from one already there. The old
+// reading compared only the dictionaries and so mis-told two cases: a
+// refused redefinition of a word another word still calls left the old body
+// in place, which read as "unchanged (deduplicated by content identity)" —
+// the file's body was different, and it was refused; and an entry with no
+// body, which the interpreter passes over, counted as imported.
+export const summarizeImport = (
+    requested: readonly UserWord[],
+    skipped: readonly SkippedWord[],
+    before: ReadonlyMap<string, string>,
+    after: ReadonlyMap<string, string>,
+    embeddedIds: ReadonlyMap<string, string> | null
+): ImportSummary => {
+    const skippedKeys = new Set(skipped.map(entry => buildWordKey(entry.name)));
+    const seen = new Set<string>();
+    const added: string[] = [];
+    const unchanged: string[] = [];
+    const idMismatches: string[] = [];
+    for (const word of requested) {
+        const key = buildWordKey(word.name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (skippedKeys.has(key)) continue;
+        // Passed over without a report: an entry with no body asked for
+        // nothing, so its absence is not an arrival to count.
+        if (!after.has(key)) continue;
+        if (before.has(key) && before.get(key) === after.get(key)) {
+            unchanged.push(word.name);
+        } else {
+            added.push(word.name);
+        }
+        const expected = embeddedIds?.get(key);
+        const actual = after.get(key);
+        if (expected && actual && expected !== actual) {
+            idMismatches.push(word.name);
+        }
+    }
+    return { added, unchanged, skipped: [...skipped], idMismatches };
+};
+
+// Validate a single raw word entry from an untrusted source — an import file,
+// or the saved session, which a hand edit or an older build can have left
+// malformed. Returns a normalized word, or null when the entry is malformed.
+// A word is only usable downstream if it has a string `name`; `definition`
+// and `id` are optional and must be strings when present. This keeps
+// `parseImportDocument` a total function: a hostile or hand-corrupted file
+// with `null`, numeric, or name-less entries is parsed or cleanly rejected,
+// never thrown out of the `.map` or out of `buildWordKey`. The saved session
+// goes through it for the same reason: `restore_user_words` throws on a list
+// it cannot deserialize, and one malformed entry would otherwise cost the
+// whole dictionary.
+export const normalizeWordEntry = (
     raw: unknown
 ): { name: string; definition: string | null; description?: string | null; id?: string } | null => {
     if (!raw || typeof raw !== 'object') return null;
@@ -213,14 +220,14 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
         return err(e instanceof Error ? e : new Error(String(e)));
     }
 
-    // Both branches drop malformed entries rather than throwing or forwarding
-    // them to `restore_user_words`; valid words in a partially-corrupt file
-    // still import.
+    // Malformed entries are dropped rather than thrown on or forwarded to
+    // `restore_user_words`; valid words in a partially-corrupt file still
+    // import.
     const collect = (rawWords: unknown[]): ParsedImport => {
         const embeddedIds = new Map<string, string>();
         const words: UserWord[] = [];
         for (const raw of rawWords) {
-            const word = normalizeImportWord(raw);
+            const word = normalizeWordEntry(raw);
             if (!word) continue;
             if (word.id) embeddedIds.set(word.name.toUpperCase(), word.id);
             words.push({ name: word.name, definition: word.definition, description: word.description });
@@ -237,8 +244,11 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
     return err(new Error('Invalid file format. Expected a versioned export document with a `words` array.'));
 };
 
-export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
-    const { showError, updateDisplays, showInfo } = callbacks;
+export const createPersistence = (
+    interpreter: AjisaiInterpreter,
+    callbacks: PersistenceCallbacks = {}
+): Persistence => {
+    const { showError, updateDisplays, showInfo, readActiveDictionarySheet } = callbacks;
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
     const RETRY_DELAY_MS = 1000;
@@ -251,7 +261,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             try {
                 await getPlatform().persistence.open();
                 dbInitialized = true;
-                console.log('Database initialized successfully for Persistence.');
                 return;
             } catch (error) {
                 console.error(`Failed to initialize persistence database (attempt ${attempt}/${MAX_RETRY_COUNT}):`, error);
@@ -270,19 +279,22 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     let pendingSave: Promise<void> | null = null;
     let resolvePendingSave: (() => void) | null = null;
 
+    // A failing auto-save is reported once, not on every keystroke's worth of
+    // saves after it.
+    let saveFailureReported = false;
+
     const performSave = async (): Promise<void> => {
-        if (!window.ajisaiInterpreter) return;
-        if (!dbInitialized) {
-            console.warn('Database not initialized, skipping state save.');
-            return;
-        }
+        if (!dbInitialized) return;
 
         try {
-            const state = collectCurrentState(window.ajisaiInterpreter);
+            const state = collectCurrentState(interpreter, readActiveDictionarySheet?.());
             await getPlatform().persistence.saveInterpreterState(state);
-            console.log('State saved automatically.');
         } catch (error) {
             console.error('Failed to auto-save state:', error);
+            if (!saveFailureReported) {
+                saveFailureReported = true;
+                showError?.(new Error('Failed to save the session; changes since the last save will not survive a reload.'));
+            }
         }
     };
 
@@ -320,19 +332,18 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const loadExampleWords = async (): Promise<void> => {
         try {
-            await window.ajisaiInterpreter.restore_user_words(EXAMPLE_USER_WORDS);
+            interpreter.restore_user_words(EXAMPLE_USER_WORDS);
             await saveCurrentState();
-            console.log('Example Words loaded.');
 
             const wordNames = EXAMPLE_USER_WORDS.map(w => w.name).join(', ');
             showInfo?.(`Example Words loaded: ${wordNames}`, false);
         } catch (error) {
             console.error('Failed to load Example Words:', error);
+            showError?.(toError(error));
         }
     };
 
     const loadDatabaseData = async (): Promise<RestoredSelection> => {
-        if (!window.ajisaiInterpreter) return {};
         if (!dbInitialized) {
             console.warn('Database not initialized, loading Example Words instead.');
             await loadExampleWords();
@@ -354,44 +365,34 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     await loadExampleWords();
                     return {};
                 }
-                if (typeof state.stackSnapshot === 'string') {
-                    window.ajisaiInterpreter.restore_stack_snapshot(state.stackSnapshot);
-                }
-
-                if (state.userWords && state.userWords.length > 0) {
-                    const wordsToRestore = state.userWords;
-
-                    await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
-
-                    const notRestored = namesThatDidNotRestore(
-                        window.ajisaiInterpreter,
-                        wordsToRestore
-                    );
-                    if (notRestored.length > 0) {
+                // The dictionary first, and on its own: a saved stack that
+                // does not decode is a lost stack, not a lost dictionary. The
+                // two used to be restored stack-first inside one `try`, so a
+                // bad snapshot — or one malformed word entry, which makes
+                // `restore_user_words` throw — skipped the dictionary, and the
+                // next auto-save wrote the empty session over the saved one.
+                if (!checkHasSavedDictionary(state)) {
+                    await loadExampleWords();
+                } else if (state.userWords.length > 0) {
+                    const wordsToRestore = (state.userWords as unknown[])
+                        .map(normalizeWordEntry)
+                        .filter((word): word is NonNullable<typeof word> => word !== null)
+                        .map(({ name, definition, description }) => ({ name, definition, description }));
+                    const skipped = toSkippedWords(interpreter.restore_user_words(wordsToRestore));
+                    if (skipped.length > 0) {
                         showError?.(new Error(
-                            `${notRestored.length} saved word(s) could not be restored and were left out: ${notRestored.join(', ')}. The rest of the dictionary was restored.`
+                            `${skipped.length} saved word(s) could not be restored and were left out: ${describeSkipped(skipped)}. The rest of the dictionary was restored.`
                         ));
                     }
+                }
 
-                    // Defensive: on this path (restoring into a freshly created
-                    // interpreter) `currentWords` is always a subset of
-                    // `wordsToRestore`, so this loop is normally a no-op. It
-                    // guards against a future restore path that starts from an
-                    // interpreter that already holds words not present in the
-                    // saved set — those should not survive a load.
-                    const savedWordKeys = new Set(
-                        wordsToRestore.map((w: UserWord) => buildWordKey(w.name))
-                    );
-                    const currentWords = window.ajisaiInterpreter.collect_user_words_info();
-                    for (const [, name] of currentWords) {
-                        if (!savedWordKeys.has(buildWordKey(name))) {
-                            window.ajisaiInterpreter.remove_word(name);
-                        }
+                if (typeof state.stackSnapshot === 'string') {
+                    try {
+                        interpreter.restore_stack_snapshot(state.stackSnapshot);
+                    } catch (error) {
+                        console.error('Failed to restore the saved stack:', error);
+                        showError?.(new Error('The saved stack could not be restored and starts empty; the dictionary was restored.'));
                     }
-
-                    console.log('Interpreter state restored.');
-                } else {
-                    await loadExampleWords();
                 }
 
                 return {
@@ -403,27 +404,22 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             }
         } catch (error) {
             console.error('Failed to load database data:', error);
-            showError?.(error as Error);
+            showError?.(toError(error));
             return {};
         }
     };
 
     const exportUserWords = (): void => {
-        if (!window.ajisaiInterpreter) {
-            showError?.(new Error('Interpreter not available'));
-            return;
-        }
-
         const requestedName = window.prompt('Export file name', DEFAULT_EXPORT_NAME)?.trim();
         if (!requestedName) {
             return;
         }
-        const exportData = createExportData(window.ajisaiInterpreter);
+        const exportData = createExportData(interpreter);
         const filename = buildExportFilename(requestedName);
 
         getPlatform().fileIO.saveJson(filename, exportData)
             .then(() => showInfo?.(`User words exported as ${filename}`, true))
-            .catch((error) => showError?.(error as Error));
+            .catch((error) => showError?.(toError(error)));
     };
 
     const importUserWords = (): void => {
@@ -440,61 +436,37 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
-                const dictionary = filenameToDictionaryName(openedFile.filename);
-
-                const { words, embeddedIds } = parseResult.value;
-                const importedWords = words.map(word => ({
-                    ...word,
-                    dictionary
-                }));
+                const { words: importedWords, embeddedIds } = parseResult.value;
 
                 // Content-addressed dedup (LANG.AUTHORITY.FREEDOM): compare identities before and
                 // after the merge. Words whose identity is unchanged were already
                 // present with identical content and count as deduplicated.
-                const before = collectWordIdentityMap(window.ajisaiInterpreter);
-                await window.ajisaiInterpreter.restore_user_words(importedWords);
-                const after = collectWordIdentityMap(window.ajisaiInterpreter);
-
-                const notImported = namesThatDidNotRestore(
-                    window.ajisaiInterpreter,
-                    importedWords
+                const before = collectWordIdentityMap(interpreter);
+                const skipped = toSkippedWords(interpreter.restore_user_words(importedWords));
+                const after = collectWordIdentityMap(interpreter);
+                const { added, unchanged, idMismatches } = summarizeImport(
+                    importedWords,
+                    skipped,
+                    before,
+                    after,
+                    embeddedIds
                 );
-                const notImportedKeys = new Set(notImported.map(buildWordKey));
-
-                let added = 0;
-                let deduplicated = 0;
-                const idMismatches: string[] = [];
-                for (const word of importedWords) {
-                    const fqName = buildWordKey(word.name);
-                    // A word the interpreter could not take is neither added nor
-                    // deduplicated; counting it as imported would report an
-                    // arrival that did not happen.
-                    if (notImportedKeys.has(fqName)) continue;
-                    if (before.has(fqName) && before.get(fqName) === after.get(fqName)) {
-                        deduplicated++;
-                    } else {
-                        added++;
-                    }
-                    if (embeddedIds) {
-                        const expected = embeddedIds.get(word.name.toUpperCase());
-                        const actual = after.get(fqName);
-                        if (expected && actual && expected !== actual) {
-                            idMismatches.push(word.name);
-                        }
-                    }
-                }
 
                 updateDisplays?.();
                 await saveCurrentState();
 
-                const summary = deduplicated > 0
-                    ? `${added} user words imported, ${deduplicated} unchanged (deduplicated by content identity)`
-                    : `${added} user words imported and saved`;
+                const summary = unchanged.length > 0
+                    ? `${added.length} user words imported, ${unchanged.length} unchanged (deduplicated by content identity)`
+                    : `${added.length} user words imported and saved`;
                 showInfo?.(summary, true);
-                if (notImported.length > 0) {
-                    showError?.(new Error(
-                        `${notImported.length} word(s) in the file could not be read by this build and were not imported: ${notImported.join(', ')}.`
-                    ));
+                // Appended under the count rather than shown as an error: an
+                // error is written in place of the output, and the count
+                // belongs beside what was left out.
+                if (skipped.length > 0) {
+                    showInfo?.(
+                        `${skipped.length} word(s) in the file were not imported: ${describeSkipped(skipped)}.`,
+                        true
+                    );
                 }
                 if (idMismatches.length > 0) {
                     showInfo?.(
@@ -508,16 +480,15 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
             } catch (error) {
-                showError?.(error as Error);
+                showError?.(toError(error));
             }
-        });
+        }).catch((error) => showError?.(toError(error)));
     };
 
     const fullReset = async (): Promise<void> => {
         try {
             if (dbInitialized) {
                 await getPlatform().persistence.clearAll();
-                console.log('IndexedDB cleared.');
             } else {
                 console.warn('Database not initialized, skipping clear operation.');
             }
@@ -525,7 +496,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             updateDisplays?.();
         } catch (error) {
             console.error('Failed to perform full reset:', error);
-            showError?.(error as Error);
+            showError?.(toError(error));
         }
     };
 

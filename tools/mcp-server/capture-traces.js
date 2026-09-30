@@ -60,7 +60,7 @@ function argValue(argv, flag, fallback) {
 }
 
 /**
- * The four tools, exactly as a connected client would see them.
+ * The tools, exactly as a connected client would see them.
  *
  * Read from the server's own declaration rather than restated here: a baseline
  * measured against a hand-copied description would drift from the product the

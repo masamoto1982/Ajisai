@@ -5,7 +5,7 @@
 //! told to "read the message", which is what they had already read. The
 //! registry declares, per Word, the conditions it raises under; these pin that
 //! a raise names one of them, that the name survives to `why` and to
-//! `aiDiagnostic.kind`, and that the declared vocabulary is classified as a
+//! `aiDiagnostic.category`, and that the declared vocabulary is classified as a
 //! vocabulary rather than Word by Word.
 
 use crate::error::ErrorCategory;
@@ -54,6 +54,45 @@ fn declared_condition_vocabulary_is_classified() {
     );
 }
 
+/// `spec/outcomes.json` says which conditions are repaired in the program
+/// (`repair: "program"`), and `partiality` is derived from it. The diagnosis
+/// reports that field as the registry has it — present as `program`, absent
+/// otherwise — for every condition a Word declares, rather than a second
+/// classification of its own that could disagree.
+#[test]
+fn declared_repair_is_the_registrys() {
+    let outcomes: serde_json::Value =
+        serde_json::from_str(include_str!("../../../spec/outcomes.json")).unwrap();
+    let program: std::collections::HashSet<&str> = outcomes["errorCategories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c["repair"] == "program")
+        .filter_map(|c| c["id"].as_str())
+        .collect();
+    for condition in GENERATED_WORDS
+        .iter()
+        .flat_map(|word| word.error_when.iter().copied())
+    {
+        let diagnosis = crate::interpreter::debug_diagnosis::DebugDiagnosis::from_error_category(
+            crate::interpreter::debug_diagnosis::ErrorPhase::ExecuteWord,
+            None,
+            Some(&ErrorCategory::Declared(condition)),
+            None,
+            0,
+            0,
+            None,
+        );
+        let payload = diagnosis.ai_payload(Some(&ErrorCategory::Declared(condition)));
+        assert_eq!(payload.category.as_deref(), Some(condition));
+        assert_eq!(
+            payload.repair,
+            program.contains(condition).then_some("program"),
+            "{condition}"
+        );
+    }
+}
+
 /// The condition a raise names has to be one the raising Word declares.
 /// Naming a condition the contract does not carry would answer in a vocabulary
 /// the caller cannot look up.
@@ -63,14 +102,12 @@ async fn a_named_condition_is_one_the_word_declares() {
         ("[ 1 2 ] [ 'X' BIND ] MAP", "MAP"),
         ("[ 1 2 ] [ 0 ] [ 'A' BIND 'B' BIND ] FOLD", "FOLD"),
         ("[ 1 2 ] [ 'X' BIND ] FILTER", "FILTER"),
-        ("[ 1 2 ] [ 'X' BIND ] ALL", "ALL"),
-        ("[ 1 2 ] [ 'X' BIND ] ANY", "ANY"),
         ("42 CONTRACT", "CONTRACT"),
         ("[ 1 2 ] 5 MAP", "MAP"),
         ("TRUE NUM", "NUM"),
-        ("NIL NUM", "NUM"),
-        ("[ 0 5 0 ] RANGE", "RANGE"),
-        ("[ 5 0 1 ] RANGE", "RANGE"),
+        ("NIL EXEC", "EXEC"),
+        ("0 1/2 RANGE", "RANGE"),
+        ("'a' 5 RANGE", "RANGE"),
         ("[ 'y' ] [ 'n' ] 1 SELECT", "SELECT"),
         ("[ 1 2 ] [ 3 4 5 ] [ TRUE FALSE ] SELECT", "SELECT"),
     ] {
@@ -84,7 +121,7 @@ async fn a_named_condition_is_one_the_word_declares() {
             declared
                 .error_when
                 .iter()
-                .any(|c| condition.contains(&format!("({})", c))),
+                .any(|c| condition.contains(&format!("(error:{})", c))),
             "{:?} answered a condition {} does not declare ({:?}): {}",
             code,
             word,

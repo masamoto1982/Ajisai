@@ -1,5 +1,5 @@
 //! The zero-divisor projection law: what a zero divisor does to the value
-//! around it, for the two Words that meet one.
+//! around it, for `DIV`, the Word that meets one.
 //!
 //! Split out of `arithmetic.rs` because these are the exact-arithmetic laws
 //! that can *project* — answer NIL for a well-formed operand
@@ -7,10 +7,8 @@
 //! collection is a different problem from lifting a total one. `ADD`, `SUB`
 //! and `MUL` either answer with a number in every lane or raise.
 //!
-//! `DIV` and `MOD` share the law because they share the division: `a MOD b`
-//! is `a - b * floor(a/b)`, so a zero divisor is the same undefined operation
-//! underneath, and answering it two ways would make the same condition mean
-//! two things depending on which Word wrapped it.
+//! A remainder written out as `a - b * floor(a/b)` goes through the same
+//! division, so a zero divisor answers the same way whichever phrase wraps it.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::arithmetic::{ExactArithmeticSchema, ScalarFastWrap};
@@ -18,7 +16,7 @@ use crate::interpreter::arithmetic_meter::check_result_size;
 use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -30,7 +28,7 @@ pub(crate) fn division_by_zero_projection() -> Value {
 /// The scalar law of `DIV` as a whole `Value`, for the lane-wise lift.
 ///
 /// A zero divisor is a projection, not a failure (`LANG.FAILURE.TRICHOTOMY`),
-/// so it answers with the reasoned NIL the scalar `6 0 /` answers with.
+/// so it answers with the reasoned NIL the scalar `6 0 DIV` answers with.
 ///
 /// An absent operand never reaches here: `apply_lane_wise_broadcast` lifts the
 /// scalar passthrough law over each lane *before* consulting this one, while
@@ -51,9 +49,9 @@ fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
 
 /// A zero divisor on the one-lane fast path projects *inside* the operand's
 /// wrap, for the same reason it projects per lane in the broadcast: the shape
-/// of `[ 6 ] [ 0 ] /` is the shape of `[ 6 ] [ 2 ] /`. Answering with a bare
+/// of `[ 6 ] [ 0 ] DIV` is the shape of `[ 6 ] [ 2 ] DIV`. Answering with a bare
 /// NIL here made `DIV` the one Word whose result shape depended on whether it
-/// projected — `[ 6 ] [ 2 ] /` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] /` gave a
+/// projected — `[ 6 ] [ 2 ] DIV` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] DIV` gave a
 /// scalar `NIL`.
 ///
 /// The projection is a reasoned NIL, so the wrap is rebuilt as a nested
@@ -69,21 +67,6 @@ pub(crate) fn build_scalar_fast_projection(wrap: &ScalarFastWrap) -> Value {
             value
         }
     }
-}
-
-/// The scalar law of `MOD` as a whole `Value`, for the lane-wise lift.
-///
-/// Identical in shape to [`divide_lane`], and for the reason in this module's
-/// header: the zero divisor is the same one. Its absence guard is the same
-/// guard, kept for the same reason [`divide_lane`]'s doc gives.
-pub(crate) fn modulo_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
-    if a.is_nil() || b.is_nil() {
-        return Ok(Value::nil());
-    }
-    if b.is_zero() {
-        return Ok(division_by_zero_projection());
-    }
-    Ok(Value::from_fraction(a.modulo(b)))
 }
 
 /// The `DIV` arm of [`apply_exact_arithmetic_schema`], after the fast paths
@@ -102,11 +85,10 @@ pub(crate) fn apply_division_schema(
         if left_is_text || right_is_text {
             return Err(AjisaiError::declared(
                 "nonNumeric",
-                "DIV: expected a number, got a string",
+                "expected a Scalar, got String",
             ));
         }
     }
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let operands = extract_operands(interp, 2)?;
     let a_val = &operands[0];
     let b_val = &operands[1];
@@ -131,7 +113,7 @@ pub(crate) fn apply_division_schema(
     // The flat rational broadcast above cannot say that. Its leaf law answers
     // with a `Fraction`, so a projection can only surface as one error for the
     // whole operation, and the lanes that had already divided were discarded
-    // with it: `[ 6 6 6 ] [ 1 2 0 ] /` answered `NIL` where the same division
+    // with it: `[ 6 6 6 ] [ 1 2 0 ] DIV` answered `NIL` where the same division
     // through `MAP` answered `[ 6/1 3/1 NIL ]`, so one `DIV` meant two
     // different things depending on the route it took.
     //
@@ -154,10 +136,8 @@ pub(crate) fn apply_division_schema(
             Ok(())
         }
         Err(error) => {
-            if !is_keep_mode {
-                for val in operands {
-                    interp.stack.push(val);
-                }
+            for val in operands {
+                interp.stack.push(val);
             }
             Err(error)
         }

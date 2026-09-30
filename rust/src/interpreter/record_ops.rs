@@ -1,10 +1,11 @@
-//! The Record Words: `RECORD`, `KEYS`, `VALUES`, `AT`, `WITH`, `WITHOUT`,
-//! `HAS?`, `MERGE` (LANG.RECORDS.STRUCTURE).
+//! The Record Words: `RECORD`, `KEYS`, `VALUES`, `WITHOUT`, `HAS?`, `MERGE`
+//! (LANG.RECORDS.STRUCTURE). Reading and writing one key is `GET` and `PUT`,
+//! the same two Words that read and write a Vector position.
 //!
 //! A Record is the seventh value domain: a keyed correspondence whose keys
 //! keep the order they arrived in. It is the one shape the parallel-vector
 //! idiom could only imitate — `INDEX-OF` then `GET` scans every key where
-//! `AT` hashes one — and it is what structured data from a host arrives as.
+//! `GET` on a Record hashes one — and it is what structured data from a host arrives as.
 //! Nothing here converts a Vector to a Record or back on its own: `RECORD`
 //! and `KEYS`/`VALUES` are the only bridges, both explicit.
 //!
@@ -16,37 +17,34 @@ use super::ordering_ops::{elements_of, restore, take_operand};
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::ScanMeter;
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, RecordBuildError, RecordData, Value};
+use crate::types::{RecordBuildError, RecordData, Value};
 
-/// Put a Word's consumed operands back, in order, when it did consume them.
+/// Put a Word's consumed operands back, in order.
 fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        for operand in operands {
-            interp.stack.push(operand);
-        }
+    for operand in operands {
+        interp.stack.push(operand);
     }
 }
 
 fn push_record(interp: &mut Interpreter, record: RecordData) {
-    interp
-        .stack
-        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+    interp.stack.push(Value::from_record(record));
 }
 
-/// The declared `nonRecord` condition, naming the Word and the position.
-fn non_record(word: &str, position: &str) -> AjisaiError {
+/// The declared `nonRecord` condition, naming the position and what was
+/// found there.
+fn non_record(position: &str, got: &Value) -> AjisaiError {
     AjisaiError::declared(
         "nonRecord",
-        format!("{word}: expected a Record as {position}, got a non-record value"),
+        format!("expected a Record as {position}, got {}", got.domain_name()),
     )
 }
 
-/// The `missingField` absence `AT` and `WITHOUT` project for a key the
+/// The `notFound` absence `WITHOUT` projects for a key the
 /// Record does not hold.
-fn missing_field() -> Value {
-    Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable)
+fn not_found() -> Value {
+    Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable)
 }
 
 /// Charge for hashing every key of a Record being built or rebuilt: one
@@ -69,15 +67,12 @@ pub fn op_record(interp: &mut Interpreter) -> Result<()> {
         charge_key_scan(interp, &keys)?;
         RecordData::new(keys, values).map_err(|e| match e {
             RecordBuildError::LengthMismatch { keys, values } => {
-                AjisaiError::VectorLengthMismatch {
-                    len1: keys,
-                    len2: values,
-                }
+                AjisaiError::length_mismatch(keys, values)
             }
             RecordBuildError::DuplicateKey { first, second } => AjisaiError::declared(
                 "duplicateKey",
                 format!(
-                    "RECORD: the key at position {second} repeats the key at position {first}; \
+                    "the key at position {second} repeats the key at position {first}; \
                      a Record holds each key once"
                 ),
             ),
@@ -99,13 +94,12 @@ pub fn op_record(interp: &mut Interpreter) -> Result<()> {
 pub fn op_keys(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     let Some(record) = operand.as_record() else {
+        let err = non_record("its operand", &operand);
         restore(interp, operand);
-        return Err(non_record("KEYS", "its operand"));
+        return Err(err);
     };
     let keys = Value::from_vector(record.keys().to_vec());
-    interp
-        .stack
-        .push_with_role(keys, Interpretation::Unassigned);
+    interp.stack.push(keys);
     Ok(())
 }
 
@@ -113,71 +107,29 @@ pub fn op_keys(interp: &mut Interpreter) -> Result<()> {
 pub fn op_values(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     let Some(record) = operand.as_record() else {
+        let err = non_record("its operand", &operand);
         restore(interp, operand);
-        return Err(non_record("VALUES", "its operand"));
+        return Err(err);
     };
     let values = Value::from_vector(record.values().to_vec());
-    interp
-        .stack
-        .push_with_role(values, Interpretation::Unassigned);
+    interp.stack.push(values);
     Ok(())
 }
 
-/// `AT ( [ record ] [ key ] -> [ value ] )`: projects `missingField`.
-pub fn op_at(interp: &mut Interpreter) -> Result<()> {
-    let operands = extract_operands(interp, 2)?;
-    let Some(record) = operands[0].as_record() else {
-        restore_all(interp, operands);
-        return Err(non_record("AT", "the first operand"));
-    };
-    let answer = match record.get(&operands[1]) {
-        Some(value) => value.clone(),
-        None => missing_field(),
-    };
-    let role = if answer.is_nil() {
-        Interpretation::Nil
-    } else {
-        answer.hint
-    };
-    interp.stack.push_with_role(answer, role);
-    Ok(())
-}
-
-/// `WITH ( [ record ] [ key ] [ value ] -> [ record ] )`.
-///
-/// Declared `consumeNil` rather than `rejectNil`: a NIL *value* is a stored
-/// absence and belongs under a key, so only a NIL Record or a NIL key is
-/// malformed use, and the Word decides that itself.
-pub fn op_with(interp: &mut Interpreter) -> Result<()> {
-    let operands = extract_operands(interp, 3)?;
-    let Some(record) = operands[0].as_record() else {
-        restore_all(interp, operands);
-        return Err(non_record("WITH", "the first operand"));
-    };
-    if operands[1].is_operational_nil() {
-        restore_all(interp, operands);
-        return Err(non_record("WITH", "the key (got NIL)"));
-    }
-    let next = record.with(operands[1].clone(), operands[2].clone());
-    push_record(interp, next);
-    Ok(())
-}
-
-/// `WITHOUT ( [ record ] [ key ] -> [ record ] )`: projects `missingField`.
+/// `WITHOUT ( [ record ] [ key ] -> [ record ] )`: projects `notFound`.
 pub fn op_without(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
+        let err = non_record("the first operand", &operands[0]);
         restore_all(interp, operands);
-        return Err(non_record("WITHOUT", "the first operand"));
+        return Err(err);
     };
     match record.without(&operands[1]) {
         Some(next) => {
             push_record(interp, next);
         }
         None => {
-            interp
-                .stack
-                .push_with_role(missing_field(), Interpretation::Nil);
+            interp.stack.push(not_found());
         }
     }
     Ok(())
@@ -187,13 +139,12 @@ pub fn op_without(interp: &mut Interpreter) -> Result<()> {
 pub fn op_has(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
+        let err = non_record("the first operand", &operands[0]);
         restore_all(interp, operands);
-        return Err(non_record("HAS?", "the first operand"));
+        return Err(err);
     };
     let present = record.has(&operands[1]);
-    interp
-        .stack
-        .push_with_role(Value::from_bool(present), Interpretation::TruthValue);
+    interp.stack.push(Value::from_bool(present));
     Ok(())
 }
 
@@ -201,13 +152,14 @@ pub fn op_has(interp: &mut Interpreter) -> Result<()> {
 pub fn op_merge(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let (Some(left), Some(right)) = (operands[0].as_record(), operands[1].as_record()) else {
-        let position = if operands[0].as_record().is_none() {
-            "the first operand"
+        let (position, got) = if operands[0].as_record().is_none() {
+            ("the first operand", &operands[0])
         } else {
-            "the second operand"
+            ("the second operand", &operands[1])
         };
+        let err = non_record(position, got);
         restore_all(interp, operands);
-        return Err(non_record("MERGE", position));
+        return Err(err);
     };
     if let Err(e) = charge_key_scan(interp, right.keys()) {
         restore_all(interp, operands);

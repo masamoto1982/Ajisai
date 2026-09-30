@@ -1,31 +1,18 @@
-import type { ViewMode } from './mobile-view-switcher';
-import type { MobileHandler } from './mobile-view-switcher';
+// Presentation layer for Ajisai's four observation surfaces (LANG.OBSERVATION.PROJECTIONS:
+// Input/π_Input, Output/π_Output, Stack/π_Stack, Dictionary/π_Dict). The
+// concrete way those surfaces are made visible on a device is a "Presentation
+// Profile" (SPEC Portability Profiles): a labeled transition system over
+// visibility configurations. This module holds the initial configuration c0
+// (`createLayoutState`), the desktop transition core (`updateDesktopModes`)
+// and the execution-driven transition (`applyExecutionAreaState`); the
+// single-surface core lives in `mobile-view-switcher`, and the spec invariants
+// are checked in `presentation-profile.test.ts`.
+
+import type { ViewMode, MobileHandler } from './mobile-view-switcher';
 import type { GUIElements } from './gui-dom-cache';
 
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
-
-// The modifier carries no symbol: `KEEP` is its only spelling. Matching a whole
-// token keeps a user word whose name merely contains "keep" from reading as the
-// modifier.
-const STACK_MODIFIER_TOKEN = /(?:^|\s)(KEEP)(?=\s|$)/gi;
-
-export interface StackModifierState {
-    /** KEEP consumption: operands are retained rather than eaten. */
-    readonly keep: boolean;
-}
-
-// Mirror the runtime default (LANG.MODIFIERS.CONSUMPTION): a Word consumes the
-// operands it reads. There is exactly one modifier axis, so a program is
-// summarized by whether *any* token selects the non-default — matching the
-// existing "any occurrence wins" behavior of the highlight.
-export const analyzeStackModifiers = (content: string): StackModifierState => {
-    let keep = false;
-    for (const _match of content.matchAll(STACK_MODIFIER_TOKEN)) {
-        keep = true;
-    }
-    return { keep };
-};
 
 // Plain-text placeholder cheat sheet shown in the empty editor. Desktop lists
 // keyboard shortcuts; mobile lists the equivalent touch gestures. A non-empty
@@ -46,42 +33,42 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     '',
     'clear the stack, keep your words   → Ctrl+Alt+S',
     'clear this editor, keep everything → Ctrl+Alt+E',
-    // "everything" was not true, and it is the one line here a reader acts on
-    // expecting an empty dictionary: a reset clears the stack and the words you
-    // defined, then seeds the Example Words back (`fullReset` → `loadExampleWords`).
-    // Reading them as leftovers of your own work is the mistake this names.
+    // Reset is the one line here a reader acts on expecting an empty
+    // dictionary: it clears the stack and the words you defined, then seeds
+    // the Example Words back (`fullReset` → `loadExampleWords`). The line says
+    // so, so the seeded words do not read as leftovers of your own work.
     'reset: erase the stack and your words, keep the example words → Ctrl+Alt+Enter',
     '',
     'bring back your last program → Ctrl+Up / Ctrl+Down',
-    'stop a running step          → Escape',
+    'stop a run or a step         → Escape',
     '',
     // The dictionary panel writes into this editor, and the space *between* its
     // buttons is a control of its own: a click there types a space, a
     // double-click takes the last word back. Undocumented, it reads as a
-    // misfired click on a word button — which is exactly how it was first
-    // reported.
+    // misfired click on a word button.
     'click a word in the dictionary → write it here',
     'click the space around them    → write a space',
     'double-click that space        → take back the last word'
 ].join('\n');
 
 // The mobile sheet carries the whole touch vocabulary, because on a phone this
-// is the only place it is written down. A bar of labelled buttons was tried
-// instead and cost more than it taught: five controls and an in-flow symbol
-// palette left a 180px editor on a 740px phone, and the editor is the thing
-// the page is for. Prose in the placeholder costs nothing — the editor is
-// empty whenever it shows — so the sheet is where the teaching goes, and it is
-// allowed to be long. It scrolls, and its first four lines are the ones a
-// first-time reader needs.
+// is the only place it is written down. A bar of labelled buttons would take
+// its height out of the editor, and the editor is the thing the page is for.
+// Prose in the placeholder costs nothing — the editor is empty whenever it
+// shows — so the sheet is where the teaching goes, and it is allowed to be
+// long. It scrolls, and its first four lines are the ones a first-time reader
+// needs.
 //
 // Ordered by what a reader reaches for: run it, move between surfaces, fix the
 // text, then what types for you, then the stack's own control. The last block
-// is the honest one — four operations have a shortcut and no touch control,
-// and saying so beats letting someone hunt for a button that is not there.
+// is the honest one — five operations have a shortcut and no touch control,
+// and saying so beats letting someone hunt for a button that is not there
+// (spec/gui-semantics.md, rule 4: nothing a surface is reached by goes
+// unsaid, and recall of a submitted program is reached only by Ctrl+Up).
 //
 // Every line is kept under 27 characters on purpose. A textarea placeholder
 // wraps on width, and a hand-aligned continuation (`'    or the list above'`)
-// lands wherever the wrap leaves it, which on a 360px phone turned a tidy
+// lands wherever the wrap leaves it, which on a 360px phone turns a tidy
 // two-column sheet into ragged prose. Short whole lines wrap nowhere, so the
 // sheet reads the same on every phone from 320px up.
 const MOBILE_EDITOR_PLACEHOLDER = [
@@ -93,7 +80,6 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'format → lower-right icon',
     'clear  → × upper right',
     '',
-    'tap a symbol below to type',
     'tap a Dictionary word too',
     'two letters → suggestions',
     '',
@@ -104,17 +90,26 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'step    Ctrl+Enter',
     'stop    Escape',
     'look up Ctrl+Alt+L',
+    'recall  Ctrl+Up / Down',
     'reset   Ctrl+Alt+Enter'
 ].join('\n');
 
+/** The one record of which surface is showing; every other view of it is derived. */
 export interface LayoutState {
-    /** Last mode passed to `switchArea`. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
+    /** Last mode selected. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
     currentMode: ViewMode;
     /** Desktop left column state. Always 'input' or 'output'. Mobile does not read this. */
     currentLeftMode: ViewMode;
     /** Desktop right column state. Always 'stack' or 'dictionary'. Mobile does not read this. */
     currentRightMode: ViewMode;
 }
+
+/** The initial configuration c0. */
+export const createLayoutState = (): LayoutState => ({
+    currentMode: 'input',
+    currentLeftMode: 'input',
+    currentRightMode: 'stack'
+});
 
 const syncSelectorState = (elements: GUIElements, leftMode: ViewMode, rightMode: ViewMode): void => {
     elements.leftPanelSelect.value = leftMode;
@@ -139,8 +134,8 @@ const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
 // not layout cosmetics — they keep the surfaces that conflict in intent (Output
 // vs. Dictionary) out of the reachable configuration space, which is exactly what
 // makes the reachable subspace closed under idempotent selection (Invariant 5).
-// Exported so the conformance suite (layout/presentation-profile.test.ts) can
-// verify the shipped logic is a model of the Presentation Profile LTS.
+// Exported so the conformance suite (presentation-profile.test.ts) can verify
+// the shipped logic is a model of the Presentation Profile LTS.
 export const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     if (LEFT_TAB_MODES.includes(mode)) {
         state.currentLeftMode = mode;
@@ -162,14 +157,21 @@ export interface ExecutionSurfaceChanges {
     readonly outputChanged: boolean;
     readonly stackChanged: boolean;
     readonly dictionaryChanged: boolean;
-    readonly dictionarySheetId?: string;
 }
+
+// The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), and the
+// Dictionary area shows one at a time.
+export type DictionarySheetId = 'core' | 'user';
+
+export const isDictionarySheetId = (value: unknown): value is DictionarySheetId =>
+    value === 'core' || value === 'user';
 
 export interface ApplyAreaStateDeps {
     readonly elements: GUIElements;
     readonly state: LayoutState;
     readonly mobile: MobileHandler;
-    readonly switchDictionarySheet: (sheetId: string) => void;
+    /** Select a dictionary sheet in the selector and show it. */
+    readonly showDictionarySheet: (sheetId: DictionarySheetId) => void;
 }
 
 const applyMobileAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
@@ -192,12 +194,6 @@ export const applyAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void =
     } else {
         applyDesktopAreaState(deps, mode);
     }
-};
-
-const revealChangedDictionarySheet = (deps: ApplyAreaStateDeps, sheetId?: string): void => {
-    if (!sheetId) return;
-    deps.elements.dictionarySheetSelect.value = sheetId;
-    deps.switchDictionarySheet(sheetId);
 };
 
 // Execution-driven transition (distinct from the manual-selection core in
@@ -229,9 +225,9 @@ export const applyExecutionAreaState = (
             nextMode = 'stack';
         }
         if (nextMode) {
-            if (nextMode === 'dictionary') {
-                revealChangedDictionarySheet(deps, changes.dictionarySheetId);
-            }
+            // A run that changed the dictionary defined or deleted a User Word,
+            // so the User sheet is the one to show.
+            if (nextMode === 'dictionary') deps.showDictionarySheet('user');
             deps.state.currentMode = nextMode;
             applyMobileAreaState(deps, nextMode);
         }
@@ -246,7 +242,7 @@ export const applyExecutionAreaState = (
     }
     if (changes.dictionaryChanged) {
         deps.state.currentRightMode = 'dictionary';
-        revealChangedDictionarySheet(deps, changes.dictionarySheetId);
+        deps.showDictionarySheet('user');
     }
 
     deps.state.currentMode = deps.state.currentRightMode;
@@ -255,26 +251,27 @@ export const applyExecutionAreaState = (
     syncSelectorState(deps.elements, deps.state.currentLeftMode, deps.state.currentRightMode);
 };
 
-export const updateHighlights = (elements: GUIElements, content: string): void => {
-    const { keep } = analyzeStackModifiers(content);
-    const classes = elements.stackDisplay.classList;
-
-    // A Word takes its operands from the top of the stack, so the top item is
-    // what the highlight paints.
-    classes.add('highlight-top');
-
-    // The consumption axis is the fill color on that operand: KEEP means the
-    // operands remain, the default EAT that they are removed.
-    classes.toggle('consume-keep', keep);
-    classes.toggle('consume-eat', !keep);
-
-    classes.remove('blink-all');
-    classes.remove('blink-top');
-};
-
 export const updateEditorPlaceholder = (elements: GUIElements, mobile: MobileHandler): void => {
-    if (!elements?.codeInput) return;
     elements.codeInput.placeholder = mobile.isMobile()
         ? MOBILE_EDITOR_PLACEHOLDER
         : DESKTOP_EDITOR_PLACEHOLDER;
 };
+
+export type LayoutController = {
+    readonly setArea: (mode: ViewMode) => void;
+    readonly handleResize: () => void;
+};
+
+// `setArea` realizes a Presentation Profile transition (SPEC Portability
+// Profiles): selecting one observation surface (LANG.OBSERVATION.PROJECTIONS)
+// drives the device-appropriate transition core via `applyAreaState`.
+export const createLayoutController = (deps: ApplyAreaStateDeps): LayoutController => ({
+    setArea: (mode) => {
+        deps.state.currentMode = mode;
+        applyAreaState(deps, mode);
+    },
+    handleResize: () => {
+        applyAreaState(deps, deps.state.currentMode);
+        updateEditorPlaceholder(deps.elements, deps.mobile);
+    }
+});

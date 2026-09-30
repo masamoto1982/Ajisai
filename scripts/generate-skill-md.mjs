@@ -61,7 +61,7 @@ let snippetCounter = 0;
 function runSnippet(code) {
   const file = join(scratchDir, `snippet-${snippetCounter++}.ajisai`);
   writeFileSync(file, `${code}\n`);
-  const proc = spawnSync(ajisaiBin, ['run', file, '--json'], { encoding: 'utf8' });
+  const proc = spawnSync(ajisaiBin, ['agent', 'compute', file, '--limits', 'trusted'], { encoding: 'utf8' });
   if (proc.error) fail(`failed to spawn ajisai CLI: ${proc.error.message}`);
   let json = null;
   try {
@@ -120,27 +120,7 @@ function buildWordTable() {
       const contract = contracts.get(entry.canonical);
       if (!contract) fail(`no contract found for coreword ${entry.surface}`);
       const syntax = contract.documentation.syntax ? ` — e.g. \`${contract.documentation.syntax}\`` : '';
-      rows.push(`| \`${entry.surface}\` | ${entry.category} | ${contract.documentation.summary}${syntax} |`);
-    } else if (entry.canonical) {
-      const escaped = entry.surface.replace(/\|/g, '\\|');
-      const concept = entry.canonical.replace(/\|/g, '\\|');
-      // Only an alias is a shorthand *for* a Word you could have written out. A
-      // delimiter, a directive, or a reserved marker is not: calling a reserved
-      // marker "shorthand" would read as an invitation to use one.
-      const note = {
-        reserved_marker: `${concept} — reserved, never valid in source`,
-        // A retired form is not a reserved one: it *was* valid, so the note
-        // says what replaced it rather than only that it is refused. Listing
-        // these as `delimiter_sugar` is what let §9 advertise `{` and `}` as
-        // structural delimiters while §2 called them invalid characters.
-        retired_form: `${concept} — retired, no longer valid in source`,
-        source_directive: `${concept} — consumed by the lexer, not a Word`,
-        control_directive: `${concept} — only inside the construct that defines it`,
-        delimiter_sugar: `${concept} — structural delimiter, not a Word`,
-        literal_sugar: `${concept} — literal delimiter, not a Word`,
-        input_helper: `${concept} — editor affordance, not a Word`,
-      }[entry.kind] ?? `shorthand for \`${concept}\``;
-      rows.push(`| \`${escaped}\` | ${entry.kind.replace(/_/g, ' ')} | ${note} |`);
+      rows.push(`| \`${entry.surface}\` | ${entry.family} | ${contract.documentation.summary}${syntax} |`);
     }
   }
   return rows;
@@ -152,43 +132,32 @@ function buildWordTable() {
 
 const canonicalExamples = [
   { title: 'Push a number (always inside a vector)', code: '[ 42 ]' },
-  { title: 'Exact rational division — no floats, ever', code: '[ 1 ] [ 3 ] /' },
-  { title: 'Elementwise vector arithmetic', code: '[ 1 2 3 ] [ 4 5 6 ] +' },
-  { title: 'Scalar broadcast over a vector', code: '[ 5 ] [ 1 2 3 ] *' },
-  { title: 'Remainder', code: '[ 10 ] [ 3 ] %' },
-  { title: 'Comparison pushes a boolean', code: '1 2 <' },
-  { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] <' },
-  { title: 'Range: one vector [ start end ] (inclusive)', code: '[ 0 5 ] RANGE' },
-  { title: 'Range with step: [ start end step ]', code: '[ 0 10 2 ] RANGE' },
-  { title: 'Fill a tensor: [ shape... value ]', code: '[ 2 2 7 ] FILL' },
-  { title: 'MAP with a [ ] code block', code: '[ 0 4 ] RANGE [ [ 2 ] * ] MAP' },
-  { title: 'FILTER keeps matching elements', code: '[ 0 10 ] RANGE [ 5 > ] FILTER' },
-  { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
-  { title: 'ANY / ALL take predicate blocks', code: '[ 1 2 3 ] [ 1 > ] ANY' },
+  { title: 'Exact rational division — no floats, ever', code: '[ 1 ] [ 3 ] DIV' },
+  { title: 'Elementwise vector arithmetic', code: '[ 1 2 3 ] [ 4 5 6 ] ADD' },
+  { title: 'Scalar broadcast over a vector', code: '[ 5 ] [ 1 2 3 ] MUL' },
+  { title: 'Remainder: name the operands, then a - b * floor(a/b)', code: "10 'A' BIND 3 'B' BIND A A B DIV FLOOR B MUL SUB" },
+  { title: 'Comparison pushes a boolean', code: '1 2 LT' },
+  { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] LT' },
+  { title: 'Range: start end, both included', code: '0 5 RANGE' },
+  { title: 'A stride is a multiplication of a range', code: '0 5 RANGE 2 MUL' },
+  { title: 'Fill a shape with one number: [ shape ] value', code: '[ 2 2 ] 7 FILL' },
+  { title: 'MAP with a [ ] code block', code: '0 4 RANGE [ [ 2 ] MUL ] MAP' },
+  { title: 'FILTER keeps matching elements', code: '0 10 RANGE [ 5 GT ] FILTER' },
+  { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ ADD ] FOLD' },
   {
-    id: 'record-literal',
-    title: 'A Record literal: each key beside the value under it',
-    code: "{ 'x' 1 'y' 2 }",
+    id: 'record-basic',
+    title: 'A Record from a Vector of keys and a Vector of values',
+    code: "[ 'x' 'y' ] [ 1 2 ] RECORD",
   },
   {
     id: 'def-basic',
     title: 'Define a user word: [ body ] then name, then DEF',
-    code: "[ | [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
-  },
-  {
-    id: 'def-header',
-    title: 'Declare the inputs: names before | take that many operands, deepest first',
-    code: "[ XS | XS 0 [ + ] FOLD XS LENGTH / ] 'MEAN' DEF [ 3 1 4 1 5 ] MEAN",
-  },
-  {
-    id: 'def-header-keep',
-    title: 'KEEP on a header word keeps exactly the declared operands',
-    code: "[ A B | A B - ] 'DIFF' DEF 10 3 KEEP DIFF",
+    code: "[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM",
   },
   {
     id: 'select-basic',
     title: 'SELECT: the two candidates, then the truth that chooses between them',
-    code: "[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT",
+    code: "[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT",
   },
   {
     id: 'select-lanes',
@@ -200,24 +169,24 @@ const canonicalExamples = [
   { title: 'PRINT pops and emits to output (not the stack)', code: '[ 1 2 3 ] PRINT' },
   { title: 'Sorting is a plain Core word', code: '[ 3 1 2 ] SORT' },
   { title: 'Exact square root takes a bare scalar', code: '2 SQRT' },
-  { title: 'The KEEP modifier makes the next word non-consuming', code: '[ 5 ] KEEP PRINT' },
+  { title: 'A value used twice is named with BIND', code: "5 'N' BIND N N 1 ADD" },
 ];
 
 const commonErrors = [
   {
     title: 'Typo / unknown word',
     code: '[ 1 ] ADDD',
-    fix: 'Grep §9 for the word you meant (here: `+` / `ADD`). Word names are upper-cased automatically.',
+    fix: 'Grep §9 for the word you meant (here: `ADD`). Word names are upper-cased automatically.',
   },
   {
     title: 'Stack underflow: operands must be pushed first',
-    code: '+',
-    fix: 'Push both operands before the operator: `[ 1 ] [ 2 ] +`. Ajisai is postfix; there is no infix form.',
+    code: 'ADD',
+    fix: 'Push both operands before the operator: `[ 1 ] [ 2 ] ADD`. Ajisai is postfix; there is no infix form.',
   },
   {
     title: 'FOLD without an initial value',
-    code: '[ 1 2 3 ] [ + ] FOLD',
-    fix: 'FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.',
+    code: '[ 1 2 3 ] [ ADD ] FOLD',
+    fix: 'FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD`.',
   },
   {
     title: 'SELECT takes three operands: both candidates, then the truth',
@@ -231,7 +200,7 @@ const commonErrors = [
   },
   {
     title: 'Broadcast shape mismatch',
-    code: '[ 1 2 ] [ 1 2 3 ] +',
+    code: '[ 1 2 ] [ 1 2 3 ] ADD',
     fix: 'Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).',
   },
   {
@@ -240,14 +209,9 @@ const commonErrors = [
     fix: "NUM accepts strings: `'42' NUM`. There is no boolean→number cast.",
   },
   {
-    title: 'Old two-vector RANGE form',
-    code: '[ 0 ] [ 5 ] RANGE',
-    fix: 'RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).',
-  },
-  {
-    title: 'Vector-wrapped string passed to a cast',
-    code: "[ '42' ] NUM",
-    fix: "String casts take the bare string: `'42' NUM`.",
+    title: 'Old one-vector RANGE form',
+    code: '[ 0 5 ] RANGE',
+    fix: 'RANGE takes two bounds: `0 5 RANGE`. A stride is a multiplication: `0 5 RANGE 2 MUL`.',
   },
 ];
 
@@ -269,22 +233,22 @@ const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
     code: 'DUP',
-    why: 'Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.',
+    why: 'Forth-style stack shufflers do not exist. Every Word consumes the operands it reads; name a value with `BIND` to use it more than once.',
   },
   {
     pattern: 'IF / ELSE / THEN / WHILE',
     code: '[ 1 ] IF',
-    why: 'No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.',
+    why: 'No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / SCAN.',
   },
   {
     pattern: 'A word calling itself',
-    code: "[ | REC ] 'REC' DEF",
-    why: 'The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.',
+    code: "[ REC ] 'REC' DEF",
+    why: 'The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.',
   },
   {
     pattern: 'Parentheses ( )',
     code: '( 1 2 )',
-    why: 'Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.',
+    why: 'Reserved; not valid in source. `[ ]` is the sole bracket, for vectors and code alike.',
   },
   {
     pattern: 'Double-quoted strings',
@@ -305,20 +269,7 @@ const forbiddenPatterns = [
 function renderResult(json) {
   const parts = [];
   if (json.output.length > 0) parts.push(`prints \`${json.output.join(' ⏎ ')}\``);
-  // An algebraic slot's stack display is the LANG.VALUES.EXACT continued fraction,
-  // truncated at a display budget: √2 ran to ~194 characters ending in `...]`,
-  // which told a reader nothing about the value and left the impression that
-  // an exact square root is a complicated object. `semantics.exactDisplay`
-  // writes the same value short, and comes from the same verified `--json`
-  // run — so this substitutes a shorter true rendering, never a claim the
-  // interpreter did not make. The label says which rendering is being shown.
-  const exact = (json.stack ?? []).map((slot) => slot?.semantics?.exactDisplay ?? null);
-  if (exact.some(Boolean)) {
-    const shown = exact.map((display, index) => display ?? json.stackDisplay[index]).join('  ');
-    parts.push(`exact value: \`${shown}\` (the stack display is its continued fraction)`);
-  } else if (json.stackDisplay.length > 0) {
-    parts.push(`stack: \`${json.stackDisplay.join('  ')}\``);
-  }
+  if (json.stackDisplay.length > 0) parts.push(`stack: \`${json.stackDisplay.join('  ')}\``);
   if (parts.length === 0) parts.push('stack: (empty)');
   return parts.join('; ');
 }
@@ -361,7 +312,7 @@ function renderCommonErrors() {
       return [
         `- **${entry.title}** — \`${entry.code}\``,
         `  → exit 1, \`message: ${JSON.stringify(json.message)}\`, \`diagnosis: { when: "${d.when}", why: "${d.why}" }\`,`,
-        `  \`aiDiagnostic.recoverability: "${json.aiDiagnostic.recoverability}"\`, first nextCheck code: \`${firstCheck}\`.${candidates}`,
+        `  \`aiDiagnostic: { category: "${json.aiDiagnostic.category}"${json.aiDiagnostic.repair ? `, repair: "${json.aiDiagnostic.repair}"` : ''} }\`, first nextCheck code: \`${firstCheck}\`.${candidates}`,
         `  Fix: ${entry.fix}`,
       ].join('\n');
     })
@@ -397,11 +348,11 @@ function renderForbiddenPatterns() {
 
 function verifiedNilSection() {
   // Verify the documented NIL behavior against the real CLI before writing it.
-  const bubble = expectOk('1 0 DIV');
-  if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
-  const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
+  const projected = expectOk('1 0 DIV');
+  if (projected.stackDisplay.join(' ') !== 'NIL') fail('division by zero must project to NIL');
+  const event = projected.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('[ 99 ] 1 0 DIV NIL? SELECT');
+  const fallback = expectOk("1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT");
   if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('the fallback must replace NIL');
   // Lifted over a vector the same law projects lane by lane, so the top stays
   // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
@@ -420,13 +371,12 @@ function verifiedNilSection() {
 function verifiedExactnessSection() {
   // Comparison over the algebraic field is total: values built through
   // different histories compare equal when they denote the same real.
-  const json = expectOk('8 SQRT 2 SQRT 2 SQRT + =');
+  const json = expectOk('8 SQRT 2 SQRT 2 SQRT ADD EQ');
   if (json.stackDisplay.join(' ') !== 'TRUE') fail('sqrt(8) must equal sqrt(2)+sqrt(2)');
-  // PI is the one Tier 2 value: a comparison against it can exhaust its
-  // refinement budget and yield the logical UNKNOWN instead of deciding.
-  const undecided = expectOk('PI PI EQ');
-  if (undecided.stackDisplay.join(' ') !== 'NIL') fail('PI PI EQ must be undecidable (NIL)');
-  return { decided: json.stackDisplay.join(' '), undecided: undecided.stackDisplay.join(' ') };
+  // POW answers inside the field and nowhere else: a cube root leaves it.
+  const outside = expectOk('8 1/3 POW NIL-REASON');
+  if (outside.stackDisplay.join(' ') !== "'domainMiss'") fail('8 1/3 POW must project domainMiss');
+  return { decided: json.stackDisplay.join(' '), outside: outside.stackDisplay.join(' ') };
 }
 
 // ---------------------------------------------------------------------------
@@ -454,74 +404,72 @@ unsure, grep §9 before writing.**
 ## 1. Run loop
 
 \`\`\`sh
-ajisai run program.ajisai --json     # exit 0 = ok, 1 = language error, 2 = usage
-ajisai check program.ajisai --json   # parse + resolve only, no execution
+ajisai agent compute program.ajisai   # exit 0 = ok, 1 = language error, 2 = usage
+ajisai agent check program.ajisai     # parse + resolve only, no execution
 \`\`\`
 
 Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 1. \`status\` / exit code. On ok: \`stackDisplay\` (final stack, bottom→top) and \`output\` (PRINT lines).
-2. On error: \`diagnosis.why\` + \`diagnosis.where\` locate the failure; follow \`diagnosis.nextChecks\` in order; \`aiDiagnostic.recoverability\` says what kind of change fixes it (\`fixProgram\` / \`fixInput\` / \`fixHost\` ...).
+2. On error: \`diagnosis.why\` + \`diagnosis.where\` locate the failure; follow \`diagnosis.nextChecks\` in order; \`aiDiagnostic.category\` is the spec/outcomes.json error category, and \`aiDiagnostic.repair: "program"\` says the program is what to change (absent: an operand is wrong).
 3. Even on ok, scan \`errorFlowTrace\` for \`nilProduced\` events if a NIL surprised you.
 
 ## 2. Minimal syntax
 
-- Postfix, stack-based. Operands first, word last: \`[ 1 ] [ 2 ] +\`.
+- Postfix, stack-based. Operands first, word last: \`[ 1 ] [ 2 ] ADD\`.
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
 - Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
-- Named data is a Record, written \`{ key value … }\`: \`${canonicalExampleCode('record-literal')}\`. It is not a Vector and is never code — \`{ }\` builds a value, \`[ ]\` builds a value that may also be run (§6).
+- Named data is a Record, built by \`RECORD\` from a Vector of keys and a Vector of values: \`${canonicalExampleCode('record-basic')}\`. It is not a Vector and is never code. It displays as \`{ 'x' 1/1 'y' 2/1 }\`, which is a display, not source: only \`[ ]\` delimits.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
-- **Write a parameter header** — names, then \`|\`, then the body: \`${canonicalExampleCode('def-header')}\`. The call takes exactly that many operands (deepest first), binds them, and runs the body on an empty stack, so the Word's arity is written down, \`KEEP\` on it keeps exactly those operands, and \`CONTRACT\` reports the arity. \`DEF\` refuses a body without a header, and one that reads below its own frame on every call.
 - Comments: \`#\` to end of line.
-- One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
+- Every Word consumes the operands it reads. To use a value more than once, name it with \`BIND\` and read the name: \`5 'N' BIND N N 1 ADD\` leaves \`5 6\`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
 
 - Branch: the two candidates, then the truth that chooses between them, then \`SELECT\`: \`${canonicalExampleCode('select-basic')}\` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: \`${canonicalExampleCode('select-lanes')}\`. An absent truth chooses neither and answers that same absence.
 - Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial-value Vector.
-- Predicates: \`ANY\` / \`ALL\` take a predicate block (examples in §6).
-- No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
+- No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
 
-Failed partial operations *bubble*: \`1 0 DIV\` succeeds (exit 0) and
+Failed partial operations *project to NIL*: \`1 0 DIV\` succeeds (exit 0) and
 pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`NIL?\` and \`SELECT\`: \`[ 99 ] 1 0 DIV NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` answers its subject *and* whether it is absent, which is exactly where \`SELECT\` wants the truth — so the phrase reads "X, or the fallback if X is absent" with nothing named and nothing repeated.
+- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
 - Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
 - That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
-- NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
+- NIL flows through later operations (NIL projection rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
 
 Numbers are exact rationals, closed under \`SQRT\`. Arithmetic never rounds,
 coefficients are arbitrary-precision, and **every comparison of two scalars
 built from rationals and \`SQRT\` decides**: there is no budget, no refinement
-limit, and no undecided outcome over that field.
+limit, and no undecided outcome.
 
 \`\`\`ajisai
-8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
+8 SQRT 2 SQRT 2 SQRT ADD EQ   # √8 vs √2+√2
 \`\`\`
 
 → stack \`${exactness.decided}\` (exit 0). Values built through different
 histories are the same value when they denote the same real.
 
-\`PI\` is the one value outside that field: a general computable real with no
-algebraic normal form. Comparing two independently-built \`PI\` values can
-exhaust the comparison's refinement budget without deciding:
+That field is the whole numeric domain. \`POW\` answers inside it — an integer
+exponent, or \`p/2\` over a non-negative rational — and projects NIL for any
+other exponent rather than leave it:
 
 \`\`\`ajisai
-PI PI EQ
+8 1/3 POW NIL-REASON
 \`\`\`
 
-→ stack \`${exactness.undecided}\` (exit 0, truthValue \`unknown\`). Truth has
-three values: \`TRUE\`, \`FALSE\`, and this logical UNKNOWN, which is also what a
-NIL operand reads as in a truth position (§4). An operation that cannot
-produce a value produces NIL (§4); a malformed one raises an error.
+→ stack \`${exactness.outside}\` (exit 0). Truth has three values: \`TRUE\`,
+\`FALSE\`, and the logical UNKNOWN, which is what a NIL operand reads as in a
+truth position (§4) — no comparison produces it of its own. An operation that
+cannot produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
 
@@ -549,7 +497,7 @@ ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
 
-| word | category | summary |
+| word | family | summary |
 |---|---|---|
 ${wordRows.join('\n')}
 `;
@@ -560,43 +508,6 @@ ${wordRows.join('\n')}
 // ---------------------------------------------------------------------------
 
 const content = buildSkillMd();
-
-// The hand-typed prose in §2/§3 explains syntax in *prose*, not through
-// `runSnippet` the way §6/§7/§8's curated examples are, and it had drifted
-// into showing `{ }` as a live block bracket while §9 listed it as a
-// delimiter — then, when braces were freed and later allocated to the Record
-// literal, into calling them invalid source characters. Both readings were
-// wrong in the same place, so what is checked here is neither: every braced
-// fragment in §2/§3 must be Ajisai source that builds a Record, run to find
-// out. A `{ ... }` presented as a block would have to answer a Record to
-// survive this, and a claim that braces are not source cannot survive it at
-// all. Scoped to §2/§3: §7's "Common errors" section legitimately embeds JSON
-// diagnostic output (`{ when: ..., why: ... }`), which is not Ajisai source.
-const syntaxSections = content.slice(content.indexOf('## 2. Minimal syntax'), content.indexOf('## 4. NIL'));
-for (const fragment of syntaxSections.matchAll(/`([^`]*[{}][^`]*)`/g)) {
-  const code = fragment[1];
-  // A fragment carrying the ellipsis is a schema, not a program: `{ key value
-  // … }` names the shape a reader fills in, so there is nothing to run. The
-  // rule still bites, because a schema cannot be the only braced fragment —
-  // the executed example beside it is what proves the shape is real.
-  if (code.includes('…')) continue;
-  const { exit, json } = runSnippet(code);
-  if (exit !== 0) {
-    fail(`SKILL.md §2/§3 shows ${JSON.stringify(code)}, which is not Ajisai source: ${json?.message}`);
-  }
-  const shown = (json.stack ?? []).map((node) => node.type).join(',');
-  if (!shown.includes('record')) {
-    fail(`SKILL.md §2/§3 shows ${JSON.stringify(code)} with braces, but it answers [${shown}] rather than a Record`);
-  }
-}
-if (!/`[^`…]*[{}][^`…]*`/.test(syntaxSections)) {
-  fail('SKILL.md §2/§3 shows no braced fragment that runs, so the Record literal it documents is unchecked');
-}
-for (const [index, line] of syntaxSections.split('\n').entries()) {
-  if (/[{}]/.test(line) && !/`[^`]*[{}]/.test(line)) {
-    fail(`SKILL.md §2/§3 (relative line ${index + 1}) mentions a brace outside a code fragment, so nothing ran it: ${line}`);
-  }
-}
 
 if (process.argv.includes('--check')) {
   const committed = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : null;

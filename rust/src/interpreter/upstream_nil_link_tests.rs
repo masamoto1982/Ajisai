@@ -10,7 +10,7 @@ use crate::interpreter::upstream_nil_link::UPSTREAM_NIL_CHECK;
 
 /// The agent host profile, which is the one this link exists for: its
 /// materialization ceiling is 100,000, where the interpreter default is
-/// 1,000,000, so `[ 0 100001 ] RANGE` projects here and simply succeeds under
+/// 1,000,000, so `0 100001 RANGE` projects here and simply succeeds under
 /// the default. Running these against the default profile would have made the
 /// resource case pass by never failing at all.
 async fn report(source: &str) -> serde_json::Value {
@@ -50,10 +50,12 @@ fn evidence(report: &serde_json::Value) -> Vec<String> {
 }
 
 /// The reported case: a resource ceiling two Words upstream reached the top
-/// level only as "LENGTH got a Nil".
+/// level only as "got NIL" from the Word that refused it. A NIL flows through
+/// every `data` operand, so the Word that refuses it is one whose operand is
+/// a block — here `EXEC`.
 #[tokio::test]
 async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
-    let report = report("[ 0 100001 ] RANGE LENGTH").await;
+    let report = report("0 100001 RANGE EXEC").await;
     assert_eq!(report["status"], "error");
 
     let codes = check_codes(&report);
@@ -83,13 +85,27 @@ async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
 /// the NIL-flow rule and not a special case for the resource ceiling.
 #[tokio::test]
 async fn a_division_by_zero_reaches_the_top_level_diagnosis_too() {
-    let report = report("1 0 / LENGTH").await;
+    let report = report("1 0 DIV EXEC").await;
     let detail = report["diagnosis"]["nextChecks"][0]["detail"]["en"]
         .as_str()
         .expect("english detail");
     assert!(
         detail.contains("DIV") && detail.contains("divisionByZero"),
         "{detail}"
+    );
+}
+
+/// The link names the Word that produced the NIL, not the last Word it passed
+/// through on the way: with `ADD` between the projection and the refusal, the
+/// cause is still `DIV`.
+#[tokio::test]
+async fn the_link_names_the_producer_not_the_last_word_the_nil_passed() {
+    let report = report("1 0 DIV 2 ADD EXEC").await;
+    assert_eq!(report["status"], "error");
+    let evidence = evidence(&report);
+    assert!(
+        evidence.contains(&"upstreamNilProducer=DIV".to_string()),
+        "{evidence:?}"
     );
 }
 
@@ -113,12 +129,12 @@ async fn a_genuine_type_error_is_left_alone() {
     );
 }
 
-/// A NIL the program wrote down is not a fault. `NIL LENGTH` is a type error
+/// A NIL the program wrote down is not a fault. `NIL EXEC` is a type error
 /// whose cause is the source line in front of the reader, so sending them
 /// "upstream" would be sending them nowhere.
 #[tokio::test]
 async fn a_written_nil_is_not_reported_as_an_upstream_cause() {
-    let report = report("NIL LENGTH").await;
+    let report = report("NIL EXEC").await;
     assert_eq!(report["status"], "error");
     assert!(
         !check_codes(&report).contains(&UPSTREAM_NIL_CHECK.to_string()),
@@ -131,7 +147,7 @@ async fn a_written_nil_is_not_reported_as_an_upstream_cause() {
 /// reads from.
 #[tokio::test]
 async fn a_recovered_absence_leaves_no_trace_of_the_link() {
-    let report = report("42 1 0 / NIL? SELECT").await;
+    let report = report("1 0 DIV 'S' BIND 42 S S NIL? SELECT").await;
     assert_eq!(report["status"], "ok");
     assert!(report["diagnosis"].is_null());
 }

@@ -1,33 +1,16 @@
 import { getPlatform } from '../platform';
-import { GUI_INSTANCE, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
+import { createGUI, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
+import { toError } from '../gui/to-error';
 import { initWasm } from '../wasm-module-loader';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
-import type { WasmModule, AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter } from '../wasm-interpreter-types';
+import { parseHostProfile } from './host-profile-parse';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
 declare const __AJISAI_RELEASE_VERSION__: string;
 
-declare global {
-    interface Window {
-        AjisaiWasm: WasmModule;
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
-
-function formatTimestamp(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    const hours = `${date.getHours()}`.padStart(2, '0');
-    const minutes = `${date.getMinutes()}`.padStart(2, '0');
-    return `${year}${month}${day}${hours}${minutes}`;
-}
-
-// Fixed once at load: the build and host-profile labels are written at
-// different moments (the second only after the interpreter is up) and both
-// state this stamp, so deriving it per call would let the fallback branch
-// report two different times for one page.
-const BUILD_TIMESTAMP = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
+// Injected by vite.config.ts (`define`).
+const BUILD_TIMESTAMP = __AJISAI_BUILD_TIMESTAMP__;
 
 const COMPARE_NOTE =
     'Compare against the repository when the Playground disagrees with the specification.';
@@ -57,11 +40,10 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  * `リファレンス` badge, and state which build is deployed.
  *
  * Which build matters because the Playground is a separately deployed
- * artifact and a deploy can be stranded — see the `workflow_dispatch` note in
- * `.github/workflows/build.yml` for the incident that added it. When that
- * happens the symptom is a site whose behaviour disagrees with the
- * specification, and with no version anywhere there is nothing to compare
- * against.
+ * artifact and a deploy can be stranded (see the `workflow_dispatch` note in
+ * `.github/workflows/build.yml`). When that happens the symptom is a site
+ * whose behaviour disagrees with the specification, and with no version
+ * anywhere there is nothing to compare against.
  *
  * The header says it on hover and the splash says it in plain text, which is
  * what makes the pair work: a tooltip does not exist on a touch device, so
@@ -116,18 +98,23 @@ function setPlaygroundBadgeTooltip(lines: string[]): void {
  *
  * LANG.MACHINE.LIMITS makes limits a host safety control rather than value semantics, so
  * two conforming hosts legitimately enforce different ceilings — and they do:
- * `[ 0 100001 ] RANGE` materializes here and answers `NIL(spaceExhausted)`
- * under the MCP agent profile. That difference is only a trap when neither
- * host discloses what it applies, which is what this fixes on this side.
+ * `0 100001 RANGE` materializes here and answers `NIL(spaceExhausted)`
+ * under the MCP agent profile. That difference is only a trap when a host
+ * does not disclose what it applies, so this one does.
  * See docs/dev/mcp-host-profiles.md for the comparison.
  */
 export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
-    let profile: HostProfile;
+    // Best effort throughout: this is a label, and nothing below it may throw
+    // into initializeApplication() and take the GUI down with it. The call
+    // itself sits inside the guard for the same reason as the parse.
+    let reported: string;
     try {
-        profile = JSON.parse(interpreter.host_profile()) as HostProfile;
+        reported = interpreter.host_profile();
     } catch {
         return;
     }
+    const profile = parseHostProfile(reported);
+    if (!profile) return;
     const text = `resource limits: ${profile.profile}`;
     const limitLines = [
         ...Object.entries(profile.limits).map(([name, value]) => `${name}: ${value.toLocaleString()}`),
@@ -182,15 +169,27 @@ export function initSplashScreen(): void {
     const splash = document.querySelector<HTMLElement>('#splash-screen');
     if (!splash) return;
 
-    // Read before the GUI strips the hash (gui-application.ts
-    // applyPlaygroundCodeFromUrl), which it only does once the wasm is up —
-    // long after this runs at DOMContentLoaded.
+    const SESSION_KEY = 'ajisai-splash-seen';
+    const markSeen = (): void => {
+        try {
+            sessionStorage.setItem(SESSION_KEY, '1');
+        } catch {
+            // Best effort only; worst case the splash reappears next reload.
+        }
+    };
+
+    // Read before the GUI strips the hash (gui-application.ts init, which
+    // only does so once the wasm is up — long after this runs at
+    // DOMContentLoaded). Marked seen as well: the GUI replaces the URL
+    // without the fragment, so a reload in this tab arrives with no hash, and
+    // that reload is exactly the mid-session one the splash must not
+    // interrupt.
     if (window.location.hash.startsWith(PLAYGROUND_CODE_HASH_MARKER)) {
+        markSeen();
         splash.remove();
         return;
     }
 
-    const SESSION_KEY = 'ajisai-splash-seen';
     try {
         if (sessionStorage.getItem(SESSION_KEY) === '1') {
             splash.remove();
@@ -211,11 +210,7 @@ export function initSplashScreen(): void {
     const dismiss = (): void => {
         if (dismissed) return;
         dismissed = true;
-        try {
-            sessionStorage.setItem(SESSION_KEY, '1');
-        } catch {
-            // Best effort only; worst case the splash reappears next reload.
-        }
+        markSeen();
         splash.classList.add('splash-dismissing');
         splash.addEventListener('transitionend', (event) => {
             // The detail rows' own reveal transitions bubble up here too, and
@@ -242,27 +237,23 @@ export async function initializeApplication(): Promise<void> {
         if (!wasm) {
             throw new Error('WASM initialization failed. Application cannot start.');
         }
-        window.AjisaiWasm = wasm;
 
         console.log('[Main] Creating main thread interpreter...');
-        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter();
-        setHostProfileLabel(window.ajisaiInterpreter);
+        const interpreter = new wasm.AjisaiInterpreter();
+        setHostProfileLabel(interpreter);
 
         console.log('[Main] Initializing GUI...');
-        await GUI_INSTANCE.init();
-        GUI_INSTANCE.updateAllDisplays();
+        await createGUI(interpreter).init();
 
         console.log('[Main] Application initialization completed successfully');
     } catch (error) {
         console.error('[Main] Application startup failed:', error);
         const outputDisplay = document.getElementById('output-display');
         if (outputDisplay) {
-            outputDisplay.innerHTML = '';
             const errorSpan = document.createElement('span');
-            errorSpan.style.color = '#dc3545';
-            errorSpan.style.fontWeight = 'bold';
-            errorSpan.textContent = `Application startup failed: ${(error as Error).message}`;
-            outputDisplay.appendChild(errorSpan);
+            errorSpan.className = 'output-error';
+            errorSpan.textContent = `Application startup failed: ${toError(error).message}`;
+            outputDisplay.replaceChildren(errorSpan);
         }
     }
 }

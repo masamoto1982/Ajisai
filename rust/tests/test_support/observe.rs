@@ -4,7 +4,7 @@
 //! `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff ⟦p⟧ σ₀)`. This module gives the
 //! data-plane half of that: it reads a value **only** through the LANG.OBSERVATION.FIREWALL
 //! semantic axes (`semanticKind`, `shape`, `capabilities`, `truthValue`,
-//! `origin`, `absence`) and through the pure renderer `render : (data, role) →
+//! `origin`, `absence`) and through the pure renderer `render : value →
 //! display`. It never branches on a Rust enum name, `Debug` string, or display
 //! text — the semantic-firewall discipline the roadmap §1.2-3 mandates.
 //!
@@ -19,26 +19,14 @@
 #![allow(dead_code)]
 
 use ajisai_core::interpreter::Interpreter;
-use ajisai_core::types::display::format_with_hint;
-use ajisai_core::types::{Interpretation, Value};
+use ajisai_core::types::Value;
 use ajisai_core::ErrorCategory;
 
-/// Every interpretation role of LANG.OBSERVATION.PROTOCOL, in table order.
-pub const ALL_ROLES: [Interpretation; 7] = [
-    Interpretation::Unassigned,
-    Interpretation::RawNumber,
-    Interpretation::ContinuedFraction,
-    Interpretation::Interval,
-    Interpretation::TruthValue,
-    Interpretation::Timestamp,
-    Interpretation::Nil,
-];
-
-/// The pure renderer `render : (data, role) → display` (LANG.OBSERVATION.PROTOCOL). Exposed as
-/// a named function so laws read as equations over `render`, not over the
-/// `Display` impl.
-pub fn render(v: &Value, role: Interpretation) -> String {
-    format_with_hint(v, role)
+/// The pure renderer `render : value → display` (LANG.OBSERVATION.PROTOCOL,
+/// LANG.VALUES.DENOTATION). Exposed as a named function so laws read as
+/// equations over `render`.
+pub fn render(v: &Value) -> String {
+    v.to_string()
 }
 
 /// The protocol-level observation of one value: the LANG.OBSERVATION.FIREWALL semantic axes as
@@ -50,7 +38,6 @@ pub struct DiagnosisObservation {
     pub where_kind: &'static str,
     pub word: Option<String>,
     pub why: &'static str,
-    pub agreed_prefix: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,11 +50,7 @@ pub struct AbsenceObservation {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AxisObservation {
-    pub semantic_kind: &'static str,
-    pub shape: &'static str,
-    pub capabilities: Vec<&'static str>,
     pub truth_value: Option<&'static str>,
-    pub origin: &'static str,
     pub absence: Option<AbsenceObservation>,
 }
 
@@ -86,12 +69,6 @@ pub struct ProgramObservation {
 
 /// Observe a value through the semantic axes only (firewall-clean).
 pub fn observe_axes(v: &Value) -> AxisObservation {
-    let mut capabilities: Vec<&'static str> = v
-        .capabilities()
-        .iter()
-        .map(|c| c.as_protocol_str())
-        .collect();
-    capabilities.sort_unstable();
     let absence = v.absence_metadata().map(|absence| AbsenceObservation {
         reason: absence
             .reason
@@ -107,15 +84,10 @@ pub fn observe_axes(v: &Value) -> AxisObservation {
                 where_kind: diagnosis.where_.kind.as_protocol_str(),
                 word: diagnosis.where_.word.clone(),
                 why: diagnosis.why.as_protocol_str(),
-                agreed_prefix: diagnosis.agreed_prefix,
             }),
     });
     AxisObservation {
-        semantic_kind: v.semantic_kind().as_protocol_str(),
-        shape: v.shape_kind().as_protocol_str(),
-        capabilities,
         truth_value: v.truth_value(),
-        origin: v.origin().as_protocol_str(),
         absence,
     }
 }
@@ -125,7 +97,7 @@ pub fn observe_axes(v: &Value) -> AxisObservation {
 /// metadata when present.
 pub fn observe_value(v: &Value) -> ValueObservation {
     ValueObservation {
-        render: render(v, v.hint),
+        render: render(v),
         axes: observe_axes(v),
     }
 }
@@ -141,7 +113,7 @@ pub fn observe_program(src: &str) -> ProgramObservation {
         let mut interp = Interpreter::new();
         let error_category = match interp.execute(src).await {
             Ok(()) => None,
-            Err(err) => Some(ErrorCategory::from_error(&err).as_protocol_str()),
+            Err(err) => ErrorCategory::from_error(&err).map(|category| category.as_protocol_str()),
         };
         ProgramObservation {
             stack: interp.get_stack().iter().map(observe_value).collect(),

@@ -7,7 +7,7 @@
 //! inlined a 256-byte `DebugDiagnosis`: a summary string, an evidence list, a
 //! next-check list and a candidate list, reserved in full on every value
 //! whether or not it was absent. A vector of 262,144 numbers moved 90 MB to
-//! carry 19 MB of numerators, and `[ 0 262143 ] RANGE` took 89.8 ms; boxed, the
+//! carry 19 MB of numerators, and `0 262143 RANGE` took 89.8 ms; boxed, the
 //! same line takes 9.9 ms.
 //!
 //! These are layout assertions, not wall clocks (`work_meter_calibration_tests`
@@ -21,7 +21,7 @@ mod value_layout_tests {
     use crate::types::{Value, ValueData};
     use std::mem::size_of;
 
-    /// The payload plus a pointer-sized envelope and the role, rounded to
+    /// The payload plus a pointer-sized envelope, rounded to
     /// alignment. Anything materially wider means something rare was inlined
     /// into every value again.
     ///

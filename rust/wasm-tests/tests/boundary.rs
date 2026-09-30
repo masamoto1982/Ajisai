@@ -1,6 +1,6 @@
 //! Phase C: end-to-end verification of the real WASM serialization boundary.
 //!
-//! Phases A and B verify the (Value, hint) -> protocol mapping and the
+//! Phases A and B verify the Value -> protocol mapping and the
 //! interpreter's NIL-projection behavior natively, on the host target -- those
 //! never cross the `wasm-bindgen` glue. This crate closes the last gap: it
 //! drives the public `AjisaiInterpreter` API compiled to `wasm32`, executes
@@ -79,7 +79,7 @@ async fn number_vector_serializes_as_numbers() {
 /// (TruthValue role on a bare scalar), distinct from the vector case above.
 #[wasm_bindgen_test]
 async fn scalar_comparison_serializes_as_boolean() {
-    let stack = stack_of("3 5 <").await;
+    let stack = stack_of("3 5 LT").await;
     assert_eq!(stack.length(), 1);
     let node = stack.get(0);
     assert_eq!(type_of(&node), "boolean");
@@ -125,7 +125,7 @@ async fn exact_scalar_rawnumber_marks_approximate_at_boundary() {
 /// the marker is specific to exact irrationals collapsed to an approximation.
 #[wasm_bindgen_test]
 async fn exact_rational_is_not_marked_approximate() {
-    let stack = stack_of("3 4 /").await;
+    let stack = stack_of("3 4 DIV").await;
     assert_eq!(stack.length(), 1);
     let node = stack.get(0);
     assert_eq!(type_of(&node), "number");
@@ -148,10 +148,9 @@ async fn exact_rational_is_not_marked_approximate() {
 // deeply nested vector (unbounded recursion overflows the wasm stack).
 // ---------------------------------------------------------------------------
 
-/// One stack slot in the persistence wire format: an unassigned-role value
-/// wrapping the given `d` payload.
+/// One stack slot in the persistence wire format: the given value payload.
 fn snapshot_of(data: &str) -> String {
-    format!("[{{\"v\":{{\"h\":\"unassigned\",\"d\":{data}}},\"r\":\"unassigned\"}}]")
+    format!("[{data}]")
 }
 
 #[wasm_bindgen_test]
@@ -198,14 +197,88 @@ fn restore_stack_snapshot_rejects_deeply_nested_payload_without_overflow() {
     // the wasm stack overflows.
     let mut data = String::from("{\"t\":\"Scalar\",\"n\":\"1\",\"d\":\"1\"}");
     for _ in 0..1000 {
-        data = format!(
-            "{{\"t\":\"Vector\",\"items\":[{{\"h\":\"unassigned\",\"d\":{data}}}]}}"
-        );
+        data = format!("{{\"t\":\"Vector\",\"items\":[{data}]}}");
     }
     let mut interp = AjisaiInterpreter::new();
     let result = interp.restore_stack_snapshot(&snapshot_of(&data));
     assert!(
         result.is_err(),
         "a deeply nested snapshot must error, not overflow the stack"
+    );
+}
+
+/// A saved word as the host hands it over: `{ name, definition }`.
+fn saved_word(name: &str, definition: &str) -> JsValue {
+    let word = js_sys::Object::new();
+    js_sys::Reflect::set(&word, &"name".into(), &name.into()).expect("plain object");
+    js_sys::Reflect::set(&word, &"definition".into(), &definition.into()).expect("plain object");
+    word.into()
+}
+
+fn pairs_of(value: &JsValue) -> Vec<(String, String)> {
+    js_sys::Array::from(value)
+        .iter()
+        .map(|pair| {
+            let pair = js_sys::Array::from(&pair);
+            (
+                pair.get(0).as_string().expect("a name"),
+                pair.get(1).as_string().expect("a string"),
+            )
+        })
+        .collect()
+}
+
+/// The dictionary that crosses the boundary: `collect_user_words_info` is
+/// `[name, hasDependents]` pairs, and `restore_user_words` names what it could
+/// not restore — a Core name, and a redefinition of a word another word still
+/// calls, which the dictionary afterwards does not show.
+#[wasm_bindgen_test]
+fn restore_user_words_names_what_it_could_not_restore() {
+    let mut interp = AjisaiInterpreter::new();
+
+    let words = js_sys::Array::new();
+    words.push(&saved_word("ADD", "1"));
+    words.push(&saved_word("QUAD", "DBL DBL"));
+    words.push(&saved_word("DBL", "2 MUL"));
+    let skipped = interp
+        .restore_user_words(words.into())
+        .expect("a well-formed list restores");
+    assert_eq!(
+        pairs_of(&skipped)
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["ADD"],
+        "the Core name is the one entry left out"
+    );
+
+    let info = js_sys::Array::from(&interp.collect_user_words_info())
+        .iter()
+        .map(|pair| {
+            let pair = js_sys::Array::from(&pair);
+            (
+                pair.get(0).as_string().expect("a name"),
+                pair.get(1).as_bool().expect("a boolean"),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        info,
+        vec![("DBL".to_string(), true), ("QUAD".to_string(), false)],
+        "QUAD calls DBL, whichever order they were saved in"
+    );
+
+    let again = js_sys::Array::new();
+    again.push(&saved_word("DBL", "3 MUL"));
+    let skipped = interp
+        .restore_user_words(again.into())
+        .expect("a well-formed list restores");
+    let skipped = pairs_of(&skipped);
+    assert_eq!(skipped.len(), 1);
+    assert_eq!(skipped[0].0, "DBL");
+    assert!(
+        skipped[0].1.contains("referenced by QUAD"),
+        "the reason names the locking word: {}",
+        skipped[0].1
     );
 }

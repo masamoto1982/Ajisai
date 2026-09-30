@@ -87,11 +87,11 @@ pub(crate) fn build_next_checks(
 
     match why {
         CauseClass::Domain => {
-            if matches!(category, Some(ErrorCategory::DivisionByZero)) {
-                // Name the Word that actually met the zero. This check was
-                // written for `DIV` and hard-coded its spelling, so `MOD` —
-                // which declares the same `divisorEqualsZero` condition — sent
-                // the reader to look at an operand of a Word it had not called.
+            if matches!(nil_reason, Some(NilReason::DivisionByZero)) {
+                // Name the Word that actually met the zero rather than
+                // hard-coding `DIV`: any Word that declares the same
+                // `divisorEqualsZero` condition must send the reader to an
+                // operand of the Word it actually called.
                 let word_label = word.unwrap_or("the word");
                 out.push(check(
                     "checkDivisor",
@@ -113,8 +113,8 @@ pub(crate) fn build_next_checks(
                     "checkZeroIsExpected",
                     ("Check zero is expected", "0 が正常値かを確認する"),
                     (
-                        "If 0 is a legitimate value here, choose a fallback with NIL? and SELECT, or guard the divisor.",
-                        "0 が正常値としてあり得るなら NIL? と SELECT で代替値を選ぶか、除数を事前に確認する",
+                        "If 0 is a legitimate value here, name the quotient with BIND and choose a fallback with NIL? and SELECT, or guard the divisor.",
+                        "0 が正常値としてあり得るなら商を BIND で名付け、NIL? と SELECT で代替値を選ぶか、除数を事前に確認する",
                     ),
                 ));
                 out.push(check(
@@ -187,19 +187,11 @@ pub(crate) fn build_next_checks(
             }
             out.push(spelling_check(candidates));
             out.push(check(
-                "checkAliasCanonicalization",
-                ("Check alias canonicalization", "別名の正規化を確認する"),
-                (
-                    "Check the canonical Word name the alias expands to.",
-                    "alias 展開後の canonical word 名を確認する",
-                ),
-            ));
-            out.push(check(
                 "checkUserDefinitions",
                 ("Check user definitions", "ユーザー定義を確認する"),
                 (
-                    "Check the user Word's definition and the dictionary it belongs to.",
-                    "user word の定義と所属 dictionary を確認する",
+                    "Check that the User Word is defined (DEF) and spelled as defined.",
+                    "その User Word が DEF で定義済みで、定義どおりの綴りかを確認する",
                 ),
             ));
         }
@@ -266,32 +258,6 @@ pub(crate) fn build_next_checks(
                 ),
             ));
         }
-        CauseClass::VectorLength => {
-            out.push(check(
-                "checkOperandLengths",
-                ("Check operand lengths", "オペランド長を確認する"),
-                (
-                    "Check the lengths of the two vectors involved.",
-                    "対象の 2 つの vector 長を確認する",
-                ),
-            ));
-            out.push(check(
-                "checkElementWiseContract",
-                ("Check element-wise contract", "要素ごとの前提を確認する"),
-                (
-                    "Check the assumptions of the zip / map / element-wise operation.",
-                    "zip / map / element-wise 演算の前提を確認する",
-                ),
-            ));
-            out.push(check(
-                "checkSelectiveOps",
-                ("Check selective ops", "選択的操作を確認する"),
-                (
-                    "Check whether a filter or drop was applied to only one side.",
-                    "片方だけ filter や drop が適用されていないか確認する",
-                ),
-            ));
-        }
         CauseClass::ShapeMismatch => {
             out.push(check(
                 "checkDisagreeingAxis",
@@ -317,6 +283,14 @@ pub(crate) fn build_next_checks(
                     "行列積・転置・One-hot などで次元数そのものがずれていないか確認する",
                 ),
             ));
+            out.push(check(
+                "checkSelectiveOps",
+                ("Check selective ops", "選択的操作を確認する"),
+                (
+                    "Check whether a filter or drop was applied to only one side.",
+                    "片方だけ filter や drop が適用されていないか確認する",
+                ),
+            ));
         }
         CauseClass::SourceForm => {
             out.push(check(
@@ -325,14 +299,6 @@ pub(crate) fn build_next_checks(
                 (
                     "Check that every [ and ] pair up and no vector was left unclosed.",
                     "[ ] の対応と、閉じ忘れた vector がないか確認する",
-                ),
-            ));
-            out.push(check(
-                "checkClauseForm",
-                ("Check clause form", "節の形を確認する"),
-                (
-                    "'|' is only legal directly inside a vector, and needs both a guard and a body.",
-                    "'|' は vector の直下にのみ書ける。guard と body の両方が必要",
                 ),
             ));
         }
@@ -392,13 +358,13 @@ pub(crate) fn build_next_checks(
             }
         }
         CauseClass::ContractViolation => {
-            if matches!(category, Some(ErrorCategory::BuiltinProtection)) {
+            if matches!(category, Some(ErrorCategory::Declared("protectedWord"))) {
                 out.push(check(
                     "checkProtection",
                     ("Check protection", "保護を確認する"),
                     (
-                        "A mutating operation was requested against a built-in Word.",
-                        "built-in word に対する不可変操作が要求されている",
+                        "A dictionary change was asked of a Core Word, which the dictionary seals.",
+                        "Core Word に対する辞書の変更が求められたが、Core は封印されている",
                     ),
                 ));
             } else {

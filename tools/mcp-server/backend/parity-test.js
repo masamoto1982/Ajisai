@@ -6,29 +6,19 @@
 // provenance block are excluded: they carry host/engine metadata and
 // execution counters, not language semantics.
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LIMITS } from "../index.js";
+import { LIMITS, resolveAjisaiBin } from "../index.js";
 import { limitCases } from "../golden/limit-cases.js";
 import { NativeCliBackend } from "./native-cli.js";
 import { WasmWorkerBackend } from "./wasm-worker.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-function resolveNativeBin() {
-  if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
-  const repoRoot = process.env.AJISAI_REPO
-    ? resolve(process.env.AJISAI_REPO)
-    : resolve(here, "..", "..", "..");
-  for (const profile of ["debug", "release"]) {
-    const candidate = join(repoRoot, "rust", "target", profile, "ajisai");
-    if (existsSync(candidate)) return candidate;
-  }
-  return null;
-}
-
-const bin = resolveNativeBin();
+// The same discovery the server uses, so the parity test compares the binary
+// the server would actually run.
+const bin = resolveAjisaiBin();
 if (!bin) {
   console.error(
     "backend parity test requires a built native `ajisai` binary; run " +
@@ -55,7 +45,7 @@ const wasm = new WasmWorkerBackend({
   responseBytes: LIMITS.responseBytes,
 });
 
-// Every field of the schema-1 envelope except the host-metrics/provenance
+// Every field of the result envelope except the host-metrics/provenance
 // fields a backend's own process/thread model incidentally affects.
 const STABLE_FIELDS = [
   "schemaVersion",

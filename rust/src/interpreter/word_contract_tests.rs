@@ -13,10 +13,10 @@ async fn contract_for(src: &str, name: &str) -> Arc<WordContract> {
 
 #[tokio::test]
 async fn pure_arithmetic_user_word_is_complete_and_pure() {
-    let contract = contract_for("[ X | X [ 1 ] ADD ] 'INC' DEF", "INC").await;
+    let contract = contract_for("[ [ 1 ] ADD ] 'INC' DEF", "INC").await;
     assert_eq!(contract.purity, ContractPurity::Pure);
     assert_eq!(contract.determinism, ContractDeterminism::Deterministic);
-    assert_eq!(contract.nil_behavior, NilBehavior::Propagates);
+    assert_eq!(contract.partiality, ContractPartiality::Total);
     assert_eq!(
         contract.flow,
         ContractFlow::Fixed {
@@ -29,49 +29,45 @@ async fn pure_arithmetic_user_word_is_complete_and_pure() {
 
 #[tokio::test]
 async fn print_dependency_makes_user_word_effectful() {
-    let contract = contract_for("[ X | X PRINT ] 'SAY' DEF", "SAY").await;
+    let contract = contract_for("[ PRINT ] 'SAY' DEF", "SAY").await;
     assert_eq!(contract.purity, ContractPurity::Effectful);
 }
 #[tokio::test]
 async fn dependency_chains_widen_monotonically() {
     let pure = contract_for(
-        "[ X | X [ 1 ] ADD ] 'INC' DEF [ X | X INC ] 'INC2' DEF [ X | X INC2 ] 'INC3' DEF",
+        "[ [ 1 ] ADD ] 'INC' DEF [ INC ] 'INC2' DEF [ INC2 ] 'INC3' DEF",
         "INC3",
     )
     .await;
     assert_eq!(pure.purity, ContractPurity::Pure);
 
-    let impure = contract_for(
-        "[ X | X PRINT ] 'A' DEF [ X | X A ] 'B' DEF [ X | X B ] 'C' DEF",
-        "C",
-    )
-    .await;
+    let impure = contract_for("[ PRINT ] 'A' DEF [ A ] 'B' DEF [ B ] 'C' DEF", "C").await;
     assert_eq!(impure.purity, ContractPurity::Effectful);
 }
 
 // `recursive_words_are_conservative_without_looping` tested that contract
 // inference went conservative on re-entrant (direct or mutual) recursion.
 // LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now refuses such a definition
-// outright — `[ | REC ] 'REC' DEF` and `[ X | X B ] 'A' DEF [ X | X A ] 'B' DEF` both fail
+// outright — `[ REC ] 'REC' DEF` and `[ B ] 'A' DEF [ A ] 'B' DEF` both fail
 // before contract inference ever runs — so there is no longer a program that
 // reaches this path.
 
 #[tokio::test]
 async fn redefinition_invalidates_old_contract_cache_key() {
     let mut interp = Interpreter::new();
-    interp.execute("[ X | X [ 1 ] ADD ] 'W' DEF").await.unwrap();
+    interp.execute("[ [ 1 ] ADD ] 'W' DEF").await.unwrap();
     let first = interp.infer_word_contract("W").unwrap();
-    interp.execute("[ X Y | X Y DIV ] 'W' DEF").await.unwrap();
+    interp.execute("[ DIV ] 'W' DEF").await.unwrap();
     let second = interp.infer_word_contract("W").unwrap();
     assert_ne!(first.cache_key, second.cache_key);
-    assert_eq!(second.nil_behavior, NilBehavior::MayCreate);
+    assert_eq!(second.partiality, ContractPartiality::Projecting);
 }
 
 #[tokio::test]
 async fn identical_content_reuses_contract_cache_entry() {
     let mut interp = Interpreter::new();
     interp
-        .execute("[ X | X [ 1 ] ADD ] 'A' DEF [ X | X [ 1 ] ADD ] 'B' DEF")
+        .execute("[ [ 1 ] ADD ] 'A' DEF [ [ 1 ] ADD ] 'B' DEF")
         .await
         .unwrap();
     let a = interp.infer_word_contract("A").unwrap();
@@ -85,7 +81,7 @@ async fn identical_content_reuses_contract_cache_entry() {
 async fn different_content_does_not_share_contract_cache_entry() {
     let mut interp = Interpreter::new();
     interp
-        .execute("[ X | X [ 1 ] ADD ] 'A' DEF [ X | X [ 2 ] ADD ] 'B' DEF")
+        .execute("[ [ 1 ] ADD ] 'A' DEF [ [ 2 ] ADD ] 'B' DEF")
         .await
         .unwrap();
     let a = interp.infer_word_contract("A").unwrap();
@@ -101,11 +97,11 @@ async fn del_refuses_while_a_dependent_would_be_left_dangling() {
     // reference.
     let mut interp = Interpreter::new();
     interp
-        .execute("[ X Y | X Y DIV ] 'DEP' DEF [ X Y | X Y DEP ] 'USE' DEF")
+        .execute("[ DIV ] 'DEP' DEF [ DEP ] 'USE' DEF")
         .await
         .unwrap();
     let before = interp.infer_word_contract("USE").unwrap();
-    assert_eq!(before.nil_behavior, NilBehavior::MayCreate);
+    assert_eq!(before.partiality, ContractPartiality::Projecting);
 
     interp
         .execute("'DEP' DEL")
@@ -113,7 +109,7 @@ async fn del_refuses_while_a_dependent_would_be_left_dangling() {
         .expect_err("DEL must refuse while USE still depends on DEP");
 
     let after = interp.infer_word_contract("USE").unwrap();
-    assert_eq!(after.nil_behavior, NilBehavior::MayCreate);
+    assert_eq!(after.partiality, ContractPartiality::Projecting);
 }
 
 // ---------------------------------------------------------------------------
@@ -130,14 +126,14 @@ fn fixed(consumes: u16, produces: u16) -> ContractFlow {
 
 #[tokio::test]
 async fn a_vector_literal_pushes_one_value_not_its_elements() {
-    let contract = contract_for("[ | [ 1 2 ] ] 'PAIR' DEF", "PAIR").await;
+    let contract = contract_for("[ [ 1 2 ] ] 'PAIR' DEF", "PAIR").await;
     assert_eq!(contract.flow, fixed(0, 1));
     assert_eq!(contract.confidence, ContractConfidence::Complete);
 }
 
 #[tokio::test]
 async fn a_vector_literal_operand_is_consumed_like_any_other_value() {
-    let contract = contract_for("[ X | X [ 10 20 ] ADD ] 'ADD-PAIR' DEF", "ADD-PAIR").await;
+    let contract = contract_for("[ [ 10 20 ] ADD ] 'ADD-PAIR' DEF", "ADD-PAIR").await;
     assert_eq!(contract.flow, fixed(1, 1));
     assert_eq!(contract.confidence, ContractConfidence::Complete);
 }
@@ -147,7 +143,7 @@ async fn a_code_block_literal_is_not_inlined_into_the_arity() {
     // The block's `2 MUL` is evaluated only when MAP runs it, so it must not
     // consume an operand at the point the block is written. Inlining it made
     // this word's arity ( 2 -- 1 ).
-    let contract = contract_for("[ X | X [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF", "DOUBLE-ALL").await;
+    let contract = contract_for("[ [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF", "DOUBLE-ALL").await;
     assert_eq!(contract.flow, fixed(1, 1));
     assert_eq!(contract.confidence, ContractConfidence::Complete);
 }
@@ -155,9 +151,9 @@ async fn a_code_block_literal_is_not_inlined_into_the_arity() {
 #[tokio::test]
 async fn nested_literals_still_push_exactly_one_value() {
     for source in [
-        "[ | [ [ 1 ] [ 2 ] ] ] 'W' DEF",
-        "[ | [ [ 1 ] ] ] 'W' DEF",
-        "[ | [ [ [ 1 ] ] ] ] 'W' DEF",
+        "[ [ [ 1 ] [ 2 ] ] ] 'W' DEF",
+        "[ [ [ 1 ] ] ] 'W' DEF",
+        "[ [ [ [ 1 ] ] ] ] 'W' DEF",
     ] {
         let contract = contract_for(source, "W").await;
         assert_eq!(contract.flow, fixed(0, 1), "source: {source}");
@@ -168,7 +164,7 @@ async fn nested_literals_still_push_exactly_one_value() {
 async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
     // At run time `[ 'a' PRINT 'b' ]` is the three-element vector
     // [ 'a' 'PRINT' 'b' ], so PRINT's arity must not be applied here.
-    let contract = contract_for("[ | [ 'a' PRINT 'b' ] ] 'LABELS' DEF", "LABELS").await;
+    let contract = contract_for("[ [ 'a' PRINT 'b' ] ] 'LABELS' DEF", "LABELS").await;
     assert_eq!(contract.flow, fixed(0, 1));
 }
 
@@ -183,7 +179,11 @@ async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
 /// one out, and the walk models it exactly.
 #[tokio::test]
 async fn a_recovery_phrase_has_a_fixed_arity() {
-    let contract = contract_for("[ | 9 1 0 DIV NIL? SELECT ] 'FALLBACK' DEF", "FALLBACK").await;
+    let contract = contract_for(
+        "[ 1 0 DIV 'S' BIND 9 S S NIL? SELECT ] 'FALLBACK' DEF",
+        "FALLBACK",
+    )
+    .await;
     assert_eq!(contract.flow, fixed(0, 1));
     assert!(
         !contract
@@ -194,43 +194,12 @@ async fn a_recovery_phrase_has_a_fixed_arity() {
     );
 }
 
-#[tokio::test]
-async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
-    // `KEEP`'s registry arity is ( 0 -- 0 ); it makes the *next* Word read its
-    // operands without consuming them. Each expectation below is the stack the
-    // body actually leaves at run time.
-    for (body, consumes, produces) in [
-        // `2 3 KEEP ADD` leaves `2 3 5`.
-        ("KEEP ADD", 2, 3),
-        ("2 3 KEEP ADD", 0, 3),
-        // A second KEEP is idempotent, and the flag survives an intervening
-        // literal, so `2 3 KEEP 4 ADD` leaves `2 3 4 7`.
-        ("2 3 KEEP KEEP ADD", 0, 3),
-        ("2 3 KEEP 4 ADD", 0, 4),
-        ("[ 1 2 ] KEEP LENGTH", 0, 2),
-        // The modifier reaches exactly one Word: `2 3 KEEP ADD ADD` leaves `2 8`.
-        ("2 3 KEEP ADD ADD", 0, 2),
-        // Pending at the end of a body is a no-op, as it is at run time.
-        ("1 KEEP", 0, 1),
-    ] {
-        let params = ["X", "Y"][..usize::from(consumes)].join(" ");
-        let source = format!("[ {params} | {params} {body} ] 'W' DEF");
-        let contract = contract_for(&source, "W").await;
-        assert_eq!(contract.flow, fixed(consumes, produces), "body: {body}");
-        assert_eq!(
-            contract.confidence,
-            ContractConfidence::Complete,
-            "body: {body}"
-        );
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Code-operand classification regression tests (`word_contract_widen.rs`).
 //
 // `{ }` spells a Record and never code, so a `[ ... ]` alone cannot say whether its
 // interior is inert data or a fixed-position code operand a higher-order
-// Word (`MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`/`EXEC`/`CONTRACT`/`COND`) will
+// Word (`MAP`/`FILTER`/`FOLD`/`SCAN`/`EXEC`/`CONTRACT`) will
 // actually run. `classify_vector_positions` answers this positionally: a
 // `[ ... ]` immediately followed by one of those Words is code, everything
 // else is data, and a `Data` ancestor forces `Data` all the way down. Every
@@ -240,7 +209,7 @@ async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
 #[tokio::test]
 async fn a_symbol_inside_a_vector_literal_never_widens_purity() {
     // `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]` — PRINT never runs.
-    let contract = contract_for("[ | [ 'a' PRINT 'b' ] ] 'LABELS' DEF", "LABELS").await;
+    let contract = contract_for("[ [ 'a' PRINT 'b' ] ] 'LABELS' DEF", "LABELS").await;
     assert_eq!(contract.purity, ContractPurity::Pure);
     assert_eq!(contract.confidence, ContractConfidence::Complete);
 }
@@ -257,7 +226,7 @@ async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
         "[ [ PRINT ] [ 1 ] ]",
         "[ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
     ] {
-        let source = format!("[ | {body} ] 'W' DEF");
+        let source = format!("[ {body} ] 'W' DEF");
         let contract = contract_for(&source, "W").await;
         assert_eq!(contract.purity, ContractPurity::Pure, "body: {body}");
         assert_eq!(
@@ -269,29 +238,57 @@ async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
 }
 
 #[tokio::test]
-async fn a_value_only_reaching_exec_through_collect_is_a_known_gap() {
-    // Before `{ }` was retired as a block, `{ PRINT }` written outside any vector
-    // widened unconditionally, so `COLLECT`ing it and later `GET`+`EXEC`ing
-    // it (measured: `'hi' { PRINT } 1 COLLECT [ 0 ] GET EXEC` printed "hi")
-    // still counted as effectful. `classify_vector_positions` instead asks
-    // whether a code-consuming Word immediately follows a literal's own
-    // close — sound for the ordinary `MAP`/`FILTER`/`EXEC`/`COND` shapes,
-    // but `COLLECT` gathers already-evaluated stack values built arbitrarily
-    // far away, which no positional rule can see. This is an accepted,
-    // narrower guarantee, not a regression target: the declaration check
-    // stays conservative-by-omission (a missed `note`, never a false
-    // `error`), and a value actually reaching `EXEC` this way is unusual
-    // enough that recovering it is not worth another special case.
-    let contract = contract_for("[ | [ PRINT ] 1 COLLECT [ 0 ] GET EXEC ] 'W' DEF", "W").await;
-    assert_eq!(contract.purity, ContractPurity::Pure);
+async fn a_code_operand_that_is_not_a_literal_is_a_gap_not_pure() {
+    // `classify_vector_positions` sees a code operand only when it is the
+    // `[ ... ]` written immediately before the Word that runs it. A Vector
+    // `COLLECT`ed, taken out of data by `GET`, or held by a binding reaches
+    // `EXEC` from somewhere the walk read as inert data, so the `PRINT`
+    // inside it is invisible. Inferring `pure`/`complete` there verified a
+    // false `purity=pure` declaration; the walk now says it cannot tell.
+    for body in [
+        "[ PRINT ] 1 COLLECT 0 GET EXEC",
+        "[ [ 42 PRINT ] ] 0 GET EXEC",
+        "[ 42 PRINT ] 'B' BIND B EXEC",
+        "[ 1 2 ] [ [ PRINT ] ] 0 GET MAP",
+    ] {
+        let source = format!("[ {body} ] 'W' DEF");
+        let contract = contract_for(&source, "W").await;
+        assert_eq!(contract.purity, ContractPurity::Effectful, "body: {body}");
+        assert_eq!(
+            contract.confidence,
+            ContractConfidence::Conservative,
+            "body: {body}"
+        );
+        assert!(
+            contract
+                .gaps
+                .contains(&crate::agent::contract_gap::GapCode::UnmodelledControlFlow),
+            "body: {body}"
+        );
+    }
 }
 
 #[tokio::test]
 async fn a_map_over_a_literal_block_still_widens_regardless_of_purity() {
     // Sanity check that the code-operand classification leaves the ordinary,
     // no-vector-involved case exactly as before.
-    let pure = contract_for("[ X | X [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF", "DOUBLE-ALL").await;
+    let pure = contract_for("[ [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF", "DOUBLE-ALL").await;
     assert_eq!(pure.purity, ContractPurity::Pure);
-    let effectful = contract_for("[ X | X [ PRINT ] MAP ] 'PRINTALL' DEF", "PRINTALL").await;
+    let effectful = contract_for("[ [ PRINT ] MAP ] 'PRINTALL' DEF", "PRINTALL").await;
     assert_eq!(effectful.purity, ContractPurity::Effectful);
+}
+
+/// A name a `BIND` in the body made reads as one value, not as an unresolved
+/// Word: before this, every such body answered `inputs: variable` with an
+/// `unresolvedWord` gap (the lexicon-emergence pilot's finding M-2).
+#[tokio::test]
+async fn a_bound_name_reads_as_one_value_not_an_unresolved_word() {
+    for (src, name) in [
+        ("[ 'V' BIND V V LENGTH DIV ] 'M' DEF", "M"),
+        ("[ [ 'A' 'B' ] BIND A B ADD ] 'S' DEF", "S"),
+    ] {
+        let contract = contract_for(src, name).await;
+        assert_eq!(contract.flow, fixed(1, 1), "`{src}`");
+        assert!(contract.gaps.is_empty(), "`{src}`: {:?}", contract.gaps);
+    }
 }

@@ -39,8 +39,7 @@ const allowedAlgebraicFamilies = new Set([
   'exact-scalar',
   'exact-arithmetic',
   'boolean-truth',
-  'bubble',
-  'modifier',
+  'absence',
   'structure-lift',
   'hosted-effect',
   'syntax-sugar',
@@ -168,7 +167,7 @@ function validateWordManifest(coverage) {
       if (entryClassifiesSurface(entry, manifestEntry)) coveredManifestIds.add(manifestEntry.id);
     }
 
-    const isSurfaceEntry = ['coreword', 'moduleword', 'symbol_alias', 'syntax_sugar', 'input_helper', 'delimiter_sugar', 'literal_sugar', 'modifier_sugar', 'source_directive', 'control_directive', 'reserved_marker', 'retired_form', 'conversion_word'].includes(entry.kind);
+    const isSurfaceEntry = ['coreword', 'moduleword', 'delimiter_sugar', 'literal_sugar', 'modifier_sugar', 'source_directive', 'control_directive', 'reserved_marker', 'retired_form', 'conversion_word'].includes(entry.kind);
     if (isSurfaceEntry && !manifestById.has(entry.id)) {
       const hasSurfaceMatch = coverageSurfaces(entry).some((surface) => {
         const normalized = normalizeSurface(surface);
@@ -193,7 +192,7 @@ function validateWordManifest(coverage) {
   // to contain the character — which is how `/`, `^` and `)` sat in the manifest
   // with no entry of their own.
   const SUGAR_KINDS = new Set([
-    'symbol_alias', 'syntax_sugar', 'input_helper', 'delimiter_sugar',
+    'delimiter_sugar',
     'literal_sugar', 'source_directive', 'control_directive', 'reserved_marker',
     'retired_form',
   ]);

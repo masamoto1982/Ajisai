@@ -8,11 +8,6 @@
 //   node scripts/check-conformance-coverage.mjs --json     # JSON report
 //   node scripts/check-conformance-coverage.mjs --suite F  # alternate suite file
 //
-// Sugar and alias surfaces are folded onto their canonical Core word using
-// the alias entries of the word manifest (e.g. `+` counts as ADD, `^` as
-// OR-NIL, `~` as FLOW, `;`/`;;` as their modifier pairs), so a case written
-// in sugar still covers the canonical word.
-//
 // A module word counts as covered when its qualified surface (MODULE@WORD)
 // appears as a token, or its short surface appears as a token in a source
 // that also imports that module ('module' IMPORT / IMPORT-ONLY), so bare
@@ -39,17 +34,6 @@ const coreWords = new Set(
     .filter((e) => e.classification === 'Core')
     .map((e) => e.surface),
 );
-
-// surface -> canonical word name(s), from the manifest's alias entries plus
-// the control/modifier sugar the tokenizer folds before dictionary lookup.
-const sugarMap = new Map();
-for (const e of manifest.entries) {
-  if (e.kind === 'symbol_alias' || e.kind === 'syntax_sugar') {
-    sugarMap.set(e.surface, [e.canonical]);
-  }
-}
-sugarMap.set(';', ['TOP', 'EAT']);
-sugarMap.set(';;', ['STAK', 'KEEP']);
 
 function decodeEntities(value) {
   return value
@@ -78,23 +62,10 @@ const seen = new Set();
 const perSource = [];
 for (const src of sources) {
   const tokens = new Set();
-  for (let tok of src.split(/\s+/)) {
+  for (const tok of src.split(/\s+/)) {
     if (!tok) continue;
-    // fused modifier sugar: ';;ADD' covers STAK KEEP ADD, ';ADD' TOP EAT ADD
-    if (tok.startsWith(';;') && tok.length > 2) {
-      seen.add('STAK'); seen.add('KEEP');
-      tok = tok.slice(2);
-    } else if (tok.startsWith(';') && tok.length > 1) {
-      seen.add('TOP'); seen.add('EAT');
-      tok = tok.slice(1);
-    }
-    // The surface itself may be Core-classified (e.g. `/`), so record both
-    // the raw token and its canonical fold.
     seen.add(tok);
     tokens.add(tok);
-    if (sugarMap.has(tok)) {
-      for (const canon of sugarMap.get(tok)) seen.add(canon);
-    }
   }
   const imports = new Set();
   for (const m of src.matchAll(/'([A-Za-z-]+)'\s+IMPORT(?:-ONLY)?\b/gi)) {

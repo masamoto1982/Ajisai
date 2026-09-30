@@ -3,7 +3,7 @@
   "cases": [
     {
       "name": "successful exact rational",
-      "source": "[ 1 ] [ 2 ] +",
+      "source": "[ 1 ] [ 2 ] ADD",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 3/1 ]",
@@ -12,7 +12,7 @@
     },
     {
       "name": "reason-carrying NIL is a successful value",
-      "source": "1 0 /",
+      "source": "1 0 DIV",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "NIL",
@@ -27,7 +27,7 @@
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
-        "/aiDiagnostic/kind": "unknownWord",
+        "/aiDiagnostic/category": "unknownWord",
         "/errorFlowTrace/0/kind": "wordError",
         "/diagnosis/nextChecks/0/code": "checkSpelling",
         "/diagnosis/candidates": []
@@ -44,7 +44,7 @@
     },
     {
       "name": "a misspelled user Word is matched against the live dictionary",
-      "source": "[ X | X [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBEL",
+      "source": "[ [ 2 ] MUL ] 'DOUBLE' DEF [ 3 ] DOUBEL",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
@@ -60,59 +60,56 @@
         "/stack/0/value/0/semantics/exactTerms/0/numerator": "1",
         "/stack/0/value/0/semantics/exactTerms/0/denominator": "1",
         "/stack/0/value/0/semantics/exactTerms/0/radicand": "2",
-        "/stack/0/value/0/semantics/exactDisplay": "sqrt(2)"
+        "/stackDisplay/0": "[ sqrt(2) ]"
       }
     },
     {
       "name": "a scaled algebraic value writes its coefficient",
-      "source": "1 2 / SQRT",
+      "source": "1 2 DIV SQRT",
       "expect": {
         "/status": "ok",
-        "/stack/0/semantics/exactDisplay": "1/2*sqrt(2)",
         "/stack/0/semantics/exactTerms/0/numerator": "1",
         "/stack/0/semantics/exactTerms/0/denominator": "2",
-        "/stack/0/semantics/exactTerms/0/radicand": "2"
+        "/stack/0/semantics/exactTerms/0/radicand": "2",
+        "/stackDisplay/0": "1/2*sqrt(2)"
       }
     },
     {
       "name": "a multi-term algebraic value writes every term",
-      "source": "2 SQRT 3 SQRT +",
+      "source": "2 SQRT 3 SQRT ADD",
       "expect": {
         "/status": "ok",
-        "/stack/0/semantics/exactDisplay": "sqrt(2) + sqrt(3)",
         "/stack/0/semantics/exactTerms/0/radicand": "2",
-        "/stack/0/semantics/exactTerms/1/radicand": "3"
+        "/stack/0/semantics/exactTerms/1/radicand": "3",
+        "/stackDisplay/0": "sqrt(2)+sqrt(3)"
       }
     },
     {
       "name": "a rational carries no algebraic rendering",
-      "source": "2 3 / 1 3 / +",
+      "source": "2 3 DIV 1 3 DIV ADD",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "1/1"
       },
       "expectAbsent": [
-        "/stack/0/semantics/exactDisplay",
         "/stack/0/semantics/exactTerms",
         "/stack/0/semantics/approximate"
       ]
     },
     {
       "name": "a vector of rationals carries no algebraic rendering",
-      "source": "[ 1 2 3 ] [ 4 5 6 ] +",
+      "source": "[ 1 2 3 ] [ 4 5 6 ] ADD",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 5/1 7/1 9/1 ]"
       },
       "expectAbsent": [
-        "/stack/0/semantics/exactDisplay",
-        "/stack/0/value/0/semantics/exactDisplay",
         "/stack/0/value/0/semantics/exactTerms"
       ]
     },
     {
       "name": "a NIL lane survives arithmetic applied to the whole vector",
-      "source": "[ 1 NIL 3 ] [ 2 ] *",
+      "source": "[ 1 NIL 3 ] [ 2 ] MUL",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 2/1 NIL 6/1 ]",
@@ -122,7 +119,7 @@
     },
     {
       "name": "a zero divisor projects its own lane and says why",
-      "source": "[ 6 6 6 ] [ 1 2 0 ] /",
+      "source": "[ 6 6 6 ] [ 1 2 0 ] DIV",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "[ 6/1 3/1 NIL ]",
@@ -131,24 +128,12 @@
       }
     },
     {
-      "name": "MOD answers a zero divisor exactly as DIV does",
-      "source": "[ 6 6 6 ] [ 1 2 0 ] %",
-      "expect": {
-        "/status": "ok",
-        "/stackDisplay/0": "[ 0/1 0/1 NIL ]",
-        "/stack/0/value/2/type": "nil",
-        "/stack/0/value/2/semantics/absence/reason": "divisionByZero",
-        "/errorFlowTrace/0/word": "MOD",
-        "/errorFlowTrace/0/absence/reason": "divisionByZero"
-      }
-    },
-    {
       "name": "execution budget exhaustion is a language ERROR",
-      "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+      "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "resourceLimit",
-        "/aiDiagnostic/kind": "executionLimitExceeded",
+        "/aiDiagnostic/category": "executionLimitExceeded",
         "/errorFlowTrace/0/kind": "wordError",
         "/errorFlowTrace/0/word": "ADD",
         "/diagnosis/resourceLimit/resource": "executionSteps"
@@ -156,7 +141,7 @@
     },
     {
       "name": "agent materialization ceiling is a reason-carrying NIL",
-      "source": "[ 0 100001 ] RANGE",
+      "source": "0 100001 RANGE",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "NIL",
@@ -175,7 +160,7 @@
     },
     {
       "name": "a declared projection condition reaches the caller as its own cause class",
-      "source": "4 NEG SQRT",
+      "source": "-4 SQRT",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "NIL",
@@ -208,7 +193,7 @@
     },
     {
       "name": "a huge failing stack does not cost the diagnosis",
-      "source": "[ 0 99999 ] RANGE LENGHT",
+      "source": "0 99999 RANGE LENGHT",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
@@ -222,14 +207,14 @@
     },
     {
       "name": "a run reports the resources it actually spent",
-      "source": "[ 1 20 ] RANGE 1 [ * ] FOLD",
+      "source": "1 20 RANGE 1 [ MUL ] FOLD",
       "expect": {
         "/status": "ok",
         "/resourceUsage/executionSteps": 22,
-        "/resourceUsage/numericWork": 20,
-        "/runtimeMetrics/executionSteps": 22
+        "/resourceUsage/numericWork": 20
       },
-      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant \u2014 every program reported 0 \u2014 so only an exact expectation catches a regression to one."
+      "expectAbsent": ["/runtimeMetrics/executionSteps"],
+      "comment": "RANGE and FOLD are one step each and the block's `MUL` runs twenty times: 22. The step count is a budget, reported once under resourceUsage and not again beside the optimizer counters. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
     }
   ]
 }

@@ -12,9 +12,6 @@ impl Value {
     #[inline]
     pub fn len(&self) -> usize {
         match &self.data {
-            // The logical Unknown (U — `Nil` carrying the `TruthValue`
-            // hint) has no dedicated variant, so it falls through this same
-            // `Nil` arm and reports length 0, same as an operational NIL.
             ValueData::Nil => 0,
             // A String is one value, not a sequence of characters. Its
             // character count is reached through `CHARS`, which is what makes
@@ -114,7 +111,12 @@ impl Value {
         }
         match &mut self.data {
             ValueData::Vector(v) => {
+                // One more child: the nesting can only grow to hold it, so it
+                // is updated from that child alone rather than rescanned.
+                let with_child = child.nesting().saturating_add(1);
                 Arc::make_mut(v).push(child);
+                self.raise_nesting_to(with_child);
+                return;
             }
             ValueData::Nil => {
                 self.data = ValueData::Vector(Arc::new(vec![child]));
@@ -127,16 +129,13 @@ impl Value {
                 // Cannot push_child into an ExactScalar — silently ignore
                 // (ExactScalar is always a scalar leaf, never mutated into a vector).
             }
-            // The logical Unknown (U — `Nil` carrying the `TruthValue`
-            // hint) has no dedicated variant, so it takes the `Nil` arm
-            // above and becomes a one-element Vector too, same as an
-            // operational NIL.
             ValueData::Boolean(_)
             | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Symbol(_)
             | ValueData::Record(_) => {}
         }
+        self.refresh_nesting();
     }
 
     #[inline]
@@ -204,9 +203,6 @@ impl Value {
             ValueData::Tensor { data, .. } => {
                 buf.extend(data.iter());
             }
-            // The logical Unknown (U — `Nil` carrying the `TruthValue`
-            // hint) has no dedicated variant, so it takes the `Nil` arm
-            // above and flattens to a nil lane, same as an operational NIL.
             // A Boolean/Text/Symbol flattens to no fraction lane. Kept in
             // lock-step with `count_fractions` below so buffer sizing stays
             // exact.

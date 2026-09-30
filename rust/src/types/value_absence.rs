@@ -1,9 +1,9 @@
-//! Operational absence and truth-role behavior for [`Value`].
+//! Operational absence and the truth observation for [`Value`].
 //!
 //! Invariant: a [`NilReason`] chooses its [`AbsenceOrigin`] in exactly one place,
 //! and every reasoned NIL constructor routes through that exhaustive mapping.
 
-use super::{Interpretation, Value, ValueData};
+use super::{Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 
@@ -13,18 +13,16 @@ use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 /// reason, which gave the pairing two sources and let them disagree: `DIV` by
 /// zero reported `reason = divisionByZero` with `origin = executionFailure`,
 /// contradicting `AbsenceOrigin::DivisionByZero`'s own documentation, and
-/// `INDEX-OF` did the same to `missingField`. Deriving here means a new reason
+/// `INDEX-OF` did the same to `notFound`. Deriving here means a new reason
 /// gets its origin by adding one arm, and gets it everywhere at once.
 fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
     match reason {
-        NilReason::MissingField => AbsenceOrigin::MissingField,
+        NilReason::NotFound => AbsenceOrigin::NotFound,
         NilReason::InvalidEncoding => AbsenceOrigin::InvalidEncoding,
         NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
-        NilReason::Undecidable => AbsenceOrigin::ComparisonBudget,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
         NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
         NilReason::DomainMiss => AbsenceOrigin::DomainMiss,
-        NilReason::NotAvailable => AbsenceOrigin::NotAvailable,
         NilReason::Literal => AbsenceOrigin::Literal,
         NilReason::UserDeclared => AbsenceOrigin::UserDeclared,
     }
@@ -38,20 +36,12 @@ impl Value {
 
     #[inline]
     pub fn nil_literal() -> Self {
-        Self {
-            data: ValueData::Nil,
-            hint: Interpretation::Nil,
-            absence: Some(AbsenceMetadata::literal()),
-        }
+        Self::new(ValueData::Nil, Some(AbsenceMetadata::literal()))
     }
 
     #[inline]
     pub fn nil_with_absence(absence: AbsenceMetadata) -> Self {
-        Self {
-            data: ValueData::Nil,
-            hint: Interpretation::Nil,
-            absence: Some(absence),
-        }
+        Self::new(ValueData::Nil, Some(absence))
     }
 
     #[inline]
@@ -64,55 +54,16 @@ impl Value {
         ))
     }
 
-    /// Whether this value carries the `TruthValue` interpretation role. Used at
-    /// observation boundaries to attach the `truthValue` axis. The logical
-    /// truth value `Unknown` (U, LANG.VALUES.TRUTH) is `ValueData::Nil`
-    /// carrying this role — there is no dedicated `Unknown` variant — so
-    /// `is_truth_value()` combined with `matches!(self.data, ValueData::Nil)`
-    /// is how U is detected, never by assuming a distinct storage
-    /// representation.
-    #[inline]
-    pub fn is_truth_value(&self) -> bool {
-        self.hint == Interpretation::TruthValue
-    }
-
-    /// The observable `truthValue` axis (LANG.VALUES.TRUTH, LANG.OBSERVATION.PROTOCOL)
-    /// under a given effective interpretation role: `Some("true")`,
-    /// `Some("false")`, or `Some("unknown")` for truth-valued values, and
-    /// `None` otherwise.
-    ///
-    /// The role is taken as a parameter because a definite boolean produced
-    /// by a comparison/logic word carries its `TruthValue` role in the
-    /// semantic plane, not on the value's own `hint`. The
-    /// logical Unknown (U) is always `unknown` regardless of the role, since
-    /// it is detected from its reason. This is the single canonical mapping
-    /// from a value to its three-valued logical surface; external consumers
-    /// must read this axis rather than the internal NIL representation or
-    /// display text.
-    pub fn truth_value_for_role(&self, effective: Interpretation) -> Option<&'static str> {
-        // A Boolean is intrinsically truth-valued: it reports its truth on the
-        // axis regardless of the effective role, because its data identity —
-        // not a semantic-plane role — carries the truth.
-        if let ValueData::Boolean(b) = &self.data {
-            return Some(if *b { "true" } else { "false" });
-        }
-        if effective != Interpretation::TruthValue {
-            return None;
-        }
-        match &self.data {
-            ValueData::Nil => Some("unknown"),
-            ValueData::Scalar(f) => Some(if f.is_zero() { "false" } else { "true" }),
-            ValueData::ExactScalar(_) => Some("true"),
-            _ => Some(if self.is_truthy() { "true" } else { "false" }),
-        }
-    }
-
-    /// The `truthValue` axis using the value's own `hint` as the role.
-    /// Convenience for values that carry the `TruthValue` role on the value
-    /// itself (notably U); the boundary uses
-    /// [`truth_value_for_role`] with the effective role.
+    /// The observable `truthValue` axis (LANG.VALUES.TRUTH,
+    /// LANG.OBSERVATION.PROTOCOL): `Some("true")` or `Some("false")` for a
+    /// Boolean, `None` for every other value. It is read off the value's
+    /// domain alone. UNKNOWN is a NIL (LANG.VALUES.TRUTH) and is observed as
+    /// one, with its reason, so it has no entry on this axis.
     pub fn truth_value(&self) -> Option<&'static str> {
-        self.truth_value_for_role(self.hint)
+        match &self.data {
+            ValueData::Boolean(b) => Some(if *b { "true" } else { "false" }),
+            _ => None,
+        }
     }
 
     #[inline]
@@ -124,7 +75,7 @@ impl Value {
     }
 
     /// Create a reasoned NIL for the NIL Projection Rule (the specification's
-    /// "Bubble Rule"): well-formed operations that cannot produce a value
+    /// "NIL Projection Rule"): well-formed operations that cannot produce a value
     /// return a reasoned NIL directly with an explicit reason.
     ///
     /// The origin follows from the reason via [`absence_origin_for_reason`] and

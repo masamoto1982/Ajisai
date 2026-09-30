@@ -29,6 +29,7 @@ mod record_words_tests {
         let mut interp = Interpreter::new();
         let err = interp.execute(code).await.expect_err("must raise an ERROR");
         crate::error::ErrorCategory::from_error(&err)
+            .expect("a program ERROR has a category")
             .as_protocol_str()
             .to_string()
     }
@@ -57,42 +58,25 @@ mod record_words_tests {
         );
     }
 
-    /// The literal and the constructor are one construction
-    /// (LANG.RECORDS.STRUCTURE): the same value, and the same ERRORs.
+    /// A Record's keys may be any value, not only Text, and a Record nests in
+    /// a Vector and in another Record (LANG.RECORDS.STRUCTURE).
     #[tokio::test]
-    async fn a_record_literal_builds_what_the_constructor_builds() {
-        assert_eq!(top("{ 'x' 1 'y' 2 }").await, "{ 'x' 1/1 'y' 2/1 }");
-        assert_eq!(top(&format!("{R} {{ 'x' 1 'y' 2 }} EQ")).await, "TRUE");
-        assert_eq!(top("{ }").await, "{ }");
-        assert_eq!(top("{ } [ ] [ ] RECORD EQ").await, "TRUE");
-        // Key order is observable in the literal too.
-        assert_eq!(top("{ 'x' 1 'y' 2 } { 'y' 2 'x' 1 } EQ").await, "FALSE");
-        // The constructor's two ERRORs, raised by the literal.
-        assert_eq!(error_of("{ 'a' 1 'a' 2 }").await, "duplicateKey");
-        assert_eq!(error_of("{ 'a' 1 'b' }").await, "vectorLengthMismatch");
-        // A literal evaluates nothing, so a bare name inside one is a Symbol
-        // (LANG.VALUES.VECTOR's rule, over the same elements) and a key may be
-        // any value, not only Text.
-        assert_eq!(top("{ 'a' ADD }").await, "{ 'a' ADD }");
+    async fn a_record_takes_any_key_and_nests() {
         assert_eq!(
-            top("{ 1 'one' TRUE 'yes' }").await,
+            top("[ 1 TRUE ] [ 'one' 'yes' ] RECORD").await,
             "{ 1/1 'one' TRUE 'yes' }"
         );
-        // Either literal nests inside the other.
         assert_eq!(
-            top("{ 'v' [ 1 2 ] 'r' { 'k' 3 } }").await,
+            top("[ 'v' 'r' ] [ 1 2 ] [ 'k' ] [ 3 ] RECORD 2 COLLECT RECORD").await,
             "{ 'v' [ 1/1 2/1 ] 'r' { 'k' 3/1 } }"
         );
-        assert_eq!(top("[ { 'a' 1 } ] LENGTH").await, "1/1");
+        assert_eq!(top("[ 'a' ] [ 1 ] RECORD 1 COLLECT LENGTH").await, "1/1");
     }
 
     #[tokio::test]
     async fn record_rejects_malformed_key_vectors() {
         assert_eq!(error_of("[ 'a' 'a' ] [ 1 2 ] RECORD").await, "duplicateKey");
-        assert_eq!(
-            error_of("[ 'a' ] [ 1 2 ] RECORD").await,
-            "vectorLengthMismatch"
-        );
+        assert_eq!(error_of("[ 'a' ] [ 1 2 ] RECORD").await, "shapeMismatch");
         assert_eq!(error_of("'a' [ 1 ] RECORD").await, "nonVector");
         // Operands are back on the stack after the ERROR.
         let mut interp = Interpreter::new();
@@ -101,33 +85,44 @@ mod record_words_tests {
     }
 
     #[tokio::test]
-    async fn at_answers_by_key_and_projects_missing_field() {
-        assert_eq!(top(&format!("{R} 'y' AT")).await, "2/1");
+    async fn get_reads_a_record_by_key_and_projects_not_found() {
+        assert_eq!(top(&format!("{R} 'y' GET")).await, "2/1");
         assert_eq!(
-            reason(&format!("{R} 'z' AT")).await.as_deref(),
-            Some("missingField")
+            reason(&format!("{R} 'z' GET")).await.as_deref(),
+            Some("notFound")
         );
-        assert_eq!(top(&format!("0 {R} 'z' AT NIL? SELECT")).await, "0/1");
-        assert_eq!(error_of("[ 1 2 ] 'x' AT").await, "nonRecord");
-        // A stored NIL is a value under its key: AT answers it, HAS? sees it.
-        assert_eq!(top(&format!("{R} 'n' NIL WITH 'n' HAS?")).await, "TRUE");
+        assert_eq!(
+            top(&format!("{R} 'z' GET 'S' BIND 0 S S NIL? SELECT")).await,
+            "0/1"
+        );
+        // A Record's keys are any value, so an integer is a key like another:
+        // absent here, it projects rather than being read as a position.
+        assert_eq!(
+            reason(&format!("{R} 0 GET")).await.as_deref(),
+            Some("notFound")
+        );
+        // A Vector is read by index, so a String there is not one.
+        assert_eq!(error_of("[ 1 2 ] 'x' GET").await, "invalidInteger");
+        // Neither container: the one condition GET and PUT share.
+        assert_eq!(error_of("5 'x' GET").await, "nonContainer");
+        assert_eq!(error_of("5 'x' 1 PUT").await, "nonContainer");
+        // A stored NIL is a value under its key: GET answers it, HAS? sees it.
+        assert_eq!(top(&format!("{R} 'n' NIL PUT 'n' HAS?")).await, "TRUE");
         assert_eq!(top(&format!("{R} 'n' HAS?")).await, "FALSE");
     }
 
     #[tokio::test]
-    async fn with_replaces_in_place_or_appends() {
-        assert_eq!(top(&format!("{R} 'x' 9 WITH")).await, "{ 'x' 9/1 'y' 2/1 }");
+    async fn put_sets_a_record_key_in_place_or_appends() {
+        assert_eq!(top(&format!("{R} 'x' 9 PUT")).await, "{ 'x' 9/1 'y' 2/1 }");
+        assert_eq!(top(&format!("{R} 'z' 3 PUT KEYS")).await, "[ 'x' 'y' 'z' ]");
+        // The operand is a value: it is not changed by PUT, so the bound
+        // Record reads unchanged after the answer.
         assert_eq!(
-            top(&format!("{R} 'z' 3 WITH KEYS")).await,
-            "[ 'x' 'y' 'z' ]"
+            top(&format!("{R} 'REC' BIND REC 'z' 3 PUT REC")).await,
+            "{ 'x' 1/1 'y' 2/1 'z' 3/1 } { 'x' 1/1 'y' 2/1 }"
         );
-        // The operand is a value: it is not changed by WITH, and KEEP retains
-        // all three operands beside the answer.
-        assert_eq!(
-            top(&format!("{R} 'z' 3 KEEP WITH")).await,
-            "{ 'x' 1/1 'y' 2/1 } 'z' 3/1 { 'x' 1/1 'y' 2/1 'z' 3/1 }"
-        );
-        assert_eq!(error_of(&format!("{R} NIL 1 WITH")).await, "nonRecord");
+        // The key is data: an absent key passes through.
+        assert_eq!(top(&format!("{R} NIL 1 PUT NIL?")).await, "TRUE");
     }
 
     #[tokio::test]
@@ -135,7 +130,7 @@ mod record_words_tests {
         assert_eq!(top(&format!("{R} 'x' WITHOUT")).await, "{ 'y' 2/1 }");
         assert_eq!(
             reason(&format!("{R} 'z' WITHOUT")).await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
     }
 
@@ -176,7 +171,7 @@ mod record_words_tests {
     async fn arithmetic_and_comparison_lift_over_values() {
         assert_eq!(top(&format!("{R} 10 MUL")).await, "{ 'x' 10/1 'y' 20/1 }");
         assert_eq!(top(&format!("10 {R} SUB")).await, "{ 'x' 9/1 'y' 8/1 }");
-        assert_eq!(top(&format!("{R} NEG")).await, "{ 'x' -1/1 'y' -2/1 }");
+        assert_eq!(top(&format!("{R} -1 MUL")).await, "{ 'x' -1/1 'y' -2/1 }");
         assert_eq!(top(&format!("{R} {R} ADD")).await, "{ 'x' 2/1 'y' 4/1 }");
         assert_eq!(top(&format!("{R} 1 GT")).await, "{ 'x' FALSE 'y' TRUE }");
         assert_eq!(top(&format!("{R} 1 MAX")).await, "{ 'x' 1/1 'y' 2/1 }");
@@ -187,16 +182,16 @@ mod record_words_tests {
         );
         // Division by zero empties the lane, not the Record.
         assert_eq!(
-            top(&format!("{R} 0 DIV 'x' AT NIL-REASON")).await,
-            "NIL 'divisionByZero'"
+            top(&format!("{R} 0 DIV 'x' GET NIL-REASON")).await,
+            "'divisionByZero'"
         );
         assert_eq!(
             error_of(&format!("{R} [ 'y' 'x' ] [ 1 2 ] RECORD ADD")).await,
             "shapeMismatch"
         );
         assert_eq!(
-            top(&format!("{R} 2 KEEP MUL")).await,
-            "{ 'x' 1/1 'y' 2/1 } 2/1 { 'x' 2/1 'y' 4/1 }"
+            top(&format!("{R} 'REC' BIND REC REC 2 MUL")).await,
+            "{ 'x' 1/1 'y' 2/1 } { 'x' 2/1 'y' 4/1 }"
         );
     }
 
@@ -204,7 +199,6 @@ mod record_words_tests {
     #[tokio::test]
     async fn no_other_family_accepts_a_record() {
         assert_eq!(error_of(&format!("{R} LENGTH")).await, "nonVector");
-        assert_eq!(error_of(&format!("{R} 0 GET")).await, "nonVector");
         assert_eq!(error_of(&format!("{R} [ 1 ADD ] MAP")).await, "nonVector");
         assert_eq!(error_of(&format!("{R} TRUE AND")).await, "nonTruthValue");
         assert_eq!(error_of(&format!("{R} CHARS")).await, "nonText");
@@ -216,11 +210,11 @@ mod record_words_tests {
         assert_eq!(top("[ 3 1 3 ] TALLY").await, "{ 3/1 2/1 1/1 1/1 }");
         assert_eq!(top("[ 3 1 3 ] TALLY VALUES").await, "[ 2/1 1/1 ]");
         assert_eq!(
-            top("[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP").await,
+            top("[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP").await,
             "{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }"
         );
         assert_eq!(
-            top("[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP 'a' AT").await,
+            top("[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP 'a' GET").await,
             "[ 1/1 3/1 ]"
         );
     }
@@ -229,12 +223,12 @@ mod record_words_tests {
     async fn a_record_survives_a_block_and_the_protocol() {
         // Carried into a block as its own literal.
         assert_eq!(
-            top(&format!("{R} 1 COLLECT [ 'x' AT ] MAP")).await,
+            top(&format!("{R} 1 COLLECT [ 'x' GET ] MAP")).await,
             "[ 1/1 ]"
         );
         let interp = run(R).await;
         let value = interp.stack.last().cloned().expect("an answer");
-        let node = crate::types::value_protocol::value_to_protocol(&value, None);
+        let node = crate::types::value_protocol::value_to_protocol(&value);
         assert_eq!(node.type_str, "record");
     }
 }

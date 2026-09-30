@@ -7,109 +7,81 @@
 //! diagnosis metadata that the canonical minimal-NIL model does not have, and
 //! are not in `spec/words.json`.
 //!
-//! Two invariants hold for both (see the module-level notes in
-//! `builtin_word_definitions.rs`):
+//! Two invariants hold for both:
 //!
-//!   * **Observation, not consumption.** Each word retains the inspected value
-//!     on the stack and pushes its result above it, mirroring the LENGTH/GET
-//!     inspection-word precedent of LANG.OBSERVATION.DIAGNOSIS. A diagnosis is an observation.
+//!   * **They consume what they read**, like every Word
+//!     (LANG.STACK.CONSUMPTION): the inspected value leaves the stack and the
+//!     answer takes its place. A program that needs the value afterwards names
+//!     it with `BIND`.
 //!   * **Every absence, U included.** They key off
 //!     [`Value::is_operational_nil`], which is every `Nil` value. The logical
 //!     Unknown (U) is a NIL read in truth position (LANG.VALUES.TRUTH), so it
 //!     is an absence: `NIL?` answers TRUE for it and `NIL-REASON` reports the
 //!     reason it arrived with. Excluding U here briefly made
-//!     `1 0 DIV TRUE AND NIL-REASON` answer `notAvailable` while the protocol
+//!     `1 0 DIV TRUE AND NIL-REASON` answer that it had no reason while the protocol
 //!     published `absence.reason = divisionByZero` for the same value.
 //!
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose
-//! reason is `notAvailable`: the "well-formed but cannot produce a value" case
-//! of the NIL Projection Rule (LANG.FAILURE.PROJECT), never an error.
+//! reason is `domainMiss`: a well-formed operand outside the accessor's domain,
+//! the reason `SQRT` gives a negative radicand (LANG.FAILURE.PROJECT), never an
+//! error.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
-/// Borrow the operational-NIL metadata of the top-of-stack value without
-/// consuming it. Returns `None` when the stack is empty *(malformed use)*, or
-/// when the top is not an operational NIL (a non-NIL value, or the logical U).
-fn peek_operational_absence(interp: &Interpreter) -> Option<&AbsenceMetadata> {
-    let top = interp.stack.last()?;
-    if !top.is_operational_nil() {
+/// The operational-NIL metadata of a value, or `None` when it is not an
+/// operational NIL.
+fn operational_absence(value: &Value) -> Option<&AbsenceMetadata> {
+    if !value.is_operational_nil() {
         return None;
     }
     // Every operational NIL has metadata; `absence_metadata` is `Some` for a
     // reasoned NIL and the literal-NIL constructor. Fall back defensively.
-    top.absence_metadata()
+    value.absence_metadata()
 }
 
-fn require_non_empty(interp: &Interpreter) -> Result<()> {
-    if interp.stack.is_empty() {
-        return Err(AjisaiError::StackUnderflow);
-    }
-    Ok(())
-}
-
-/// Push a result above the retained inspection target and register its semantic
-/// interpretation so the value renders correctly (Text with quotes, a truth
-/// value, a NIL, a Record). The target below keeps its own hint untouched.
-fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
-    interp.stack.push_with_role(value, hint);
-}
-
-/// A protocol-string Text result, or a `notAvailable` NIL when the accessor
-/// found no value. Carries the matching interpretation hint so a Text result
-/// renders as text and a NIL result renders as NIL.
+/// A protocol-string Text result, or a `domainMiss` NIL when the accessor
+/// found no value.
 ///
 /// The projected NIL is *reasoned*. It used to be `Value::nil()`, a bare
-/// literal NIL, which left `NIL-REASON`'s declared `projection.reason:
-/// "notAvailable"` unobservable: `5 NIL-REASON NIL-REASON` answered NIL rather
+/// literal NIL, which left `NIL-REASON`'s declared projection reason
+/// unobservable: `5 NIL-REASON NIL-REASON` answered NIL rather
 /// than the registered reason. `LANG.FAILURE.PROJECT` says a projection
 /// produces "NIL with the reason its contract registers", and
 /// `LANG.VALUES.NIL` makes the reason a NIL's entire observable content — a
 /// reasonless projection would have no content to observe.
 fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&str>) {
     match value {
-        Some(protocol) => push_result(
-            interp,
-            Value::from_string(protocol),
-            Interpretation::Unassigned,
-        ),
-        None => push_result(
-            interp,
-            Value::nil_with_reason_unknown(NilReason::NotAvailable),
-            Interpretation::Nil,
-        ),
+        Some(protocol) => interp.stack.push(Value::from_string(protocol)),
+        None => interp
+            .stack
+            .push(Value::nil_with_reason_unknown(NilReason::DomainMiss)),
     }
 }
 
-/// `NIL?` — retain the value and push `TRUE` when it is an operational NIL,
+/// `NIL?` — consume the value and push `TRUE` when it was an operational NIL,
 /// `FALSE` otherwise. It checks absence only and never branches on the reason
 /// (LANG.VALUES.NIL).
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let is_absent = match interp.stack.last() {
-        Some(value) => value.is_operational_nil(),
-        None => return Err(AjisaiError::StackUnderflow),
-    };
-    push_result(
-        interp,
-        Value::from_bool(is_absent),
-        Interpretation::TruthValue,
-    );
+    let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    interp
+        .stack
+        .push(Value::from_bool(value.is_operational_nil()));
     Ok(())
 }
 
 /// `NIL-REASON` — the direct reason as a lowerCamelCase protocol-string Text,
-/// or a `notAvailable` NIL when the value carries no reason or is not an
-/// operational NIL.
+/// or a `domainMiss` NIL when the value is not an operational NIL.
 ///
 /// A `userDeclared` NIL (one `ABSENT` made) answers the text it was declared
 /// with rather than the reason id: that text is the reason's parameter and,
 /// under `LANG.VALUES.NIL`, the NIL's entire observable content.
 pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
-    require_non_empty(interp)?;
-    let protocol: Option<String> = peek_operational_absence(interp).and_then(|absence| {
+    let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let protocol: Option<String> = operational_absence(&value).and_then(|absence| {
         let reason = absence.reason.as_ref()?;
         Some(match (reason, absence.detail_text()) {
             (NilReason::UserDeclared, Some(detail)) => detail.to_string(),

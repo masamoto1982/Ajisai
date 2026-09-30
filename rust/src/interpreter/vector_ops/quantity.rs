@@ -4,7 +4,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, extract_integer_from_value,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -65,13 +65,6 @@ enum Split {
 }
 
 impl Split {
-    fn name(self) -> &'static str {
-        match self {
-            Split::Take => "TAKE",
-            Split::Drop => "DROP",
-        }
-    }
-
     fn bounds(self, len: usize, count: i64) -> Option<(usize, usize)> {
         match self {
             Split::Take => compute_take_bounds(len, count),
@@ -91,19 +84,9 @@ impl Split {
 }
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    // `LENGTH` declares `consumption: eat` with `[ vec ] -> [ count ]`: the
-    // measured vector leaves the stack unless `KEEP` is in force.
-    let target_val = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    // `LENGTH` is `[ vec ] -> [ count ]` and consumes what it reads: the
+    // measured vector leaves the stack.
+    let target_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let len = {
         if target_val.is_nil() {
@@ -118,12 +101,11 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
             // was the third most expensive linear Word in the family.
             target_val.len()
         } else {
-            if !is_keep_mode {
-                interp.stack.push(target_val);
-            }
+            let got = target_val.domain_name();
+            interp.stack.push(target_val);
             return Err(AjisaiError::declared(
                 "nonVector",
-                "LENGTH: expected a Vector, got a non-vector value",
+                format!("expected a Vector, got {got}"),
             ));
         }
     };
@@ -141,26 +123,20 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// `TAKE` and `DROP` are one Word up to which side of the cut they answer
-/// with, so they are one executor: same operand reading, same `invalidCount`
+/// with, so they are one executor: same operand reading, same `invalidInteger`
 /// on a count that is not an integer, same projection past the end.
 fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
-    let word = split.name();
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let count_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let count = match extract_integer_from_value(&count_val) {
         Ok(v) => v,
-        // `invalidCount`: TAKE's own declared condition for a count operand
+        // `invalidInteger`: TAKE's own declared condition for a count operand
         // that isn't a well-formed integer.
-        Err(AjisaiError::StructureError { got, .. }) => {
-            interp.stack.push(count_val);
-            return Err(AjisaiError::declared(
-                "invalidCount",
-                format!("{word}: expected an integer count, got {got}"),
-            ));
-        }
         Err(e) => {
             interp.stack.push(count_val);
-            return Err(e);
+            return Err(AjisaiError::declared(
+                "invalidInteger",
+                format!("expected an integer count, got {}", e.got),
+            ));
         }
     };
 
@@ -175,20 +151,16 @@ fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
         return Err(e);
     }
 
-    let result =
-        with_stacktop_vector_target_with_arg(interp, &count_val, is_keep_mode, |vector_val| {
-            let elements = extract_vector_elements(vector_val);
-            Ok(split
-                .bounds(elements.len(), count)
-                .map(|(start, end)| Value::from_vector(elements[start..end].to_vec()))
-                .unwrap_or_else(|| {
-                    Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
-                }))
-        })?;
+    let result = with_stacktop_vector_target_with_arg(interp, &count_val, |vector_val| {
+        let elements = extract_vector_elements(vector_val);
+        Ok(split
+            .bounds(elements.len(), count)
+            .map(|(start, end)| Value::from_vector(elements[start..end].to_vec()))
+            .unwrap_or_else(|| {
+                Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
+            }))
+    })?;
 
-    if is_keep_mode {
-        interp.stack.push(count_val);
-    }
     interp.stack.push(result);
     Ok(())
 }

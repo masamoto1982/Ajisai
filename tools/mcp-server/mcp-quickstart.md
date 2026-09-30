@@ -18,28 +18,28 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 100 Words are:
+reaching for it exactly where it would have helped. The 78 Words are:
 
 | you need | Words |
 |---|---|
-| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` `RANDOM` |
-| transcendental (computable reals, compared under a budget) | `EXP` `LN` `SIN` `COS` `ATAN` `PI` · render with `FORMAT`; `1 EXP 1 EXP EQ` is `NIL`, never a wrong answer |
-| comparison and logic | `EQ` `LT` `LTE` `GT` `GTE` (not-equal is `EQ NOT`) · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
+| arithmetic | `ADD` `SUB` `MUL` `DIV` `FLOOR` `ROUND` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` (negate with `-1 MUL`) |
+| comparison and logic | `EQ` `LT` `GT` (not-equal is `EQ NOT`, at-most is `GT NOT`) · `AND` `NOT` (or is `a NOT b NOT AND NOT`) `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
-| collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
-| records (keyed data) | `RECORD` `KEYS` `VALUES` `AT` `WITH` `WITHOUT` `HAS?` `MERGE` · `TALLY` `GROUP` answer Records |
-| blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
+| collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER?` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
+| records (keyed data) | `RECORD` `KEYS` `VALUES` `WITHOUT` `HAS?` `MERGE` · read and written by key with `GET` `PUT` · `TALLY` `GROUP` answer Records |
+| blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `UPPER` `LOWER` `SEARCH` `REPLACE` `NUM` `STR` · `FORMAT` (decimal text at a stated precision, the one place rounding happens) |
 | JSON in and out | `JSON-DECODE` (object → Record, array → Vector, numbers exact) `JSON-ENCODE` (no rounding: `1/3` travels as `"1/3"`) |
 | absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |
-| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `FAIL` (raise a declared ERROR) · `PRINT` `KEEP` |
-| reflection | `DEFINED?` (does a Symbol name a Word) `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's or a block's contract as a Record, inferred without running it; `'cost' AT` before running it) |
+| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `FAIL` (raise a declared ERROR) · `PRINT` |
+| reflection | `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's or a block's contract as a Record, inferred without running it; `'cost' GET` before running it) |
 
-**Word names are exact and case-sensitive, and this is the whole list.** Do not
-invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that
-is not here does not exist under another spelling. When unsure, call
+**This is the whole list.** Word names are case-insensitive — `add` runs as
+`ADD`, because every name is canonicalized to upper case — but otherwise exact.
+Do not invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a
+name that is not here does not exist under another spelling. When unsure, call
 `word_contract` — it answers a near miss with `suggestions` — or read
-`ajisai://vocabulary` for every contract at once.
+`ajisai://contracts` for every contract at once.
 
 Out of domain, and not worth a call: transcendental functions, floating point,
 I/O, and anything that is really a program rather than a calculation.
@@ -59,9 +59,10 @@ don't know.
 | a number, a vector, an exact root, a `PRINT` line | `compute` | `source` |
 | to know whether source parses and resolves, without running it | `check` | `source` |
 | the inferred contract of Words *you* defined | `infer_contracts` | `source` |
+| every outcome a program could reach, before running it | `outcomes` | `source` |
 | a built-in Word's contract, or "did I spell it right?" | `word_contract` | `word` |
 
-All four take text, never a file path. To run a file, read it yourself and pass
+All five take text, never a file path. To run a file, read it yourself and pass
 its contents as `source`.
 
 ## 2. Read a result in this order
@@ -69,13 +70,15 @@ its contents as `source`.
 1. **`status`** decides everything else. `ok` — a value. `error` — an *Ajisai*
    error, still an ordinary successful call carrying a full diagnosis.
    `hostError` (with `isError` set) — this server failed, and your program may
-   be fine.
+   be fine. A `compute` result also names its **`outcome`** in the ids
+   `outcomes` predicts: `value`, `nil:<reason>` (a reasoned absence, under
+   `status: ok`) or `error:<category>`.
 2. On `ok`: `stackDisplay` is the final stack bottom→top, `output` holds `PRINT`
    lines, and `stack` is the machine-readable form of the same values. That is
    the general rule and it has exactly one exception: for an irrational square
-   root `stackDisplay` is a *truncated* rendering and the value lives in
-   `semantics.exactTerms` — see §4, which you must read before computing with
-   any `SQRT` result.
+   root `stackDisplay` is an exact but display-only rendering (`sqrt(2)`), and
+   the value to compute with lives in `semantics.exactTerms` — see §4, which you
+   must read before computing with any `SQRT` result.
 3. On `error`: `diagnosis.why` and `.where` locate it; `diagnosis.candidates`
    names the Word you probably meant; `diagnosis.nextChecks[].code` is a stable
    identifier to act on — never match on its display text, which is localized.
@@ -94,17 +97,17 @@ A partial operation that has no answer produces `NIL` carrying a reason, and the
 call still succeeds:
 
 ```ajisai tool=compute status=ok stack="NIL"
-1 0 /
+1 0 DIV
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
 and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with
-`NIL?` and `SELECT`. `NIL?` answers its subject *and* whether it is absent,
-which is exactly where `SELECT` reads its truth operand, so the phrase needs
-no name and no repetition:
+`BIND`, `NIL?` and `SELECT`. `NIL?` consumes its subject, like every Word,
+and answers whether it was absent, which is exactly where `SELECT` reads its
+truth operand, so name the subject once and read it twice:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-[ 99 ] 1 0 / NIL? SELECT
+1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT
 ```
 
 `NIL?` asks about the whole value, and a vector holding an absent lane is not
@@ -114,7 +117,7 @@ the others — so the top is still a vector and the fallback is not chosen.
 Recover such a result per lane (`MAP`), not around it:
 
 ```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"
-[ 6 6 ] [ 1 0 ] /
+[ 6 6 ] [ 1 0 ] DIV
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to
@@ -122,7 +125,7 @@ Recover such a result per lane (`MAP`), not around it:
 Rationals are exact and their display is exact too:
 
 ```ajisai tool=compute status=ok stack="1/1"
-2 3 / 1 3 / +
+2 3 DIV 1 3 DIV ADD
 ```
 
 An irrational square root is where display and value part company. On the
@@ -132,34 +135,32 @@ result of
 2 SQRT
 ```
 
-read either of these two fields, in this order:
+the two fields to read are:
 
-- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`. Read this
-  first. It is a display: read it, do not parse it.
+- **`stackDisplay`** — the value written as one token: `"sqrt(2)"`,
+  `"1/2*sqrt(2)"`, `"1/1+sqrt(2)"`. It is exact and never truncated. It is a
+  display: read it, do not parse it.
 - **`semantics.exactTerms`** — the value itself: a list of
   `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
   arbitrary-precision integers as strings. Compute with this.
 
-They are the same fact in two shapes and always appear together. Two *other*
-fields on that same result are **not** the value, and reading either as if it
-were will mislead you:
+The display renders exactly these terms. One *other* field on that same result
+is **not** the value, and reading it as if it were will mislead you:
 
-- `stackDisplay` shows the canonical continued fraction, truncated at a display
-  budget (`[ 1; 2, 2, … ]`). It is a rendering, and an incomplete one.
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
-Neither `exactDisplay` nor `exactTerms` appears on a plain rational or a vector
-of rationals — there is no radical to write, and `stackDisplay` is already
-exact for those.
+`exactTerms` does not appear on a plain rational or a vector of rationals —
+there is no radical to write, and `stackDisplay` is already the whole value.
 
-One caution about `exactDisplay`: it writes the stored form faithfully, so two
-values that *are* equal can be written differently — `8 SQRT` gives
-`"sqrt(8)"` and `2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`. Never compare these
-strings to decide equality. Ask Ajisai, which decides on the exact value:
+The display writes the canonical normal form, so two values that *are* equal
+are written the same way — `8 SQRT` and `2 SQRT 2 SQRT ADD` both give
+`2/1*sqrt(2)`. Even so, never compare these strings to decide equality: the
+string is display text, not a value. Ask Ajisai, which decides on the exact
+value:
 
 ```ajisai tool=compute status=ok stack="TRUE"
-8 SQRT 2 SQRT 2 SQRT + =
+8 SQRT 2 SQRT 2 SQRT ADD EQ
 ```
 
 ## 5. When a name is wrong, the answer says so
@@ -180,7 +181,7 @@ Every result carries the profile it ran under in `mcp.limits`, alongside
 ceiling is a diagnosed outcome, never a hang. The full profile is also readable
 without a tool call at `ajisai://limits`, the result contract at
 `ajisai://schema/result`, every Word's full contract at `ajisai://contracts`,
-and the inventory with its semantic classification at `ajisai://vocabulary`.
+and the inventory — every Word's name and family — at `ajisai://vocabulary`.
 
 ## 7. Budget before you run
 
@@ -215,9 +216,9 @@ Measured through `resourceUsage.numericWork`, all three of these are `const`:
 
 | program | `numericWork` |
 | --- | --- |
-| `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` | 5 |
-| `2 SQRT 3 SQRT +` | 2048 |
-| `2 SQRT 3 SQRT + 'S' BIND S S *` | 6144 |
+| `[ 1 2 3 4 5 ] [ 0 ] [ ADD ] FOLD` | 5 |
+| `2 SQRT 3 SQRT ADD` | 2048 |
+| `2 SQRT 3 SQRT ADD 'S' BIND S S MUL` | 6144 |
 
 The `numericWork` ceiling is 10,000,000, so an algebraic chain meets it after a
 few thousand additions while a rational one of the same class runs

@@ -11,7 +11,7 @@
 //! easy to get wrong without a test noticing:
 //!
 //!  * **Algebraic normal forms are not canonical.** `8 SQRT` keeps the basis
-//!    `{8}`; `2 SQRT 2 SQRT +` keeps `{2}` — equal values, disagreeing
+//!    `{8}`; `2 SQRT 2 SQRT ADD` keeps `{2}` — equal values, disagreeing
 //!    `normal_form_terms()`. Hashing the normal form would make this Phase's
 //!    own founding example fail. `impl Hash for Algebraic`
 //!    (`types/exact/algebraic.rs`) already solves this by hashing
@@ -32,18 +32,11 @@
 //!    agnostic — but `Scalar`/`ExactScalar` also report `len() == 1` and
 //!    `child(0) == self`, so those two are matched as their own leaves before
 //!    a collection encoder ever runs, or encoding them would recurse forever.
-//!  * **`hint` is presentation, not meaning; `absence`'s reason is meaning.**
-//!    `PartialEq for Value` never reads `hint` and always reads the NIL
-//!    reason, so the digest follows exactly that split.
-//!  * **`stackDisplay` is not the value.** It is LANG.VALUES.EXACT's continued
-//!    fraction truncated at a display budget (`√2` runs to ~101 characters
-//!    and ends in `… )`), so hashing it would fold two different numbers to
-//!    one digest the moment either runs past the budget. The digest always
-//!    encodes the value itself.
-//!
-//! `ExactReal::Computable` (Tier 2) has no canonical finite representation and
-//! no current Word constructs it; meeting one aborts the whole digest to
-//! `None` rather than fabricate a value for it.
+//!  * **`absence`'s reason is meaning.** `PartialEq for Value` always reads
+//!    the NIL reason, so the digest does too.
+//!  * **`stackDisplay` is not the value.** It is a rendering, and for a
+//!    Word it is the body's text; the digest always encodes the value itself,
+//!    so two spellings of one value digest alike.
 
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
@@ -82,10 +75,8 @@ pub(crate) struct ObservationDigestInput<'a> {
     pub error_category: Option<&'a str>,
 }
 
-/// The canonical digest of one observation, or `None` when it cannot be
-/// encoded (a Tier 2 `ExactReal::Computable` scalar is present anywhere in
-/// the stack).
-pub(crate) fn observation_digest(input: ObservationDigestInput<'_>) -> Option<String> {
+/// The canonical digest of one observation.
+pub(crate) fn observation_digest(input: ObservationDigestInput<'_>) -> String {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(DIGEST_SCHEMA_TAG);
 
@@ -95,7 +86,7 @@ pub(crate) fn observation_digest(input: ObservationDigestInput<'_>) -> Option<St
     write_section(&mut bytes, 0x02);
     write_u64(&mut bytes, input.stack.len() as u64);
     for value in input.stack {
-        encode_value(&mut bytes, value)?;
+        encode_value(&mut bytes, value);
     }
 
     write_section(&mut bytes, 0x03);
@@ -114,7 +105,7 @@ pub(crate) fn observation_digest(input: ObservationDigestInput<'_>) -> Option<St
     write_section(&mut bytes, 0x05);
     write_opt_str(&mut bytes, input.error_category);
 
-    Some(content_digest(&bytes))
+    content_digest(&bytes)
 }
 
 /// Version tag for a single value's digest — the `DIGEST` Word's answer for
@@ -123,15 +114,13 @@ pub(crate) fn observation_digest(input: ObservationDigestInput<'_>) -> Option<St
 /// digest of a whole observation that happens to hold that value alone.
 pub(crate) const VALUE_DIGEST_SCHEMA_TAG: &[u8] = b"AJISAI-VAL-1";
 
-/// The digest of one value's denotation, or `None` when the value carries a
-/// Tier 2 `ExactReal::Computable` scalar anywhere inside it. Equal values
-/// digest alike whatever built them, by the same encoding the observation
-/// digest uses for its stack.
-pub(crate) fn value_digest(value: &Value) -> Option<String> {
+/// The digest of one value's denotation. Equal values digest alike whatever
+/// built them, by the same encoding the observation digest uses for its stack.
+pub(crate) fn value_digest(value: &Value) -> String {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(VALUE_DIGEST_SCHEMA_TAG);
-    encode_value(&mut bytes, value)?;
-    Some(content_digest(&bytes))
+    encode_value(&mut bytes, value);
+    content_digest(&bytes)
 }
 
 fn write_section(bytes: &mut Vec<u8>, id: u8) {
@@ -171,7 +160,7 @@ fn write_sint(bytes: &mut Vec<u8>, i: &BigInt) {
 /// `Vector` and `Tensor` share one arm precisely because they must encode
 /// identically when they are equal: it walks `Value::len()` / `Value::child`,
 /// never the raw variant payload.
-fn encode_value(bytes: &mut Vec<u8>, value: &Value) -> Option<()> {
+fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
     match &value.data {
         ValueData::Nil => {
             bytes.push(b'N');
@@ -180,6 +169,10 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) -> Option<()> {
                 .map(|r| r.as_protocol_str())
                 .unwrap_or("");
             write_str(bytes, reason);
+            // An ABSENT NIL is identified by its Text (LANG.VALUES.NIL), so
+            // the detail is part of the identity, exactly as `Value::hash`
+            // and `PartialEq` treat it.
+            write_str(bytes, value.absence_detail().unwrap_or(""));
         }
         ValueData::Boolean(b) => {
             bytes.push(b'B');
@@ -201,15 +194,14 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) -> Option<()> {
             bytes.push(b'R');
             write_u64(bytes, record.len() as u64);
             for (key, value) in record.entries() {
-                encode_value(bytes, key)?;
-                encode_value(bytes, value)?;
+                encode_value(bytes, key);
+                encode_value(bytes, value);
             }
         }
         ValueData::Scalar(f) => encode_rational(bytes, f),
         ValueData::ExactScalar(exact) => match exact {
             ExactReal::Rational(f) => encode_rational(bytes, f),
             ExactReal::Algebraic(alg) => encode_algebraic(bytes, alg),
-            ExactReal::Computable(_) => return None,
         },
         ValueData::Vector(_) | ValueData::Tensor { .. } => {
             bytes.push(b'V');
@@ -219,11 +211,10 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) -> Option<()> {
                 let child = value
                     .child(i)
                     .expect("i < value.len() always has a child for Vector/Tensor");
-                encode_value(bytes, &child)?;
+                encode_value(bytes, &child);
             }
         }
     }
-    Some(())
 }
 
 /// A rational scalar, reduced and sign-normalized the same way

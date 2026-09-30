@@ -48,9 +48,9 @@ const EMPTY_STACK = '—';
 
 const html = readFileSync(SURFACE, 'utf8');
 
-// `<br>` is a line break in the sample source, and line breaks are significant
-// in Ajisai (a definition body's own level separates statements), so it has to
-// become a newline rather than be stripped with the rest of the markup.
+// `<br>` is a line break in the sample source, and a line break ends a `#`
+// comment, so it has to become a newline rather than be stripped with the rest
+// of the markup.
 const cellText = (cell) =>
   cell
     .replace(/<br\s*\/?>/g, '\n')

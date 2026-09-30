@@ -6,7 +6,7 @@
 //! execution-free token walk the contract inference already performs
 //! (`word_contract.rs`). The domain is deliberately provenance-aware: a
 //! materializer whose operand is a compile-time literal contributes `const`
-//! (`[ 0 10 ] RANGE` is input-independent), while the same word fed an input
+//! (`0 10 RANGE` is input-independent), while the same word fed an input
 //! value is provably `unbounded` (`X RANGE` materializes a length set by the
 //! *value* of `X`). Everything the simulation cannot prove degrades to a sound
 //! upper bound with `exact = false`, so the declaration checker can only raise
@@ -83,20 +83,19 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Add | Sub | Mul | Div => (Linear, true),
         // Comparisons and logic may produce elementwise results; O(input),
         // not audited as tight.
-        Eq | Lt | Le | Gt | Gte | And | Or | Not | Select => (Linear, false),
+        Eq | Lt | Gt | And | Not | Select => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
-        Map | Filter | Fold | Scan | Any | All | Rank => (Unbounded, false),
+        Map | Filter | Fold | Scan => (Unbounded, false),
         Exec => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
         Get | Length => (Const, false),
         // `Contract` walks a block's tokens once without evaluating them, or
         // reads one registry entry, and answers one fixed-shape Record;
-        // `Defined` a truth value; `Digest` a fixed-length text after walking
-        // its operand once.
-        Contract | Defined | Digest => (Const, false),
+        // `Digest` a fixed-length text after walking its operand once.
+        Contract | Digest => (Const, false),
         NilCheck | NilReason | Absent | Fail => (Const, false),
-        True | False | Nil | Pi => (Const, false),
+        True | False | Nil => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse | Flatten | Reshape => (Linear, true),
         // Shape observations: an answer bounded by the operand's rank.
@@ -106,7 +105,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // materialized length (Phase 3 gives these the runtime water level).
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
-        Floor | Ceil | Round | Quantize | Mod => (Linear, false),
+        Floor | Round => (Linear, false),
         Str | Num | Chars | Tokenize | Trim | Upper | Lower | Search | Replace => (Linear, false),
         // Text out of a value, or a value out of text: both O(input).
         Format => (Linear, false),
@@ -117,27 +116,19 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Bind | Def => (Linear, false),
         Del => (Const, false),
         Print => (Linear, false),
-        // The Words promoted out of the deleted MATH and ALGO modules.
-        Abs | Neg | Min | Max | Sqrt => (Linear, false),
-        // The numeric Words of Phase 7: element-wise like the rest of the
-        // family; a transcendental answer is one lazy enclosure per lane.
-        Pow | Gcd | Ratio | Exp | Ln | Sin | Cos | Atan => (Linear, false),
+        // The remaining number Words: element-wise like the rest of the family.
+        Min | Max | Sqrt => (Linear, false),
+        // The number-closing Words: element-wise like the rest of the family.
+        Pow | Gcd | Ratio => (Linear, false),
         Sort | Order => (Linear, true),
         IndexOf | Member | Bsearch => (Linear, false),
         // Ordering, grouping and shape Words: the result is bounded by the
         // operands' total size, and a vector operand attains the bound.
         Unique | Tally | Zip | Put | Group => (Linear, true),
-        // Record Words: a Record's size is its operands', and `AT`/`HAS?`
-        // answer one value.
-        Record | Keys | Values | With | Without | Merge => (Linear, true),
-        At | Has => (Const, false),
-        // A value-driven materializer like RANGE and FILL: the *count*
-        // operand's value sets the length, so it takes the runtime water level
-        // rather than a static bound.
-        Random => (Unbounded, true),
-        // `KEEP` never reaches a primitive: the execution loop interprets it
-        // against the source stream, so it materializes nothing.
-        SetConsumptionKeep => (Const, false),
+        // Record Words: a Record's size is its operands', and `HAS?` answers
+        // one value.
+        Record | Keys | Values | Without | Merge => (Linear, true),
+        Has => (Const, false),
     }
 }
 
@@ -145,7 +136,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
 /// `Dynamic` but whose *stack* arity is nonetheless fixed and known here. This
 /// lets the simulation inspect the operand provenance of the value-driven
 /// materializers — where a compile-time-literal operand collapses the class
-/// from `Unbounded` to `Const` (`[ 0 10 ] RANGE`) — even though their `mass`
+/// from `Unbounded` to `Const` (`0 10 RANGE`) — even though their `mass`
 /// is conservatively `Dynamic`. Every other Dynamic-mass word is soundly
 /// handled by the degrade-on-dynamic path.
 fn space_arity_override(id: WordId) -> Option<(u16, u16)> {
@@ -308,15 +299,14 @@ impl SpaceSim {
         self.poisoned = true;
     }
 
-    /// A structural token outside any symbol dispatch. A literal — `[ ... ]`
-    /// or `{ ... }`, on one depth because each leaves one value — collapses
-    /// to one slot; their inner tokens are not simulated (any execution of
+    /// A structural token outside any symbol dispatch. A `[ ... ]` literal
+    /// leaves one value, so it collapses to one slot; their inner tokens are not simulated (any execution of
     /// one goes through a higher-order word, which is classified `Unbounded`
     /// at *its* call site).
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
-            Token::VectorStart | Token::RecordStart => self.vector_depth += 1,
-            Token::VectorEnd | Token::RecordEnd => {
+            Token::VectorStart => self.vector_depth += 1,
+            Token::VectorEnd => {
                 self.vector_depth = self.vector_depth.saturating_sub(1);
                 if self.vector_depth == 0 {
                     if self.vector_dirty {
@@ -344,17 +334,15 @@ impl SpaceSim {
         // A literal inside a vector keeps the vector clean.
     }
 
-    /// A read of a bound name (LANG.SOURCE.FRAME). A header parameter is one
-    /// of the Word's inputs, moved untouched; a name a `BIND` in the body made
-    /// may hold anything the body computed, so its size is not assumed. Inside
-    /// a vector literal either one makes the vector non-constant.
-    pub(crate) fn feed_bound(&mut self, parameter: bool) {
+    /// A read of a name a `BIND` in the body made. It may hold anything the
+    /// body computed, so its size is not assumed; inside a vector literal it
+    /// makes the vector non-constant.
+    pub(crate) fn feed_bound(&mut self) {
         if self.vector_depth > 0 {
             self.vector_dirty = true;
             return;
         }
-        self.slots
-            .push(if parameter { INPUT_SLOT } else { UNKNOWN_SLOT });
+        self.slots.push(UNKNOWN_SLOT);
     }
 
     /// A symbol that failed to resolve: unknown flow and unknown growth.
@@ -367,10 +355,10 @@ impl SpaceSim {
         self.degrade();
     }
 
-    /// The caller stopped feeding this line mid-way (a dependency could not be
-    /// inferred), so structural depths can no longer be trusted: pin the bound
-    /// to the conservative top and resynchronize for whatever follows.
-    pub(crate) fn abandon_line(&mut self) {
+    /// A dependency's contract could not be inferred, so nothing after it can
+    /// be bounded: pin the bound to the conservative top and resynchronize
+    /// for whatever follows.
+    pub(crate) fn abandon(&mut self) {
         self.bound.join(SpaceBound::CONSERVATIVE);
         self.degrade();
         self.vector_depth = 0;

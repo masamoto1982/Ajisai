@@ -29,7 +29,7 @@ export const HOST_ERRORS = Object.freeze({
   timeout: { retryable: true, limit: "wallTimeMs" },
   /** The backend's response passed the declared `responseBytes` ceiling. */
   responseTooLarge: { retryable: false, limit: "responseBytes" },
-  /** The backend answered with something that is not the schema-1 envelope. */
+  /** The backend answered with something that is not the result envelope. */
   malformedBackendResponse: { retryable: false },
   /** The backend failed for a reason none of the above names. */
   backendFailure: { retryable: false },

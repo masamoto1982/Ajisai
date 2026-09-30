@@ -3,32 +3,10 @@
 import type {
     AjisaiInterpreter,
     ExecuteResult,
-    RuntimeMetricsSnapshot,
 } from '../wasm-interpreter-types';
 import { applyInterpreterSnapshot } from './interpreter-snapshot';
 
-// Cost-model counters (LANG.AUTHORITY.FREEDOM) are session-cumulative on the interpreter,
-// and this worker's interpreter is reused across runs, so the per-run
-// activity is the before/after delta around one execute call. Undefined when
-// the wasm bundle predates collect_runtime_metrics.
-const collectMetrics = (interp: AjisaiInterpreter): RuntimeMetricsSnapshot | undefined =>
-    interp.collect_runtime_metrics?.();
-
-const diffMetrics = (
-    before: RuntimeMetricsSnapshot | undefined,
-    after: RuntimeMetricsSnapshot | undefined
-): RuntimeMetricsSnapshot | undefined => {
-    if (!before || !after) return undefined;
-    const delta = {} as Record<keyof RuntimeMetricsSnapshot, number>;
-    for (const key of Object.keys(after) as Array<keyof RuntimeMetricsSnapshot>) {
-        delta[key] = Math.max(0, (after[key] ?? 0) - (before[key] ?? 0));
-    }
-    return delta;
-};
-
 let interpreter: AjisaiInterpreter | null = null;
-let isAborted = false;
-let currentTaskId: string | null = null;
 
 
 const bindingsPromise = import('../wasm/generated/ajisai_core.js');
@@ -73,13 +51,9 @@ self.onmessage = async (event: MessageEvent) => {
         return;
     }
 
-    if (type === 'abort') {
-        if (id === currentTaskId || id === '*') {
-            isAborted = true;
-        }
-        return;
-    }
-
+    // There is no `abort` message: the interpreter runs synchronously, so one
+    // would not be read until the run was over. The pool stops a run by
+    // terminating this worker (execution-worker-manager.ts, `stopActiveTask`).
     if (type !== 'execute') return;
 
 
@@ -91,49 +65,22 @@ self.onmessage = async (event: MessageEvent) => {
         }
     }
 
-    isAborted = false;
-    currentTaskId = id;
-
     try {
 
         applyInterpreterSnapshot(interpreter!, event.data.state);
 
-        if (isAborted) throw new Error('aborted');
-
-        const metricsBefore = collectMetrics(interpreter!);
         const result: ExecuteResult = await interpreter!.execute(event.data.code);
-        result.runtimeMetricsDelta = diffMetrics(metricsBefore, collectMetrics(interpreter!));
 
         // Attach the lossless stack snapshot (LANG.OBSERVATION.FIREWALL): it is the format the
         // main thread restores from, so exact post-run values (CodeBlock,
         // ExactScalar) survive instead of the lossy observation `stack`. The
         // interpreter still holds the post-execute state here, so this captures
         // the result stack exactly.
-        //
-        // Its own failure is reported as its own: the snapshot codec refuses a
-        // value it cannot encode without loss (`PI`, and anything built from
-        // it, is a Tier-2 computable real), and this runs *after* the program
-        // has already succeeded. Letting that throw out of the shared `try`
-        // blamed the program for it — `PI` alone answered "cannot persist a
-        // Tier-2 computable exact real" and read as a Word that does not work,
-        // while the run had in fact produced π.
-        try {
-            result.stackSnapshot = interpreter!.snapshot_stack();
-        } catch (snapshotError: any) {
-            result.stackSnapshotError = String(snapshotError?.message ?? snapshotError);
-        }
-
-        if (isAborted) throw new Error('aborted');
+        result.stackSnapshot = interpreter!.snapshot_stack();
 
         self.postMessage({ type: 'result', id, data: result });
 
     } catch (error: any) {
-        if (isAborted || error.message === 'aborted') {
-            self.postMessage({ type: 'aborted', id });
-        } else {
-            self.postMessage({ type: 'error', id, data: error.toString() });
-        }
-    } finally {
-        currentTaskId = null;
+        self.postMessage({ type: 'error', id, data: error.toString() });
     }
 };

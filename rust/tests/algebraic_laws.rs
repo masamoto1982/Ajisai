@@ -133,11 +133,11 @@ proptest! {
         );
     }
 
-    /// Exact finite comparisons are dual observations over the shared budgeted-order primitive.
+    /// Exact finite comparisons are dual observations over the shared exact-order primitive.
     #[test]
     fn comparison_dualities(a in small(), b in small()) {
         assert_law("lt-gt-dual", &format!("{a} {b} LT"), &format!("{b} {a} GT"));
-        assert_law("lte-gte-dual", &format!("{a} {b} LTE"), &format!("{b} {a} GTE"));
+        assert_law("not-gt-not-lt-dual", &format!("{a} {b} GT NOT"), &format!("{b} {a} LT NOT"));
     }
 
     // ─────────────────── NIL-projection monad (§5) ───────────────────
@@ -149,22 +149,16 @@ proptest! {
     }
 
     /// Absence handler: a projected NIL is replaced by the fallback, a present
-    /// value is kept (LANG.FAILURE.RECOVERY). `NIL?` answers its subject and
-    /// whether it is absent, which is exactly `SELECT`'s truth operand, so the
-    /// handler is `fallback subject NIL? SELECT` with nothing named.
+    /// value is kept (LANG.FAILURE.RECOVERY). `NIL?` consumes its subject and
+    /// answers whether it was absent, which is exactly `SELECT`'s truth
+    /// operand, so the handler names the subject once and reads it twice:
+    /// `subject 'S' BIND fallback S S NIL? SELECT`.
     #[test]
     fn absence_handler(a in small()) {
-        assert_law("absence-recovers-projection", &format!("{a} 1 0 DIV NIL? SELECT"), &format!("{a}"));
+        assert_law("absence-recovers-projection", &format!("1 0 DIV 'S' BIND {a} S S NIL? SELECT"), &format!("{a}"));
         // A present value is its own result regardless of the fallback.
-        assert_law("absence-present", &format!("999 {a} NIL? SELECT"), &format!("{a}"));
+        assert_law("absence-present", &format!("{a} 'S' BIND 999 S S NIL? SELECT"), &format!("{a}"));
     }
-}
-
-/// MOD is the Euclidean remainder induced by floor division: x - floor(x/y)·y.
-#[test]
-fn mod_floor_remainder_examples() {
-    assert_law("mod-positive", "7 3 MOD", "1");
-    assert_law("mod-negative-dividend", "-7 3 MOD", "2");
 }
 
 /// Integer projections are exact-real observations, not float round trips.
@@ -172,14 +166,7 @@ fn mod_floor_remainder_examples() {
 fn integer_projection_examples() {
     assert_law("floor-positive", "7 3 DIV FLOOR", "2");
     assert_law("floor-negative", "-7 3 DIV FLOOR", "-3");
-    assert_law("ceil-positive", "7 3 DIV CEIL", "3");
-    assert_law("ceil-negative", "-7 3 DIV CEIL", "-2");
-    assert_law(
-        "ceil-is-reflected-floor",
-        "7 3 DIV CEIL",
-        "7 3 DIV NEG FLOOR NEG",
-    );
-    assert_law("ceil-of-integer", "4 CEIL", "4");
+    assert_law("floor-of-integer", "4 FLOOR", "4");
     assert_law("round-positive-half", "5 2 DIV ROUND", "3");
     assert_law("round-negative-half", "-5 2 DIV ROUND", "-3");
 }
@@ -187,20 +174,14 @@ fn integer_projection_examples() {
 // ─────────────────── Strong Kleene three-valued logic K3 (§4) ───────────────────
 //
 // K3 laws are checked exhaustively over the truth domain {TRUE, FALSE, U}.
-// `U` is produced by an undecidable continued-fraction comparison
-// (LANG.VALUES.EXACT): `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ` compares the composed
-// Gosper value (√2+1) − (√2+1) against 0 and exhausts the budget. (Plain
-// √2 − √2 now collapses to an exact 0 in closed form and would decide.)
+// `U` is a NIL read in truth position (LANG.VALUES.TRUTH): every comparison
+// over the numbers decides, so the bare `NIL` is how a program writes it.
 // Each law renders both sides through the identical path,
 // so the equation is independent of how a truth value is displayed (finding B).
 
 /// The three truth-domain generators as Ajisai source fragments.
 fn truths() -> [(&'static str, &'static str); 3] {
-    [
-        ("T", "TRUE"),
-        ("F", "FALSE"),
-        ("U", "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
-    ]
+    [("T", "TRUE"), ("F", "FALSE"), ("U", "NIL")]
 }
 
 #[test]
@@ -211,41 +192,13 @@ fn k3_double_negation() {
 }
 
 #[test]
-fn k3_and_or_commutative() {
+fn k3_and_commutative() {
     for (na, a) in truths() {
         for (nb, b) in truths() {
             assert_law(
                 &format!("and-comm[{na},{nb}]"),
                 &format!("{a} {b} AND"),
                 &format!("{b} {a} AND"),
-            );
-            assert_law(
-                &format!("or-comm[{na},{nb}]"),
-                &format!("{a} {b} OR"),
-                &format!("{b} {a} OR"),
-            );
-        }
-    }
-}
-
-// De Morgan over {T, F, U}. Truth values now render uniformly as
-// TRUE/FALSE/UNKNOWN through every path (finding B fixed), so both sides of
-// each law render identically when they denote the same truth value.
-#[test]
-fn k3_de_morgan() {
-    for (na, a) in truths() {
-        for (nb, b) in truths() {
-            // ¬(a ∧ b) = ¬a ∨ ¬b
-            assert_law(
-                &format!("de-morgan-and[{na},{nb}]"),
-                &format!("{a} {b} AND NOT"),
-                &format!("{a} NOT {b} NOT OR"),
-            );
-            // ¬(a ∨ b) = ¬a ∧ ¬b
-            assert_law(
-                &format!("de-morgan-or[{na},{nb}]"),
-                &format!("{a} {b} OR NOT"),
-                &format!("{a} NOT {b} NOT AND"),
             );
         }
     }
@@ -255,20 +208,14 @@ fn k3_de_morgan() {
 fn k3_associativity_and_idempotence() {
     let ts = truths();
     for (na, a) in ts {
-        // Idempotence: a ∧ a = a, a ∨ a = a.
+        // Idempotence: a ∧ a = a.
         assert_law(&format!("and-idem[{na}]"), &format!("{a} {a} AND"), a);
-        assert_law(&format!("or-idem[{na}]"), &format!("{a} {a} OR"), a);
         for (nb, b) in ts {
             for (nc, c) in ts {
                 assert_law(
                     &format!("and-assoc[{na},{nb},{nc}]"),
                     &format!("{a} {b} AND {c} AND"),
                     &format!("{a} {b} {c} AND AND"),
-                );
-                assert_law(
-                    &format!("or-assoc[{na},{nb},{nc}]"),
-                    &format!("{a} {b} OR {c} OR"),
-                    &format!("{a} {b} {c} OR OR"),
                 );
             }
         }

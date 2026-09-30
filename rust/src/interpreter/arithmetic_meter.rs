@@ -5,7 +5,7 @@
 //! It used to be neither: two of the six routes out of
 //! `arithmetic::apply_exact_arithmetic_schema` charged, both reachable only
 //! when both operands were scalar-shaped, and the other four were free. So
-//! `2 3 *` was priced and `[ 2 ] 3 *` was not, and `algebraicTerms` was a
+//! `2 3 MUL` was priced and `[ 2 ] 3 MUL` was not, and `algebraicTerms` was a
 //! ceiling a vector literal turned off. Which route runs is an optimization
 //! decision, unobservable by LANG.AUTHORITY.FREEDOM; a safety control priced
 //! per route made it observable, which is the one thing a limit must never do.
@@ -86,10 +86,8 @@ pub(crate) fn charge_binary_schema(
         let pairs = match schema {
             ExactArithmeticSchema::Mul => left_terms.saturating_mul(right_terms),
             // Division inverts the right operand (conjugation recursion, ~term²
-            // inner products) and multiplies; bound by both. `MOD` performs
-            // that division and then one more multiply and subtract, which the
-            // same bound already covers.
-            ExactArithmeticSchema::Div | ExactArithmeticSchema::Mod => left_terms
+            // inner products) and multiplies; bound by both.
+            ExactArithmeticSchema::Div => left_terms
                 .saturating_mul(right_terms)
                 .saturating_add(right_terms.saturating_mul(right_terms)),
             ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => {

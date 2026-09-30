@@ -123,16 +123,14 @@
     }
    },
    "additionalProperties": false,
-   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `MOD` answers NIL both for a zero divisor and for an integer projection it cannot decide. `reason` already accepted a list; a single condition may still be written as a bare string. As with `errorWhen`, a condition here names a state of the input rather than an outcome; this field is what says the outcome is a projection."
+   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `POW` answers NIL both for a zero base under a negative exponent and for an exponent that leaves the exact field. `reason` already accepted a list; a single condition may still be written as a bare string. As with `errorWhen`, a condition here names a state of the input rather than an outcome; this field is what says the outcome is a projection."
   },
   "documentation": {
    "type": "object",
    "required": [
     "summary",
     "hover",
-    "lookup",
     "syntax",
-    "role",
     "stackEffect"
    ],
    "properties": {
@@ -144,15 +142,7 @@
      "type": "string",
      "minLength": 1
     },
-    "lookup": {
-     "type": "string",
-     "minLength": 1
-    },
     "syntax": {
-     "type": "string",
-     "minLength": 1
-    },
-    "role": {
      "type": "string",
      "minLength": 1
     },
@@ -167,11 +157,8 @@
    "type": "object",
    "required": [
     "name",
-    "aliases",
     "family",
-    "category",
     "stack",
-    "consumption",
     "nilPolicy",
     "projection",
     "errorWhen",
@@ -189,14 +176,6 @@
      "type": "string",
      "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$"
     },
-    "aliases": {
-     "type": "array",
-     "items": {
-      "type": "string",
-      "minLength": 1
-     },
-     "uniqueItems": true
-    },
     "family": {
      "enum": [
       "booleanLogic",
@@ -207,15 +186,10 @@
       "text",
       "control",
       "absence",
-      "stackModifier",
       "dictionary",
       "output",
       "record"
      ]
-    },
-    "category": {
-     "type": "string",
-     "minLength": 1
     },
     "stack": {
      "type": "object",
@@ -229,16 +203,22 @@
       },
       "outputs": {
        "$ref": "#/$defs/arity"
+      },
+      "operands": {
+       "description": "What the Word does with each operand, first-pushed first (LANG.FAILURE.PASSTHROUGH). `leaf`: the Word reads it as one Scalar, String or Boolean, so an absent operand makes the result that absence, and a Vector or Record there lifts the Word over its elements (LANG.COLLECTIONS.LIFT). `data`: the Word reads it whole, so an absent operand makes the result that absence. `element`: the Word carries it without reading it, so a NIL is an ordinary value. `control`: a block it evaluates, a name it binds, defines or looks up, or a message it raises, so a NIL there is malformed use. `truth`: read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH), and which lifts like a `leaf`. Present exactly when `inputs` is a fixed count, with one role per operand.",
+       "type": "array",
+       "items": {
+        "enum": [
+         "leaf",
+         "data",
+         "element",
+         "control",
+         "truth"
+        ]
+       }
       }
      },
      "additionalProperties": false
-    },
-    "consumption": {
-     "enum": [
-      "none",
-      "eat",
-      "retain"
-     ]
     },
     "nilPolicy": {
      "enum": [
@@ -264,6 +244,7 @@
      "description": "The conditions under which the Word raises. A condition names a state of the *input* — \"the divisor is zero\", \"the index is outside the vector\" — and not an outcome, so the schema permits the same name in one Word's `errorWhen` and another's `projection.when`. Which field it appears in is what decides the outcome, per Word, and the two are never both declared for one condition on one Word. No condition is currently declared both ways anywhere in the registry: `indexOutOfBounds` was the last one that was — `GET` projected it while `TAKE` and `PUT` raised it — and those two now project it too, so every condition in the registry has one outcome across the whole vocabulary."
     },
     "partiality": {
+     "description": "A summary of the declared outcomes, never a choice of its own (scripts/check-word-schema-migration.mjs derives it): `projecting` when the Word declares a projection; else `partial` when it runs a block (purity `conditional`) or declares an errorWhen condition spec/outcomes.json marks `repair: program`; else `total` — it raises only on an operand of the wrong kind.",
      "type": "string",
      "enum": [
       "total",
@@ -271,22 +252,10 @@
       "projecting"
      ]
     },
-    "acceptedDomain": {
-     "description": "The shape of operand the Word accepts. `partiality` says what happens to an operand the Word accepts; this says which operands those are, and the two together are what a reader needs before calling it. Omitted where the Word takes whatever its family takes.",
-     "type": "string",
-     "enum": [
-      "scalar",
-      "numeric",
-      "flatNumericVector",
-      "vector",
-      "text"
-     ]
-    },
     "purity": {
      "enum": [
       "pure",
       "conditional",
-      "observational",
       "effectful"
      ]
     },

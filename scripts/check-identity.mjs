@@ -88,9 +88,10 @@ for (const level of levels) {
     }
     // `unknown` reaches a reader two ways, and which one it is decides whether
     // a registry reason applies. A comparison the language performs answers
-    // with a NIL, so its reason must be a declared one; a judgement a host
-    // makes from identities it was handed is not a value at all, and demanding
-    // a NIL reason for it would be asking the wrong question.
+    // with a NIL, so its reason must be a declared one; a rule for what a
+    // reader of identities — a host, or a program comparing `DIGEST` texts —
+    // may conclude is not a value at all, and demanding a NIL reason for it
+    // would be asking the wrong question.
     if (reachesUnknown) {
       const arrival = level.unknownArrivesAs;
       if (!arrival || typeof arrival.kind !== 'string') {
@@ -102,10 +103,10 @@ for (const level of levels) {
               'spec/outcomes.json does not declare',
           );
         }
-      } else if (arrival.kind === 'hostJudgement') {
+      } else if (arrival.kind === 'readingRule') {
         if (typeof arrival.note !== 'string' || arrival.note.trim() === '') {
           fail(
-            `level "${id}" reaches "unknown" as a host judgement but does not say what a host ` +
+            `level "${id}" reaches "unknown" as a reading rule but does not say what a reader ` +
               'may conclude from it, which is the whole content of that claim',
           );
         }

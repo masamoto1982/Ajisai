@@ -1,11 +1,10 @@
 // Adversarial robustness for the import-document parser: an imported .json file
 // is fully untrusted, so `parseImportDocument` must honour its `Result` contract
-// (never throw) and only forward well-formed words downstream. Regression for
-// the fuzzing finding that malformed v2 entries (null / name-less / non-string
-// name) threw a TypeError out of the parser.
+// (never throw) and only forward well-formed words downstream, whatever a
+// malformed entry looks like (null / name-less / non-string name).
 
 import { describe, expect, test } from 'vitest';
-import { createExportData, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
+import { checkHasSavedDictionary, createExportData, normalizeWordEntry, parseImportDocument, summarizeImport } from './interpreter-state-persistence';
 import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 
 describe('parseImportDocument robustness', () => {
@@ -50,65 +49,89 @@ describe('parseImportDocument robustness', () => {
     });
 });
 
-describe('namesThatDidNotRestore', () => {
-    // Only `collect_user_words_info` is consulted, so the rest of the
-    // interpreter surface is not modelled.
-    const withWords = (present: string[]): AjisaiInterpreter => ({
-        collect_user_words_info: () =>
-            present.map(name => ['USER', name, false] as [string, string, boolean]),
-    } as unknown as AjisaiInterpreter);
+describe('summarizeImport', () => {
+    const ids = (entries: Record<string, string>): Map<string, string> => new Map(Object.entries(entries));
 
-    test('names a requested word that is not in the dictionary afterwards', () => {
+    test('counts an arrival as added and an identical word already present as unchanged', () => {
         const requested: UserWord[] = [
-            { name: 'KEPT', definition: '[ 1 ]' },
-            { name: 'LEGACY', definition: '[1]' },
+            { name: 'NEW', definition: '[ 1 ]' },
+            { name: 'SAME', definition: '[ 2 ]' },
         ];
-        expect(namesThatDidNotRestore(withWords(['KEPT']), requested)).toEqual(['LEGACY']);
+        const summary = summarizeImport(requested, [], ids({ SAME: 's' }), ids({ NEW: 'n', SAME: 's' }), null);
+        expect(summary.added).toEqual(['NEW']);
+        expect(summary.unchanged).toEqual(['SAME']);
+        expect(summary.skipped).toEqual([]);
     });
 
-    test('reports nothing when every requested word arrived', () => {
-        const requested: UserWord[] = [
-            { name: 'ONE', definition: '[ 1 ]' },
-            { name: 'TWO', definition: '[ 2 ]' },
-        ];
-        expect(namesThatDidNotRestore(withWords(['ONE', 'TWO']), requested)).toEqual([]);
+    // The interpreter refused the file's body and kept the old one: the
+    // dictionary looks the same before and after, which used to read as
+    // "unchanged (deduplicated by content identity)".
+    test('reports a refused redefinition as skipped, never as unchanged', () => {
+        const requested: UserWord[] = [{ name: 'INC', definition: '5 ADD' }];
+        const skipped = [{ name: 'INC', reason: "Cannot redefine 'INC': referenced by INC2" }];
+        const summary = summarizeImport(requested, skipped, ids({ INC: 'a' }), ids({ INC: 'a' }), null);
+        expect(summary.unchanged).toEqual([]);
+        expect(summary.added).toEqual([]);
+        expect(summary.skipped).toEqual(skipped);
     });
 
-    // An entry with no body asked for nothing, so its absence is not a loss.
-    test('does not report a definition-less entry', () => {
+    // An entry with no body is passed over by the interpreter and asked for
+    // nothing; it used to be counted as imported.
+    test('does not count a definition-less entry as imported', () => {
         const requested: UserWord[] = [
             { name: 'NO-BODY', definition: null },
             { name: 'REAL', definition: '[ 1 ]' },
         ];
-        expect(namesThatDidNotRestore(withWords(['REAL']), requested)).toEqual([]);
+        const summary = summarizeImport(requested, [], ids({}), ids({ REAL: 'r' }), null);
+        expect(summary.added).toEqual(['REAL']);
+        expect(summary.unchanged).toEqual([]);
     });
 
     // A word answers to either spelling, so matching is through the same
     // normalization the dictionary uses.
     test('matches the dictionary through the normalized name', () => {
         const requested: UserWord[] = [{ name: 'lower', definition: '[ 1 ]' }];
-        expect(namesThatDidNotRestore(withWords(['LOWER']), requested)).toEqual([]);
+        const summary = summarizeImport(requested, [], ids({}), ids({ LOWER: 'l' }), null);
+        expect(summary.added).toEqual(['lower']);
+    });
+
+    test('names a word whose embedded identity is not the identity it has here', () => {
+        const requested: UserWord[] = [{ name: 'DBL', definition: '3 MUL' }];
+        const summary = summarizeImport(requested, [], ids({ DBL: 'old' }), ids({ DBL: 'old' }), ids({ DBL: 'deadbeef' }));
+        expect(summary.idMismatches).toEqual(['DBL']);
     });
 });
 
-// Regression for a bug where the export document was filtered by a
-// per-dictionary label sourced from a hidden `<select>` element left over
-// from the module/multi-dictionary era. `collect_user_words_info` reports a
-// constant "USER" label for every word (the dictionary has one exportable
-// tier), so any filter that could disagree with that label silently dropped
-// every word instead of exporting them. `createExportData` no longer
-// filters at all: every User Word it is given comes out.
+// The saved session goes through the same entry check as an import file, so
+// one malformed entry costs that entry rather than the whole dictionary.
+describe('normalizeWordEntry', () => {
+    test('keeps a well-formed entry', () => {
+        expect(normalizeWordEntry({ name: 'A', definition: '1', description: 'd' })).toEqual({ name: 'A', definition: '1', description: 'd' });
+    });
+
+    for (const raw of [null, 1, 'A', { definition: '1' }, { name: 2 }, { name: null }]) {
+        test(`drops ${JSON.stringify(raw)}`, () => {
+            expect(normalizeWordEntry(raw)).toBeNull();
+        });
+    }
+
+    test('reads a non-string definition as absent', () => {
+        expect(normalizeWordEntry({ name: 'A', definition: 7 })).toEqual({ name: 'A', definition: null, description: undefined });
+    });
+});
+
+// `createExportData` does not filter: every User Word it is given comes out.
 describe('createExportData', () => {
     const fakeInterpreter = (words: string[]): AjisaiInterpreter => ({
         collect_user_words_info: () =>
-            words.map(name => ['USER', name, false] as [string, string, boolean]),
+            words.map(name => [name, false] as [string, boolean]),
         collect_word_identities: () =>
             words.map(name => [name, `id-${name}`] as [string, string]),
         lookup_word_definition: (name: string) => `[ '${name}' ]`,
         lookup_word_description: () => null,
     } as unknown as AjisaiInterpreter);
 
-    test('exports every user word regardless of any dictionary label', () => {
+    test('exports every user word', () => {
         const data = createExportData(fakeInterpreter(['ALPHA', 'BETA']));
         expect(data.words.map(w => w.name)).toEqual(['ALPHA', 'BETA']);
     });
@@ -121,5 +144,19 @@ describe('createExportData', () => {
     test('carries each word\'s content identity', () => {
         const data = createExportData(fakeInterpreter(['ALPHA']));
         expect(data.words[0]?.id).toBe('id-ALPHA');
+    });
+});
+
+describe('checkHasSavedDictionary', () => {
+    test('treats an empty saved dictionary as a dictionary, so deleting every User Word survives a reload', () => {
+        expect(checkHasSavedDictionary({ userWords: [] })).toBe(true);
+    });
+
+    test('treats a saved dictionary with words as a dictionary', () => {
+        expect(checkHasSavedDictionary({ userWords: [{ name: 'SQ', definition: '[ 2 POW ]', description: null }] as never })).toBe(true);
+    });
+
+    test('seeds the Example Words only when no dictionary was saved at all', () => {
+        expect(checkHasSavedDictionary({ userWords: undefined as never })).toBe(false);
     });
 });

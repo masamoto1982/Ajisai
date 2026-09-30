@@ -14,7 +14,7 @@ mod tests {
     async fn def(name: &str) -> Result<(), String> {
         let mut interp = Interpreter::new();
         interp
-            .execute(&format!("[ | [ 1 ] ] '{}' DEF", name))
+            .execute(&format!("[ [ 1 ] ] '{}' DEF", name))
             .await
             .map_err(|e| e.to_string())
     }
@@ -51,7 +51,7 @@ mod tests {
 
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ | [ 7 ] ] '{}' DEF {}", name, name))
+                .execute(&format!("[ [ 7 ] ] '{}' DEF {}", name, name))
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be callable, got: {e}"));
             assert_eq!(
@@ -62,24 +62,17 @@ mod tests {
         }
     }
 
-    /// The retired block syntax lexes, `{ ... }` now being the Record literal
-    /// (LANG.RECORDS.STRUCTURE), so what refuses it has moved from the lexer
-    /// to `DEF`: a definition body is a Vector, and a Record is not one.
-    ///
-    /// This is the property `test_brace_is_rejected_as_source` used to hold at
-    /// the tokenizer, kept where the refusal now lives.
+    /// A brace is an ordinary name, so a brace-block form is a call of the
+    /// undefined Word `{` and defines nothing.
     #[tokio::test]
-    async fn retired_brace_block_syntax_still_does_not_define_a_word() {
+    async fn a_brace_block_does_not_define_a_word() {
         let mut interp = Interpreter::new();
         let err = interp
-            .execute("{ [ 2 ] * } 'DOUBLE' DEF")
+            .execute("{ [ 2 ] MUL } 'DOUBLE' DEF")
             .await
-            .expect_err("the retired brace-block form must not define a Word")
+            .expect_err("a brace block must not define a Word")
             .to_string();
-        assert!(
-            err.contains("definition body"),
-            "the failure should name the body `DEF` wanted, got: {err}"
-        );
+        assert!(err.contains("Unknown word"), "got: {err}");
         assert!(
             !interp.user_words.contains_key("DOUBLE"),
             "the retired form must not have defined DOUBLE"
@@ -90,7 +83,7 @@ mod tests {
     /// under — the half of the allocation that reaches the dictionary.
     #[tokio::test]
     async fn a_delimiter_is_not_a_definable_name() {
-        for name in ["{", "}", "[", "]"] {
+        for name in ["[", "]"] {
             let err = def(name)
                 .await
                 .expect_err("a delimiter must not be definable")
@@ -104,18 +97,17 @@ mod tests {
 
     /// A freed character is a perfectly ordinary name, so a Word may be
     /// defined under one and called by writing it. This is the other half of
-    /// the rule above: only what is taken is refused. `a|b` is here because
-    /// only the bare `|` is taken (it separates a parameter header).
+    /// the rule above: nothing is reserved, so nothing is refused.
     #[tokio::test]
     async fn a_freed_character_is_a_definable_name() {
-        for name in ["(", ")", "a|b", "f(x)"] {
+        for name in ["(", ")", "|", "f(x)"] {
             def(name)
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));
 
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ | [ 7 ] ] '{}' DEF {}", name, name))
+                .execute(&format!("[ [ 7 ] ] '{}' DEF {}", name, name))
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be callable, got: {e}"));
             assert_eq!(
@@ -126,24 +118,6 @@ mod tests {
         }
     }
 
-    /// The bare `|` separates a definition's parameter header from its body
-    /// (LANG.SOURCE.FRAME), so neither a Word nor a binding may take it.
-    #[tokio::test]
-    async fn the_header_separator_is_not_a_name() {
-        let err = def("|")
-            .await
-            .expect_err("`|` must not be definable")
-            .to_string();
-        assert!(err.contains("separates"), "got: {err}");
-        let mut interp = Interpreter::new();
-        let err = interp
-            .execute("1 '|' BIND")
-            .await
-            .expect_err("`|` must not be bindable")
-            .to_string();
-        assert!(err.contains("separates"), "got: {err}");
-    }
-
     /// Names are matched through the canonical normalization, so a lowercase
     /// definition answers to either spelling. The rule must not disturb that.
     #[tokio::test]
@@ -151,25 +125,25 @@ mod tests {
         for call in ["gentle", "GENTLE"] {
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ | [ 7 ] ] 'gentle' DEF {}", call))
+                .execute(&format!("[ [ 7 ] ] 'gentle' DEF {}", call))
                 .await
                 .unwrap_or_else(|e| panic!("`{call}` should reach the word, got: {e}"));
             assert_eq!(interp.stack.len(), 1);
         }
     }
 
-    /// A name reserved as an alias keeps its own diagnosis: `+` and `>=` both
-    /// lex as perfectly ordinary Symbols, so the unwritable-name rule must not
-    /// shadow the more specific message. This is why that rule is checked after
-    /// the reserved-name one rather than before it.
+    /// A symbol that was once a second spelling of a Core Word is an ordinary
+    /// name now: `+` and `<` lex as Symbols, so they are definable like any
+    /// other, and the Word defined under one is reached by writing it.
     #[tokio::test]
-    async fn a_reserved_alias_keeps_its_own_message() {
-        for name in ["+", ">="] {
-            let err = def(name).await.expect_err(&format!("`{name}` is reserved"));
-            assert!(
-                err.contains("reserved"),
-                "`{name}` should say it is reserved rather than unwritable, got: {err}"
-            );
+    async fn a_freed_symbol_is_an_ordinary_definable_name() {
+        for name in ["+", "<"] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(&format!("[ 1 ] '{name}' DEF {name}"))
+                .await
+                .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));
+            assert_eq!(interp.stack.len(), 1);
         }
     }
 }

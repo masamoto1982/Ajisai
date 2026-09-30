@@ -1,13 +1,13 @@
 //! Test suite for `crate::interpreter::error_flow_trace`.
 
-use crate::error::{ErrorCategory, NilReason};
+use crate::error::NilReason;
 use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
 use crate::interpreter::Interpreter;
 
 #[tokio::test]
 async fn nil_produced_event_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -27,7 +27,7 @@ async fn nil_produced_event_has_execute_word_diagnosis() {
 #[tokio::test]
 async fn projection_produced_by_word_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -49,7 +49,7 @@ async fn projection_produced_by_word_has_execute_word_diagnosis() {
 #[tokio::test]
 async fn stack_underflow_has_stack_shape_diagnosis() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("+").await;
+    let result = interp.execute("ADD").await;
     assert!(result.is_err());
 
     let trace = interp.drain_error_flow_trace();
@@ -67,7 +67,7 @@ async fn stack_underflow_has_stack_shape_diagnosis() {
 #[tokio::test]
 async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -93,7 +93,7 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
 #[tokio::test]
 async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -105,42 +105,51 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
         .diagnosis
         .as_ref()
         .expect("NilProduced event should carry a diagnosis");
-    let payload = diagnosis.ai_payload(
-        event.error_category.as_ref(),
+    // A NIL is not an error: it names no error category, and so no repair.
+    // `divisionByZero` is a NIL reason in spec/outcomes.json and never a
+    // category, which is what this event used to report it as.
+    assert_eq!(event.error_category, None);
+    let payload = diagnosis.ai_payload(event.error_category.as_ref());
+    assert_eq!(payload.category, None);
+    assert_eq!(payload.repair, None);
+    assert_eq!(payload.word.as_deref(), Some("DIV"));
+    assert_eq!(payload.family.as_deref(), Some("exactArithmetic"));
+    // The NIL's reason is the event's absence, where every host reads it.
+    assert_eq!(
         event
             .absence
             .as_ref()
-            .and_then(|absence| absence.reason.as_ref()),
-        None,
-        None,
+            .and_then(|absence| absence.reason.as_ref())
+            .map(|reason| reason.as_protocol_str()),
+        Some("divisionByZero")
     );
-    assert_eq!(payload.kind.as_deref(), Some("divisionByZero"));
-    assert_eq!(payload.recoverability, "fixInput");
-    assert_eq!(payload.semantic_area, "exact-real-arithmetic");
-    assert_eq!(payload.word.as_deref(), Some("DIV"));
-    assert_eq!(payload.semantic_role, "Derived");
-    assert_eq!(payload.algebraic_family, "exact-arithmetic");
-    assert_eq!(payload.nil_reason.as_deref(), Some("divisionByZero"));
-    assert!(payload.truth_value.is_none());
-    assert!(payload.effect.is_none());
-    assert!(payload
+    assert!(diagnosis
         .next_checks
         .iter()
         .any(|check| check.code == "checkDivisor"));
+    assert!(
+        diagnosis
+            .summary
+            .starts_with("executeWord / DIV / domain (nil:divisionByZero)"),
+        "{}",
+        diagnosis.summary
+    );
 }
 
 #[tokio::test]
 async fn error_flow_trace_records_direct_projection_from_word() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
     let trace = interp.drain_error_flow_trace();
     assert!(
         trace
             .iter()
             .any(|e| e.kind == ErrorFlowEventKind::NilProduced
                 && e.word.as_deref() == Some("DIV")
-                && e.error_category == Some(ErrorCategory::DivisionByZero)),
-        "expected NilProduced(DIV, DivisionByZero), got {:?}",
+                && e.error_category.is_none()
+                && e.absence.as_ref().and_then(|a| a.reason.as_ref())
+                    == Some(&NilReason::DivisionByZero)),
+        "expected NilProduced(DIV) with reason divisionByZero, got {:?}",
         trace
     );
 }
@@ -148,7 +157,7 @@ async fn error_flow_trace_records_direct_projection_from_word() {
 #[tokio::test]
 async fn error_flow_trace_drain_clears_log() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
     let first = interp.drain_error_flow_trace();
     assert!(!first.is_empty());
     let second = interp.drain_error_flow_trace();
@@ -158,7 +167,7 @@ async fn error_flow_trace_drain_clears_log() {
 #[tokio::test]
 async fn direct_projection_carries_division_by_zero_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 /").await.unwrap();
+    interp.execute("10 0 DIV").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
@@ -231,36 +240,108 @@ mod attribution_tests {
     /// routes reporting the same Word (LANG.AUTHORITY.FREEDOM).
     #[tokio::test]
     async fn a_user_word_body_failure_names_the_user_word() {
-        let diagnosis = diagnose("[ X | X SORT ] 'S' DEF 5 S").await;
+        let diagnosis = diagnose("[ SORT ] 'S' DEF 5 S").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), None);
     }
 
     #[tokio::test]
     async fn a_user_word_applied_by_a_higher_order_word_is_still_the_locus() {
-        let diagnosis = diagnose("[ X | X SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
+        let diagnosis = diagnose("[ SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
     }
+}
 
-    /// Each half of `expected _, got _` is a noun phrase, never a whole
-    /// sentence — a raise site that passed a sentence as the first half used
-    /// to render "expected SORT: expected vector, got non-vector value, got
-    /// other format". `SORT` itself no longer reaches this path (its
-    /// non-vector operand now names the declared condition `nonVector`
-    /// directly), so this exercises `create_structure_error`'s own rendering
-    /// discipline instead of routing through a specific Word.
-    #[test]
-    fn a_structure_error_renders_as_one_sentence() {
-        let message =
-            crate::error::AjisaiError::create_structure_error("vector", "non-vector value")
-                .to_string();
+/// Which Word *produced* a reasoned NIL, as against which Words it passed
+/// through. A NIL flows like any other value (LANG.FAILURE.PASSTHROUGH): an
+/// absent data operand is the result, reason unchanged, and the primitive does
+/// not run. Every Word downstream of the projection used to record the NIL as
+/// its own, so a host showing the latest event blamed the last Word the NIL
+/// passed.
+#[cfg(test)]
+mod production_attribution_tests {
+    use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
+    use crate::interpreter::Interpreter;
+
+    async fn productions(source: &str) -> Vec<ErrorFlowEvent> {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(source)
+            .await
+            .unwrap_or_else(|e| panic!("`{source}` must compute, got: {e:?}"));
+        interp
+            .drain_error_flow_trace()
+            .into_iter()
+            .filter(|event| event.kind == ErrorFlowEventKind::NilProduced)
+            .collect()
+    }
+
+    fn producers(events: &[ErrorFlowEvent]) -> Vec<&str> {
+        events
+            .iter()
+            .filter_map(|event| event.word.as_deref())
+            .collect()
+    }
+
+    fn inside(event: &ErrorFlowEvent) -> Option<&str> {
+        event
+            .diagnosis
+            .as_ref()?
+            .evidence
+            .iter()
+            .find_map(|e| e.strip_prefix("insideWords="))
+    }
+
+    #[tokio::test]
+    async fn a_nil_passed_through_data_operands_is_produced_once() {
+        let events = productions("1 0 DIV 2 ADD 3 MUL 1 EQ").await;
+        assert_eq!(producers(&events), vec!["DIV"]);
+    }
+
+    /// An element operand carries a NIL as an ordinary value, so a Word that
+    /// collects, joins or extracts it produced nothing either.
+    #[tokio::test]
+    async fn a_nil_carried_as_an_element_is_not_produced_again() {
         assert_eq!(
-            message,
-            "Structure error: expected vector, got non-vector value"
+            producers(&productions("1 0 DIV 1 COLLECT [ 2 ] CONCAT 0 GET").await),
+            vec!["DIV"]
         );
-        assert_eq!(message.matches("expected").count(), 1);
-        assert_eq!(message.matches("got").count(), 1);
+    }
+
+    /// A NIL that entered a User Word through its operand and left through its
+    /// result was passed through the body's Words and through the Word.
+    #[tokio::test]
+    async fn a_user_word_that_passes_a_nil_through_did_not_produce_it() {
+        let events = productions("[ 2 DIV ] 'HALVE' DEF 1 0 DIV HALVE").await;
+        assert_eq!(producers(&events), vec!["DIV"]);
+        assert_eq!(inside(&events[0]), None);
+    }
+
+    /// A NIL a body's Word projected is that Word's, and the User Word is the
+    /// frame it happened in — innermost first, as a failure's frames are.
+    /// `HALVE`'s body compiles; `TWICE`'s holds a nested quotation the
+    /// compiler leaves to the interpreter, so both body routes are covered and
+    /// must read alike (LANG.AUTHORITY.FREEDOM).
+    #[tokio::test]
+    async fn a_nil_produced_inside_a_user_word_names_the_producer_and_the_frames() {
+        let compiled = productions("[ 0 DIV ] 'HALVE' DEF [ HALVE ] 'OUTER' DEF 1 OUTER").await;
+        assert_eq!(producers(&compiled), vec!["DIV"]);
+        assert_eq!(inside(&compiled[0]), Some("HALVE,OUTER"));
+
+        let interpreted =
+            productions("[ 0 DIV [ ADD ] DROP ] 'TWICE' DEF [ TWICE ] 'OUTER' DEF 1 OUTER").await;
+        assert_eq!(producers(&interpreted), vec!["DIV"]);
+        assert_eq!(inside(&interpreted[0]), Some("TWICE,OUTER"));
+    }
+
+    /// A NIL a block's Word projected under a higher-order Word is the block
+    /// Word's, once per application, inside the higher-order Word.
+    #[tokio::test]
+    async fn a_nil_produced_in_an_applied_block_is_the_block_words() {
+        let events = productions("[ 1 2 ] [ 0 DIV ] MAP").await;
+        assert_eq!(producers(&events), vec!["DIV", "DIV"]);
+        assert!(events.iter().all(|event| inside(event) == Some("MAP")));
     }
 }
 
@@ -298,10 +379,7 @@ mod source_position_tests {
         // The body has no source of its own — it was stored as tokens — so the
         // position a reader can act on is the top-level token that reached it.
         let mut interp = Interpreter::new();
-        interp
-            .execute("[ | 1 BADWORD ] 'BROKEN' DEF")
-            .await
-            .unwrap();
+        interp.execute("[ 1 BADWORD ] 'BROKEN' DEF").await.unwrap();
         let _ = interp.drain_error_flow_trace();
         assert!(interp.execute("1 PRINT\n2 PRINT\nBROKEN").await.is_err());
         assert_eq!(evidence_of(&mut interp, "sourceLine").as_deref(), Some("3"));
@@ -327,26 +405,5 @@ mod source_position_tests {
             evidence.contains(&"sourceColumn=5".to_string()),
             "{evidence:?}"
         );
-    }
-
-    /// The spelling the program was written with, from the one place it still
-    /// exists: the token. Dispatch canonicalizes an alias before anything
-    /// downstream sees it, so `1 + 2` reported a failure in `ADD` with
-    /// nothing tying it to the `+` that was typed. It is recorded beside the
-    /// position because it answers the same question: what the reader wrote.
-    #[tokio::test]
-    async fn a_failure_reached_through_an_alias_records_the_alias() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1 + 2").await.is_err());
-        assert_eq!(evidence_of(&mut interp, "sourceWord").as_deref(), Some("+"));
-    }
-
-    /// A program written under the Word's own name has no second spelling to
-    /// report, and the diagnosis says nothing rather than repeating itself.
-    #[tokio::test]
-    async fn a_failure_written_under_the_words_own_name_records_no_spelling() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1 ADD").await.is_err());
-        assert_eq!(evidence_of(&mut interp, "sourceWord"), None);
     }
 }

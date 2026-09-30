@@ -54,12 +54,14 @@ fn unbounded() -> RuntimeLimits {
         max_collection_work: u64::MAX,
         max_bigint_bits: u64::MAX,
         max_algebraic_terms: usize::MAX,
+        // Not lifted: it bounds the native stack, not a price.
+        max_nesting_depth: RuntimeLimits::default().max_nesting_depth,
     }
 }
 
 /// Run `setup` to leave the operands on the stack, then time `word` alone.
 ///
-/// The operand has to be built outside the timed region: `[ 0 99999 ] RANGE
+/// The operand has to be built outside the timed region: `0 99999 RANGE
 /// UNIQUE` measures `RANGE` and `UNIQUE` together, and `RANGE` is the cheaper
 /// of the two by three orders of magnitude at that size — which is exactly the
 /// asymmetry being measured. `execute` keeps the stack between calls and resets
@@ -106,13 +108,13 @@ fn measure_charged(setup: &str, word: &str) -> (f64, u64) {
 
 /// A vector of `n` distinct small integers.
 fn distinct(n: usize) -> String {
-    format!("[ 0 {} ] RANGE", n - 1)
+    format!("0 {} RANGE", n - 1)
 }
 
 /// A vector of `n` small integers drawn from `d` distinct values, so the
 /// equality scan finds a match after `d/2` probes on average instead of `n/2`.
 fn few_distinct(n: usize, d: usize) -> String {
-    format!("[ 0 {} ] RANGE {{ {d} MOD }} MAP", n - 1)
+    format!("0 {} RANGE {{ {d} MOD }} MAP", n - 1)
 }
 
 /// A vector of `n` distinct integers each `digits` decimal digits wide.
@@ -122,14 +124,14 @@ fn few_distinct(n: usize, d: usize) -> String {
 /// cheap direction for an equality test. The expensive direction is measured by
 /// `wide_few_distinct`.
 fn wide_distinct(n: usize, digits: usize) -> String {
-    format!("[ 1 {n} ] RANGE {{ {} * }} MAP", "9".repeat(digits))
+    format!("1 {n} RANGE {{ {} MUL }} MAP", "9".repeat(digits))
 }
 
 /// A vector of `n` wide integers with only `d` distinct values, so most
 /// equality tests compare two *equal* wide numbers and cannot exit early.
 fn wide_few_distinct(n: usize, d: usize, digits: usize) -> String {
     format!(
-        "[ 0 {} ] RANGE {{ {d} MOD 1 + {} * }} MAP",
+        "0 {} RANGE {{ {d} MOD 1 ADD {} MUL }} MAP",
         n - 1,
         "9".repeat(digits)
     )
@@ -138,7 +140,7 @@ fn wide_few_distinct(n: usize, d: usize, digits: usize) -> String {
 /// A vector of `n` strings, so equality and ordering run over text rather than
 /// numbers.
 fn text_distinct(n: usize) -> String {
-    format!("[ 0 {} ] RANGE {{ STR }} MAP", n - 1)
+    format!("0 {} RANGE {{ STR }} MAP", n - 1)
 }
 
 /// A vector of `n` nested vectors of `k` elements each: equality on an element
@@ -148,11 +150,11 @@ fn text_distinct(n: usize) -> String {
 /// equality test starts — so this is the cheap arrangement. `shared_prefix` is
 /// the dear one.
 fn nested(n: usize, k: usize) -> String {
-    format!("[ 0 {} ] RANGE {{ [ 1 {k} ] RANGE + }} MAP", n - 1)
+    format!("0 {} RANGE {{ 1 {k} RANGE ADD }} MAP", n - 1)
 }
 
 /// A vector of `n` nested vectors of `k` elements that agree on the first
-/// `k - 1` positions and differ only in the last.
+/// `k SUB 1` positions and differ only in the last.
 ///
 /// This is the adversarial shape for any price that ignores what is *inside* an
 /// element: every equality test walks the whole element before it can answer,
@@ -164,7 +166,7 @@ fn shared_prefix(n: usize, k: usize) -> String {
     mask[k - 1] = "1";
     let ones = vec!["1"; k];
     format!(
-        "[ 0 {} ] RANGE {{ [ {} ] * [ {} ] + }} MAP",
+        "0 {} RANGE {{ [ {} ] MUL [ {} ] ADD }} MAP",
         n - 1,
         mask.join(" "),
         ones.join(" ")
@@ -178,7 +180,7 @@ fn shared_prefix(n: usize, k: usize) -> String {
 /// ordering by refining enclosures. If the price is written in limbs alone,
 /// this is the shape it cannot see.
 fn algebraic(n: usize) -> String {
-    format!("[ 2 {} ] RANGE {{ SQRT }} MAP", n + 1)
+    format!("2 {} RANGE {{ SQRT }} MAP", n + 1)
 }
 
 struct Case {

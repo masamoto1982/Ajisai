@@ -3,18 +3,16 @@
 // A Record crosses the protocol as two aligned arrays of nodes
 // (LANG.OBSERVATION.PROTOCOL), so the panel re-renders it from those arrays
 // rather than receiving the engine's string. Nothing but this test stops the
-// two drifting, and they have drifted before: the panel printed `[]` for an
-// empty Vector where the engine printed `[ ]`, which went unnoticed while a
-// display was not expected to be source. It is now — `[]` is a source error,
-// because a bracket must stand alone (`spec/grammar.json`,
-// `bracketMustStandAlone`).
+// two drifting, and a display is expected to be source: the empty Vector is
+// `[ ]`, because `[]` is a source error — a bracket must stand alone
+// (`spec/grammar.json`, `bracketMustStandAlone`).
 //
 // Every expectation below is a string captured from the engine by running the
 // named program through `ajisai run`, not one written by hand to match the
 // panel.
 
 import { describe, expect, test } from 'vitest';
-import { formatValue } from './output-display-renderer';
+import { describeNilNode, formatValue } from './output-display-renderer';
 
 type Node = Parameters<typeof formatValue>[0];
 
@@ -76,5 +74,58 @@ describe('a Vector of ordinary values is a literal', () => {
 
     test('the empty Vector is spaced, because a bracket must stand alone', () => {
         expect(render(vec())).toBe('[ ]');
+    });
+});
+
+describe('an irrational renders as the engine writes it', () => {
+    // Captured from `ajisai agent compute` (`stackDisplay`), with the node's
+    // `semantics.exactTerms` as the input.
+    const irrational = (...terms: [string, string, string][]): Node =>
+        ({
+            type: 'number',
+            value: { numerator: '0', denominator: '1' },
+            semantics: {
+                approximate: true,
+                exactTerms: terms.map(([numerator, denominator, radicand]) => ({
+                    numerator,
+                    denominator,
+                    radicand
+                }))
+            }
+        }) as Node;
+
+    test.each([
+        ['2 SQRT', irrational(['1', '1', '2']), 'sqrt(2)'],
+        ['1 2 SQRT ADD', irrational(['1', '1', '1'], ['1', '1', '2']), '1/1+sqrt(2)'],
+        ['2 SQRT 3 SQRT SUB', irrational(['1', '1', '2'], ['-1', '1', '3']), 'sqrt(2)-sqrt(3)'],
+        ['2 SQRT 2 DIV', irrational(['1', '2', '2']), '1/2*sqrt(2)'],
+        ['0 2 SQRT SUB', irrational(['-1', '1', '2']), '-sqrt(2)']
+    ])('%s', (_source, node, expected) => {
+        expect(render(node)).toBe(expected);
+    });
+
+    test('inside a Vector it is still one element', () => {
+        expect(render(vec(irrational(['1', '1', '2']), num(1)))).toBe('[ sqrt(2) 1/1 ]');
+    });
+});
+
+// A NIL's reason is its observable content (LANG.VALUES.NIL). The canonical
+// text stays the engine's `NIL`; the Stack draws the reason beside it, and the
+// label it draws is this one.
+describe('a NIL in the Stack carries its reason', () => {
+    const nil = (reason?: string): Node =>
+        ({ type: 'nil', value: null, semantics: reason ? { absence: { reason } } : {} }) as Node;
+
+    test('1 0 DIV', () => {
+        expect(render(nil('divisionByZero'))).toBe('NIL');
+        expect(describeNilNode(nil('divisionByZero'))).toBe('NIL · divisionByZero');
+    });
+
+    test('a NIL the program wrote names that reason too', () => {
+        expect(describeNilNode(nil('literal'))).toBe('NIL · literal');
+    });
+
+    test('a NIL the host sent no reason for is a bare NIL', () => {
+        expect(describeNilNode(nil())).toBe('NIL');
     });
 });

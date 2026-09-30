@@ -6,10 +6,9 @@
 use crate::kernel::generated::{Arity, GeneratedWord};
 use serde::Serialize;
 
-/// Static mass contract: a word's flow-mass relationship under the
-/// default target/consume mode. `consumes` operands are read and `produces` results
-/// are pushed; under `KEEP` the `consumes` operands are additionally retained
-/// (LANG.MODIFIERS.CONSUMPTION). This is the machine-readable form of the "arity /
+/// Static mass contract: a word's flow-mass relationship. `consumes` operands
+/// are read and removed, and `produces` results are pushed
+/// (LANG.STACK.CONSUMPTION). This is the machine-readable form of the "arity /
 /// consumption / production / bifurcation" declaration; the NIL-projection part
 /// of LANG.MACHINE.WORD is carried by `nil_policy`.
 ///
@@ -51,39 +50,8 @@ pub(super) fn mass_from_arity(word: &GeneratedWord) -> MassContract {
 /// The canonical mass contract for a Coreword, keyed by its canonical name.
 /// Unknown or non-core names conservatively return `Dynamic`.
 pub fn mass_contract(name: &str) -> MassContract {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    let canonical = crate::word_name::canonical_word_name(name);
     crate::kernel::generated::generated_word(&canonical)
         .map(mass_from_arity)
         .unwrap_or(MassContract::Dynamic)
-}
-
-/// Read runtime partiality from the canonical Word contract.
-pub(crate) const fn partiality_from_contract(word: &GeneratedWord) -> super::Partiality {
-    word.partiality
-}
-
-/// Derive the audit safety band: effects are boundary operations, while pure
-/// total Words are A and pure partial/projecting Words are B.
-pub(crate) const fn safety_from_contract(word: &GeneratedWord) -> super::SafetyLevel {
-    if !word.effects.is_empty() {
-        super::SafetyLevel::D
-    } else {
-        match partiality_from_contract(word) {
-            super::Partiality::Total => super::SafetyLevel::A,
-            super::Partiality::Partial | super::Partiality::Projecting => super::SafetyLevel::B,
-        }
-    }
-}
-
-/// Preview is permitted exactly for effect-free pure Words.
-pub(crate) const fn safe_preview_from_contract(word: &GeneratedWord) -> bool {
-    word.effects.is_empty() && matches!(word.purity, crate::kernel::generated::Purity::Pure)
-}
-
-/// Stability is a projection of the audit safety band, never a parallel label.
-pub(crate) const fn stability_from_contract(word: &GeneratedWord) -> &'static str {
-    match safety_from_contract(word) {
-        super::SafetyLevel::A | super::SafetyLevel::B => "stable",
-        super::SafetyLevel::D => "experimental",
-    }
 }

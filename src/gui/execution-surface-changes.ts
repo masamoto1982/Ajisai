@@ -1,24 +1,22 @@
 import type { ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
+import { isFailure } from './interpreter-execution-utils';
 
-const stableStringify = (value: unknown): string => JSON.stringify(value ?? null);
+const toJson = (value: unknown): string => JSON.stringify(value ?? null);
 
 // Whether the stack changed, decided without building a string of it.
 //
-// This used to compare `JSON.stringify(before.stack)` with the same of
-// `after.stack`. That is two full serializations of the stack on every single
-// run, and a stack is not small by construction: `[ 1 200000 ] RANGE` is a
-// legal program whose one value holds two hundred thousand elements, and
-// stringifying it twice cost the better part of a second of frozen main thread
-// for an answer that a length mismatch settles immediately. A structural walk
-// with an early exit answers the same question, allocates nothing, and stops at
-// the first difference — which for a run that produced anything is usually the
-// first slot it looks at.
+// A stack is not small by construction: `1 200000 RANGE` is a legal program
+// whose one value holds two hundred thousand elements, and serializing it
+// twice on every run would cost the better part of a second of frozen main
+// thread for an answer that a length mismatch settles immediately. A
+// structural walk with an early exit allocates nothing and stops at the first
+// difference — which for a run that produced anything is usually the first
+// slot it looks at.
 const checkValuesEqual = (left: unknown, right: unknown): boolean => {
     if (left === right) return true;
-    // JSON.stringify wrote both null and undefined into the same text for a
-    // top-level value, so treat the pair as equal here too rather than reporting
-    // a change the previous comparison never saw.
+    // null and undefined are the same absence here (as they are in JSON), so
+    // the pair is equal rather than a change.
     if (left === null || left === undefined) return right === null || right === undefined;
     if (right === null || right === undefined) return false;
     if (typeof left !== 'object' || typeof right !== 'object') return false;
@@ -43,19 +41,14 @@ const checkValuesEqual = (left: unknown, right: unknown): boolean => {
 // Order-insensitive identity of the user dictionary. The pre-execution
 // snapshot and the post-execution read-back can enumerate words in different
 // orders (a synced interpreter rebuilds its dictionaries from scratch), so the
-// set is sorted by fully-qualified name before comparison — otherwise a pure
-// stack op like `2 3 +` would look like a dictionary change whenever any user
-// word exists, and wrongly pull the right column to the Words sheet.
+// set is sorted by name before comparison — otherwise a pure stack op like
+// `2 3 ADD` would look like a dictionary change whenever any user word exists,
+// and wrongly pull the right column to the Words sheet.
 const normalizeUserWords = (words: readonly UserWord[]): string =>
-    stableStringify(
+    toJson(
         [...words]
-            .map(word => ({
-                dictionary: word.dictionary ?? null,
-                name: word.name,
-                definition: word.definition ?? null
-            }))
-            .sort((a, b) =>
-                `${a.dictionary ?? ''}@${a.name}`.localeCompare(`${b.dictionary ?? ''}@${b.name}`))
+            .map(word => ({ name: word.name, definition: word.definition ?? null }))
+            .sort((a, b) => a.name.localeCompare(b.name))
     );
 
 // A view of the surfaces an execution can touch, read from one interpreter
@@ -74,23 +67,44 @@ export const detectExecutionSurfaceChanges = (
 
     // Errors and diagnostics render into the Output surface, so a failed run
     // changes Output even when the program emitted no text of its own.
-    const hasError = result.status !== 'OK' || Boolean(result.error);
+    const hasError = isFailure(result);
 
-    // A result the session cannot carry (`PI` alone: a Tier-2 computable exact
-    // real) is explained by a host-written line into Output, and that line is
-    // the only account of where the answer went. It is not part of
-    // `result.output` and the run did not fail, so both tests above miss it:
-    // the run succeeded, produced no output of its own and left the stack as
-    // it was, which read as "nothing changed" and left the left column on
-    // Input. The reader was then told nothing at all — the very reading the
-    // refusal text exists to prevent.
-    const refusedSnapshot = Boolean(result.stackSnapshotError);
-
+    // Any emission changes Output, an empty or whitespace-only one included:
+    // `'' PRINT` writes a line, so the surface it wrote to is shown
+    // (spec/gui-semantics.md, "a Run shows each surface it changed").
     return {
-        outputChanged: hasError || refusedSnapshot || Boolean((result.output ?? '').trim()),
+        outputChanged: hasError || Boolean(result.output),
         stackChanged: !checkValuesEqual(before.stack, after.stack),
-        dictionaryChanged: userWordsChanged,
-        // Defining your own word lands on the 'user' sheet.
-        dictionarySheetId: userWordsChanged ? 'user' : undefined
+        dictionaryChanged: userWordsChanged
     };
 };
+
+// Whether a value is a NIL or holds one in some lane.
+const checkHoldsNil = (value: Value | undefined): boolean => {
+    if (!value) return false;
+    if (value.type === 'nil') return true;
+    if (value.type === 'vector' && Array.isArray(value.value)) {
+        return (value.value as Value[]).some(checkHoldsNil);
+    }
+    if (value.type === 'record') {
+        const record = value.value as { keys?: Value[]; values?: Value[] } | null;
+        return [...(record?.keys ?? []), ...(record?.values ?? [])].some(checkHoldsNil);
+    }
+    return false;
+};
+
+// Whether the run left a NIL of its own on the stack — the only NIL a "Why
+// NIL" can be about.
+//
+// The trace names a Word for every NIL left on top of the stack, including one
+// that was already there: on a stack holding an earlier run's NIL,
+// `[ 2 MUL ] 'G' DEF` reports that NIL against DEF. A slot the run did not
+// change still holds what the run was handed, so only a new or changed slot
+// holding a NIL counts.
+export const checkRunLeftOwnNil = (
+    before: ExecutionStateView,
+    after: ExecutionStateView
+): boolean =>
+    after.stack.some((value, index) =>
+        checkHoldsNil(value)
+        && (index >= before.stack.length || !checkValuesEqual(before.stack[index], value)));

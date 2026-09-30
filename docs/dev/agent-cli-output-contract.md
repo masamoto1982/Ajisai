@@ -1,4 +1,4 @@
-# Agent CLI output contract (`ajisai --json`)
+# Agent CLI output contract (`ajisai agent`)
 
 Status: implemented host contract. This document is not an authority for
 language semantics; `SPECIFICATION.html` remains that authority. It documents
@@ -7,10 +7,10 @@ only commands and fields emitted by the current native CLI.
 ## Commands
 
 ```text
-ajisai run <file.ajisai> [--json] [--step-limit <N>]
-ajisai check <file.ajisai> [--json] [--contract]
-ajisai contract <file.ajisai> [--json]
-ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|->
+ajisai run <file.ajisai> [--step-limit <N>]
+ajisai check <file.ajisai> [--contract]
+ajisai contract <file.ajisai>
+ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|-> [--limits <agent|trusted>] [--step-limit <N>]
 ajisai test <file-or-dir> [--json]
 ajisai repl [--json]
 ajisai version [--json]
@@ -30,21 +30,34 @@ leaves no program on disk for the duration of the call.
 | 1 | Ajisai language, check, contract, or test failure |
 | 2 | CLI usage or host file-reading failure; JSON is not guaranteed |
 
-With `--json`, commands that produce a JSON report write one document to
-stdout. Program `PRINT` effects are captured in the document rather than mixed
-into stdout. `--step-limit` is a positive integer and applies only to `run`;
+`run`, `check` and `contract` are the human-readable forms of
+`agent compute --limits trusted`, `agent check` and `agent infer-contracts`,
+and take no `--json`: the machine form of an operation is its `agent`
+operation, and there is one. (`run` executes under the trusted ceilings;
+`agent compute` applies them only when asked. `agent check` always verifies
+`#:contract` declarations, as `check --contract` does.) A flag a command does
+not read is a usage error (exit 2), never silently ignored. `agent` (and
+`test`/`repl`/`version` with `--json`) write one JSON document to stdout.
+Program `PRINT` effects are captured in the document rather than mixed into
+stdout.
+
+`--limits` chooses the resource ceilings `agent compute` runs under and
+`agent outcomes` predicts under: `agent` (the default) is the tighter profile
+for untrusted, generated programs (`agent::api::LOCAL_AGENT_RUNTIME_LIMITS`);
+`trusted` is the interpreter default that `run` uses. `--step-limit` is a
+positive integer and applies to `run`, `agent compute` and `agent outcomes`;
 the default is the host's derived step budget
-(`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 23,190,000 — see
+(`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 12,180,000 — see
 `docs/dev/mcp-host-profiles.md`, re-derived per-container and not a value to
 hard-code elsewhere). `--contract` applies only to `check`.
 
-## `run` and `check`
+## `agent compute` and `agent check`
 
-Both commands emit schema version 1:
+Both operations emit schema version 3:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "status": "ok",
   "stack": [],
   "stackDisplay": [],
@@ -57,7 +70,7 @@ Both commands emit schema version 1:
   "resourceUsage": {},
   "contractDecls": null,
   "stackElided": null,
-  "observationDigest": null,
+  "observationDigest": "#89ab...",
   "receipt": null
 }
 ```
@@ -85,13 +98,12 @@ module.
 `LANG.CONTRACT.CHECK` fixes exactly three results for `check --contract`:
 verified, cannot verify, violated. A `code` on a finding is the stable *reason*
 behind a cannot-verify result — the breakdown of that one result, not a fourth
-result of its own. `violated` (top-level bool) and each finding's `severity`
-are computed exactly as before; gap identifiers add information, they do not
-change what counts as a violation.
+result of its own. Each finding's `severity` is computed exactly as before;
+gap identifiers add information, they do not change what counts as a
+violation.
 
 ```json
 {
-  "violated": false,
   "findings": [
     {
       "severity": "note",
@@ -118,16 +130,17 @@ change what counts as a violation.
   recursion), `gap.dependencyUnknown` (a dependency's own inference could not
   complete), `gap.conservativeSeed` (inference fell back to the maximally
   cautious contract without going through one of the other reasons),
-  `gap.unmodelledControlFlow` (the body reaches a control directive whose
-  paths differ in stack height — `^`, `|` — or an unbalanced `[`/`{`
-  delimiter, so no fixed arity describes it). `gap.opaqueReflection` was
+  `gap.unmodelledControlFlow` (the body runs code inference never read — a
+  code operand that is not the `[ ... ]` literal written before the Word that
+  runs it, such as `[ [ [ 42 PRINT ] ] 0 GET EXEC ]` — or no fixed arity
+  describes its stack flow). `gap.opaqueReflection` was
   retired along with `REFLECT` (the 2026-08 CodeBlock/Vector unification;
   its work order has since been retired): every Vector is executable now,
   so there is no separate crossing whose contents inference cannot trust.
 - `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
   declarations; `verified + cannotVerify + violated` always equals it. A
   malformed directive (one that never became a checkable declaration) still
-  contributes an `error` finding and still sets `violated: true`, but is not
+  contributes an `error` finding and still makes `outcome` `error`, but is not
   one of the three counted here.
 - `gapSummary.byGap` keys are sorted ascending and the object is always
   present (empty when nothing is unverifiable), so a caller can read it
@@ -145,7 +158,6 @@ that correspondence directly, in the runtime's own vocabulary:
 
 ```json
 {
-  "violated": false,
   "findings": [ ... ],
   "gapSummary": { ... },
   "outcome": "nil",
@@ -167,20 +179,19 @@ that correspondence directly, in the runtime's own vocabulary:
   `LANG.FAILURE` rather than chosen: `error` propagates and halts, so one
   `error` anywhere decides the whole file; `nil` flows downstream only once
   nothing halted first, so it decides the file only when no `error` is
-  present; a file with no declarations (or none outstanding) is `value`.
+  present; a file with no declarations (or none outstanding) is `value`. A
+  malformed directive belongs to no declaration but fails the check, so it
+  makes the file-level `outcome` `error` as well.
 - **This does not make `check` evaluate the program.** The correspondence
   classifies outcomes, not mechanisms — division by zero, a failed parse and
   an out-of-range index already share one *outcome* (NIL) while sharing no
   *mechanism*, and an inference that could not decide joins that list on the
   same terms.
-- `findings` and `violated` are **not removed or changed** — `LANG.OBSERVATION.PROTOCOL`
-  permits only additive changes within a schema version, and `SCHEMA_VERSION`
-  does not move for this change. They remain exactly what they were: `findings`
-  / `violated` is a legacy projection of the identical result `outcome` /
-  `declarations` now also states directly, and is planned for removal in a
-  future breaking schema version. The exit code is unaffected either way: it
-  is `1` when `violated` is `true` and `0` otherwise, exactly as before —
-  `outcome: "nil"` (cannot verify) never fails the check.
+- `outcome` is the only spelling of a violation: schema version 2 removed the
+  boolean `violated` that repeated `outcome == "error"`. `findings` stays, as
+  the place each declaration's message is written. The exit code is `1` when
+  `outcome` is `error` and `0` otherwise — `outcome: "nil"` (cannot verify)
+  never fails the check.
 - Merging gap identifiers into the NIL reason registry so a gap could be read
   back through `NIL-REASON` is deliberately **not** done here. See
   `docs/dev/trichotomy-unification.md` for why, and the condition under which
@@ -241,17 +252,15 @@ defect this object exists to fix.
 which fast path fired, how often a plan was rebuilt. Optimizer observations,
 useful for understanding a slowdown and useless for planning against a limit.
 
-`runtimeMetrics.executionSteps` appears in both and carries the same reading. It
-stays there because removing a field is what a schema version is for; it belongs
-in `resourceUsage`. That it sat in the optimizer object is how it went unnoticed
-that nothing ever wrote it: the value was `0` for every program ever run, beside
-the `Interpreter::execution_step_count` that every limit check increments. Two
-counters for one fact, and the reported one was the one that was always zero.
+`executionSteps` is a budget, so it is reported in `resourceUsage` alone.
+Schema version 1 also carried it in `runtimeMetrics`, where it went unnoticed
+for a long time that nothing ever wrote it — two counters for one fact, and the
+reported one was always zero — so version 2 removed that copy.
 
 ### `observationDigest`
 
-A single `#`-prefixed 64-lowercase-hex BLAKE3 digest of the whole observation,
-or `null`. Two runs agree on this field exactly when they agree on everything
+A single `#`-prefixed 64-lowercase-hex BLAKE3 digest of the whole observation.
+Two runs agree on this field exactly when they agree on everything
 an agent can observe: `status`, the stack (bottom to top, by value — not by
 representation), `PRINT` output in order, the user dictionary (each word's
 normalized name and its content identity, sorted by name), and the error
@@ -262,8 +271,8 @@ themselves.
 It does **not** include `stackDisplay`, `message`, `diagnosis`,
 `aiDiagnostic`, `errorFlowTrace`, `runtimeMetrics`, `resourceUsage`, or
 `contractDecls` — none of those are the observation; several of them
-(`stackDisplay` in particular, LANG.VALUES.EXACT's continued fraction truncated at a
-display budget) are not even faithful to the value they render. A value's
+(`stackDisplay` in particular) are renderings of a value rather than the value
+itself. A value's
 `hint` (display role) is excluded the same way `PartialEq for Value` excludes
 it; a NIL's reason is included the same way `PartialEq for Value` includes it.
 
@@ -282,10 +291,6 @@ it merely fails to prove they agree at that resolution. Every other domain
 (rational, boolean, string, code block, NIL, vector, tensor) digests
 injectively.
 
-`observationDigest` is `null` exactly when the observation contains a Tier 2
-`ExactReal::Computable` scalar (lazily refined, no canonical finite
-representation) anywhere in the stack. No current Word constructs one.
-
 The byte grammar is tagged (`AJISAI-OBS-1`, `rust/src/agent/observation_digest.rs`).
 Changing the grammar is not a backward-compatible change even though it adds
 no JSON field and does not move `SCHEMA_VERSION`: a value that used to digest
@@ -300,10 +305,8 @@ the broader question a third party asks after the fact: run this exact
 (`registryDigest`), under this `limitProfile`, and you get exactly this
 `outcomeStatus`, this `observationDigest`, having spent exactly this
 `resourceUsage` — verifiable without re-running anything, by re-deriving the
-same digest from the same seven inputs. `null` under the same conditions
-`observationDigest` is: `check`/`infer-contracts` never execute (nothing to
-receipt) and a Tier 2 result (`observationDigest` itself `null`) carries no
-receipt rather than one built over an unhashed observation.
+same digest from the same seven inputs. `null` for `check`/`infer-contracts`, which never
+execute and so have nothing to receipt.
 
 ```json
 {
@@ -323,7 +326,7 @@ one-character change to either the source or the profile changes `digest`.
 `runtimeMetrics` is deliberately absent from the bundle for the same reason it
 is absent from `observationDigest`: it is optimizer state, not a fact about
 what the program does (`LANG.AUTHORITY.FREEDOM` — which path ran is
-unobservable). The byte grammar carries its own schema tag (`AJISAI-RECEIPT-1`,
+unobservable). The byte grammar carries its own schema tag (`AJISAI-RECEIPT-2`,
 `rust/src/agent/execution_receipt.rs`), distinct from `observationDigest`'s,
 since a receipt is a superset of a digest and the two must be free to version
 independently.
@@ -337,15 +340,13 @@ together exceed what a host will accept, sending the residue and losing the
 answer is the wrong trade.
 
 So on `status: "error"` only, slots whose values do not fit a byte budget are
-replaced in place: `value` becomes `null`, `type`, `displayHint` and
-`semantics` still say what the value was, and an `elided` record says what was
-dropped.
+replaced in place: `value` becomes `null`, `type` and `semantics` still say
+what the value was, and an `elided` record says what was dropped.
 
 ```json
 {
   "type": "vector",
   "value": null,
-  "displayHint": "unassigned",
   "semantics": {},
   "elided": { "reason": "errorStackBudget", "approxBytes": 27178011, "elements": 100000 }
 }
@@ -394,15 +395,15 @@ playground boundary:
 {
   "type": "number",
   "value": { "numerator": "3", "denominator": "2" },
-  "displayHint": "rawNumber",
   "semantics": {}
 }
 ```
 
 Arbitrary-precision integers are decimal strings, never JSON floating-point
 numbers. Vectors contain arrays of value nodes. NIL carries normalized absence
-metadata in `semantics.absence`. Logical Unknown is observed through the truth
-axis rather than serialized as operational NIL.
+metadata in `semantics.absence`. UNKNOWN is a NIL and is serialized as one; a
+Boolean carries `semantics.truthValue`. Every field of a node is derived from
+the value itself, never from the Word that produced it.
 
 An algebraic irrational retains the approximate rational compatibility view,
 marks it with `approximate: true`, and carries its authoritative multiquadratic
@@ -412,10 +413,8 @@ normal form:
 {
   "type": "number",
   "value": { "numerator": "768398401", "denominator": "543339720" },
-  "displayHint": "rawNumber",
   "semantics": {
     "approximate": true,
-    "exactDisplay": "sqrt(2)",
     "exactTerms": [
       { "numerator": "1", "denominator": "1", "radicand": "2" }
     ]
@@ -427,24 +426,34 @@ normal form:
 present, the `value` rational is a display compatibility view and is not the
 canonical value.
 
-`exactDisplay` is the same normal form written as one short string —
-`sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)` — and is present
-in exactly the cases `exactTerms` is. It exists because the two other
-renderings of an algebraic value on the same report are each misleading as what
-they resemble: `stackDisplay` is the LANG.VALUES.EXACT continued fraction *truncated
-at a display budget* (√2 runs to ~194 characters and ends in `...]`), and
-`value` is a rational approximation. It is a display: read it, compute with
-`exactTerms`. Because it renders the stored normal form faithfully, two values
-`=` decides are equal can still be written differently (`sqrt(8)` and
-`2/1*sqrt(2)`); comparison decides equality, string comparison does not.
+`stackDisplay` writes the same normal form as one token — `sqrt(2)`,
+`2/1*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` — exact and never truncated. It
+is a display: read it, compute with `exactTerms`. It renders the stored normal
+form, and a number has one normal form (radicands are square-free), so two
+values `EQ` calls equal are written alike: `8 SQRT` and `2 SQRT 2 SQRT ADD` both
+display `2/1*sqrt(2)`. There is no separate short-rendering
+field: an `exactDisplay` once carried this string when `stackDisplay` was a
+truncated continued fraction, and was removed once the two became the same.
 
 ### Diagnosis and error flow
 
 `diagnosis` is a structured failure explanation with `when`, `why`, `summary`,
-`where`, `evidence`, `nextChecks`, `agreedPrefix`, `candidates`, and
-`resourceLimit`. `aiDiagnostic` is its machine-oriented classification and
-carries `candidates` and `resourceLimit` too. Consumers must treat new
+`where`, `evidence`, `nextChecks`, `candidates`, and
+`resourceLimit`. It is the report's one copy of the diagnosis: the trace's
+`wordError` event does not repeat it, and `aiDiagnostic` does not copy its
+checks.
+
+`aiDiagnostic` classifies an ERROR and nothing more: `category` (the
+spec/outcomes.json error category — the id `error:<category>` names),
+`repair` (`"program"` exactly when spec/outcomes.json marks the category
+`repair: program`, absent otherwise, as in the registry), `word` and `family`.
+A NIL's reason is read from the value's `semantics.absence`, not from here; a
+NIL is never reported under an error category. Consumers must treat new
 protocol-string variants as opaque values rather than rejecting the report.
+
+`summary` is one display line in protocol spellings:
+`executeWord / ADD / stackShape (error:stackUnderflow) msg="…"`, or
+`(nil:divisionByZero)` for a NIL's diagnosis. Read it; branch on the fields.
 
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
 `code` is the stable identifier — match on it. `title` and `detail` are display
@@ -457,28 +466,50 @@ match first, and is empty for every other cause class. It considers the
 compiled-in vocabulary, the failing interpreter's own dictionary, and — for
 `check` — the Words the same source defines.
 
-`resourceLimit` is `{ resource, limit, observed }` and is present when a
-declared ceiling fired. `resource` is the ceiling's own name
-(`sourceBytes`, `numericLiteralDigits`, `numericWork`, `bigintBits`,
-`algebraicTerms`, `executionSteps`) — the same identifier a host publishes in
+`resourceLimit` is `{ resource, limit, observed }` (plus `progress` for a
+cumulative meter) when a declared ceiling fired, and `null` otherwise. The same
+record sits in the diagnosis of a NIL a generative Word declined with
+`spaceExhausted`, which names `materializedElements`, `nestingDepth` or
+`numericLiteralDigits`. `resource` is the ceiling's own name
+(`sourceBytes`, `numericLiteralDigits`, `numericWork`, `collectionWork`,
+`bigintBits`, `algebraicTerms`, `nestingDepth`, `materializedElements`,
+`executionSteps`) — the same identifier a host publishes in
 its limit profile, so "too big" says what was too big and against what. A size
-ceiling reports `aiDiagnostic.kind: "resourceLimitExceeded"` and
-`recoverability: "reduceWorkOrRaiseLimit"`; the step budget keeps
-`executionLimitExceeded` and `addBudgetOrFixRecursion`, because letting the
-program run longer fixes one and not the other.
+ceiling reports `aiDiagnostic.category: "resourceLimitExceeded"`; the step
+budget keeps `executionLimitExceeded`, because letting the program run longer
+fixes one and not the other.
 
 `errorFlowTrace` records Word errors and reason-carrying NIL production. A
-successful run may therefore have a non-empty trace. Neither NIL nor an Ajisai
+`nilProduced` event carries that NIL's `diagnosis`, which lives nowhere else;
+a `wordError` event carries none, since the report's top-level `diagnosis` is
+built from it. A successful run may therefore have a non-empty trace. The
+event is recorded at the Word whose contract projected the NIL and not at the
+Words it then passed through (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 2 ADD` holds
+one `nilProduced` event, for `DIV`. A Word inside whose run it was produced —
+a `MAP` applying the block, the User Word whose body ran `DIV` — is named in
+that event's diagnosis evidence as `insideWords=`, innermost first, the same
+way a `wordError` names the frames a failure happened in. Neither NIL nor an Ajisai
 language `status: error` is a host transport failure.
 
 ## `contract`
 
-`contract --json` emits a JSON array, not the `run` envelope. Each entry reports
-a user Word's inferred `name`, `arity`, `purity`, `determinism`, NIL behavior,
-order sensitivity, space class, a `cost` object keyed by its three axes
+`agent infer-contracts` returns, under `contracts`, one entry per user Word
+(`contract` prints the same entries for a person). Each entry reports
+a user Word's inferred `name`, `inputs`, `outputs`, `partiality`, `purity`,
+`determinism`, a `cost` object keyed by its three axes
 (`steps`/`numeric`/`collection`, each `"const"`/`"linear"`/`"superlinear"`/
-`"unbounded"`), effects, confidence, and a paste-ready `suggested` declaration.
+`"unbounded"`), `effects`, `confidence`, `gaps`, and a paste-ready `suggested`
+declaration — the same keys, in the same vocabulary, as a registered Word's
+contract.
 Inference registers definitions without executing their bodies.
+
+Source that does not tokenize or balance its vector delimiters is answered
+exactly as `agent check` answers it — `status: "error"`, exit 1,
+`aiDiagnostic.category: "malformedSource"` — rather than as a success with no
+contracts. A body that calls a name nothing defines is `partiality: "partial"`
+with the `gap.unresolvedWord` gap: that call raises `unknownWord`, a
+`repair: program` category, so the Word is partial by the registry's own
+derivation.
 
 `suggested` carries only terms the declaration checker can parse — arity,
 purity, NIL behavior and `cost`. The space class is reported but never
@@ -493,10 +524,7 @@ could only ever check as a note. When no axis is exact, the `cost` keyword
 itself is omitted rather than emitted with zero terms, since the declaration
 grammar rejects a bare `cost`.
 
-The MCP adapter normalizes this legacy bare array into its common result
-envelope under `contracts`; the native CLI shape remains unchanged in schema
-version 1.
-The array itself is produced by `agent::api::infer_contracts` so native and
+The entries are produced by `agent::api::infer_contracts` so native and
 other embedded hosts (including the WASM one-shot entry point) share inference
 rather than reimplementing it.
 
@@ -510,7 +538,8 @@ Ajisai program semantics.
 ## `repl`
 
 The REPL preserves stack and definitions across lines. In JSON mode, every
-submitted program line produces one `run`-shaped JSON document. REPL
+submitted program line produces one small JSON document of its own —
+`{ "status", "stackDisplay", "output", "message" }`, not the `agent` envelope. REPL
 meta-commands (`:help`, `:stack`, `:reset`, and `:quit`) are host commands, not
 Ajisai Words.
 
@@ -519,16 +548,15 @@ Ajisai Words.
 `version --json` emits:
 
 ```json
-{ "schemaVersion": 1, "status": "ok", "version": "0.2.0-beta.1" }
+{ "schemaVersion": 3, "status": "ok", "version": "0.2.0-alpha.1" }
 ```
 
 ## `agent`
 
-`agent` is the stable JSON-only host boundary used by the MCP adapter. Its
-`compute`, `check`, `infer-contracts`, and `outcomes` operations call the
-typed Rust agent API and always return a schema-versioned object. In
-particular, `infer-contracts` returns the array under `contracts`, avoiding
-the legacy bare array emitted by the compatibility `contract --json` command.
+`agent` is the one JSON host boundary, used by the MCP adapter and by the
+repository's own scripts. Its `compute`, `check`, `infer-contracts`, and
+`outcomes` operations call the typed Rust agent API and always return a
+schema-versioned object.
 
 ### `outcomes`
 
@@ -541,7 +569,7 @@ settled before a single Word runs, so it has exactly one predicted outcome.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "status": "ok",
   "outcomes": ["value", "error:nonNumeric", "error:shapeMismatch"],
   "exact": false,
@@ -592,8 +620,8 @@ never reaches" nor "a block executed somewhere other than where it is
 written" was represented.
 
 `limitProfile` (the same shape `receipt.limitProfile` reports) names the
-resource ceilings this prediction assumed; `outcomes` does not currently
-accept a caller-supplied profile override.
+resource ceilings this prediction assumed: the profile `--limits` selects and
+the `--step-limit` budget, exactly as `agent compute` would run it.
 
 ## Compatibility
 

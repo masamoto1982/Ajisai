@@ -17,11 +17,11 @@
 //! spells no number; the outcome is never a guess at what was meant.
 //!
 //! Nesting is bounded all the same, by the machine rather than by the
-//! grammar: a value nested past `MAX_NESTING` is well-formed JSON the machine
-//! will not hold (its own value representation walks structure recursively
-//! when it is compared, rendered or released), so such text projects
-//! `spaceExhausted`, the outcome every other materialization past a ceiling
-//! reaches (LANG.MACHINE.LIMITS), not `invalidEncoding`.
+//! grammar: a value nested past the nesting ceiling (`nestingDepth`,
+//! LANG.MACHINE.LIMITS) is well-formed JSON the machine will not hold (its own
+//! value representation walks structure recursively when it is compared,
+//! rendered or released), so such text projects `spaceExhausted`, the outcome
+//! every other materialization past a ceiling reaches, not `invalidEncoding`.
 
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -32,19 +32,18 @@ use crate::interpreter::collection_meter;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, RecordData, Value};
-
-/// Deepest container nesting one decoded value may hold. Past it the text
-/// is refused as too large, not as malformed.
-pub(crate) const MAX_NESTING: usize = 512;
+use crate::types::{RecordData, Value};
 
 /// Why text did not decode.
 #[derive(Debug, PartialEq, Eq)]
 enum Reject {
     /// Not exactly one JSON value.
     Malformed,
-    /// One JSON value, nested deeper than `MAX_NESTING`.
+    /// One JSON value, nested deeper than the decoder's `max_nesting`.
     TooDeep,
+    /// One JSON value holding a number of more digits, counting its exponent,
+    /// than the decoder's `max_digits` (the numeric-literal ceiling).
+    TooManyDigits(u64),
 }
 
 /// An open container on the decoder's own stack.
@@ -60,6 +59,12 @@ enum Frame {
 struct Decoder<'a> {
     bytes: &'a [u8],
     pos: usize,
+    /// The nesting ceiling: past it the text is declined as too large, not
+    /// refused as malformed.
+    max_nesting: usize,
+    /// The numeric-literal ceiling, which a number in the text meets as a
+    /// number in source does.
+    max_digits: usize,
 }
 
 impl<'a> Decoder<'a> {
@@ -95,51 +100,64 @@ impl<'a> Decoder<'a> {
     }
 
     /// `-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?`, as an exact rational.
-    fn number(&mut self) -> Option<Value> {
+    fn number(&mut self) -> std::result::Result<Value, Reject> {
         let negative = self.eat(b'-').is_some();
-        let int_digits = self.digits()?;
+        let int_digits = self.digits().ok_or(Reject::Malformed)?;
         if int_digits.len() > 1 && int_digits[0] == b'0' {
-            return None;
+            return Err(Reject::Malformed);
         }
         let mut mantissa = int_digits.to_vec();
         let mut scale: u32 = 0;
         if self.eat(b'.').is_some() {
-            let frac = self.digits()?;
-            scale = u32::try_from(frac.len()).ok()?;
+            let frac = self.digits().ok_or(Reject::Malformed)?;
+            scale = u32::try_from(frac.len()).map_err(|_| Reject::Malformed)?;
             mantissa.extend_from_slice(frac);
         }
-        let mut exponent: i64 = 0;
+        let mut magnitude: u64 = 0;
+        let mut negative_exponent = false;
         if matches!(self.peek(), Some(b'e' | b'E')) {
             self.pos += 1;
-            let sign = match self.peek() {
+            match self.peek() {
                 Some(b'-') => {
                     self.pos += 1;
-                    -1
+                    negative_exponent = true;
                 }
-                Some(b'+') => {
-                    self.pos += 1;
-                    1
-                }
-                _ => 1,
-            };
-            let exp_digits = self.digits()?;
-            let magnitude: i64 = std::str::from_utf8(exp_digits).ok()?.parse().ok()?;
-            exponent = sign * magnitude;
+                Some(b'+') => self.pos += 1,
+                _ => {}
+            }
+            let exp_digits = self.digits().ok_or(Reject::Malformed)?;
+            // Saturates: an exponent past `u64` is past any ceiling anyway.
+            magnitude = std::str::from_utf8(exp_digits)
+                .map_err(|_| Reject::Malformed)?
+                .parse()
+                .unwrap_or(u64::MAX);
         }
-        let mut numerator = BigInt::parse_bytes(&mantissa, 10)?;
+        // Checked before anything is built: `1e99999999` is eleven bytes of
+        // text and a hundred million digits of integer.
+        // Zero is one digit at any scale, and nothing is built for it.
+        let is_zero = mantissa.iter().all(|&d| d == b'0');
+        let denoted = if is_zero {
+            1
+        } else {
+            (mantissa.len() as u64).saturating_add(magnitude)
+        };
+        if denoted > self.max_digits as u64 {
+            return Err(Reject::TooManyDigits(denoted));
+        }
+        let mut numerator = BigInt::parse_bytes(&mantissa, 10).ok_or(Reject::Malformed)?;
         if negative {
             numerator = -numerator;
         }
         let mut denominator = BigInt::from(10).pow(scale);
-        let shift = u32::try_from(exponent.unsigned_abs()).ok()?;
+        let shift = u32::try_from(magnitude).map_err(|_| Reject::Malformed)?;
         if numerator.is_zero() {
             // Zero at any scale; skips the (possibly enormous) power.
-        } else if exponent >= 0 {
+        } else if !negative_exponent {
             numerator *= BigInt::from(10).pow(shift);
         } else {
             denominator *= BigInt::from(10).pow(shift);
         }
-        Some(Value::from_fraction(Fraction::new(numerator, denominator)))
+        Ok(Value::from_fraction(Fraction::new(numerator, denominator)))
     }
 
     fn hex4(&mut self) -> Option<u32> {
@@ -201,8 +219,9 @@ impl<'a> Decoder<'a> {
         frames: &mut Vec<Frame>,
     ) -> std::result::Result<Option<Value>, Reject> {
         self.skip_whitespace();
+        let max_nesting = self.max_nesting;
         let open = |frames: &mut Vec<Frame>, frame: Frame| {
-            if frames.len() >= MAX_NESTING {
+            if frames.len() >= max_nesting {
                 return Err(Reject::TooDeep);
             }
             frames.push(frame);
@@ -237,7 +256,7 @@ impl<'a> Decoder<'a> {
                 self.literal(b"null", Value::nil())
                     .ok_or(Reject::Malformed)?,
             ),
-            b'-' | b'0'..=b'9' => Some(self.number().ok_or(Reject::Malformed)?),
+            b'-' | b'0'..=b'9' => Some(self.number()?),
             _ => return Err(Reject::Malformed),
         })
     }
@@ -336,7 +355,7 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
         restore(interp, operand);
         return Err(AjisaiError::declared(
             "nonText",
-            "JSON-DECODE: expected a String of JSON text",
+            "expected a String of JSON text",
         ));
     };
     // One pass over the text, charged before it runs.
@@ -344,27 +363,38 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
         restore(interp, operand);
         return Err(e);
     }
+    let max_nesting = interp.runtime_limits.max_nesting_depth;
+    let max_digits = interp.runtime_limits.max_numeric_literal_digits;
     let mut decoder = Decoder {
         bytes: text.as_bytes(),
         pos: 0,
+        max_nesting,
+        max_digits,
     };
     match decoder.decode() {
         Ok(value) => {
-            let role = if value.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::Unassigned
-            };
-            interp.stack.push_with_role(value, role);
+            interp.stack.push(value);
         }
-        Err(Reject::Malformed) => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::InvalidEncoding, Recoverability::Recoverable),
-            Interpretation::Nil,
+        Err(Reject::Malformed) => interp.stack.push(Value::nil_with_reason(
+            NilReason::InvalidEncoding,
+            Recoverability::Recoverable,
+        )),
+        Err(Reject::TooManyDigits(digits)) => interp.stack.push(
+            crate::interpreter::space_projection::numeric_literal_exhausted_nil(
+                "JSON-DECODE",
+                max_digits,
+                digits,
+            ),
         ),
-        Err(Reject::TooDeep) => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::SpaceExhausted, Recoverability::Unknown),
-            Interpretation::Nil,
-        ),
+        Err(Reject::TooDeep) => {
+            interp
+                .stack
+                .push(crate::interpreter::space_projection::nesting_exhausted_nil(
+                    "JSON-DECODE",
+                    max_nesting,
+                    max_nesting + 1,
+                ))
+        }
     }
     Ok(())
 }
@@ -373,10 +403,14 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
 mod tests {
     use super::*;
 
+    const MAX_NESTING: usize = crate::interpreter::runtime_limits::DEFAULT_MAX_NESTING_DEPTH;
+
     fn decode(text: &str) -> Option<Value> {
         Decoder {
             bytes: text.as_bytes(),
             pos: 0,
+            max_nesting: MAX_NESTING,
+            max_digits: crate::interpreter::runtime_limits::DEFAULT_MAX_NUMERIC_LITERAL_DIGITS,
         }
         .decode()
         .ok()
@@ -386,6 +420,8 @@ mod tests {
         Decoder {
             bytes: text.as_bytes(),
             pos: 0,
+            max_nesting: MAX_NESTING,
+            max_digits: crate::interpreter::runtime_limits::DEFAULT_MAX_NUMERIC_LITERAL_DIGITS,
         }
         .decode()
         .err()

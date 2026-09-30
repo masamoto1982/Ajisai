@@ -5,22 +5,12 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NilReason {
     DivisionByZero,
-    MissingField,
+    NotFound,
     InvalidEncoding,
     IndexOutOfBounds,
-    /// Comparison-budget exhaustion per LANG.VALUES.EXACT: two lazy CFs
-    /// agreed on every emitted partial quotient up to the budget
-    /// without diverging, or one of the operands' CF streams reported
-    /// `CfStep::Exhausted`. The NIL Projection Rule projects this to NIL with
-    /// `absence.origin = comparisonBudget` rather than a recovered
-    /// error.
-    Undecidable,
     // `LogicallyUnknown` was retired: no `NilReason` value represents the
-    // logical truth value Unknown (U, LANG.VALUES.TRUTH). U has no dedicated
-    // `ValueData` variant — it is `Nil` data carrying the `TruthValue`
-    // hint, not a NIL node carrying a reason — so there is no reverse
-    // decode of `NilReason` from a protocol string, and the retired name
-    // needs no boundary handling.
+    // logical truth value UNKNOWN (LANG.VALUES.TRUTH): UNKNOWN is a NIL read
+    // in truth position, carrying whatever reason that NIL has.
     /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
     /// result would exceed the space water level (`max_materialized_elements`).
     /// The NIL Projection Rule projects this to NIL with `absence.origin = spaceBudget`
@@ -39,13 +29,6 @@ pub enum NilReason {
     /// distinguishes it from an execution failure and what makes the same
     /// variant right for future domain misses in other words.
     DomainMiss,
-    /// A diagnostic accessor was asked for something the value does not carry —
-    /// `NIL-REASON` applied to a value that is not an operational NIL, or to one
-    /// that carries no reason. `spec/words.json` registers this as
-    /// `NIL-REASON`'s projection reason, and `LANG.FAILURE.PROJECT` requires a
-    /// projection to produce "NIL with the reason its contract registers", so
-    /// the accessor's own absence is reasoned like any other.
-    NotAvailable,
     /// A NIL the program *wrote* rather than computed — the `NIL` Word and the
     /// `NIL` symbol inside a vector literal.
     ///
@@ -93,6 +76,9 @@ pub enum ResourceLimit {
     BigintBits,
     /// Algebraic term count of one exact value (`max_algebraic_terms`).
     AlgebraicTerms,
+    /// How many containers deep one value nests (`max_nesting_depth`) —
+    /// whether written as a literal, decoded from JSON, or built by Words.
+    NestingDepth,
     /// Execution-step budget (`Interpreter::max_execution_steps`). Kept in the
     /// same vocabulary even though it lives outside `RuntimeLimits`, because a
     /// host publishes it as one more entry in the same limit table.
@@ -148,6 +134,7 @@ impl ResourceLimit {
             ResourceLimit::CollectionWork => "collectionWork",
             ResourceLimit::BigintBits => "bigintBits",
             ResourceLimit::AlgebraicTerms => "algebraicTerms",
+            ResourceLimit::NestingDepth => "nestingDepth",
             ResourceLimit::ExecutionSteps => "executionSteps",
             ResourceLimit::MaterializedElements => "materializedElements",
         }
@@ -157,21 +144,14 @@ impl ResourceLimit {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorCategory {
     StackUnderflow,
-    StructureError,
     UnknownWord,
-    DivisionByZero,
-    VectorLengthMismatch,
-    ShapeMismatch,
     MalformedSource,
-    NameConflict,
     ExecutionLimitExceeded,
     /// A named `RuntimeLimits` ceiling other than the step budget. Separate
     /// from `ExecutionLimitExceeded` so "the program never terminated" and
     /// "one value grew past the declared size ceiling" stop sharing an answer.
     ResourceLimitExceeded,
     RecursionLimitExceeded,
-    BuiltinProtection,
-    SelfReferentialDefinition,
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
     /// asked `word_contract` for the Word gets back the same vocabulary the
@@ -183,41 +163,35 @@ impl ErrorCategory {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             ErrorCategory::StackUnderflow => "stackUnderflow",
-            ErrorCategory::StructureError => "structureError",
             ErrorCategory::UnknownWord => "unknownWord",
-            ErrorCategory::DivisionByZero => "divisionByZero",
-            ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
-            ErrorCategory::ShapeMismatch => "shapeMismatch",
             ErrorCategory::MalformedSource => "malformedSource",
-            ErrorCategory::NameConflict => "nameConflict",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
-            ErrorCategory::BuiltinProtection => "builtinProtection",
-            ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
             ErrorCategory::Declared(condition) => condition,
         }
     }
 
-    pub fn from_error(err: &AjisaiError) -> Self {
-        match err {
-            AjisaiError::StackUnderflow => ErrorCategory::StackUnderflow,
-            AjisaiError::StructureError { .. } => ErrorCategory::StructureError,
+    /// The spec/outcomes.json error category `err` reports as, or `None` for
+    /// the one variant that is not an outcome at all.
+    ///
+    /// `DivisionByZero` used to map to a `divisionByZero` *error* category —
+    /// an id spec/outcomes.json declares only as a NIL reason. DIV never ends a
+    /// run with it (the signal is projected to `NIL(divisionByZero)` before it
+    /// can), so the category existed only to label NIL-producing trace events
+    /// and surfaced there as an error id the registry does not have. A NIL is
+    /// reported by its reason; the internal signal has no category to give.
+    pub fn from_error(err: &AjisaiError) -> Option<Self> {
+        Some(match err {
+            AjisaiError::StackUnderflow { .. } => ErrorCategory::StackUnderflow,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
-            AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
-            AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
-            AjisaiError::ShapeMismatch { .. } => ErrorCategory::ShapeMismatch,
+            AjisaiError::DivisionByZero => return None,
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
-            AjisaiError::NameConflict(_) => ErrorCategory::NameConflict,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
-            AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
-            AjisaiError::SelfReferentialDefinition { .. } => {
-                ErrorCategory::SelfReferentialDefinition
-            }
             AjisaiError::DeclaredCondition { condition, .. } => ErrorCategory::Declared(condition),
-        }
+        })
     }
 }
 
@@ -225,14 +199,11 @@ impl NilReason {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             NilReason::DivisionByZero => "divisionByZero",
-            NilReason::MissingField => "missingField",
+            NilReason::NotFound => "notFound",
             NilReason::InvalidEncoding => "invalidEncoding",
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
-            NilReason::Undecidable => "undecidable",
-
             NilReason::SpaceExhausted => "spaceExhausted",
             NilReason::DomainMiss => "domainMiss",
-            NilReason::NotAvailable => "notAvailable",
             NilReason::Literal => "literal",
             NilReason::UserDeclared => "userDeclared",
         }
@@ -244,13 +215,11 @@ impl NilReason {
     /// and `from_protocol_str` follows without another table to update.
     pub const ALL: &'static [NilReason] = &[
         NilReason::DivisionByZero,
-        NilReason::MissingField,
+        NilReason::NotFound,
         NilReason::InvalidEncoding,
         NilReason::IndexOutOfBounds,
-        NilReason::Undecidable,
         NilReason::SpaceExhausted,
         NilReason::DomainMiss,
-        NilReason::NotAvailable,
         NilReason::Literal,
         NilReason::UserDeclared,
     ];
@@ -271,40 +240,24 @@ impl NilReason {
 
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
-    StackUnderflow,
-    StructureError {
-        expected: String,
-        got: String,
+    /// A Word was called with fewer operands than its declared arity. `word`
+    /// is filled in at dispatch (`attributed_to`), like a declared condition's,
+    /// so the message names the Word that was short.
+    StackUnderflow {
+        word: Option<&'static str>,
     },
     UnknownWord(String),
+    /// A zero divisor met by the rational kernel. Not an ERROR a program can
+    /// end with: DIV projects it to `NIL(divisionByZero)` (LANG.FAILURE.PROJECT)
+    /// by re-running the operation lane-wise, so this is only the signal that
+    /// asks for that re-run. It has no outcome category — see
+    /// `ErrorCategory::from_error`.
     DivisionByZero,
-    VectorLengthMismatch {
-        len1: usize,
-        len2: usize,
-    },
-    /// Two operands of an element-wise Word have shapes that do not broadcast:
-    /// on some axis they disagree and neither extent is 1.
-    ///
-    /// Distinct from `VectorLengthMismatch`, which is the one-dimensional case
-    /// discovered while walking a ragged value tree. This one carries both full
-    /// shapes and the axis they part on, because with rank ≥ 2 "which operand
-    /// is the wrong shape, and where" is the whole question — and it is the
-    /// most frequent error there is in any program that multiplies matrices.
-    ShapeMismatch {
-        left: Vec<usize>,
-        right: Vec<usize>,
-        axis: usize,
-    },
     /// Program text that does not parse: an unclosed or crossed delimiter, a
     /// delimiter glued to a name, an unclosed string. The fault is in the
     /// writing, not in any value, so it belongs to neither the value-shape nor
     /// the user-logic families.
     MalformedSource(String),
-    /// A name was asked to mean two things at once — `BIND` to a name a Word
-    /// already holds, or `DEF` to a name a live binding holds. The two name
-    /// spaces are disjoint by rule (LANG.DICTIONARY.RESOLUTION), so this is a
-    /// rule the program broke, not a value that came out wrong.
-    NameConflict(String),
     ExecutionLimitExceeded {
         limit: usize,
     },
@@ -332,16 +285,6 @@ pub enum AjisaiError {
         limit: usize,
         word: String,
     },
-    /// `DEF` refused: `word`'s body names itself, directly or through other
-    /// User words (LANG.DICTIONARY.ACYCLIC's acyclicity invariant). `cycle` closes back on it.
-    SelfReferentialDefinition {
-        word: String,
-        cycle: Vec<String>,
-    },
-    BuiltinProtection {
-        word: String,
-        operation: String,
-    },
     /// A raise the failing Word's own registry entry already names: `condition`
     /// is one of the conditions its `errorWhen` declares, spelled the way
     /// `spec/words.json` spells it.
@@ -355,17 +298,17 @@ pub enum AjisaiError {
     DeclaredCondition {
         condition: &'static str,
         message: String,
+        /// The Word the failure belongs to, attached once by the dispatcher
+        /// as the error leaves that Word (`execute_generated_word`). The
+        /// message itself never spells the Word's name: every declared
+        /// message is written "expected …, got …", and `Display` prefixes the
+        /// name, so every one reads `WORD: expected …` and no raise site can
+        /// forget, misspell, or borrow another Word's name.
+        word: Option<&'static str>,
     },
 }
 
 impl AjisaiError {
-    pub fn create_structure_error(expected: &str, got: &str) -> Self {
-        AjisaiError::StructureError {
-            expected: expected.to_string(),
-            got: got.to_string(),
-        }
-    }
-
     /// Raise the named condition from the failing Word's `errorWhen`.
     ///
     /// `condition` has to be a condition that Word declares — the diagnosis
@@ -376,10 +319,69 @@ impl AjisaiError {
     /// hand rather than scanning the source, so it only catches a condition
     /// this file names for a program its own list exercises — not every call
     /// site automatically.
+    /// A stack short of operands, not yet attributed to a Word.
+    pub const fn stack_underflow() -> Self {
+        AjisaiError::StackUnderflow { word: None }
+    }
+
     pub fn declared(condition: &'static str, message: impl Into<String>) -> Self {
         AjisaiError::DeclaredCondition {
             condition,
             message: message.into(),
+            word: None,
+        }
+    }
+
+    /// Two operands whose shapes do not align on `axis` (LANG.COLLECTIONS.LIFT).
+    /// One condition for every alignment a Word performs — lifting, pairing
+    /// keys with values, zipping rows — so a length that differs is
+    /// `shapeMismatch` whichever Word noticed it.
+    pub fn shape_mismatch(left: &[usize], right: &[usize], axis: usize) -> Self {
+        AjisaiError::declared(
+            "shapeMismatch",
+            format!(
+                "expected shapes that align, got {:?} and {:?} (axis {} is {} and {}, and neither is 1)",
+                left,
+                right,
+                axis,
+                left.get(axis).copied().unwrap_or(1),
+                right.get(axis).copied().unwrap_or(1)
+            ),
+        )
+    }
+
+    /// Two sequences that must pair position by position and do not.
+    pub fn length_mismatch(left: usize, right: usize) -> Self {
+        AjisaiError::declared(
+            "shapeMismatch",
+            format!(
+                "expected Vectors of the same length, got {} and {}",
+                left, right
+            ),
+        )
+    }
+
+    /// Attach the Word a declared failure belongs to, if none is attached
+    /// yet. The innermost Word wins: an error raised by `ADD` inside a `MAP`
+    /// block is `ADD`'s, and `MAP` passing it on does not relabel it.
+    ///
+    /// `declaredFailure` is the program's own text (`FAIL`), so it is left as
+    /// the program wrote it.
+    pub fn attributed_to(self, name: &'static str) -> Self {
+        match self {
+            AjisaiError::DeclaredCondition {
+                condition,
+                message,
+                word: None,
+            } if condition != "declaredFailure" => AjisaiError::DeclaredCondition {
+                condition,
+                message,
+                word: Some(name),
+            },
+            AjisaiError::StackUnderflow { word: None } => {
+                AjisaiError::StackUnderflow { word: Some(name) }
+            }
+            other => other,
         }
     }
 }
@@ -387,28 +389,13 @@ impl AjisaiError {
 impl fmt::Display for AjisaiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
-            AjisaiError::StructureError { expected, got } => {
-                write!(f, "Structure error: expected {}, got {}", expected, got)
+            AjisaiError::StackUnderflow { word: Some(word) } => {
+                write!(f, "{}: stack underflow", word)
             }
+            AjisaiError::StackUnderflow { word: None } => write!(f, "stack underflow"),
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
-            AjisaiError::VectorLengthMismatch { len1, len2 } => {
-                write!(f, "Vector length mismatch: {} vs {}", len1, len2)
-            }
-            AjisaiError::ShapeMismatch { left, right, axis } => {
-                write!(
-                    f,
-                    "Cannot broadcast shapes {:?} and {:?}: axis {} is {} on the left and {} on the right, and neither is 1",
-                    left,
-                    right,
-                    axis,
-                    left.get(*axis).copied().unwrap_or(1),
-                    right.get(*axis).copied().unwrap_or(1)
-                )
-            }
             AjisaiError::MalformedSource(msg) => write!(f, "{}", msg),
-            AjisaiError::NameConflict(msg) => write!(f, "{}", msg),
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
             }
@@ -451,17 +438,11 @@ impl fmt::Display for AjisaiError {
             AjisaiError::RecursionLimitExceeded { limit, word } => {
                 write!(f, "recursion limit exceeded ({}) in '{}'", limit, word)
             }
-            AjisaiError::SelfReferentialDefinition { word, cycle } => {
-                write!(
-                    f,
-                    "Cannot define '{}': self-referential definition ({})",
-                    word,
-                    cycle.join(" -> ")
-                )
-            }
-            AjisaiError::BuiltinProtection { word, operation } => {
-                write!(f, "Cannot {} built-in word: {}", operation, word)
-            }
+            AjisaiError::DeclaredCondition {
+                message,
+                word: Some(word),
+                ..
+            } => write!(f, "{}: {}", word, message),
             AjisaiError::DeclaredCondition { message, .. } => write!(f, "{}", message),
         }
     }

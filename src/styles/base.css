@@ -1,8 +1,9 @@
-
-* {
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
 html,
@@ -11,62 +12,26 @@ body {
     overflow-x: hidden;
 }
 
-
 body {
     font-family: var(--font-stack-primary);
-    background: #fff;
+    background: var(--color-white);
     color: var(--color-text);
-    line-height: 1.6;
+    line-height: var(--leading-body);
+}
+
+[hidden] {
+    display: none !important;
 }
 
 a {
     color: var(--color-primary);
     text-decoration: none;
 
+    /* Hover marks the link with a line rather than a lighter colour, which
+       fell to 2.3:1. */
     &:hover {
-        color: var(--color-secondary);
+        text-decoration: underline;
     }
-}
-
-
-/* Visually hidden until focused: clip to a 1px box rather than translating a
- * painted black box off-screen, which left a sub-pixel sliver at the top-left. */
-.skip-link {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
-    background: #000;
-    color: #fff;
-    padding: 8px 16px;
-    z-index: 1000;
-    text-decoration: none;
-
-    &:focus {
-        width: auto;
-        height: auto;
-        overflow: visible;
-        clip: auto;
-        clip-path: none;
-        white-space: normal;
-        outline: 2px solid var(--color-secondary);
-        outline-offset: 2px;
-    }
-}
-
-
-:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-    outline: none;
 }
 
 :focus-visible {
@@ -74,30 +39,67 @@ a {
     outline-offset: 2px;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
+/* Visually hidden until focused. */
+.skip-link {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    background: var(--color-text);
+    color: var(--color-white);
+    padding: var(--space-xs) var(--space-md);
+    z-index: 1000;
+
+    &:focus {
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip-path: none;
+        white-space: normal;
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+}
 
 .container {
     min-height: 100%;
     display: flex;
     flex-direction: column;
+
+    @media (width <= 768px) {
+        height: 100dvh;
+        min-height: 0;
+    }
+}
+
+@media (width <= 768px) {
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
 }
 
 
 /* ── 移ろい — header / footer ───────────────────────────────────────────────
- * A slow OKLCH gradient cycling through all four hydrangea-image hues:
+ * A slow OKLCH gradient cycling through the four hydrangea hues:
  *   青紫 (blue-purple ~265) · 赤紫 (red-purple ~325)
  *   淡水色 (pale aqua ~205) · 淡緑 (pale green ~155)
  * Both endpoints animate as a matched pair; nearby hues at every keyframe
  * prevent the interpolation from cutting through warm orange. The 100%
- * keyframe exactly repeats 0% to keep the infinite loop seamless. */
+ * keyframe repeats 0% to keep the infinite loop seamless. */
 @property --mv-h-a {
     syntax: "<number>";
     inherits: false;
@@ -187,33 +189,42 @@ footer,
         mv-hydrangea-hues 260s ease-in-out infinite,
         mv-chroma 210s ease-in-out infinite,
         mv-light 170s ease-in-out infinite;
-}
 
-
-@media (prefers-reduced-motion: reduce) {
-    header,
-    footer,
-    .utsuroi {
+    @media (prefers-reduced-motion: reduce) {
         animation: none;
     }
 }
 
+
 header {
     border-bottom: var(--border-main);
-    padding: 1rem 2rem;
+    padding: var(--space-md) var(--space-xl);
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     flex-shrink: 0;
     color: var(--color-text);
+
+    & h1 {
+        font-size: var(--text-xl);
+        font-weight: var(--weight-medium);
+        color: var(--color-text);
+    }
+
+    /* The header's badge carries the build and resource-limit detail in its
+       tooltip (setPlaygroundBadgeTooltip() in src/entry/entry-common.ts); the
+       splash copy has that detail written out beside it. */
+    & .version {
+        cursor: help;
+    }
 }
 
 .app-header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-md);
     width: 100%;
 }
 
@@ -221,14 +232,13 @@ header {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    text-decoration: none;
     color: inherit;
 }
 
 .app-brand-meta {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
 }
 
 .logo {
@@ -237,44 +247,29 @@ header {
     object-fit: contain;
 }
 
-header h1 {
-    font-size: 1.5rem;
-    color: var(--color-text);
-    font-weight: 500;
-    margin: 0;
-}
-
-header h1 a {
-    color: var(--color-text);
-}
-
 .version {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: var(--text-2xs);
+    line-height: var(--leading-snug);
     color: var(--color-white);
     background: var(--color-primary);
     border: 1px solid var(--color-primary);
     border-radius: var(--radius-button);
-    padding: 0.125rem 0.5rem;
-    line-height: 1.5;
+    padding: var(--space-3xs) var(--space-xs);
 }
 
-/* In the header this badge is also the handle for the build and resource-limit
-   detail, which it carries in its tooltip (setPlaygroundBadgeTooltip() in
-   src/entry/entry-common.ts) rather than in badges of its own beside it. The
-   splash copy has that same detail written out beside it, so only the header's
-   invites the hover. */
-header .version {
-    cursor: help;
+.header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-xs);
 }
 
 
 /* First-visit walkthrough — see initSplashScreen() in src/entry/entry-common.ts.
    Reuses the header's moving hydrangea gradient (.utsuroi) so the splash reads
-   as the same surface, not a separate dialog bolted on. Sits above the
-   skip-link's z-index so it is unambiguously on top while active; once
-   dismissed it fades to transparent and stops intercepting pointer events
-   immediately, well before it is removed from the DOM. */
+   as the same surface. Sits above the skip-link's z-index; once dismissed it
+   fades out and stops intercepting pointer events before it is removed. */
 .splash-screen {
     position: fixed;
     inset: 0;
@@ -286,11 +281,22 @@ header .version {
     color: var(--color-text);
     opacity: 1;
     transition: opacity 0.35s ease;
-}
 
-.splash-screen.splash-dismissing {
-    opacity: 0;
-    pointer-events: none;
+    &.splash-dismissing {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* The technical detail is revealed by a timer (splash-detail-visible); the
+       hint below it never waits on that timer. */
+    &.splash-detail-visible :is(.splash-version-line, .splash-note, .splash-limits-heading, .splash-limits) {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
 }
 
 .splash-content {
@@ -311,10 +317,8 @@ header .version {
     animation: splash-logo-in 0.5s ease forwards;
 }
 
-/* The title and its "Playground" badge read as one identity, side by side —
-   matching how the header itself pairs <h1>Ajisai</h1> with the same badge
-   (see .app-brand-meta) — so both fade in together with the logo, ahead of
-   the technical-detail group below. */
+/* The title and its "Playground" badge read as one identity, side by side,
+   the way the header pairs <h1>Ajisai</h1> with the same badge. */
 .splash-heading {
     display: flex;
     flex-wrap: wrap;
@@ -330,14 +334,8 @@ header .version {
     font-weight: var(--weight-medium);
 }
 
-/* Hidden until the JS-driven auto-transition reveals them (splash-detail-visible),
-   matching the "logo/title first, then technical detail" sequence — but the
-   hint below is never gated on that timer, so skipping straight through
-   never means waiting out an animation first. The technical detail itself —
-   the version/build line and the resource-limit ceiling table in particular
-   — is written out here as plain text, not tucked into a badge or a `title`
-   hover: a touch device has no hover to read it from, which was the entire
-   point of putting it on the splash. */
+/* Written out as plain text rather than a hover title: a touch device has no
+   hover to read it from. */
 .splash-version-line,
 .splash-note,
 .splash-limits-heading,
@@ -345,14 +343,6 @@ header .version {
     opacity: 0;
     transform: translateY(4px);
     transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.splash-screen.splash-detail-visible .splash-version-line,
-.splash-screen.splash-detail-visible .splash-note,
-.splash-screen.splash-detail-visible .splash-limits-heading,
-.splash-screen.splash-detail-visible .splash-limits {
-    opacity: 1;
-    transform: translateY(0);
 }
 
 .splash-version-line {
@@ -373,9 +363,8 @@ header .version {
     font-weight: var(--weight-medium);
 }
 
-/* The ceiling table, which the header can only offer on hover. Monospace so
-   the name/value pairs line up, and left-aligned within a centered splash so
-   a list of several lines reads naturally. */
+/* The ceiling table: monospace so the name/value pairs line up, left-aligned
+   within the centred splash. */
 .splash-limits {
     list-style: none;
     display: flex;
@@ -403,16 +392,8 @@ header .version {
     to { opacity: 1; }
 }
 
-/* Every splash rule above carries the same specificity as these, so this block
-   has to sit after them to win the cascade — the same reason the header's own
-   override sits directly below the rules it cancels. With the motion gone the
-   splash still says everything it would have said, just all at once: nothing
-   here is only reachable through an animation. */
+/* With the motion gone the splash says everything at once. */
 @media (prefers-reduced-motion: reduce) {
-    .splash-screen {
-        transition: none;
-    }
-
     .splash-logo,
     .splash-heading {
         animation: none;
@@ -433,48 +414,45 @@ header .version {
 
 footer {
     border-top: var(--border-main);
-    padding: 0.75rem 2rem;
+    padding: var(--space-sm) var(--space-xl);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
+    gap: var(--space-xl);
     flex-shrink: 0;
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     text-align: center;
-}
 
-footer a {
-    color: var(--color-text-light);
-    text-decoration: none;
+    & a {
+        color: var(--color-text-light);
 
-    &:hover {
-        color: var(--color-text);
+        &:hover {
+            color: var(--color-text);
+        }
     }
 }
 
 
-/* Single source of truth for every non-word button (header, output, dictionary
- * actions, and the dynamically generated JSON download link). Edit here to
- * restyle all of them at once. */
+/* Every non-word button: header, output, dictionary actions, and the
+   generated JSON download link. */
 .btn {
     display: inline-flex;
     align-items: center;
     align-self: flex-end;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     min-height: 2.125rem;
-    padding: 0.5rem 1rem;
+    padding: var(--space-xs) var(--space-md);
     font-family: var(--font-stack-primary);
-    font-size: 0.875rem;
-    font-weight: 500;
-    line-height: 1.2;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
     border: var(--border-main);
     border-radius: var(--radius-button);
     cursor: pointer;
-    text-decoration: none;
     color: var(--color-text);
-    background: #fff;
+    background: var(--color-white);
 
     &:hover {
         background: var(--color-light);
@@ -482,77 +460,22 @@ footer a {
     }
 }
 
-.header-actions {
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-}
 
-
+/* The three content boxes: Output, Stack, and the word lists. */
 .display-area,
 .state-display,
 .words-display {
     min-height: 0;
     overflow-y: auto;
+    padding: var(--space-sm);
+    border: var(--border-main);
+    background: var(--color-white);
     font-family: var(--font-stack-mono);
     font-size: 0.9rem;
-}
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-medium) var(--color-light);
 
-.display-area,
-.state-display,
-.words-display {
-    background-color: #fff;
-    padding: 0.75rem;
-    border: var(--border-main);
-}
-
-
-.display-area::-webkit-scrollbar,
-.state-display::-webkit-scrollbar,
-.words-display::-webkit-scrollbar {
-    width: 10px;
-}
-
-.display-area::-webkit-scrollbar-track,
-.state-display::-webkit-scrollbar-track,
-.words-display::-webkit-scrollbar-track {
-    background: var(--color-light);
-}
-
-.display-area::-webkit-scrollbar-thumb,
-.state-display::-webkit-scrollbar-thumb,
-.words-display::-webkit-scrollbar-thumb {
-    background: var(--color-medium);
-    border-radius: 5px;
-}
-
-.display-area::-webkit-scrollbar-thumb:hover,
-.state-display::-webkit-scrollbar-thumb:hover,
-.words-display::-webkit-scrollbar-thumb:hover {
-    background: var(--color-secondary);
-}
-
-
-
-@media (max-width: 768px) {
-    html,
-    body {
-        height: auto;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .container {
-        min-height: 100vh;
-        height: auto;
-        width: 100%;
-    }
-
-
-    header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
+    @media (width <= 768px) {
+        min-height: 80px;
     }
 }

@@ -9,26 +9,31 @@
 //! introduced here.
 
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
-use crate::interpreter::error_flow_trace::ErrorFlowEvent;
+use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
-use crate::types::value_protocol::{
-    exact_display, exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode,
-    ProtocolValue,
-};
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::value_protocol::{exact_terms, value_to_protocol, ProtocolNode, ProtocolValue};
+use crate::types::{Value, ValueData};
 use serde_json::{json, Map, Value as Json};
 
 /// Version of the top-level `--json` envelope. Bump only on a breaking
 /// change (field removal or rename); purely additive fields keep the same
 /// version. See `docs/dev/agent-cli-output-contract.md`.
-pub(crate) const SCHEMA_VERSION: u64 = 1;
+///
+/// 3: `aiDiagnostic` classifies only (`category`, `repair`, `word`,
+/// `family`) — `kind` became `category`, `recoverability` gave way to the
+/// registry's `repair`, and the copies of `nextChecks`/`candidates`/
+/// `resourceLimit` went; an error's trace event no longer repeats the
+/// top-level `diagnosis`.
+pub(crate) const SCHEMA_VERSION: u64 = 3;
 
 pub(crate) struct Report {
     pub status: &'static str,
     pub stack: Json,
     /// Human display strings for the stack, bottom to top — the same text
-    /// the GUI and PRINT render. Carried in the JSON envelope as
+    /// the GUI's Stack projection renders. Not the text `PRINT` writes: a
+    /// top-level String is displayed quoted (`'a'`) and printed raw (`a`),
+    /// see `types::display::format_for_output`. Carried in the JSON envelope as
     /// `stackDisplay` so agents and the SKILL.md generator can show
     /// "code → expected stack" pairs without re-deriving display rules.
     pub stack_display: Vec<String>,
@@ -53,18 +58,15 @@ pub(crate) struct Report {
     /// Canonical `#`-prefixed 64-hex-char BLAKE3 digest of the whole
     /// observation (`status` / stack / output / user-dictionary identities /
     /// error category) — `agent::observation_digest`, Phase 1 of
-    /// `docs/dev/competitive-advantage-work-order-2026-08.md`. `None` means
-    /// the observation could not be encoded: a Tier 2 `ExactReal::Computable`
-    /// scalar was present somewhere in the stack.
-    pub observation_digest: Option<String>,
+    /// `docs/dev/competitive-advantage-work-order-2026-08.md`.
+    pub observation_digest: String,
     /// The execution receipt (`agent::execution_receipt`, Phase 4 of
     /// `docs/dev/auditable-kernel-work-order-2026-09.md`): source digest,
     /// engine version, registry digest, limit profile, outcome status,
     /// `observation_digest` and `resourceUsage`, bundled and folded into one
     /// more digest — the material a third party needs to verify "this
     /// source, on this engine, under these limits, produced this outcome"
-    /// rather than merely being told what the outcome was. `None` exactly
-    /// when `observation_digest` is `None` (Tier 2), and `None` for
+    /// rather than merely being told what the outcome was. `None` for
     /// `check`/`infer-contracts`, which never execute and so have nothing to
     /// receipt.
     pub receipt: Option<Json>,
@@ -86,7 +88,7 @@ impl Report {
                 .map(error_flow_event_json)
                 .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
-            "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics, &self.resource_usage),
+            "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "resourceUsage": resource_usage_json(&self.resource_usage),
             "contractDecls": self.contract_decls,
             "stackElided": self.stack_elided,
@@ -97,11 +99,10 @@ impl Report {
 }
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
-    // The `Stack` owns aligned `(value, role)` slots, so iterate them directly.
     let nodes: Vec<Json> = interp
         .get_stack()
-        .iter_slots()
-        .map(|(value, role)| protocol_node_json(&value_to_protocol(value, Some(role))))
+        .iter()
+        .map(|value| protocol_node_json(&value_to_protocol(value)))
         .collect();
     Json::Array(nodes)
 }
@@ -115,9 +116,6 @@ pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
     if let Some(word) = &diagnosis.where_.word {
         where_obj.insert("word".into(), json!(word));
     }
-    if let Some(dictionary) = &diagnosis.where_.dictionary {
-        where_obj.insert("dictionary".into(), json!(dictionary));
-    }
     json!({
         "when": diagnosis.when.as_protocol_str(),
         "why": diagnosis.why.as_protocol_str(),
@@ -125,7 +123,6 @@ pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
         "where": Json::Object(where_obj),
         "evidence": diagnosis.evidence,
         "nextChecks": diagnosis.next_checks.iter().map(check_json).collect::<Vec<_>>(),
-        "agreedPrefix": diagnosis.agreed_prefix,
         "candidates": diagnosis.candidates,
         "resourceLimit": diagnosis.resource_limit.as_ref().map(resource_limit_json),
     })
@@ -160,20 +157,16 @@ fn resource_limit_json(facts: &crate::interpreter::debug_diagnosis::ResourceLimi
 }
 
 pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
-    json!({
-        "kind": payload.kind,
-        "recoverability": payload.recoverability,
-        "semanticArea": payload.semantic_area,
-        "word": payload.word,
-        "semanticRole": payload.semantic_role,
-        "algebraicFamily": payload.algebraic_family,
-        "absenceReason": payload.nil_reason,
-        "truthValue": payload.truth_value,
-        "effect": payload.effect,
-        "nextChecks": payload.next_checks.iter().map(check_json).collect::<Vec<_>>(),
-        "candidates": payload.candidates,
-        "resourceLimit": payload.resource_limit.as_ref().map(resource_limit_json),
-    })
+    let mut obj = Map::new();
+    obj.insert("category".into(), json!(payload.category));
+    // As in spec/outcomes.json: present only as `program`; absent means the
+    // operand is what is wrong.
+    if let Some(repair) = payload.repair {
+        obj.insert("repair".into(), json!(repair));
+    }
+    obj.insert("word".into(), json!(payload.word));
+    obj.insert("family".into(), json!(payload.family));
+    Json::Object(obj)
 }
 
 fn absence_json(absence: &AbsenceMetadata) -> Json {
@@ -207,13 +200,17 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
     obj.insert("stackLenBefore".into(), json!(event.stack_len_before));
     obj.insert("stackLenAfter".into(), json!(event.stack_len_after));
     obj.insert("message".into(), json!(event.message));
-    if let Some(diagnosis) = &event.diagnosis {
+    // A NIL has no diagnosis anywhere else, so its event carries one. An
+    // ERROR's is the report's top-level `diagnosis` — built from this very
+    // event (`run_render::failed_run_diagnosis`) — and sending it here as well
+    // doubled every error report for no information.
+    if let (ErrorFlowEventKind::NilProduced, Some(diagnosis)) = (&event.kind, &event.diagnosis) {
         obj.insert("diagnosis".into(), diagnosis_json(diagnosis));
     }
     Json::Object(obj)
 }
 
-pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics, usage: &ResourceUsage) -> Json {
+pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
     // Diagnostics only: these counters describe *how* the runtime went about
     // its work — which cache answered, which fast path fired. Reading them
     // changes no result, and no Word reads them.
@@ -226,12 +223,6 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics, usage: &ResourceUsa
         "resolveCacheMissCount": metrics.resolve_cache_miss_count,
         "resolveCacheInvalidationCount": metrics.resolve_cache_invalidation_count,
         "tailCallJumpCount": metrics.tail_call_jump_count,
-        // Kept here, and equal to `resourceUsage.executionSteps`, because
-        // removing a field is what a schema version is for. It belongs in
-        // `resourceUsage`: an optimizer counter and a budget an agent plans
-        // against are different kinds of fact, and mixing them is how this one
-        // went unnoticed while reporting zero for every program ever run.
-        "executionSteps": usage.execution_steps,
     })
 }
 
@@ -251,18 +242,11 @@ pub(crate) fn resource_usage_json(usage: &ResourceUsage) -> Json {
 }
 
 /// JSON rendering of a `ProtocolNode` — the same shape `protocol_to_js`
-/// produces for the GUI: `{ type, value, displayHint, semantics? }`.
+/// produces for the GUI: `{ type, value, semantics? }`.
 pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
     let mut obj = Map::new();
-    obj.insert(
-        "displayHint".into(),
-        json!(interpretation_protocol_str(node.display_hint)),
-    );
     if let Some(source) = &node.semantics {
-        obj.insert(
-            "semantics".into(),
-            semantics_json(source, node.display_hint),
-        );
+        obj.insert("semantics".into(), semantics_json(source));
     }
     obj.insert("type".into(), json!(node.type_str));
     let value = match &node.value {
@@ -283,29 +267,22 @@ pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
     Json::Object(obj)
 }
 
-/// JSON rendering of the per-value `semantics` block — the native mirror of
-/// `value_semantics_to_js` at the WASM boundary; the two now emit the exact
-/// same field set.
-pub(super) fn semantics_json(value: &Value, effective: Interpretation) -> Json {
+/// JSON rendering of the per-value `semantics` block — the one rendering:
+/// the WASM boundary converts this same value (`value_semantics_to_js`)
+/// rather than building its own.
+pub(crate) fn semantics_json(value: &Value) -> Json {
     let mut obj = Map::new();
-    let truth = value.truth_value_for_role(effective);
-    if let Some(truth) = truth {
+    if let Some(truth) = value.truth_value() {
         obj.insert("truthValue".into(), json!(truth));
     }
     if let Some(absence) = value.normalized_absence_metadata() {
         obj.insert("absence".into(), absence_json(&absence));
     }
-    if matches!(value.data, ValueData::ExactScalar(_))
-        && effective != Interpretation::ContinuedFraction
-    {
+    if matches!(value.data, ValueData::ExactScalar(_)) {
         obj.insert("approximate".into(), json!(true));
     }
-    // The same normal form in two shapes: the terms a consumer computes with,
-    // and one short string a reader can take in. Emitted together because they
-    // are derived together — see `value_protocol::exact_display`.
-    if let Some(display) = exact_display(value) {
-        obj.insert("exactDisplay".into(), json!(display));
-    }
+    // The terms a consumer computes with. The rendering a reader takes in is
+    // the stack display, which writes these same terms (`sqrt(2)`).
     if let Some(terms) = exact_terms(value) {
         obj.insert(
             "exactTerms".into(),
@@ -337,15 +314,13 @@ mod tests {
         let sqrt_two = ExactReal::from_sqrt_rational(Fraction::new(2.into(), 1.into()))
             .expect("sqrt(2) is in the supported algebraic domain");
         let value = Value::from_exact_real(sqrt_two);
-        let semantics = semantics_json(&value, Interpretation::RawNumber);
+        let semantics = semantics_json(&value);
 
         assert_eq!(semantics["approximate"], true);
         assert_eq!(semantics["exactTerms"][0]["numerator"], "1");
         assert_eq!(semantics["exactTerms"][0]["denominator"], "1");
         assert_eq!(semantics["exactTerms"][0]["radicand"], "2");
-        // The short rendering of those same terms. Without it the only two
-        // things a reader meets before them are a truncated continued
-        // fraction and a rational approximation.
-        assert_eq!(semantics["exactDisplay"], "sqrt(2)");
+        // The rendering is the stack display's, not a second field here.
+        assert!(semantics.get("exactDisplay").is_none());
     }
 }

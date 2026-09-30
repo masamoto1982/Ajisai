@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 use num_bigint::BigInt;
@@ -52,60 +52,42 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     }
 }
 
-fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
-    match &value.data {
-        ValueData::Text(_) => Err(AjisaiError::create_structure_error("integer", "string")),
-        ValueData::Record(_) => Err(AjisaiError::create_structure_error("integer", "record")),
-        ValueData::Scalar(f) => {
-            if !f.is_integer() {
-                return Err(AjisaiError::create_structure_error("integer", "fraction"));
-            }
-            Ok(f.numerator())
+/// An operand that is not an integer, described for the message the caller
+/// raises. Not an `AjisaiError`: GET, TAKE, PUT, COLLECT and RANGE all raise
+/// `invalidInteger` for it, each with a message naming what the integer was
+/// for (an index, a count, a bound).
+#[derive(Debug, Clone)]
+pub(crate) struct NotAnInteger {
+    pub got: String,
+}
+
+impl NotAnInteger {
+    fn of(value: &Value) -> Self {
+        NotAnInteger {
+            got: crate::types::display::describe_operand(value),
         }
-        ValueData::Nil => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "NIL",
-        )),
-        ValueData::Vector(children) if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_) => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "multi-element vector",
-        )),
-        ValueData::Tensor { data, .. } => {
-            if data.len() == 1 {
-                let fraction = data
-                    .get_small_fraction(0)
-                    .ok_or_else(|| AjisaiError::create_structure_error("integer", "NIL"))?;
-                if !fraction.is_integer() {
-                    return Err(AjisaiError::create_structure_error("integer", "fraction"));
-                }
-                Ok(fraction.numerator())
-            } else {
-                Err(AjisaiError::create_structure_error(
-                    "single-element value with integer",
-                    "multi-element vector",
-                ))
-            }
-        }
-        ValueData::ExactScalar(_) => Err(AjisaiError::create_structure_error(
-            "integer",
-            "irrational exact real",
-        )),
-        ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "code block",
-        )),
     }
 }
 
-pub(crate) fn extract_integer_from_value(value: &Value) -> Result<i64> {
-    let n = extract_integer_bigint(value)?;
-    n.to_i64().ok_or_else(|| {
-        AjisaiError::create_structure_error("an integer within i64 range", "a larger integer")
-    })
+fn extract_integer_bigint(value: &Value) -> std::result::Result<BigInt, NotAnInteger> {
+    match &value.data {
+        ValueData::Scalar(f) if f.is_integer() => Ok(f.numerator()),
+        // No one-element Vector stands for its element here: `[ 2 ]` is a
+        // Vector (LANG.VALUES.DISJOINT), and a Vector where an index or a
+        // count is read lifts the Word over it (LANG.COLLECTIONS.LIFT).
+        _ => Err(NotAnInteger::of(value)),
+    }
 }
 
-pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
+pub(crate) fn extract_integer_from_value(value: &Value) -> std::result::Result<i64, NotAnInteger> {
+    extract_integer_bigint(value)?
+        .to_i64()
+        .ok_or_else(|| NotAnInteger::of(value))
+}
+
+pub(crate) fn extract_bigint_from_value(
+    value: &Value,
+) -> std::result::Result<BigInt, NotAnInteger> {
     extract_integer_bigint(value)
 }
 
@@ -121,7 +103,7 @@ pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::declared(
             "nonText",
-            "expected a name (String), got Nil",
+            "expected a name (String), got NIL",
         ));
     }
 
@@ -129,7 +111,7 @@ pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
         Some(name) => Ok(name.to_uppercase()),
         None => Err(AjisaiError::declared(
             "nonText",
-            "expected a name (String), got a non-text value",
+            format!("expected a name (String), got {}", value.domain_name()),
         )),
     }
 }
@@ -160,70 +142,18 @@ pub(crate) fn create_number_value(fraction: Fraction) -> Value {
 
 pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
-    match interp.consumption_mode {
-        ConsumptionMode::Consume => {
-            let values: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            if values.len() != count {
-                return Err(AjisaiError::StackUnderflow);
-            }
-            Ok(values)
-        }
-        ConsumptionMode::Keep => {
-            let stack_len = interp.stack.len();
-            let values: Vec<Value> = interp.stack.as_slice()[stack_len - count..].to_vec();
-            Ok(values)
-        }
+    let values: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+    if values.len() != count {
+        return Err(AjisaiError::stack_underflow());
     }
+    Ok(values)
 }
 
 pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
-}
-
-/// The operand slots a Word that answers with nothing is about to eat, when
-/// `KEEP` is in force — `None` in the ordinary consuming mode.
-///
-/// `KEEP` leaves a Word's operands on the stack beneath its result
-/// (LANG.MODIFIERS.CONSUMPTION), and the contract names no exception for a
-/// Word whose result is empty: `5 KEEP 'X' BIND` names the value *and* leaves
-/// `5 'X'` where they were, and `{ 1 } 'W' KEEP DEF` leaves the body and the
-/// name. The consuming-and-answering Words read the modifier while extracting
-/// their operands; a Word with nothing to answer with has nothing to extract
-/// there, so it takes a copy up front and puts it back once the effect has
-/// succeeded. Silently doing neither — which is what `BIND`, `DEF`, `DEL` and
-/// `LOOKUP` used to do — is the one reading the contract does not allow.
-pub(crate) fn keep_mode_operands(
-    interp: &Interpreter,
-    count: usize,
-) -> Option<Vec<(Value, crate::types::Interpretation)>> {
-    if interp.consumption_mode != ConsumptionMode::Keep || interp.stack.len() < count {
-        return None;
-    }
-    let floor = interp.stack.len() - count;
-    Some(
-        interp
-            .stack
-            .iter_slots()
-            .skip(floor)
-            .map(|(value, role)| (value.clone(), role))
-            .collect(),
-    )
-}
-
-/// Put back what [`keep_mode_operands`] took a copy of. Called only after the
-/// Word succeeded: a failed Word reports its own stack, and restoring on top
-/// of that would double the operands it had already pushed back for the
-/// diagnosis.
-pub(crate) fn restore_keep_mode_operands(
-    interp: &mut Interpreter,
-    operands: Option<Vec<(Value, crate::types::Interpretation)>>,
-) {
-    for (value, role) in operands.into_iter().flatten() {
-        interp.stack.push_with_role(value, role);
-    }
 }
 
 pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
@@ -235,9 +165,7 @@ pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
         return false;
     }
     let inherited = Value::nil_inheriting_absence_from(&interp.stack[stack_len - 1]);
-    if interp.consumption_mode == ConsumptionMode::Consume {
-        interp.stack.pop();
-    }
+    interp.stack.pop();
     interp.stack.push(inherited);
     true
 }
@@ -257,10 +185,8 @@ pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
     } else {
         Value::nil_inheriting_absence_from(&interp.stack[stack_len - 1])
     };
-    if interp.consumption_mode == ConsumptionMode::Consume {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
     interp.stack.push(inherited);
     true
 }

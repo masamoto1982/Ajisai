@@ -1,16 +1,11 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// Whether a value is a String (LANG.VALUES.DISJOINT).
 ///
-/// This used to *guess*: it walked a Vector's elements and answered "string"
-/// when every one of them happened to be a printable codepoint, optionally
-/// steered by an `Interpretation::Text` role. That made `[ 65 ]` and `'A'`
-/// indistinguishable to every caller, and it was render-time re-guessing of
-/// exactly the kind `Interpretation` promises the runtime never does. With
-/// String a domain of its own, the question is answered by the tag.
+/// String is a domain of its own, so the question is answered by the tag.
 pub(crate) fn is_string_value(val: &Value) -> bool {
     val.is_text()
 }
@@ -31,32 +26,15 @@ pub(crate) fn apply_unary_cast(
     interp: &mut Interpreter,
     convert: fn(&Value) -> Result<Value>,
 ) -> Result<()> {
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let hint: Interpretation = interp.stack.last_role();
-    let value: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let value: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     match convert(&value) {
         Ok(result) => {
-            // A unary cast is value-preserving on the semantic plane: the
-            // slot keeps its prior plane role.
-            // Core casts that do change the role (STR/NUM/…) are re-tagged
-            // afterward by `apply_word_hint_override`.
-            interp.stack.push_with_role(result, hint);
+            interp.stack.push(result);
             Ok(())
         }
         Err(error) => {
-            if !is_keep_mode {
-                interp.stack.push_with_role(value, hint);
-            }
+            interp.stack.push(value);
             Err(error)
         }
     }
@@ -68,15 +46,6 @@ pub(crate) fn format_fraction_to_string(f: &Fraction) -> String {
     } else {
         format!("{}/{}", f.numerator(), f.denominator())
     }
-}
-
-pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
-    let f: &Fraction = val.as_scalar()?;
-    let code: i64 = f.to_i64()?;
-    if !(0..=0x10FFFF).contains(&code) {
-        return None;
-    }
-    char::from_u32(code as u32)
 }
 
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
@@ -112,9 +81,6 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
 
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
-            // The logical Unknown (U — `Nil` carrying the `TruthValue`
-            // hint) has no dedicated variant, so it takes this arm too and
-            // casts to `NIL`, same as an operational NIL.
             ValueData::Nil => vec!["NIL".to_string()],
             ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],

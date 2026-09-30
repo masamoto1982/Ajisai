@@ -3,12 +3,12 @@ use super::common::{
 };
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
-    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -18,16 +18,10 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let target_val: Value = if is_keep_mode {
-        interp.stack.last().cloned().ok_or_else(|| {
-            interp.stack.push(code_val.clone());
-            AjisaiError::StackUnderflow
-        })?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let target_val: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(code_val.clone());
+        AjisaiError::stack_underflow()
+    })?;
 
     if target_val.is_nil() {
         interp
@@ -37,13 +31,12 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     }
 
     if !is_vector_value(&target_val) {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
+        let got = target_val.domain_name();
+        interp.stack.push(target_val);
         interp.stack.push(code_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            "FILTER: expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
 
@@ -73,7 +66,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     None => {
                         error = Some(AjisaiError::declared(
                             "blockContractViolation",
-                            "FILTER: expected boolean value, got empty stack",
+                            "expected the predicate block to leave one truth value, and it left none",
                         ));
                         break;
                     }
@@ -101,9 +94,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     interp.stack = saved_stack;
 
     if let Some(e) = error {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
+        interp.stack.push(target_val);
         interp.stack.push(code_val);
         return Err(e);
     }

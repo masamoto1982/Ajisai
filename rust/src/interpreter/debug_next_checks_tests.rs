@@ -31,7 +31,6 @@ fn every_check_carries_a_code_and_both_locales() {
         CauseClass::Environment,
         CauseClass::ValueShape,
         CauseClass::Index,
-        CauseClass::VectorLength,
         CauseClass::ShapeMismatch,
         CauseClass::SourceForm,
         CauseClass::ResourceLimit,
@@ -45,11 +44,10 @@ fn every_check_carries_a_code_and_both_locales() {
     ];
     let categories = [
         None,
-        Some(ErrorCategory::DivisionByZero),
         Some(ErrorCategory::ExecutionLimitExceeded),
         Some(ErrorCategory::ResourceLimitExceeded),
         Some(ErrorCategory::RecursionLimitExceeded),
-        Some(ErrorCategory::BuiltinProtection),
+        Some(ErrorCategory::Declared("protectedWord")),
     ];
     for why in &classes {
         for category in &categories {
@@ -204,7 +202,7 @@ fn an_unclassified_raise_lists_the_declared_conditions_and_a_classified_one_does
     let classified = checks_for(
         &CauseClass::ShapeMismatch,
         Some("ADD"),
-        Some(&ErrorCategory::ShapeMismatch),
+        Some(&ErrorCategory::Declared("shapeMismatch")),
         None,
     );
     assert!(classified
@@ -248,8 +246,8 @@ fn a_word_with_no_registry_entry_still_gets_its_class_level_checks() {
 /// This gate exists because of a defect it would have caught on the day it
 /// landed: the zero-division check told both locales to "handle it with SAFE",
 /// and `SAFE` is not an Ajisai word — it is the pre-rename spelling of
-/// `OR-NIL`. `1 0 /` therefore answered a correct NIL whose diagnosis sent the
-/// reader to `1 0 / SAFE`, which fails with `Unknown word: SAFE`, and no check
+/// `OR-NIL`. `1 0 DIV` therefore answered a correct NIL whose diagnosis sent the
+/// reader to `1 0 DIV SAFE`, which fails with `Unknown word: SAFE`, and no check
 /// ever named `OR-NIL`. For a language whose stated claim is that a machine can
 /// follow a structured diagnosis to a first-attempt repair, a check that names
 /// a word the dictionary rejects is worse than a check that names none.
@@ -305,7 +303,7 @@ mod diagnosis_vocabulary_is_real {
         if crate::surface_forms::lookup_surface_form(token).is_some() {
             return true;
         }
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(token);
+        let canonical = crate::word_name::canonical_word_name(token);
         crate::kernel::generated::generated_word(canonical.as_ref()).is_some()
     }
 
@@ -318,7 +316,6 @@ mod diagnosis_vocabulary_is_real {
             CauseClass::Environment,
             CauseClass::ValueShape,
             CauseClass::Index,
-            CauseClass::VectorLength,
             CauseClass::ShapeMismatch,
             CauseClass::SourceForm,
             CauseClass::ResourceLimit,
@@ -333,30 +330,25 @@ mod diagnosis_vocabulary_is_real {
         let categories = [
             None,
             Some(ErrorCategory::StackUnderflow),
-            Some(ErrorCategory::StructureError),
             Some(ErrorCategory::UnknownWord),
-            Some(ErrorCategory::DivisionByZero),
-            Some(ErrorCategory::VectorLengthMismatch),
-            Some(ErrorCategory::ShapeMismatch),
+            Some(ErrorCategory::Declared("shapeMismatch")),
             Some(ErrorCategory::MalformedSource),
-            Some(ErrorCategory::NameConflict),
+            Some(ErrorCategory::Declared("nameConflict")),
             Some(ErrorCategory::ExecutionLimitExceeded),
             Some(ErrorCategory::ResourceLimitExceeded),
             Some(ErrorCategory::RecursionLimitExceeded),
-            Some(ErrorCategory::BuiltinProtection),
-            Some(ErrorCategory::SelfReferentialDefinition),
+            Some(ErrorCategory::Declared("protectedWord")),
+            Some(ErrorCategory::Declared("selfReferentialDefinition")),
             Some(ErrorCategory::Declared("divisorEqualsZero")),
         ];
         let reasons = [
             None,
             Some(NilReason::DivisionByZero),
-            Some(NilReason::MissingField),
+            Some(NilReason::NotFound),
             Some(NilReason::InvalidEncoding),
             Some(NilReason::IndexOutOfBounds),
-            Some(NilReason::Undecidable),
             Some(NilReason::SpaceExhausted),
             Some(NilReason::DomainMiss),
-            Some(NilReason::NotAvailable),
             Some(NilReason::Literal),
         ];
 
@@ -379,7 +371,7 @@ mod diagnosis_vocabulary_is_real {
                                 }
                                 assert!(
                                     resolves(&token),
-                                    "check `{}` names `{token}`, which no Ajisai Word, alias or \
+                                    "check `{}` names `{token}`, which no Ajisai Word or \
                                      surface form resolves. A diagnosis may not send a reader to \
                                      a name the dictionary rejects. Text: {text}",
                                     check.code
@@ -399,7 +391,7 @@ mod diagnosis_vocabulary_is_real {
         let checks = checks_for(
             &CauseClass::Domain,
             Some("DIV"),
-            Some(&ErrorCategory::DivisionByZero),
+            None,
             Some(&NilReason::DivisionByZero),
         );
         let advice = checks

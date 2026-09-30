@@ -26,45 +26,10 @@ class AjisaiInterpreter {
         wasm.ajisaiinterpreter_clear_stack(this.__wbg_ptr);
     }
     /**
-     * Returns the canonical Core-listed words.
-     *
-     * Tuple shape: `(name, description, syntax)` — same as
-     * `collect_core_words_info` so the GUI can render either list with the
-     * same code path.
-     * @returns {any}
-     */
-    collect_core_listed_words_info() {
-        const ret = wasm.ajisaiinterpreter_collect_core_listed_words_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {any}
-     */
-    collect_core_word_aliases_info() {
-        const ret = wasm.ajisaiinterpreter_collect_core_word_aliases_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
      * @returns {any}
      */
     collect_core_words_info() {
         const ret = wasm.ajisaiinterpreter_collect_core_words_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {any}
-     */
-    collect_input_helper_words_info() {
-        const ret = wasm.ajisaiinterpreter_collect_input_helper_words_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * Runtime counters for the Playground. Counts are session-cumulative and
-     * reset with the interpreter. Observational only.
-     * @returns {any}
-     */
-    collect_runtime_metrics() {
-        const ret = wasm.ajisaiinterpreter_collect_runtime_metrics(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -82,9 +47,9 @@ class AjisaiInterpreter {
         return ret;
     }
     /**
-     * Content identity (Section 8.6) of each user word, as `[fqName, id]`
-     * pairs. The host uses these to deduplicate identical definitions on
-     * import and to key shared word groups by content rather than by name.
+     * Content identity of each user word, as `[name, id]` pairs. The host
+     * uses these to deduplicate identical definitions on import and to key
+     * shared word groups by content rather than by name.
      * @returns {any}
      */
     collect_word_identities() {
@@ -99,16 +64,6 @@ class AjisaiInterpreter {
         const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ajisaiinterpreter_execute(this.__wbg_ptr, ptr0, len0);
-        return ret;
-    }
-    /**
-     * @param {string} code
-     * @returns {any}
-     */
-    execute_step(code) {
-        const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.ajisaiinterpreter_execute_step(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
     /**
@@ -169,26 +124,10 @@ class AjisaiInterpreter {
         return this;
     }
     /**
-     * @param {string} name
-     */
-    remove_word(name) {
-        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.ajisaiinterpreter_remove_word(this.__wbg_ptr, ptr0, len0);
-    }
-    /**
      * @returns {any}
      */
     reset() {
         const ret = wasm.ajisaiinterpreter_reset(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * Compatibility alias for [`Self::reset`].
-     * @returns {any}
-     */
-    reset_session() {
-        const ret = wasm.ajisaiinterpreter_reset_session(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -214,7 +153,7 @@ class AjisaiInterpreter {
     }
     /**
      * Restore a stack from a `snapshot_stack` payload, reinstating exact
-     * values (CodeBlock, ExactScalar, …) and their stack-position roles.
+     * values (CodeBlock, ExactScalar, …).
      * @param {string} snapshot_json
      */
     restore_stack_snapshot(snapshot_json) {
@@ -226,13 +165,28 @@ class AjisaiInterpreter {
         }
     }
     /**
+     * Restore saved User Words, and name the entries that could not be
+     * restored as `[name, reason]` pairs.
+     *
+     * Restoring skips an unreadable entry rather than raising, which is what
+     * keeps the rest of a dictionary (`restore_user_word_definitions`); the
+     * skipped entries come back here instead of being thrown, since a throw
+     * would abort the host's own post-restore work and leave the session
+     * holding a half-restored dictionary. The host used to learn only the
+     * *names* that did not arrive, by comparing what it asked for against
+     * the dictionary afterwards — which could not see a refused
+     * redefinition (the old body is still there, so the name is present) and
+     * could not say why anything was left out. The `Err` case is a list that
+     * does not deserialize at all.
      * @param {any} words_js
+     * @returns {any}
      */
     restore_user_words(words_js) {
         const ret = wasm.ajisaiinterpreter_restore_user_words(this.__wbg_ptr, words_js);
-        if (ret[1]) {
-            throw takeFromExternrefTable0(ret[0]);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
         }
+        return takeFromExternrefTable0(ret[0]);
     }
     /**
      * Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
@@ -265,21 +219,15 @@ class AjisaiInterpreter {
      * @returns {string}
      */
     snapshot_stack() {
-        let deferred2_0;
-        let deferred2_1;
+        let deferred1_0;
+        let deferred1_1;
         try {
             const ret = wasm.ajisaiinterpreter_snapshot_stack(this.__wbg_ptr);
-            var ptr1 = ret[0];
-            var len1 = ret[1];
-            if (ret[3]) {
-                ptr1 = 0; len1 = 0;
-                throw takeFromExternrefTable0(ret[2]);
-            }
-            deferred2_0 = ptr1;
-            deferred2_1 = len1;
-            return getStringFromWasm0(ptr1, len1);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
         } finally {
-            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
 }
@@ -349,17 +297,20 @@ exports.agent_infer_contracts = agent_infer_contracts;
 
 /**
  * Predict the finite set of outcome ids `source` could produce without
- * executing it, matching `ajisai agent outcomes`.
+ * executing it, under the same agent-profile ceilings `agent_compute`
+ * applies, matching `ajisai agent outcomes`. `step_limit` as for
+ * `agent_compute`.
  * @param {string} source
+ * @param {number | null} [step_limit]
  * @returns {string}
  */
-function agent_predict_outcomes(source) {
+function agent_predict_outcomes(source, step_limit) {
     let deferred2_0;
     let deferred2_1;
     try {
         const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.agent_predict_outcomes(ptr0, len0);
+        const ret = wasm.agent_predict_outcomes(ptr0, len0, isLikeNone(step_limit) ? Number.MAX_SAFE_INTEGER : (step_limit) >>> 0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -417,6 +368,10 @@ function __wbg_get_imports() {
         __wbg___wbindgen_is_object_a27215656b807791: function(arg0) {
             const val = arg0;
             const ret = typeof(val) === 'object' && val !== null;
+            return ret;
+        },
+        __wbg___wbindgen_is_string_ea5e6cc2e4141dfe: function(arg0) {
+            const ret = typeof(arg0) === 'string';
             return ret;
         },
         __wbg___wbindgen_is_undefined_c05833b95a3cf397: function(arg0) {
@@ -526,6 +481,10 @@ function __wbg_get_imports() {
             const ret = new Array();
             return ret;
         },
+        __wbg_new_7796ffc7ed656783: function() {
+            const ret = new Map();
+            return ret;
+        },
         __wbg_new_cd45aabdf6073e84: function(arg0) {
             const ret = new Uint8Array(arg0);
             return ret;
@@ -578,6 +537,10 @@ function __wbg_get_imports() {
             const ret = Promise.resolve(arg0);
             return ret;
         },
+        __wbg_set_575dd786d51585f8: function(arg0, arg1, arg2) {
+            const ret = arg0.set(arg1, arg2);
+            return ret;
+        },
         __wbg_set_6be42768c690e380: function(arg0, arg1, arg2) {
             arg0[arg1] = arg2;
         },
@@ -620,7 +583,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 280, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 182, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014);
             return ret;
         },
@@ -629,9 +592,19 @@ function __wbg_get_imports() {
             const ret = arg0;
             return ret;
         },
-        __wbindgen_cast_0000000000000003: function(arg0, arg1) {
+        __wbindgen_cast_0000000000000003: function(arg0) {
+            // Cast intrinsic for `I64 -> Externref`.
+            const ret = arg0;
+            return ret;
+        },
+        __wbindgen_cast_0000000000000004: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
+            return ret;
+        },
+        __wbindgen_cast_0000000000000005: function(arg0) {
+            // Cast intrinsic for `U64 -> Externref`.
+            const ret = BigInt.asUintN(64, arg0);
             return ret;
         },
         __wbindgen_init_externref_table: function() {

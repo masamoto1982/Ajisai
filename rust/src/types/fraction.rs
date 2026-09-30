@@ -3,24 +3,6 @@ use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;
 
-/// How a value is rounded to an integer (or, via [`Fraction::quantize`], to a
-/// rational grid). Each variant is the grid generalisation of an existing
-/// integer-rounding behaviour: `Floor`/`Ceil`/`Trunc` are directed, `HalfEven`
-/// (banker's) and `HalfAway` (the `ROUND` tie rule) are round-to-nearest.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RoundingMode {
-    /// Nearest; ties to the even multiple (banker's rounding).
-    HalfEven,
-    /// Nearest; ties away from zero (the `ROUND` rule).
-    HalfAway,
-    /// Toward negative infinity (the `FLOOR` rule).
-    Floor,
-    /// Toward positive infinity (the `CEIL` rule).
-    Ceil,
-    /// Toward zero (truncation).
-    Trunc,
-}
-
 #[inline]
 pub(crate) fn compute_gcd_i64(a: i64, b: i64) -> i64 {
     // Reduce in unsigned space: `i64::MIN.abs()` overflows and panics, so the
@@ -391,11 +373,13 @@ impl Fraction {
     pub fn as_usize(&self) -> Option<usize> {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 1 && *n >= 0 {
-                    Some(*n as usize)
-                } else {
-                    None
+                if *d != 1 || *n < 0 {
+                    return None;
                 }
+                // Not `as usize`: on a 32-bit target (wasm32) that cast
+                // truncates, so a count past `u32::MAX` came back as a small,
+                // wrong count instead of "not a usize".
+                usize::try_from(*n).ok()
             }
             FractionRepr::Big {
                 numerator,
@@ -457,18 +441,29 @@ impl Fraction {
             let exponent_str = &s[e_pos + 1..];
 
             let mantissa: Fraction = Self::from_str(mantissa_str)?;
+            // The exponent's *form* is checked before its *range*: a zero
+            // mantissa is zero at any scale, so `0e2147483648` denotes 0 and
+            // must not fail the i32 parse below — which is what it did while
+            // the range check came first, making `0e<beyond i32>` a mid-run
+            // source error here, `invalidEncoding` through NUM and 0 through
+            // JSON-DECODE, three answers for one lexeme.
+            let exponent_digits = exponent_str
+                .strip_prefix(['+', '-'])
+                .unwrap_or(exponent_str);
+            if exponent_digits.is_empty() || !exponent_digits.bytes().all(|b| b.is_ascii_digit()) {
+                return Err(format!("invalid exponent: {exponent_str}"));
+            }
+            let (mn, md): (BigInt, BigInt) = mantissa.to_bigint_pair();
+            // Skip the (possibly enormous) power, so `0e<huge>` cannot drive
+            // an unbounded `pow` allocation.
+            if mn.is_zero() {
+                return Ok(Fraction::new(BigInt::zero(), BigInt::one()));
+            }
             let exponent: i32 = exponent_str.parse::<i32>().map_err(|e| e.to_string())?;
             // Take the magnitude with `unsigned_abs`: negating an i32::MIN
             // exponent (`1e-2147483648`) overflows and panicked here, a crash
             // reachable from both a numeric literal and `NUM` on a string.
             let magnitude: u32 = exponent.unsigned_abs();
-
-            let (mn, md): (BigInt, BigInt) = mantissa.to_bigint_pair();
-            // A zero mantissa is zero at any scale; skip the (possibly enormous)
-            // power so `0e<huge>` cannot drive an unbounded `pow` allocation.
-            if mn.is_zero() {
-                return Ok(Fraction::new(BigInt::zero(), BigInt::one()));
-            }
             let power: BigInt = BigInt::from(10).pow(magnitude);
             if exponent >= 0 {
                 return Ok(Fraction::new(mn * power, md));
@@ -553,11 +548,6 @@ impl Fraction {
     #[inline]
     pub fn gt(&self, other: &Fraction) -> bool {
         self.cmp(other) == std::cmp::Ordering::Greater
-    }
-
-    #[inline]
-    pub fn ge(&self, other: &Fraction) -> bool {
-        self.cmp(other) != std::cmp::Ordering::Less
     }
 }
 

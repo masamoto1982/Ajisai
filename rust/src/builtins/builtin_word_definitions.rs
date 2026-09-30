@@ -2,21 +2,18 @@ use crate::coreword_registry::Partiality;
 
 /// Runtime view of a canonical Core Word.
 ///
-/// Documentation and presentation are generated from `spec/words.json`; safety,
-/// partiality, stability, and execution form are projected from the generated
-/// contract. This type assembles those projections for existing GUI and reference
+/// Documentation and presentation are generated from `spec/words.json`;
+/// partiality is projected from the generated contract. This type assembles those projections for existing GUI and reference
 /// consumers and owns no parallel source of language facts.
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
     pub name: &'static str,
-    pub category: &'static str,
+    pub family: &'static str,
     pub summary: &'static str,
     #[allow(dead_code)]
     pub hover_summary: &'static str,
     pub hover_syntax: &'static str,
-    pub role: &'static str,
     pub stack_effect: &'static str,
-    pub stability: &'static str,
     pub partiality: Partiality,
 }
 
@@ -35,14 +32,12 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
                     .expect("generated documentation must name a canonical Word");
                 BuiltinSpec {
                     name: doc.name,
-                    category: doc.category,
+                    family: doc.family,
                     summary: doc.summary,
                     hover_summary: doc.hover_summary,
                     hover_syntax: doc.hover_syntax,
-                    role: doc.role,
                     stack_effect: doc.stack_effect,
-                    stability: crate::coreword_registry::stability_from_contract(word),
-                    partiality: crate::coreword_registry::partiality_from_contract(word),
+                    partiality: word.partiality,
                 }
             })
             .collect()
@@ -50,7 +45,7 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
 }
 
 pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
-    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    let canonical = crate::word_name::canonical_word_name(name);
     builtin_specs().iter().find(|spec| spec.name == canonical)
 }
 
@@ -71,7 +66,7 @@ pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'
 #[cfg(test)]
 mod tests {
     #[test]
-    fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
+    fn builtin_specs_are_not_named_by_symbols() {
         let forbidden = [
             "+", "-", "*", "/", "%", "=", "<", "<=", ">", ">=", "<>", ".", "..", ",", ",,", "~",
             "!", "'", "|", "?", "^",
@@ -88,10 +83,7 @@ mod tests {
 
     #[test]
     fn builtin_specs_contain_canonical_core_words() {
-        let required = [
-            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "LT", "LTE", "GT", "GTE", "KEEP", "SQRT",
-            "SORT",
-        ];
+        let required = ["ADD", "SUB", "MUL", "DIV", "EQ", "LT", "GT", "SQRT", "SORT"];
 
         for name in required {
             assert!(
@@ -115,9 +107,8 @@ mod tests {
 
         for (doc, spec) in generated.iter().zip(super::builtin_specs()) {
             assert_eq!(doc.name, spec.name);
-            assert_eq!(doc.category, spec.category, "{} category", doc.name);
+            assert_eq!(doc.family, spec.family, "{} family", doc.name);
             assert_eq!(doc.summary, spec.summary, "{} summary", doc.name);
-            assert_eq!(doc.role, spec.role, "{} role", doc.name);
             assert_eq!(
                 doc.stack_effect, spec.stack_effect,
                 "{} stack_effect",
@@ -136,18 +127,7 @@ mod tests {
         for spec in super::builtin_specs() {
             let word = crate::kernel::generated::generated_word(spec.name)
                 .expect("every spec name must be a canonical Word");
-            assert_eq!(
-                spec.stability,
-                crate::coreword_registry::stability_from_contract(word),
-                "{} stability",
-                spec.name
-            );
-            assert_eq!(
-                spec.partiality,
-                crate::coreword_registry::partiality_from_contract(word),
-                "{} partiality",
-                spec.name
-            );
+            assert_eq!(spec.partiality, word.partiality, "{} partiality", spec.name);
         }
     }
 
@@ -155,18 +135,11 @@ mod tests {
     fn builtin_specs_have_required_lookup_content() {
         for spec in super::builtin_specs() {
             assert!(!spec.summary.is_empty(), "{} missing summary", spec.name);
-            assert!(!spec.role.is_empty(), "{} missing role", spec.name);
-            assert!(!spec.category.is_empty(), "{} missing category", spec.name);
+            assert!(!spec.family.is_empty(), "{} missing family", spec.name);
             assert!(
                 !spec.stack_effect.is_empty(),
                 "{} missing stack_effect",
                 spec.name
-            );
-            assert!(
-                spec.stability == "stable" || spec.stability == "experimental",
-                "{} has invalid stability {}",
-                spec.name,
-                spec.stability
             );
         }
     }
@@ -202,9 +175,8 @@ mod tests {
         };
         for spec in super::builtin_specs() {
             check("summary", spec.name, spec.summary);
-            check("role", spec.name, spec.role);
             check("stack_effect", spec.name, spec.stack_effect);
-            check("category", spec.name, spec.category);
+            check("family", spec.name, spec.family);
         }
     }
 }

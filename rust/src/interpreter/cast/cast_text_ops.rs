@@ -1,47 +1,24 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::cast::cast_value_helpers::{
-    is_boolean_value, is_number_value, is_string_value,
-};
+use crate::interpreter::cast::cast_value_helpers::is_string_value;
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
-fn type_name_of(val: &Value) -> &'static str {
-    if val.is_nil() {
-        "Nil"
-    } else if is_string_value(val) {
-        "String"
-    } else if is_number_value(val) {
-        "Number"
-    } else if is_boolean_value(val) {
-        "Boolean"
-    } else if val.as_vector_view().is_some() {
-        "Vector"
-    } else {
-        "other format"
-    }
-}
-
-fn pop_string(interp: &mut Interpreter, word: &str) -> Result<String> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    if val.is_nil() {
-        let err = AjisaiError::declared("nonText", format!("{}: expected String, got Nil", word));
-        interp.stack.push(val);
-        return Err(err);
-    }
+fn pop_string(interp: &mut Interpreter) -> Result<String> {
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     if is_string_value(&val) {
         return Ok(value_as_string(&val).unwrap_or_default());
     }
-    let tn = type_name_of(&val);
+    let got = val.domain_name();
     interp.stack.push(val);
     Err(AjisaiError::declared(
         "nonText",
-        format!("{}: expected String, got {}", word, tn),
+        format!("expected a String, got {got}"),
     ))
 }
 
 pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
-    let s = pop_string(interp, "TRIM")?;
+    let s = pop_string(interp)?;
     interp.stack.push(Value::from_string(s.trim()));
     Ok(())
 }
@@ -51,7 +28,7 @@ pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
 /// definition over `CHARS` and `JOIN` could carry, so the Word is native.
 /// `'straße' UPPER` is `'STRASSE'`.
 pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
-    let s = pop_string(interp, "UPPER")?;
+    let s = pop_string(interp)?;
     let mapped: String = s.chars().flat_map(char::to_uppercase).collect();
     interp.stack.push(Value::from_string(&mapped));
     Ok(())
@@ -63,15 +40,15 @@ pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
 /// same text lowers the same way wherever it is run, and `CHARS LOWER` per
 /// character agrees with `LOWER` of the whole.
 pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
-    let s = pop_string(interp, "LOWER")?;
+    let s = pop_string(interp)?;
     let mapped: String = s.chars().flat_map(char::to_lowercase).collect();
     interp.stack.push(Value::from_string(&mapped));
     Ok(())
 }
 
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
-    let sep_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let src_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow);
+    let sep_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let src_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow());
     let src_val = match src_val {
         Ok(v) => v,
         Err(e) => {
@@ -85,50 +62,36 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(b);
     };
 
-    if src_val.is_nil() {
-        let err = AjisaiError::declared("nonText", "TOKENIZE: expected String, got Nil");
-        restore(interp, src_val, sep_val);
-        return Err(err);
-    }
-    if sep_val.is_nil() {
-        let err = AjisaiError::declared(
-            "nonTextSeparator",
-            "TOKENIZE: expected separator String, got Nil",
-        );
-        restore(interp, src_val, sep_val);
-        return Err(err);
-    }
     if !is_string_value(&src_val) {
-        let tn = type_name_of(&src_val);
-        let err =
-            AjisaiError::declared("nonText", format!("TOKENIZE: expected String, got {}", tn));
+        let got = src_val.domain_name();
         restore(interp, src_val, sep_val);
-        return Err(err);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String, got {got}"),
+        ));
     }
     if !is_string_value(&sep_val) {
-        let tn = type_name_of(&sep_val);
-        let err = AjisaiError::declared(
-            "nonTextSeparator",
-            format!("TOKENIZE: expected separator String, got {}", tn),
-        );
+        let got = sep_val.domain_name();
         restore(interp, src_val, sep_val);
-        return Err(err);
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("expected a String separator, got {got}"),
+        ));
     }
 
     let src = value_as_string(&src_val).unwrap_or_default();
     let sep = value_as_string(&sep_val).unwrap_or_default();
 
-    if sep.is_empty() {
-        // Not `nonTextSeparator`: the separator *is* Text, it just carries no
-        // content to split on. TOKENIZE's contract does not name this
-        // condition, so `StructureError` is the honest fallback rather than
-        // reusing a type-mismatch category for a value-domain one.
-        let err = AjisaiError::create_structure_error("a non-empty separator", "the empty string");
-        restore(interp, src_val, sep_val);
-        return Err(err);
-    }
-
-    let parts: Vec<Value> = src.split(sep.as_str()).map(Value::from_string).collect();
+    // The empty separator splits between every character, the same reading
+    // SEARCH and REPLACE give the empty pattern (it matches everywhere). This
+    // keeps TOKENIZE total over Text × Text.
+    let parts: Vec<Value> = if sep.is_empty() {
+        src.chars()
+            .map(|c| Value::from_string(&c.to_string()))
+            .collect()
+    } else {
+        src.split(sep.as_str()).map(Value::from_string).collect()
+    };
     interp.stack.push(Value::from_vector(parts));
     Ok(())
 }
@@ -175,16 +138,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn tokenize_empty_separator_errors() {
+    async fn tokenize_empty_separator_splits_characters() {
         let mut interp = Interpreter::new();
-        let r = interp.execute("'abc' '' TOKENIZE").await;
-        assert!(r.is_err());
+        interp.execute("'abc' '' TOKENIZE").await.unwrap();
+        let v = interp.stack.last().unwrap();
+        let parts = v.as_vector_view().unwrap();
+        let got: Vec<String> = parts.iter().map(|p| value_as_string(p).unwrap()).collect();
+        assert_eq!(got, vec!["a", "b", "c"]);
     }
 
     #[tokio::test]
-    async fn trim_nil_rejected() {
+    async fn trim_passes_an_absent_operand_through() {
         let mut interp = Interpreter::new();
-        let r = interp.execute("NIL TRIM").await;
-        assert!(r.is_err());
+        interp.execute("0 0 DIV TRIM NIL-REASON").await.unwrap();
+        let reason = interp
+            .stack
+            .last()
+            .and_then(|v| v.as_text().map(str::to_string));
+        assert_eq!(reason.as_deref(), Some("divisionByZero"));
     }
 }

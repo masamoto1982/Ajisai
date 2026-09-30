@@ -59,10 +59,6 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
     while i < chars.len() {
         if chars[i].is_whitespace() {
-            if chars[i] == '\n' && tokens.last() != Some(&Token::LineBreak) {
-                tokens.push(Token::LineBreak);
-                spans.push(span_at(i));
-            }
             i += 1;
             continue;
         }
@@ -74,13 +70,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // Forth's own comment word — `#` glued to a preceding name is just
         // part of that name, not a comment start.
         if chars[i] == '#' {
-            let had_token_before = !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
-
             while i < chars.len() && chars[i] != '\n' {
-                i += 1;
-            }
-
-            if !had_token_before && i < chars.len() && chars[i] == '\n' {
                 i += 1;
             }
             continue;
@@ -109,8 +99,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // else splits it, the same rule Forth applies to its own words
         // (including its bracket and comment words). No character is checked
         // for validity on the way, because there is no longer any invalid
-        // one: `(` `)` `{` `}` and a bare `|` used to be refused here and are
-        // now ordinary name characters like every other punctuation mark
+        // one: every character but whitespace is a name character
         // (`spec/grammar.json`, characterClasses.nameCharacter).
         let start = i;
         while i < chars.len() && !chars[i].is_whitespace() {
@@ -119,12 +108,12 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
         let token_str: String = chars[start..i].iter().collect();
 
-        // The four structural words, one pair per delimiter pair of
-        // `spec/grammar.json`: like every other Ajisai word (and like Forth's
-        // own `[` and `]`), they must stand alone, separated by whitespace. A
-        // delimiter glued to anything else — `[1`, `2]`, `[[1]]`, `{1`, `a}`
-        // — is a source error asking for the space, rather than a silently
-        // accepted (and meaningless) name containing a delimiter. This is a
+        // The two structural words of `spec/grammar.json`'s one delimiter
+        // pair: like every other Ajisai word (and like Forth's own `[` and
+        // `]`), they must stand alone, separated by whitespace. A delimiter
+        // glued to anything else — `[1`, `2]`, `[[1]]` — is a source error
+        // asking for the space, rather than a silently accepted (and
+        // meaningless) name containing a delimiter. This is a
         // whole-lexeme rule, not a per-character one: no character is checked
         // on the way in, and a lexeme either *is* one delimiter or holds none.
         if let Some(token) = delimiter_token(&token_str) {
@@ -134,7 +123,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         }
         if token_str.contains(DELIMITERS) {
             return Err(format!(
-                "'{}' is not a valid token: '[', ']', '{{' and '}}' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
+                "'{}' is not a valid token: '[' and ']' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
                 token_str
             ));
         }
@@ -144,6 +133,15 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // character needs special treatment — `1/2` is a number because the
         // whole token parses as one, and `/` is a name for the same reason.
         if let Some(token) = parse_number_from_string(&token_str) {
+            // `n/0` has the shape of a number and denotes none. Refused here,
+            // with the other source errors, so a program that holds one is
+            // refused before it runs rather than halfway through it.
+            if has_zero_denominator(&token_str) {
+                return Err(format!(
+                    "zero denominator: '{}' is not a valid fraction literal (the denominator must be non-zero)",
+                    token_str
+                ));
+            }
             tokens.push(token);
             spans.push(span_at(start));
             continue;
@@ -153,15 +151,12 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         spans.push(span_at(start));
     }
 
-    if tokens.last() == Some(&Token::LineBreak) {
-        tokens.pop();
-        spans.pop();
-    }
-
-    check_bracket_matching(input)?;
-    // Keep source entry and token-native entry points on one structural
-    // validator. The source-oriented bracket check above is retained for its
-    // precise diagnostics; this call is the shared semantic acceptance gate.
+    // The one structural gate, over the real tokens, shared with the entry
+    // point that reads a stored Vector as code. A second pass over the raw
+    // text used to run first for a nicer message, but it tracked `#` and `'`
+    // by character rather than by word position, so `[ C# ]` — a name glued
+    // to `#` — read to it as a comment swallowing the `]`, and it reported an
+    // imbalance the program did not have.
     validate_code_tokens(&tokens)?;
     debug_assert_eq!(
         tokens.len(),
@@ -171,50 +166,35 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
     Ok((tokens, spans))
 }
 
-/// The delimiter characters, in the pairs `spec/grammar.json` declares.
-const DELIMITERS: [char; 4] = ['[', ']', '{', '}'];
+/// The delimiter characters: the one pair `spec/grammar.json` declares.
+const DELIMITERS: [char; 2] = ['[', ']'];
 
 /// The token a lexeme that is exactly one delimiter emits.
 fn delimiter_token(lexeme: &str) -> Option<Token> {
     match lexeme {
         "[" => Some(Token::VectorStart),
         "]" => Some(Token::VectorEnd),
-        "{" => Some(Token::RecordStart),
-        "}" => Some(Token::RecordEnd),
         _ => None,
     }
 }
 
-/// The opener a closing delimiter token must find on the stack, if the token
-/// is a closer at all.
-fn opener_of(token: &Token) -> Option<Token> {
-    match token {
-        Token::VectorEnd => Some(Token::VectorStart),
-        Token::RecordEnd => Some(Token::RecordStart),
-        _ => None,
-    }
-}
-
-/// Validate the structural grammar of an already-tokenized code value.
-///
-/// One stack over both pairs, so a crossed `[ }` is mismatched rather than
-/// accepted — the property a pair-per-counter version cannot see.
+/// Validate the structural grammar of an already-tokenized code value: every
+/// `]` closes an open `[`, and every `[` is closed.
 pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
-    let mut delimiters = Vec::new();
+    let mut depth: usize = 0;
     for token in tokens {
         match token {
-            Token::VectorStart | Token::RecordStart => delimiters.push(token.clone()),
-            Token::VectorEnd | Token::RecordEnd => {
-                let innermost = delimiters.pop();
-                if innermost != opener_of(token) {
-                    return Err("mismatched code delimiter".into());
-                }
+            Token::VectorStart => depth += 1,
+            Token::VectorEnd => {
+                depth = depth
+                    .checked_sub(1)
+                    .ok_or_else(|| "Unexpected ']' without matching '['".to_string())?;
             }
             _ => {}
         }
     }
-    if !delimiters.is_empty() {
-        return Err("unclosed code delimiter".into());
+    if depth != 0 {
+        return Err("Unclosed '[': expected ']'".into());
     }
     Ok(())
 }
@@ -227,88 +207,26 @@ pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
 }
 
 /// Whether `lexeme` is exactly one Symbol token under the canonical lexer.
-/// Control directives and delimiter spellings deliberately fail this test:
-/// their canonical code-data representation uses their dedicated token tag.
+/// A delimiter spelling, a number, a comment start and an unclosed quote all
+/// fail this test: none of them can be written as one name at a word
+/// position, so none of them can name a Word or a binding.
 pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
 }
 
-/// The text-level precheck the grammar documents as deliberately partial: it
-/// may miss an imbalance, never invent one, because [`validate_code_tokens`]
-/// runs afterwards on the real tokens and has the final say. It is kept for
-/// its message, which names the pair and the character.
-fn check_bracket_matching(input: &str) -> Result<(), String> {
-    let mut stack: Vec<char> = Vec::new();
-    let mut in_string = false;
-    let mut in_comment = false;
-    let chars: Vec<char> = input.chars().collect();
-    let mut i: usize = 0;
-
-    while i < chars.len() {
-        let c: char = chars[i];
-
-        if c == '\n' {
-            in_comment = false;
-            i += 1;
-            continue;
-        }
-
-        if in_comment {
-            i += 1;
-            continue;
-        }
-
-        if c == '#' {
-            in_comment = true;
-            i += 1;
-            continue;
-        }
-
-        if c == '\'' {
-            if in_string {
-                if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
-                    in_string = false;
-                }
-            } else {
-                in_string = true;
-            }
-            i += 1;
-            continue;
-        }
-
-        if in_string {
-            i += 1;
-            continue;
-        }
-
-        match c {
-            '[' | '{' => stack.push(c),
-            ']' | '}' => {
-                let expected = if c == ']' { '[' } else { '{' };
-                match stack.pop() {
-                    Some(open) if open == expected => {}
-                    None => {
-                        return Err(format!("Unexpected '{c}' without matching '{expected}'"));
-                    }
-                    // A crossed pair: the fault is `mismatched code delimiter`,
-                    // which the token-level validator reports. This pass has
-                    // just lost an opener, so every later reading of its stack
-                    // would be a guess — stopping is how it stays incapable of
-                    // inventing a condition.
-                    Some(_) => return Ok(()),
-                }
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    match stack.last() {
-        Some('[') => Err("Unclosed '[': expected ']'".to_string()),
-        Some('{') => Err("Unclosed '{': expected '}'".to_string()),
-        Some(other) => unreachable!("only an opener is ever pushed, got {other:?}"),
-        None => Ok(()),
-    }
+/// Whether `content`, written between quotes as `'content'`, is exactly one
+/// String token holding it under the canonical lexer. A quote closes the
+/// string only when whitespace or the end of input follows it
+/// (`is_string_close_delimiter`), so the one text with no spelling is one
+/// holding a quote right before whitespace: `'a' b'` reads as the String `a`
+/// and the name `b'`. The bridge that writes a value back as source
+/// (`interpreter::value_as_code`) asks this before writing a String literal,
+/// so what it writes is what this lexer reads back.
+pub(crate) fn is_string_token_content(content: &str) -> bool {
+    matches!(
+        tokenize(&format!("'{content}'")).ok().as_deref(),
+        Some([Token::String(value)]) if value.as_ref() == content
+    )
 }
 
 enum QuoteParseResult {
@@ -371,6 +289,40 @@ fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace()
 }
 
+/// Whether a numeric lexeme is a rational whose denominator is zero.
+fn has_zero_denominator(lexeme: &str) -> bool {
+    lexeme
+        .split_once('/')
+        .is_some_and(|(_, den)| den.chars().all(|c| c == '0'))
+}
+
+/// How many digits the number a numeric lexeme denotes can take to write out:
+/// the digits written, plus the exponent's magnitude, since `1e5000` builds a
+/// 5001-digit integer from five characters. This, not the written length, is
+/// what the numeric-literal ceiling bounds (LANG.MACHINE.LIMITS), at every
+/// entry point that reads the numeric grammar — source, `NUM`, `JSON-DECODE`
+/// — because it is what decides how large an integer the parse builds.
+/// Saturates rather than overflowing for an exponent no machine could build;
+/// a zero mantissa counts only its written digits, since zero is built at no
+/// scale.
+pub(crate) fn denoted_digit_count(lexeme: &str) -> u64 {
+    let (mantissa, exponent) = match lexeme.find(['e', 'E']) {
+        Some(at) => (&lexeme[..at], Some(&lexeme[at + 1..])),
+        None => (lexeme, None),
+    };
+    let written = mantissa.chars().filter(|c| c.is_ascii_digit()).count() as u64;
+    // Zero is zero at any scale, and the parse builds nothing for it.
+    if mantissa.chars().all(|c| !c.is_ascii_digit() || c == '0') {
+        return written;
+    }
+    let scale = exponent.map_or(0, |e| {
+        e.trim_start_matches(['+', '-'])
+            .parse::<u64>()
+            .unwrap_or(u64::MAX)
+    });
+    written.saturating_add(scale)
+}
+
 fn parse_number_from_string(s: &str) -> Option<Token> {
     if s.is_empty() {
         return None;
@@ -381,7 +333,7 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
 
     if chars[i] == '-' || chars[i] == '+' {
         // The sign must be followed by a digit; otherwise the token is a name,
-        // not a number. This is what leaves `-` free to be the SUB spelling.
+        // not a number. This is what leaves a bare `-` an ordinary name.
         if chars.len() == 1 || !chars[i + 1].is_ascii_digit() {
             return None;
         }
@@ -404,7 +356,6 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     }
 
     if i < chars.len() && chars[i] == '/' {
-        let _slash_pos = i;
         i += 1;
 
         if i >= chars.len() || !chars[i].is_ascii_digit() {

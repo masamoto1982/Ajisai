@@ -68,9 +68,9 @@ pub const ALGEBRAIC_PAIR_UNITS: u64 = 1_024;
 /// costs, in limb-multiply units.
 ///
 /// Every schema is priced limb×limb, including addition and subtraction. That
-/// looks wrong for a moment and is the whole point: Ajisai's `+` is *rational*
-/// addition, not integer addition. `a/b + c/d` cross-multiplies into
-/// `(ad + cb)/(bd)` and then normalizes by a gcd — three multiplications and a
+/// looks wrong for a moment and is the whole point: Ajisai's `ADD` is *rational*
+/// addition, not integer addition. `a/b ADD c/d` cross-multiplies into
+/// `(ad ADD cb)/(bd)` and then normalizes by a gcd — three multiplications and a
 /// Euclid, none of them linear in the wider operand.
 ///
 /// Pricing it as linear was not a rounding error. Measured on the reference
@@ -96,8 +96,8 @@ pub fn binary_numeric_work(left_bits: u64, right_bits: u64) -> u64 {
 /// shape it arrived in.
 ///
 /// The meter used to read a `Fraction` and stop there, which made it a meter on
-/// the *representation* rather than on the arithmetic: `2 3 *` was charged and
-/// `[ 2 ] 3 *` was free, because the second one leaves the scalar path and
+/// the *representation* rather than on the arithmetic: `2 3 MUL` was charged and
+/// `[ 2 ] 3 MUL` was free, because the second one leaves the scalar path and
 /// every other path charged nothing. Whether an operand is stored as a scalar,
 /// a one-element vector or an N-lane tensor is an internal decision
 /// (LANG.AUTHORITY.FREEDOM says it is unobservable), and a safety control whose
@@ -173,7 +173,7 @@ pub const COLLECTION_COPY_UNITS: u64 = 16;
 /// common refinement of their radical bases, which is nothing like a limb
 /// compare. Measured at 3.0 µs through `UNIQUE` and 3.3 µs through `SORT`
 /// (after correcting for Rust's sort detecting the already-ascending run that
-/// `[ 2 n ] RANGE { SQRT } MAP` produces) — 500 to 550 units at 6 ns each.
+/// `2 n RANGE { SQRT } MAP` produces) — 500 to 550 units at 6 ns each.
 ///
 /// Distinct from [`ALGEBRAIC_PAIR_UNITS`], which prices an algebraic *product*.
 /// A product and a comparison are different operations and the measurements
@@ -312,6 +312,11 @@ pub struct RuntimeLimits {
     /// Max algebraic-term count of a single continued-fraction / polynomial
     /// value. Consumed by the work meter in the CS5 follow-up.
     pub max_algebraic_terms: usize,
+    /// Max container nesting of one value (`Value::nesting`). Every walk
+    /// over a value — comparing, rendering, hashing, encoding, broadcasting —
+    /// descends one native frame per level, so a value nested past what the
+    /// host's call stack holds would abort the process instead of failing.
+    pub max_nesting_depth: usize,
 }
 
 impl Default for RuntimeLimits {
@@ -324,6 +329,7 @@ impl Default for RuntimeLimits {
             max_collection_work: DEFAULT_MAX_COLLECTION_WORK,
             max_bigint_bits: DEFAULT_MAX_BIGINT_BITS,
             max_algebraic_terms: DEFAULT_MAX_ALGEBRAIC_TERMS,
+            max_nesting_depth: DEFAULT_MAX_NESTING_DEPTH,
         }
     }
 }
@@ -337,6 +343,19 @@ impl RuntimeLimits {
                 resource: ResourceLimit::SourceBytes,
                 limit: self.max_source_bytes as u64,
                 observed: Some(byte_len as u64),
+                progress: None,
+            });
+        }
+        Ok(())
+    }
+
+    /// Reject a value nested more than `max_nesting_depth` containers deep.
+    pub fn check_nesting_depth(&self, nesting: usize) -> Result<()> {
+        if nesting > self.max_nesting_depth {
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::NestingDepth,
+                limit: self.max_nesting_depth as u64,
+                observed: Some(nesting as u64),
                 progress: None,
             });
         }

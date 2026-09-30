@@ -10,7 +10,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 3 /"
+    "source": "1 3 DIV"
    },
    "expect": {
     "/status": "ok",
@@ -26,7 +26,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "0.1 0.2 +"
+    "source": "0.1 0.2 ADD"
    },
    "expect": {
     "/status": "ok",
@@ -58,7 +58,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 ] 10 +"
+    "source": "[ 1 2 ] 10 ADD"
    },
    "expect": {
     "/status": "ok",
@@ -74,7 +74,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 0 /"
+    "source": "1 0 DIV"
    },
    "expect": {
     "/status": "ok",
@@ -90,7 +90,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "42 1 0 / NIL? SELECT"
+    "source": "1 0 DIV 'S' BIND 42 S S NIL? SELECT"
    },
    "expect": {
     "/status": "ok",
@@ -117,12 +117,12 @@
    "id": "static-check",
    "category": "check",
    "prompts": {
-    "en": "Check this Ajisai definition for problems without running it: [ X | X [ 1 ] + ] 'INC' DEF",
-    "ja": "この Ajisai 定義を実行せずに検査してください: [ X | X [ 1 ] + ] 'INC' DEF"
+    "en": "Check this Ajisai definition for problems without running it: [ [ 1 ] + ] 'INC' DEF",
+    "ja": "この Ajisai 定義を実行せずに検査してください: [ [ 1 ] + ] 'INC' DEF"
    },
    "expectedTool": "check",
    "arguments": {
-    "source": "[ X | X [ 1 ] + ] 'INC' DEF"
+    "source": "[ [ 1 ] ADD ] 'INC' DEF"
    },
    "expect": {
     "/status": "ok",
@@ -133,12 +133,12 @@
    "id": "contract-inference",
    "category": "contract",
    "prompts": {
-    "en": "What contract does [ X | X [ 1 ] + ] 'INC' DEF infer?",
-    "ja": "[ X | X [ 1 ] + ] 'INC' DEF はどんな契約になりますか。"
+    "en": "What contract does [ [ 1 ] + ] 'INC' DEF infer?",
+    "ja": "[ [ 1 ] + ] 'INC' DEF はどんな契約になりますか。"
    },
    "expectedTool": "infer_contracts",
    "arguments": {
-    "source": "[ X | X [ 1 ] + ] 'INC' DEF"
+    "source": "[ [ 1 ] ADD ] 'INC' DEF"
    },
    "expect": {
     "/status": "ok",
@@ -170,7 +170,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "2 8 /"
+    "source": "2 8 DIV"
    },
    "expect": {
     "/status": "ok",
@@ -186,7 +186,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "9007199254740993 1 +"
+    "source": "9007199254740993 1 ADD"
    },
    "expect": {
     "/status": "ok",
@@ -202,7 +202,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 ] [ 3 4 ] +"
+    "source": "[ 1 2 ] [ 3 4 ] ADD"
    },
    "expect": {
     "/status": "ok",
@@ -250,7 +250,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "10 4 MOD"
+    "source": "10 'A' BIND 4 'B' BIND A A B DIV FLOOR B MUL SUB"
    },
    "expect": {
     "/status": "ok",
@@ -271,22 +271,6 @@
    "expect": {
     "/status": "error",
     "/diagnosis/why": "typoOrUnknownName"
-   }
-  },
-  {
-   "id": "alias-word-contract",
-   "category": "registry",
-   "prompts": {
-    "en": "Which Ajisai Word does the symbol + resolve to?",
-    "ja": "Ajisai で記号 + はどの Word になりますか。"
-   },
-   "expectedTool": "word_contract",
-   "arguments": {
-    "word": "+"
-   },
-   "expect": {
-    "/matches/0/name": "ADD",
-    "/matches/0/purity": "pure"
    }
   },
   {
@@ -346,7 +330,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP"
+    "source": "[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP"
    },
    "expect": {
     "/status": "ok",
@@ -378,7 +362,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 4 ] RANGE"
+    "source": "0 4 RANGE"
    },
    "expect": {
     "/status": "ok",
@@ -426,7 +410,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+    "source": "[ 1 2 3 4 5 ] 3 TAKE"
    },
    "expect": {
     "/status": "ok",
@@ -506,7 +490,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 10 20 30 ] [ 1 ] GET"
+    "source": "[ 10 20 30 ] 1 GET"
    },
    "expect": {
     "/status": "ok",
@@ -538,7 +522,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 2 2 0 ] FILL"
+    "source": "[ 2 2 ] 0 FILL"
    },
    "expect": {
     "/status": "ok",
@@ -554,7 +538,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 * ] MAP"
+    "source": "[ 1 2 3 ] [ 2 MUL ] MAP"
    },
    "expect": {
     "/status": "ok",
@@ -570,7 +554,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER"
+    "source": "[ 1 2 3 4 ] [ 2 DIV 'H' BIND H FLOOR H EQ ] FILTER"
    },
    "expect": {
     "/status": "ok",
@@ -586,7 +570,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] 1 [ * ] FOLD"
+    "source": "[ 1 2 3 4 ] 1 [ MUL ] FOLD"
    },
    "expect": {
     "/status": "ok",
@@ -602,7 +586,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 = ] ANY"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    },
    "expect": {
     "/status": "ok",
@@ -618,7 +602,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 2 4 ] [ 2 MOD 0 = ] ALL"
+    "source": "[ 2 4 ] [ 2 DIV 'H' BIND H FLOOR H EQ ] MAP TRUE [ AND ] FOLD"
    },
    "expect": {
     "/status": "ok",
@@ -730,7 +714,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "2 SQRT 3 SQRT +"
+    "source": "2 SQRT 3 SQRT ADD"
    },
    "expect": {
     "/status": "ok",
@@ -747,7 +731,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 3 / 3 *"
+    "source": "1 3 DIV 3 MUL"
    },
    "expect": {
     "/status": "ok",
@@ -763,7 +747,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "0.1 0.2 + 0.3 EQ"
+    "source": "0.1 0.2 ADD 0.3 EQ"
    },
    "expect": {
     "/status": "ok",
@@ -811,11 +795,11 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 0 / NIL?"
+    "source": "1 0 DIV NIL?"
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/1": "TRUE"
+    "/stackDisplay/0": "TRUE"
    }
   },
   {
@@ -827,7 +811,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
+    "source": "0 99998 RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    },
    "expect": {
     "/status": "error",
@@ -844,7 +828,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ | 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
+    "source": "[ 2 SQRT 3 SQRT ADD 5 SQRT 7 SQRT ADD MUL 11 SQRT 13 SQRT ADD MUL 17 SQRT 19 SQRT ADD MUL 23 SQRT 29 SQRT ADD MUL 31 SQRT 37 SQRT ADD MUL 41 SQRT 43 SQRT ADD MUL 47 SQRT 53 SQRT ADD MUL ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
    },
    "expect": {
     "/status": "error",
@@ -861,7 +845,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 100001 ] RANGE"
+    "source": "0 100001 RANGE"
    },
    "expect": {
     "/status": "ok",
@@ -878,7 +862,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
+    "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    },
    "expect": {
     "/status": "error",
@@ -895,7 +879,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 1 2 ] +"
+    "source": "[ 1 2 3 ] [ 1 2 ] ADD"
    },
    "expect": {
     "/status": "error",

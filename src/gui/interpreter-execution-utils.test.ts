@@ -1,15 +1,13 @@
-// Regression for the auto-transition fault: running a pure stack program such
-// as the Reference's `3 4 KEEP ADD` pulled the right column to the Dictionary
-// instead of the Stack.
+// A pure stack program such as the Reference's `3 4 ADD` must not read as a
+// dictionary change and pull the right column to the Dictionary instead of
+// the Stack.
 //
-// The cause was name addressing, not the layout rule. The dictionary has two
-// tiers and User is one of them (LANG.DICTIONARY.RESOLUTION), so a word is
-// addressed by its bare name and the interpreter no longer resolves a
-// `DICT@NAME` composite. The host still composed one, so every definition read
-// back as null; `restore_user_words` skips a definition-less word, so the
-// worker ran without the user's words and reported none back, and the
-// post-execution sync wiped them from the main interpreter. Every run then
-// looked like a dictionary change.
+// Name addressing is what that rests on. The dictionary has two tiers and User
+// is one of them (LANG.DICTIONARY.RESOLUTION), so a word is addressed by its
+// bare name, the one `collect_user_words_info` reports; `restore_user_words`
+// skips a definition-less word, so a host that looked a definition up under
+// any other spelling would run the worker without the user's words and the
+// post-execution sync would wipe them from the main interpreter.
 //
 // The fake below reproduces exactly those three contracts of the wasm boundary
 // (bare-name lookup, definition-less words skipped on restore, session reset
@@ -21,7 +19,6 @@ import {
     collectUserWords,
     createExecutionSnapshot,
     describeFailedRunOutput,
-    describeSnapshotRefusal,
     describeTimeoutDiagnosis,
     resolveExecutionException,
     syncInterpreterState
@@ -45,11 +42,9 @@ const createFakeInterpreter = (): FakeInterpreter => {
         words,
         setStack: (next: Value[]) => { stack = next; },
         collect_stack: () => stack,
-        // Tuple shape: [dictionary, name, isProtected]. There is one User tier,
-        // so the dictionary slot is a constant label, not an address.
+        // Tuple shape: [name, hasDependents].
         collect_user_words_info: () =>
-            [...words.keys()].sort().map(name => ['USER', name, false] as [string, string, boolean]),
-        // Resolves a bare name only: `USER@FOO` is not a name the dictionary has.
+            [...words.keys()].sort().map(name => [name, false] as [string, boolean]),
         lookup_word_definition: (name: string) => words.get(name.toUpperCase()) ?? null,
         lookup_word_description: () => null,
         snapshot_stack: () => JSON.stringify(stack),
@@ -60,8 +55,9 @@ const createFakeInterpreter = (): FakeInterpreter => {
                 if (!word.definition) continue;
                 words.set(word.name.toUpperCase(), word.definition);
             }
+            return [] as Array<[string, string]>;
         },
-        reset_session: () => {
+        reset: () => {
             words.clear();
             stack = [];
             return { status: 'OK' } as ExecuteResult;
@@ -82,7 +78,7 @@ const runOneExecution = (
     const before = { stack: main.collect_stack(), userWords: collectUserWords(main) };
     const snapshot = createExecutionSnapshot(main);
 
-    worker.reset_session();
+    worker.reset();
     worker.restore_stack_snapshot(snapshot.stackSnapshot!);
     worker.restore_user_words(snapshot.userWords);
 
@@ -97,18 +93,18 @@ const runOneExecution = (
 };
 
 describe('collectUserWords', () => {
-    it('reads a definition by bare name, not by a DICT@NAME composite', () => {
+    it('reads a definition by the bare name the dictionary reports', () => {
         const interpreter = createFakeInterpreter();
         interpreter.words.set('ADD10', '10 ADD');
 
         expect(collectUserWords(interpreter)).toEqual([
-            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD', description: null }
+            { name: 'ADD10', definition: '10 ADD', description: null }
         ]);
     });
 });
 
 describe('execution round trip with user words present', () => {
-    it('keeps the user words and reports a stack-only change for `3 4 KEEP ADD`', () => {
+    it('keeps the user words and reports a stack-only change for `3 4 ADD`', () => {
         const main = createFakeInterpreter();
         const worker = createFakeInterpreter();
         main.words.set('ADD10', '10 ADD');
@@ -120,10 +116,9 @@ describe('execution round trip with user words present', () => {
 
         expect(changes.stackChanged).toBe(true);
         expect(changes.dictionaryChanged).toBe(false);
-        expect(changes.dictionarySheetId).toBeUndefined();
         // The words survived the worker round trip rather than being wiped.
         expect(collectUserWords(main)).toEqual([
-            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD', description: null }
+            { name: 'ADD10', definition: '10 ADD', description: null }
         ]);
     });
 
@@ -148,7 +143,6 @@ describe('execution round trip with user words present', () => {
         });
 
         expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('user');
     });
 
     it('still reports a dictionary change when a word is deleted', () => {
@@ -162,7 +156,6 @@ describe('execution round trip with user words present', () => {
         });
 
         expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('user');
     });
 });
 
@@ -215,43 +208,6 @@ describe('describeFailedRunOutput', () => {
         } as ExecuteResult);
 
         expect(reported.startsWith('Rolled back 1 dictionary change: GY.')).toBe(true);
-    });
-});
-
-// A value the snapshot codec refuses (`PI`, and anything built from it, is a
-// Tier-2 computable real) fails *after* the program has already produced it.
-// Reported as the program's own failure, `PI` read as a Word that does not
-// work: the answer the run had computed never reached the reader, and the
-// message named a persistence concept the language never mentions.
-describe('a run whose result cannot be snapshotted', () => {
-    it('keeps the pre-run stack instead of restoring an empty one', () => {
-        const main = createFakeInterpreter();
-        main.setStack([num(1), num(2)]);
-
-        syncInterpreterState(main, {
-            status: 'OK',
-            stack: [num(3)],
-            stackSnapshotError: 'cannot persist a Tier-2 computable exact real'
-        } as ExecuteResult);
-
-        // Not the run's stack, and not an empty one either: the session is
-        // exactly as it was, which is the answer a failed run also gets.
-        expect(main.collect_stack()).toEqual([num(1), num(2)]);
-    });
-
-    it('says the run succeeded and only its result stops here', () => {
-        const explained = describeSnapshotRefusal({
-            status: 'OK',
-            stackSnapshotError: 'cannot persist a Tier-2 computable exact real'
-        } as ExecuteResult);
-
-        expect(explained).toContain('The program ran and produced its result');
-        expect(explained).toContain('cannot persist a Tier-2 computable exact real');
-        expect(explained).toContain('The stack is unchanged from before the run.');
-    });
-
-    it('explains nothing for an ordinary successful run', () => {
-        expect(describeSnapshotRefusal({ status: 'OK' } as ExecuteResult)).toBeNull();
     });
 });
 

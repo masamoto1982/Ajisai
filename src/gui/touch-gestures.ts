@@ -1,13 +1,10 @@
 // Pure recognizers for the touch gestures the mobile presentation uses.
 //
-// The counting used to live inline in `gui-event-bindings.ts` as a bare
-// `tapCount` / `lastTapAt` pair updated from `touchend`, which meant every
-// `touchend` counted as a tap: the end of a drag-to-select inside the editor,
-// the two ends of a pinch, the release of a swipe. Three of those within the
-// interval ran the program. A tap is a touch that goes down and comes up in
-// the same place, and a run of taps is a sequence of those close together in
-// both time and space — that is what this module states, once, for both the
-// editor's triple-tap and the Stack/Output double-taps to share.
+// A tap is a touch that goes down and comes up in the same place, and a run of
+// taps is a sequence of those close together in both time and space; a bare
+// `touchend` is not a tap (the end of a drag-to-select inside the editor, the
+// two ends of a pinch, the release of a swipe). This module states that once,
+// for both the editor's triple-tap and the Stack/Output double-taps to share.
 //
 // Thresholds are device tuning, not semantics (Portability Profiles
 // "Presentation Profile": gesture thresholds and tap counts have the same
@@ -107,12 +104,9 @@ export const detectSwipeDirection = (
     return deltaX > 0 ? 'right' : 'left';
 };
 
-// There is deliberately no exemption list here. One was tried: a horizontal
-// drag that started on a textarea, an input or the suggestion panel was read
-// as that element's own gesture and withheld from the layout, on the reasoning
-// that dragging sideways across an editor is a text selection. On a touch
-// screen it is not — selecting text there takes a long-press and then the
-// selection handles, which are a separate gesture entirely. What the exemption
-// actually did was kill the swipe over the editor, which is most of the Input
-// surface, so the one gesture that reaches all four surfaces stopped working
-// on the surface the app opens on. The swipe belongs to the layout everywhere.
+// There is deliberately no exemption list here: a horizontal drag that starts
+// on a textarea, an input or the suggestion panel is still the layout's swipe.
+// On a touch screen, dragging sideways across an editor is not a text
+// selection — that takes a long-press and then the selection handles, a
+// separate gesture entirely — and the editor is most of the Input surface,
+// the one the app opens on. The swipe belongs to the layout everywhere.

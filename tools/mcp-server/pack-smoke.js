@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -24,13 +24,23 @@ try {
   const paths = new Set(packed.files.map(({ path }) => path));
   for (const required of [
     "index.js", "doctor.js", "result.schema.json", "assets/metadata.json", "assets/words.json",
-    "assets/word-manifest.json", "assets/quickstart.md", "eval/cases.json", "score-repairs.js",
-    "eval/repair-cases.json", "backend/native-cli.js", "backend/wasm-worker.js",
+    "assets/word-manifest.json", "assets/quickstart.md", "backend/native-cli.js", "backend/wasm-worker.js",
     "backend/wasm-worker-entry.js", "wasm/generated/ajisai_core.js", "wasm/generated/ajisai_core_bg.wasm",
-    "wasm/generated/package.json",
+    "wasm/generated/package.json", "LICENSE", "README.md", "CHANGELOG.md",
   ]) {
     if (!paths.has(required)) throw new Error(`tarball is missing ${required}`);
   }
+  // The evaluation harness, its corpora and the repository's own tests are
+  // how this package is developed, not what it runs. Shipped, they were files
+  // no installed copy could use: every harness reads corpora or traces that
+  // live only in this checkout.
+  const devOnly = [...paths].filter((path) =>
+    /^(eval|golden)\//.test(path) ||
+    /(^|\/)[^/]*(test|smoke)[^/]*\.js$/.test(path) ||
+    ["eval.js", "benchmark.js", "number-baseline.js", "evaluation-contract.js", "validate-evaluation.js",
+      "score-traces.js", "score-repairs.js", "capture-traces.js", "capture-repairs.js", "sync-assets.js",
+      "selftest.js", "generate-reference-traces.mjs"].includes(path));
+  if (devOnly.length) throw new Error(`tarball ships development-only files: ${devOnly.join(", ")}`);
 
   try {
     await execFileAsync(
@@ -80,6 +90,13 @@ try {
   // with no native binary and no checkout in reach.
   delete process.env.AJISAI_REPO;
   delete process.env.AJISAI_BIN;
+  // A decoy where discovery used to look: `../../rust/target` from the
+  // installed package is the installing project's own directory. An installed
+  // copy must never run a binary it finds there.
+  const decoy = join(scratch, "rust", "target", "debug", "ajisai");
+  mkdirSync(dirname(decoy), { recursive: true });
+  writeFileSync(join(scratch, "rust", "Cargo.toml"), "[package]\nname = \"not-ajisai\"\n");
+  writeFileSync(decoy, "#!/bin/sh\nexit 99\n", { mode: 0o755 });
   await withServer(async (client) => {
     const tools = await client.listTools();
     if (tools.tools.length !== 5) throw new Error("installed package did not expose five tools");
@@ -91,9 +108,14 @@ try {
     if (contract.structuredContent?.matches?.[0]?.name !== "MAP") {
       throw new Error("installed package did not expose its packaged Word registry");
     }
-    const computed = await client.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+    const computed = await client.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
     if (computed.structuredContent?.stackDisplay?.[0] !== "1/3") {
       throw new Error("installed package could not compute with neither AJISAI_REPO nor AJISAI_BIN set (WASM backend)");
+    }
+    if (computed.structuredContent?.mcp?.backend?.kind !== "wasmWorker") {
+      throw new Error(
+        `installed package picked up a native binary outside itself (backend ${computed.structuredContent?.mcp?.backend?.kind})`,
+      );
     }
   });
   console.log(`PASS clean-installed ${packed.filename} computes with no repository and no native binary (WASM backend)`);
@@ -127,7 +149,7 @@ try {
     if (tools.tools.length !== 5) {
       throw new Error("the installed bin entry served no tools when launched by name");
     }
-    const computed = await spawned.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+    const computed = await spawned.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
     if (computed.structuredContent?.stackDisplay?.[0] !== "1/3") {
       throw new Error("the installed bin entry did not compute when launched by name");
     }
@@ -171,7 +193,7 @@ try {
     env: { ...process.env, AJISAI_BIN: nativeBin },
   }));
   try {
-    const computed = await native.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+    const computed = await native.callTool({ name: "compute", arguments: { source: "1 3 DIV" } });
     if (computed.structuredContent?.mcp?.backend?.kind !== "nativeCli") {
       throw new Error(
         `AJISAI_BIN did not select the native backend (got ${computed.structuredContent?.mcp?.backend?.kind})`,

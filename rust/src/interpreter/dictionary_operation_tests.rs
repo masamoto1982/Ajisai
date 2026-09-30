@@ -18,12 +18,12 @@ mod tests {
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
         interp.execute("").await.unwrap();
-        let result = interp.execute("[ Z | Z [ 1 ] + ] 'GET' DEF").await;
+        let result = interp.execute("[ [ 1 ] ADD ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("Cannot redefine built-in word"),
-            "Expected error message to contain 'Cannot redefine built-in word', got: {}",
+            err_msg.contains("Cannot redefine Core Word"),
+            "Expected error message to contain 'Cannot redefine Core Word', got: {}",
             err_msg
         );
     }
@@ -33,10 +33,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("").await.unwrap();
 
-        let result1 = interp.execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result1 = interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
-        let result2 = interp.execute("[ Z | Z [ 3 ] * ] 'DOUBLE' DEF").await;
+        let result2 = interp.execute("[ [ 3 ] MUL ] 'DOUBLE' DEF").await;
         assert!(result2.is_ok(), "Overriding user word should succeed");
 
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
@@ -57,21 +57,14 @@ mod tests {
         }
     }
 
-    /// A redefinition rebinds the one User entry, and dependents follow it.
-    ///
-    /// This used to test that a word resolved its references through its *own*
-    /// dictionary, so two dictionaries could each hold a `SAY`/`GREET` pair
-    /// without their edges crossing. There is one User tier, so the second
-    /// definition of a name replaces the first and the dependency edge moves
-    /// with it.
+    /// A redefinition rebinds the one User entry, and a caller follows it: the
+    /// caller resolves the name when it runs, so it sees the new body.
     #[tokio::test]
     async fn test_redefinition_rebinds_the_single_user_entry() {
         let mut interp = Interpreter::new();
 
-        interp.execute("[ | [ 1 ] ] 'SAY' DEF").await.unwrap();
-        interp.execute("[ | SAY ] 'GREET' DEF").await.unwrap();
-        interp.rebuild_dependencies().unwrap();
-
+        interp.execute("[ [ 1 ] ] 'SAY' DEF").await.unwrap();
+        interp.execute("[ SAY ] 'GREET' DEF").await.unwrap();
         assert!(
             interp
                 .dependents
@@ -80,21 +73,27 @@ mod tests {
             "GREET depends on SAY"
         );
 
+        // SAY is locked while GREET calls it; redefine it through the only
+        // route there is.
+        interp.execute("'GREET' DEL").await.unwrap();
+        interp.execute("[ [ 2 ] ] 'SAY' DEF").await.unwrap();
+        interp.execute("[ SAY ] 'GREET' DEF").await.unwrap();
+
         interp.execute("GREET").await.unwrap();
         assert_eq!(
             format!("{}", interp.get_stack().last().expect("a result")),
-            "[ 1/1 ]"
+            "[ 2/1 ]"
         );
     }
 
-    /// Section 8.6: identical content yields one identity regardless of name or
-    /// dictionary (the basis for automatic deduplication on import).
+    /// Identical content yields one identity regardless of name (the basis for
+    /// automatic deduplication on import).
     #[tokio::test]
     async fn test_identical_content_shares_identity() {
         let mut interp = Interpreter::new();
-        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ | [ 1 ] ] 'LEED' DEF").await.unwrap();
-        interp.execute("[ | [ 2 ] ] 'OTHER' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'LEED' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] ] 'OTHER' DEF").await.unwrap();
         interp.rebuild_dependencies().unwrap();
 
         let a_leaf = interp.word_identity("LEAF").cloned();
@@ -105,20 +104,19 @@ mod tests {
         assert_ne!(a_leaf, b_other, "different bodies must differ");
     }
 
-    /// Section 8.6: a word's identity depends on the content of its dependency,
-    /// not on the dependency's name. Two words that call differently-named but
-    /// identical helpers must share an identity.
+    /// A word's identity depends on the content of its dependency, not on the
+    /// dependency's name. Two words that call differently-named but identical
+    /// helpers share an identity.
     #[tokio::test]
     async fn test_identity_is_name_independent() {
         let mut interp = Interpreter::new();
-        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ | LEAF ] 'USE' DEF").await.unwrap();
-        interp.execute("[ | [ 1 ] ] 'LEED' DEF").await.unwrap();
-        interp.execute("[ | LEED ] 'USE' DEF").await.unwrap();
-        interp.rebuild_dependencies().unwrap();
+        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ LEAF ] 'USE-LEAF' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'LEED' DEF").await.unwrap();
+        interp.execute("[ LEED ] 'USE-LEED' DEF").await.unwrap();
 
-        let a_use = interp.word_identity("USE").cloned();
-        let b_use = interp.word_identity("USE").cloned();
+        let a_use = interp.word_identity("USE-LEAF").cloned();
+        let b_use = interp.word_identity("USE-LEED").cloned();
         assert!(a_use.is_some());
         assert_eq!(
             a_use, b_use,
@@ -128,41 +126,61 @@ mod tests {
 
     // `test_recursive_identity_is_stable` pinned that a self-recursive word's
     // identity hashed its self-cycle reproducibly. LANG.DICTIONARY.ACYCLIC's DEF-time
-    // acyclicity check now refuses `[ | REC ] 'REC' DEF` outright, so no word's
+    // acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so no word's
     // dependency graph can contain a cycle for `word_identity`'s cycle-hashing
     // path to see; that path (Section 8.6) is unreachable but kept rather than
     // torn out, matching this codebase's convention for a retired path (see
     // e.g. `NilReason::EmptySequence`).
 
-    /// Section 8.6: adding a later word with the same spelling as a formerly
-    /// unresolved reference must not recapture the existing body or change its
-    /// content identity. Dependencies are fixed at definition time.
+    /// A name resolves when the body runs, so a word that names one defined
+    /// later calls it from then on: the later definition makes the existing
+    /// word depend on it, and the caller's identity changes with what it
+    /// calls (LANG.DICTIONARY.MUTATION). Dependencies used to be fixed at
+    /// definition time, which let `DEL` delete a word another still called
+    /// and gave two callers of different words one identity.
     #[tokio::test]
-    async fn test_unresolved_reference_identity_is_not_recaptured() {
+    async fn a_later_definition_of_a_named_word_becomes_a_dependency() {
         let mut interp = Interpreter::new();
-        interp.execute("[ | MISSING ] 'CALLER' DEF").await.unwrap();
+        interp.execute("[ MISSING ] 'CALLER' DEF").await.unwrap();
         let before = interp
             .word_identity("CALLER")
             .cloned()
             .expect("identity should be computed for caller");
+        assert!(interp.collect_dependents("MISSING").is_empty());
 
-        interp.execute("[ | [ 1 ] ] 'MISSING' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'MISSING' DEF").await.unwrap();
 
+        assert_eq!(
+            interp.collect_dependents("MISSING"),
+            ["CALLER".to_string()].into_iter().collect(),
+            "the existing caller depends on the word it names once that word exists"
+        );
+        assert!(
+            interp
+                .user_words
+                .get("CALLER")
+                .is_some_and(|def| def.dependencies.contains("MISSING")),
+            "the caller's own dependency set records it too"
+        );
         let after = interp
             .word_identity("CALLER")
             .cloned()
             .expect("identity should remain computed for caller");
-        assert_eq!(
+        assert_ne!(
             before, after,
-            "a later definition must not recapture a previously free symbol"
+            "the caller's identity now includes what it calls"
         );
+
+        let refused = interp.execute("'MISSING' DEL").await;
         assert!(
-            !interp
-                .dependents
-                .get("MISSING")
-                .is_some_and(|deps| deps.contains("CALLER")),
-            "the existing caller must not become dependent on the later word"
+            refused.is_err(),
+            "a word another word calls is not deletable, however the two were ordered"
         );
+        assert!(interp.user_words.contains_key("MISSING"));
+        interp
+            .execute("CALLER")
+            .await
+            .expect("the caller still runs");
     }
 
     /// Content store: textually identical bodies defined under different names
@@ -170,13 +188,13 @@ mod tests {
     #[tokio::test]
     async fn test_identical_bodies_share_one_stored_body() {
         let mut interp = Interpreter::new();
-        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ | [ 1 ] ] 'TWIN' DEF").await.unwrap();
-        interp.execute("[ | [ 2 ] ] 'OTHER' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'TWIN' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] ] 'OTHER' DEF").await.unwrap();
 
-        let a_leaf = interp.user_words["LEAF"].lines.clone();
-        let b_twin = interp.user_words["TWIN"].lines.clone();
-        let b_other = interp.user_words["OTHER"].lines.clone();
+        let a_leaf = interp.user_words["LEAF"].body.clone();
+        let b_twin = interp.user_words["TWIN"].body.clone();
+        let b_other = interp.user_words["OTHER"].body.clone();
 
         assert!(
             std::sync::Arc::ptr_eq(&a_leaf, &b_twin),
@@ -196,7 +214,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         interp.defer_identity_recompute = true;
-        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
         assert!(
             interp.word_identity("LEAF").is_none(),
             "identity recompute should be deferred"
@@ -215,23 +233,23 @@ mod tests {
     #[tokio::test]
     async fn test_body_store_gc() {
         let mut interp = Interpreter::new();
-        interp.execute("[ | [ 1 ] ] 'X' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 1);
 
-        // Identical body in another dictionary shares one store entry.
-        interp.execute("[ | [ 1 ] ] 'Y' DEF").await.unwrap();
+        // An identical body under another name shares one store entry.
+        interp.execute("[ [ 1 ] ] 'Y' DEF").await.unwrap();
         assert_eq!(
             interp.body_store.len(),
             1,
             "identical bodies share one entry"
         );
 
-        // Redefining A@X keeps [1] (still used by B@Y) and adds [9].
-        interp.execute("[ | [ 9 ] ] 'X' DEF").await.unwrap();
+        // Redefining X keeps [1] (still used by Y) and adds [9].
+        interp.execute("[ [ 9 ] ] 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "shared [1] kept, [9] added");
 
-        // Redefining B@Y away orphans [1]; it is reclaimed, leaving [9] and [8].
-        interp.execute("[ | [ 8 ] ] 'Y' DEF").await.unwrap();
+        // Redefining Y away orphans [1]; it is reclaimed, leaving [9] and [8].
+        interp.execute("[ [ 8 ] ] 'Y' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "orphaned [1] reclaimed");
     }
 
@@ -242,7 +260,7 @@ mod tests {
         let builtin_words = vec!["TAKE", "REVERSE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
-            let code = format!("[ Z | Z [ 1 ] + ] '{}' DEF", word);
+            let code = format!("[ [ 1 ] ADD ] '{}' DEF", word);
             let result = interp.execute(&code).await;
             assert!(
                 result.is_err(),
@@ -251,7 +269,7 @@ mod tests {
             );
             let err_msg = result.unwrap_err().to_string();
             assert!(
-                err_msg.contains("Cannot redefine built-in word"),
+                err_msg.contains("Cannot redefine Core Word"),
                 "Expected error for {}, got: {}",
                 word,
                 err_msg
@@ -271,7 +289,7 @@ mod tests {
                 panic!("a Core Word must not be offered as a definition to load: {text}")
             }
         };
-        for section in ["# GET", "Category:", "Summary:", "Role:", "Stack Effect:"] {
+        for section in ["# GET", "Family:", "Summary:", "Stack Effect:"] {
             assert!(
                 loaded.contains(section),
                 "a Core Word's entry must include '{}' section, got: {}",
@@ -289,10 +307,7 @@ mod tests {
     #[tokio::test]
     async fn test_lookup_user_word_loads_def_source() {
         let mut interp = Interpreter::new();
-        interp
-            .execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF")
-            .await
-            .unwrap();
+        interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await.unwrap();
         let _ = interp.collect_output();
         let loaded = match host_lookup(&interp, "DOUBLE") {
             HostLookup::Definition(text) => text,
@@ -333,9 +348,9 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let example_words = vec![
-            ("C4", "| 264", "純正律 C4"),
-            ("D4", "| C4 9 * 8 /", "純正律 D4"),
-            ("E4", "| C4 5 * 4 /", "純正律 E4"),
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 MUL 8 DIV", "純正律 D4"),
+            ("E4", "C4 5 MUL 4 DIV", "純正律 E4"),
         ];
         restore_example_words(&mut interp, &example_words);
 
@@ -366,30 +381,35 @@ mod tests {
         assert!(!interp.user_words.contains_key("C4"));
     }
 
-    /// A qualified path is not a name.
-    ///
-    /// `DEL` used to accept `DICT@WORD` and delete through the named
-    /// dictionary. LANG.DICTIONARY.RESOLUTION gives two tiers, so a Word's name
-    /// is its whole address and a path addresses nothing.
+    /// `DICT@WORD` used to address a named dictionary. With two tiers a
+    /// Word's name is its whole address, and `@` is an ordinary name character
+    /// (LANG.SOURCE.LEXICAL allocates none): `EXAMPLE@D4` is a name that
+    /// nothing holds until something defines it, and then it is that word.
     #[tokio::test]
-    async fn test_del_rejects_a_qualified_path() {
+    async fn test_an_at_sign_makes_an_ordinary_name() {
         let mut interp = Interpreter::new();
 
-        let example_words = vec![("D4", "| 264", "test word")];
+        let example_words = vec![("D4", "264", "test word")];
         restore_example_words(&mut interp, &example_words);
-        assert!(interp.user_words.contains_key("D4"));
 
         let result = interp.execute("'EXAMPLE@D4' DEL").await;
-        assert!(result.is_err(), "a qualified path names nothing");
+        let message = result.expect_err("nothing holds that name").to_string();
+        assert!(message.contains("not defined"), "{message}");
         assert!(
             interp.user_words.contains_key("D4"),
             "the word is untouched"
         );
 
         interp
-            .execute("'D4' DEL")
+            .execute("[ 7 ] 'EXAMPLE@D4' DEF EXAMPLE@D4")
             .await
-            .expect("its name deletes it");
+            .unwrap();
+        assert_eq!(
+            format!("{}", interp.get_stack().last().expect("a result")),
+            "7/1"
+        );
+        interp.execute("'EXAMPLE@D4' DEL 'D4' DEL").await.unwrap();
+        assert!(!interp.user_words.contains_key("EXAMPLE@D4"));
         assert!(!interp.user_words.contains_key("D4"));
     }
 
@@ -398,8 +418,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let example_words = vec![
-            ("C4", "| 264", "純正律 C4"),
-            ("D4", "| C4 9 * 8 /", "純正律 D4"),
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 MUL 8 DIV", "純正律 D4"),
         ];
         restore_example_words(&mut interp, &example_words);
 
@@ -424,8 +444,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let example_words = vec![
-            ("C4", "| 264", "純正律 C4"),
-            ("D4", "| C4 9 * 8 /", "純正律 D4"),
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 MUL 8 DIV", "純正律 D4"),
         ];
         restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
@@ -455,7 +475,7 @@ mod tests {
     async fn test_builtin_symbols_remain_strings_in_vector() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "Code block DEF should work: {:?}",
@@ -479,7 +499,7 @@ mod tests {
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ [ 2 ] MUL ] 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "DEF with vector should succeed: {:?}",
@@ -507,22 +527,6 @@ mod tests {
             }
         }
     }
-    #[tokio::test]
-    async fn test_module_first_builtin_still_protected() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ | [ 1 ] ] 'GET' DEF").await;
-        assert!(
-            result.is_err(),
-            "Should not be able to override built-in GET"
-        );
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("Cannot redefine built-in word"),
-            "Expected BuiltinProtection error, got: {}",
-            err_msg
-        );
-    }
-
     // ── A word's own self-reference must not lock it ──────────────────────
     // A recursive word used to depend on itself, and once that self-edge was
     // in the dependency index, the guard that protects *callers* from losing
@@ -540,11 +544,11 @@ mod tests {
     #[tokio::test]
     async fn another_word_still_locks_a_referenced_word() {
         let mut interp = Interpreter::new();
-        interp.execute("[ Z | Z 1 ADD ] 'W' DEF").await.unwrap();
-        interp.execute("[ Z | Z W ] 'CALLER' DEF").await.unwrap();
+        interp.execute("[ 1 ADD ] 'W' DEF").await.unwrap();
+        interp.execute("[ W ] 'CALLER' DEF").await.unwrap();
 
         let err = interp
-            .execute("[ Z | Z 2 ADD ] 'W' DEF")
+            .execute("[ 2 ADD ] 'W' DEF")
             .await
             .unwrap_err()
             .to_string();
@@ -578,7 +582,7 @@ mod tests {
     #[tokio::test]
     async fn lookup_of_a_user_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
-        interp.execute("[ Z | Z 2 MUL ] 'DBL' DEF").await.unwrap();
+        interp.execute("[ 2 MUL ] 'DBL' DEF").await.unwrap();
         let loaded = lookup_source(&interp, "DBL");
         assert!(
             loaded.starts_with('['),
@@ -595,7 +599,7 @@ mod tests {
     async fn lookup_of_a_branching_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ N | [ 'small' ] [ 'big' ]\nN [ 5 ] LT\nSELECT ] 'SIZE' DEF")
+            .execute("[ 'N' BIND\n[ 'small' ] [ 'big' ]\nN [ 5 ] LT\nSELECT ] 'SIZE' DEF")
             .await
             .unwrap();
         let loaded = lookup_source(&interp, "SIZE");
@@ -613,12 +617,12 @@ mod tests {
     async fn a_contract_directive_becomes_the_defined_words_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ X | X [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] ADD ] 'INC' DEF")
             .await
             .unwrap();
         assert_eq!(
             interp.lookup_word_description("INC").as_deref(),
-            Some("( 1 -- 1 ) pure nil-free")
+            Some("inputs=1 outputs=1 purity=pure partiality=partial")
         );
     }
 
@@ -629,21 +633,21 @@ mod tests {
         // `execute()` call rather than sharing one with the `DEF`.
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial")
             .await
             .unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
-        interp.execute("[ Z | Z [ 1 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ADD ] 'INC' DEF").await.unwrap();
         assert_eq!(
             interp.lookup_word_description("INC").as_deref(),
-            Some("( 1 -- 1 ) pure nil-free")
+            Some("inputs=1 outputs=1 purity=pure partiality=partial")
         );
     }
 
     #[tokio::test]
     async fn a_word_defined_without_a_contract_directive_has_no_description() {
         let mut interp = Interpreter::new();
-        interp.execute("[ Z | Z [ 1 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ADD ] 'INC' DEF").await.unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
     }
 
@@ -651,10 +655,10 @@ mod tests {
     async fn redefining_without_a_new_directive_drops_the_old_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ X | X [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] ADD ] 'INC' DEF")
             .await
             .unwrap();
-        interp.execute("[ Z | Z [ 2 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] ADD ] 'INC' DEF").await.unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
     }
 }

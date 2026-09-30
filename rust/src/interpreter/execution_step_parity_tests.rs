@@ -58,7 +58,7 @@ mod tests {
             );
 
             let via_body = steps(
-                &format!("[ X | X {body} ] 'W' DEF"),
+                &format!("[ {body} ] 'W' DEF"),
                 &format!("{seed}{}", "W ".repeat(5)),
             )
             .await;
@@ -68,8 +68,8 @@ mod tests {
                 "`{body}` inside a Word costs the same plus the five calls"
             );
 
-            // `[ 0 4 ] RANGE` is two dispatches of its own, then `MAP` is a third.
-            let via_block = steps("", &format!("[ 0 4 ] RANGE [ {body} ] MAP")).await;
+            // `0 4 RANGE` is two dispatches of its own, then `MAP` is a third.
+            let via_block = steps("", &format!("0 4 RANGE [ {body} ] MAP")).await;
             assert_eq!(
                 via_block,
                 inline + 2,
@@ -87,11 +87,8 @@ mod tests {
             let inline = steps("", &format!("{name} ").repeat(10)).await;
             assert_eq!(inline, 10, "ten `{name}` inline");
 
-            let via_body = steps(
-                &format!("[ | {name} {name} ] 'PAIR' DEF"),
-                &"PAIR ".repeat(5),
-            )
-            .await;
+            let via_body =
+                steps(&format!("[ {name} {name} ] 'PAIR' DEF"), &"PAIR ".repeat(5)).await;
             assert_eq!(
                 via_body, 15,
                 "five calls of a Word holding two `{name}` is 10 + 5"
@@ -112,13 +109,13 @@ mod tests {
             ),
             (
                 "inside a Word body",
-                format!("[ X | X {body} ] 'BUMP' DEF"),
+                format!("[ {body} ] 'BUMP' DEF"),
                 format!("0 {}", "BUMP ".repeat(20)),
             ),
             (
                 "inside a block",
                 String::new(),
-                format!("[ 0 19 ] RANGE [ {body} ] MAP"),
+                format!("0 19 RANGE [ {body} ] MAP"),
             ),
         ] {
             let mut interp = Interpreter::new();
@@ -153,7 +150,7 @@ mod tests {
         for (setup, program) in [
             (String::new(), format!("0 {}", "1 ADD ".repeat(40))),
             (
-                "[ X | X 1 ADD 1 ADD 1 ADD 1 ADD ] 'BUMP' DEF".to_string(),
+                "[ 1 ADD 1 ADD 1 ADD 1 ADD ] 'BUMP' DEF".to_string(),
                 format!("0 {}", "BUMP ".repeat(10)),
             ),
         ] {

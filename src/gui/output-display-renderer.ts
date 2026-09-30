@@ -1,7 +1,9 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import type { Value, ExecuteResult, RuntimeMetricsSnapshot } from '../wasm-interpreter-types';
+import type { Value, ExecuteResult, ExactTerm } from '../wasm-interpreter-types';
 import { valueToLatex } from './value-latex';
+import { isFailure } from './interpreter-execution-utils';
+import { toError } from './to-error';
 import {
     createRenderBudget,
     formatElision,
@@ -21,8 +23,6 @@ export interface DisplayState {
 export interface Display {
     readonly init: () => void;
     readonly renderExecutionResult: (result: ExecuteResult) => void;
-    readonly appendExecutionResult: (result: ExecuteResult) => void;
-    readonly renderOutput: (text: string) => void;
     readonly renderError: (
         error: Error | { message?: string } | string,
         precedingOutput?: string
@@ -34,51 +34,20 @@ export interface Display {
     readonly extractState: () => DisplayState;
 }
 
-const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
-
-
-const BRACKET_DEPTH_COLORS: readonly string[] = [
-    '#332288',
-    '#88CCEE',
-    '#44AA99',
-    '#117733',
-    '#999933',
-    '#DDCC77',
-    '#CC6677',
-    '#882255',
-    '#AA4499',
-] as const;
-
-const lookupBracketColor = (depth: number): string =>
-    BRACKET_DEPTH_COLORS[depth - 1] ?? '#332288';
-
+// Coloured by nesting depth in CSS (`--bracket-depth-N`).
 const createBracketSpan = (bracket: string, depth: number): HTMLSpanElement => {
     const span = document.createElement('span');
     span.className = 'stack-bracket';
-    span.style.color = lookupBracketColor(depth);
+    span.dataset.depth = String(depth);
     span.textContent = bracket;
     return span;
 };
-
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== 'object') return null;
     const candidate = value as Record<string, unknown>;
     if (!('numerator' in candidate) || !('denominator' in candidate)) return null;
     return candidate;
-};
-
-const formatFractionToText = (fraction: Record<string, unknown>): string => {
-    const numerator = String(fraction.numerator);
-    const denominator = String(fraction.denominator);
-    return denominator === '1' ? numerator : `${numerator}/${denominator}`;
-};
-
-const parseFractionToNumber = (fraction: Record<string, unknown>): number | null => {
-    const numerator = parseInt(String(fraction.numerator || '0'), 10);
-    const denominator = parseInt(String(fraction.denominator || '1'), 10);
-    if (Number.isNaN(numerator) || Number.isNaN(denominator) || denominator === 0) return null;
-    return denominator === 1 ? numerator : Math.floor(numerator / denominator);
 };
 
 // Canonical numeric rendering: every number is a reduced
@@ -89,124 +58,21 @@ const formatNumber = (value: unknown): string => {
     return `${fraction.numerator}/${fraction.denominator}`;
 };
 
-const formatFraction = (frac: unknown): string => {
-    const fraction = checkFractionObject(frac);
-    if (!fraction) return '?';
-    return `${fraction.numerator}/${fraction.denominator}`;
-};
-
-const formatDateTime = (value: unknown): string => {
-    const fraction = checkFractionObject(value);
-    if (!fraction) return '@?';
-
-    try {
-        const numer = BigInt(String(fraction.numerator));
-        const denom = BigInt(String(fraction.denominator));
-        const timestampMs = Number((numer * 1000n) / denom);
-        const date = new Date(timestampMs);
-
-        if (isNaN(date.getTime())) {
-            return `@${formatFractionToText(fraction)}`;
-        }
-
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const year = date.getFullYear();
-        const month = pad(date.getMonth() + 1);
-        const day = pad(date.getDate());
-        const hours = pad(date.getHours());
-        const minutes = pad(date.getMinutes());
-        const seconds = pad(date.getSeconds());
-        const ms = date.getMilliseconds();
-
-        const dateStr = `@${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        return ms > 0 ? `${dateStr}.${String(ms).padStart(3, '0')}` : dateStr;
-    } catch {
-        return `@${formatFractionToText(fraction)}`;
-    }
-};
-
-const extractByteFromFraction = (frac: unknown): number | null => {
-    const fraction: Record<string, unknown> | null = checkFractionObject(frac);
-    if (!fraction) return null;
-    return parseFractionToNumber(fraction);
-};
-
-const deserializeBytesToString = (data: unknown[]): string => {
-    const bytes: number[] = data
-        .map(extractByteFromFraction)
-        .filter((value): value is number => value !== null && value >= 0 && value <= 255);
-
-    try {
-        return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
-    } catch {
-        return bytes.map(b => String.fromCharCode(b)).join('');
-    }
-};
-
-const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, displayHint?: string): string => {
-    const [open, close] = lookupBracketsAtDepth(depth);
-
-    if (shape.length === 0) {
-        if (data.length === 0) return `${open}${close}`;
-        return `${open} ${formatFraction(data[0])} ${close}`;
-    }
-
-    if (shape.length === 1) {
-        if (data.length === 0) return `${open}${close}`;
-        if (displayHint === 'text') {
-            const str = deserializeBytesToString(data);
-            return `'${str}'`;
-        }
-        const elements: string = data.map(frac => formatFraction(frac)).join(' ');
-        return `${open} ${elements} ${close}`;
-    }
-
-    const outerSize: number = shape[0] ?? 0;
-    const innerShape: number[] = shape.slice(1);
-    const innerSize: number = innerShape.reduce((a: number, b: number) => a * b, 1);
-
-    const parts: string[] = [];
-    for (let i = 0; i < outerSize; i++) {
-        const innerData = data.slice(i * innerSize, (i + 1) * innerSize);
-        parts.push(formatTensorRecursive(innerShape, innerData, depth + 1, displayHint));
-    }
-
-    return `${open} ${parts.join(' ')} ${close}`;
-};
-
-const formatTensor = (value: unknown, depth: number): string => {
-    if (!value || typeof value !== 'object') return '?';
-    const v = value as Record<string, unknown>;
-    if (!('shape' in v) || !('data' in v)) return '?';
-    const displayHint = v.displayHint as string | undefined;
-    return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth, displayHint);
-};
-
-/// A Vector renders as source that rebuilds it — a bracket literal, whatever
-/// it holds — matching the engine's own renderer
-/// (`rust/src/types/display_source.rs`). A nested Record is one element,
-/// because it has a literal of its own (`formatRecord`).
-///
-/// The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
-/// (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
-/// rather than an empty Vector. This panel used to print the glued form,
-/// which no one noticed while a display was not expected to be source.
+// A Vector renders as source that rebuilds it — a bracket literal, whatever
+// it holds — matching the engine's own renderer
+// (`rust/src/types/display_source.rs`). A nested Record is one element,
+// because it has a literal of its own (`formatRecord`).
+//
+// The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
+// (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
+// rather than an empty Vector.
 const formatVector = (value: unknown, depth: number): string => {
-    const [open, close] = lookupBracketsAtDepth(depth);
-
-    if (Array.isArray(value)) {
-        if (value.length === 0) {
-            return `${open} ${close}`;
-        }
-        const formatSingleElement = (v: Value): string => {
-            try { return formatValue(v, depth + 1); } catch { return '?'; }
-        };
-        const elements: string = value.map(formatSingleElement).join(' ');
-        return `${open} ${elements} ${close}`;
-    }
-    return `${open} ${close}`;
+    if (!Array.isArray(value) || value.length === 0) return '[ ]';
+    const formatSingleElement = (v: Value): string => {
+        try { return formatValue(v, depth + 1); } catch { return '?'; }
+    };
+    return `[ ${value.map(formatSingleElement).join(' ')} ]`;
 };
-
 
 // Math view (docs/dev/gui-current-design-memory.md): an alternate KaTeX
 // rendering of stack values, derived from the structured protocol form.
@@ -239,10 +105,9 @@ const renderMathValueNode = (item: Value): HTMLElement | null => {
     if (tex === null) return null;
     const node = document.createElement('span');
     node.className = 'stack-node stack-node-math';
-    // Tag the top-level node so the operation-target highlight selectors
-    // (`.stack-node[data-depth="1"]`) match in LaTeX view exactly as they do
-    // for the canonical rendering — keeping the grey background that shows
-    // whether the target is the Stack top or the whole Stack.
+    // Tag the top-level node so the stack-top fill's selector
+    // (`.stack-item:last-child .stack-node[data-depth="1"]`) matches in LaTeX
+    // view exactly as it does for the canonical rendering.
     node.dataset.depth = '1';
     // Trusted markup: KaTeX output for TeX generated from the structured
     // value by valueToLatex, never from user-supplied text.
@@ -260,32 +125,61 @@ const createElisionSpan = (elided: number): HTMLSpanElement => {
     return span;
 };
 
-interface ExactTerm {
-    readonly numerator: string;
-    readonly denominator: string;
-    readonly radicand: string;
-}
-
-/// Σ c·√r as one line. A coefficient of exactly one is left off (`√3`, not
-/// `1/1√3`); every other coefficient keeps the canonical `n/d` shape the rest
-/// of the panel uses, so a number does not change spelling depending on which
-/// term it sits in. A negative term joins with `-` rather than `+ -`.
+// An irrational's normal form Σ c·√r written exactly as the engine writes it
+// (`rust/src/types/display.rs::render_algebraic_terms`): one spaceless token,
+// terms in the normal form's order, `sqrt(r)` for a unit coefficient,
+// `n/d*sqrt(r)` otherwise, and the rational term as `n/d` — the canonical
+// display the Stack surface is required to show (spec/gui-semantics.md).
 const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string | null => {
     if (!terms || terms.length === 0) return null;
     let out = '';
-    for (const term of terms) {
+    terms.forEach((term, index) => {
         const negative = term.numerator.startsWith('-');
         const magnitude = negative ? term.numerator.slice(1) : term.numerator;
-        const root = term.radicand === '1' ? '' : `√${term.radicand}`;
-        const unit = magnitude === '1' && term.denominator === '1' && root !== '';
-        const coefficient = unit ? '' : `${magnitude}/${term.denominator}`;
-        if (out === '') {
-            out = `${negative ? '-' : ''}${coefficient}${root}`;
+        if (index === 0) {
+            if (negative) out += '-';
         } else {
-            out += ` ${negative ? '-' : '+'} ${coefficient}${root}`;
+            out += negative ? '-' : '+';
         }
-    }
+        if (term.radicand === '1') {
+            out += `${magnitude}/${term.denominator}`;
+        } else if (magnitude === '1' && term.denominator === '1') {
+            out += `sqrt(${term.radicand})`;
+        } else {
+            out += `${magnitude}/${term.denominator}*sqrt(${term.radicand})`;
+        }
+    });
     return out;
+};
+
+const NIL: Value = { type: 'nil' } as Value;
+
+// A collection's literal as DOM: `open`, the drawn children each preceded by
+// a space, the elision marker for the rest, a space, `close` — the same
+// spacing as the canonical text (`[ 1 2 ]`, `{ k v }`), which is source that
+// rebuilds the value. Every child is drawn under the one render budget.
+const renderCollectionNode = (
+    node: HTMLElement,
+    open: string,
+    close: string,
+    children: readonly Value[],
+    depth: number,
+    budget: RenderBudget
+): HTMLElement => {
+    const { shown, elided } = planCollectionRender(children.length, budget);
+    node.dataset.depth = String(depth);
+    node.appendChild(createBracketSpan(open, depth));
+    for (let index = 0; index < shown; index++) {
+        node.append(' ');
+        node.appendChild(renderStackValueNode(children[index]!, depth + 1, budget));
+    }
+    if (elided > 0) {
+        node.append(' ');
+        node.appendChild(createElisionSpan(elided));
+    }
+    node.append(' ');
+    node.appendChild(createBracketSpan(close, depth));
+    return node;
 };
 
 const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget): HTMLElement => {
@@ -293,129 +187,82 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     node.className = 'stack-node';
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
-        const children = item.value as Value[];
-        const { shown, elided } = planCollectionRender(children.length, budget);
         node.classList.add('stack-node-vector');
-        node.dataset.depth = String(depth);
-        node.appendChild(createBracketSpan('[', depth));
-        for (let index = 0; index < shown; index++) {
-            if (index > 0) node.append(' ');
-            node.appendChild(renderStackValueNode(children[index]!, depth + 1, budget));
-        }
-        if (elided > 0) {
-            if (shown > 0) node.append(' ');
-            node.appendChild(createElisionSpan(elided));
-        }
-        node.appendChild(createBracketSpan(']', depth));
-        return node;
+        return renderCollectionNode(node, '[', ']', item.value as Value[], depth, budget);
     }
 
-    if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
-        const tensor = item.value as { shape?: number[]; data?: unknown[]; displayHint?: string };
-        const shape = Array.isArray(tensor.shape) ? tensor.shape : [];
-        const data = Array.isArray(tensor.data) ? tensor.data : [];
-
-        const renderTensorNode = (tensorShape: number[], tensorData: unknown[], tensorDepth: number): HTMLElement => {
-            const tensorNode = document.createElement('span');
-            tensorNode.className = 'stack-node stack-node-vector';
-            tensorNode.dataset.depth = String(tensorDepth);
-
-            if (tensorShape.length === 0) {
-                tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-                tensorNode.appendChild(createBracketSpan(']', tensorDepth));
-                return tensorNode;
-            }
-
-            if (tensorShape.length === 1) {
-                if ((tensor.displayHint ?? '').toLowerCase() === 'text') {
-                    tensorNode.append(deserializeBytesToString(tensorData));
-                } else {
-                    const { shown, elided } = planCollectionRender(tensorData.length, budget);
-                    tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-                    for (let index = 0; index < shown; index++) {
-                        if (index > 0) tensorNode.append(' ');
-                        tensorNode.append(formatFraction(tensorData[index]));
-                    }
-                    if (elided > 0) {
-                        if (shown > 0) tensorNode.append(' ');
-                        tensorNode.appendChild(createElisionSpan(elided));
-                    }
-                    tensorNode.appendChild(createBracketSpan(']', tensorDepth));
-                }
-                return tensorNode;
-            }
-
-            tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-            const outerSize = tensorShape[0] ?? 0;
-            const innerShape = tensorShape.slice(1);
-            const innerSize = innerShape.reduce((a, b) => a * b, 1);
-            const { shown, elided } = planCollectionRender(outerSize, budget);
-            for (let i = 0; i < shown; i++) {
-                if (i > 0) tensorNode.append(' ');
-                const innerData = tensorData.slice(i * innerSize, (i + 1) * innerSize);
-                tensorNode.appendChild(renderTensorNode(innerShape, innerData, tensorDepth + 1));
-            }
-            if (elided > 0) {
-                if (shown > 0) tensorNode.append(' ');
-                tensorNode.appendChild(createElisionSpan(elided));
-            }
-            tensorNode.appendChild(createBracketSpan(']', tensorDepth));
-            return tensorNode;
-        };
-
-        return renderTensorNode(shape, data, depth);
+    // A Record's keys and values are two aligned arrays; they are drawn
+    // interleaved, a missing value padded with NIL (see `formatRecord`). Each
+    // pair counts as two children of the budget.
+    if (item.type === 'record') {
+        const record = item.value as { keys?: Value[]; values?: Value[] } | null;
+        const keys = Array.isArray(record?.keys) ? record.keys : [];
+        const values = Array.isArray(record?.values) ? record.values : [];
+        const pairs = keys.flatMap((key, index) => [key, values[index] ?? NIL]);
+        node.classList.add('stack-node-record');
+        return renderCollectionNode(node, '{', '}', pairs, depth, budget);
     }
 
     if (depth === 1) {
         node.dataset.depth = String(depth);
     }
-    node.textContent = renderExactScalar(item, formatValue(item, depth));
+    node.textContent = formatValue(item, depth);
+    if (item.type === 'nil') annotateNilNode(node, item);
     return node;
 };
 
-/// An exact irrational cannot be written as `n/d`, so any `n/d` the host sends
-/// for one is a best rational approximation. Drawn plainly, `3 SQRT` read as
-/// `708158977/408855776` — the same shape a genuinely exact rational has, in a
-/// language whose claim is that nothing is silently rounded.
-///
-/// There are two honest answers, and the host supplies both. When it sends the
-/// value's normal form (`semantics.exactTerms`) the panel draws that: `√3` is
-/// the number, exactly, in one line. Only when it does not — a computable real
-/// with no closed form — does the panel fall back to the approximation, and
-/// then it marks it `≈`.
-const renderExactScalar = (item: Value, text: string): string => {
-    const semantics = item?.semantics as
-        | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
-        | undefined;
-    const exact = formatNormalForm(semantics?.exactTerms);
-    if (exact) return exact;
-    return semantics?.approximate === true && !text.startsWith('≈') ? `≈ ${text}` : text;
+// A NIL's reason is its observable content (LANG.VALUES.NIL): `1 0 DIV` is a
+// NIL whose reason is `divisionByZero`, and a Stack that shows only `NIL`
+// leaves the reader to find out why in an Output area that may not be on
+// screen. The canonical text stays `NIL` — the display the engine writes — and
+// the reason is drawn after it as an annotation. Exported for
+// `output-display-renderer.test.ts`.
+export const describeNilNode = (item: Value): string => {
+    const reason = item.semantics?.absence?.reason;
+    return reason ? `NIL · ${reason}` : 'NIL';
 };
 
-/// Exported for `output-display-renderer.test.ts`, which pins these strings
-/// against the ones `rust/src/types/display.rs` produces. The two renderers
-/// are separate implementations of one display, and nothing but that test
-/// stops them drifting.
+// The visible text already carries the whole label, so the tooltip repeats it
+// and assistive technology reads it from the text itself.
+const annotateNilNode = (node: HTMLElement, item: Value): void => {
+    const label = describeNilNode(item);
+    node.classList.add('stack-node-nil');
+    node.title = label;
+    if (label === 'NIL') return;
+    const reason = document.createElement('span');
+    reason.className = 'stack-nil-reason';
+    reason.textContent = label.slice('NIL'.length);
+    node.appendChild(reason);
+};
+
+// A number as the engine displays it. An irrational's `n/d` is only an
+// approximation, so its normal form (`semantics.exactTerms`) is written
+// instead; a host that sends none gets the approximation marked `≈`, never a
+// bare `n/d` that would read as exact.
+const formatNumberNode = (item: Value): string => {
+    const semantics = item?.semantics;
+    const exact = formatNormalForm(semantics?.exactTerms);
+    if (exact) return exact;
+    const text = formatNumber(item.value);
+    return semantics?.approximate === true ? `≈ ${text}` : text;
+};
+
+// Exported for `output-display-renderer.test.ts`, which pins these strings
+// against the ones `rust/src/types/display.rs` produces. The two renderers
+// are separate implementations of one display, and nothing but that test
+// stops them drifting.
 export const formatValue = (item: Value, depth: number): string => {
-    if (!item || !item.type) return 'unknown';
+    if (!item || !item.type) return '?';
 
     switch (item.type) {
         case 'number':
-            return formatNumber(item.value);
-        case 'datetime':
-            return formatDateTime(item.value);
-        case 'tensor':
-            return formatTensor(item.value, depth);
+            return formatNumberNode(item);
         case 'string':
             return `'${item.value}'`;
         case 'symbol':
             return String(item.value);
         case 'boolean':
             return item.value ? 'TRUE' : 'FALSE';
-        case 'truthValue':
-            // Three-valued logic Unknown (LANG.VALUES.TRUTH). The wire value is the
-            // protocol string 'unknown'; render it as UNKNOWN (display-only).
-            return item.value === 'unknown' ? 'UNKNOWN' : String(item.value).toUpperCase();
         case 'vector':
             return formatVector(item.value, depth);
         case 'record':
@@ -427,17 +274,17 @@ export const formatValue = (item: Value, depth: number): string => {
     }
 };
 
-/// A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
-/// arrays of nodes, and renders as its own literal — `{ key value … }`, each
-/// key beside the value under it — which is the same display the engine's own
-/// stack rendering produces (`rust/src/types/display_source.rs`).
-///
-/// The empty Record is `{ }`, which needs no case of its own.
-///
-/// A short value array is padded with NIL rather than dropped, because the
-/// two arrays are aligned by position and a missing slot is the protocol
-/// having been malformed, not a Record with fewer values than keys — and
-/// neither `RECORD` nor the literal admits a length mismatch.
+// A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
+// arrays of nodes, and renders as its own literal — `{ key value … }`, each
+// key beside the value under it — which is the same display the engine's own
+// stack rendering produces (`rust/src/types/display_source.rs`).
+//
+// The empty Record is `{ }`, which needs no case of its own.
+//
+// A short value array is padded with NIL rather than dropped, because the
+// two arrays are aligned by position and a missing slot is the protocol
+// having been malformed, not a Record with fewer values than keys — and
+// neither `RECORD` nor the literal admits a length mismatch.
 const formatRecord = (value: unknown, depth: number): string => {
     const record = value as { keys?: Value[]; values?: Value[] } | null;
     const keys = Array.isArray(record?.keys) ? record!.keys : [];
@@ -447,111 +294,32 @@ const formatRecord = (value: unknown, depth: number): string => {
         try { return formatValue(v, depth + 1); } catch { return '?'; }
     };
     const pairs: string[] = keys.map((key, index) => {
-        const paired = values[index] ?? ({ type: 'nil' } as Value);
+        const paired = values[index] ?? NIL;
         return `${formatSingleElement(key)} ${formatSingleElement(paired)}`;
     });
     return `{ ${pairs.join(' ')} }`;
 };
 
-
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
-    typeof error === 'string'
-        ? `Error: ${error}`
-        : `Error: ${(error as Error).message || error}`;
+    `Error: ${typeof error === 'string' ? error : error.message || toError(error).message}`;
 
-const createSpanElement = (text: string, color: string): HTMLSpanElement => {
+type OutputKind = 'debug' | 'program' | 'error' | 'info';
+
+// The host writes each `PRINT` emission as one line, so the stream ends in the
+// terminator of its last emission. Only that terminator is presentation; every
+// other character is the observation itself (LANG.EFFECTS.OUTPUT), so nothing
+// else is trimmed: `'' PRINT` is one empty emission and not a run that printed
+// nothing, `'  x' PRINT` keeps its indentation, and `'' PRINT 'a' PRINT` keeps
+// its first line. Trimming the whole string collapsed all three into their
+// neighbours and made the Output projection disagree with the CLI's `output`.
+const stripEmissionTerminator = (output: string): string =>
+    output.endsWith('\n') ? output.slice(0, -1) : output;
+
+const createSpanElement = (text: string, kind: OutputKind): HTMLSpanElement => {
     const span = document.createElement('span');
-    span.style.color = color;
+    span.className = `output-${kind}`;
     span.textContent = text;
     return span;
-};
-
-const clearElement = (element: HTMLElement): void => {
-    element.innerHTML = '';
-};
-
-const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
-    parent.appendChild(child);
-};
-
-// ── Cost summary (Reference: Cost Model) ──────────────────────────────────
-// Per-run cost-model activity, rendered strictly in the Reference page's
-// vocabulary (fast lane, dense/nested vectors, COMPARE-WITHIN depth) — the
-// machine counter names never appear. Collapsed by default and omitted
-// entirely when the run had no cost-model activity, so users who never open
-// it never see it. Diagnostics only (LANG.AUTHORITY.FREEDOM): nothing here is a value.
-const buildCostSummaryLines = (delta: RuntimeMetricsSnapshot): string[] => {
-    const lines: string[] = [];
-    const plural = (n: number): string => (n === 1 ? '' : 's');
-
-    if (delta.scalarFastpathCount > 0) {
-        const n = delta.scalarFastpathCount;
-        const lane = `Fast lane: ${n} scalar operation${plural(n)}`;
-        lines.push(lane);
-    }
-
-    if (delta.bulkKernelUseCount > 0 || delta.simdKernelUseCount > 0) {
-        const n = delta.bulkKernelUseCount;
-        const simd = delta.simdKernelUseCount;
-        let line = `Dense vectors: ${n} bulk operation${plural(n)}`;
-        if (simd > 0) line += ` (${simd} SIMD)`;
-        lines.push(line);
-    }
-
-    if (delta.tensorFlattenCount > 0 || delta.tensorRebuildCount > 0) {
-        lines.push(
-            `Vector storage: ${delta.tensorFlattenCount} conversion${plural(delta.tensorFlattenCount)} to dense, ` +
-                `${delta.tensorRebuildCount} back to nested`
-        );
-    }
-
-    if (delta.compareWithinCount > 0) {
-        let line = `COMPARE-WITHIN: ${delta.compareWithinCount} call${plural(delta.compareWithinCount)}`;
-        if (delta.compareWithinUnknownCount > 0) {
-            line += `, ${delta.compareWithinUnknownCount} reached the requested depth (UNKNOWN)`;
-        }
-        if (delta.compareWithinBudgetTermsConsumed > 0) {
-            const t = delta.compareWithinBudgetTermsConsumed;
-            line += `, ${t} continued-fraction term${plural(t)} examined`;
-        }
-        lines.push(line);
-    }
-
-    // Cross-reset artifact cache (Phase 5): reuse of compiled word plans that
-    // survived the per-run session reset instead of being recompiled. Optional
-    // counters, so guard against an older wasm bundle that omits them.
-    const artifactHits = delta.artifactCacheHitCount ?? 0;
-    const artifactBuilds = delta.artifactCacheBuildCount ?? 0;
-    if (artifactHits > 0 || artifactBuilds > 0) {
-        let line = `Compiled word reuse: ${artifactHits} reused`;
-        if (artifactBuilds > 0) line += `, ${artifactBuilds} compiled`;
-        const evictions = delta.artifactCacheEvictionCount ?? 0;
-        if (evictions > 0) line += `, ${evictions} evicted`;
-        lines.push(line);
-    }
-
-    return lines;
-};
-
-const renderCostSummary = (result: ExecuteResult, outputDisplay: HTMLElement): void => {
-    const delta = result.runtimeMetricsDelta;
-    if (!delta) return;
-    const lines = buildCostSummaryLines(delta);
-    if (lines.length === 0) return;
-
-    const details = document.createElement('details');
-    details.className = 'cost-summary';
-
-    const summary = document.createElement('summary');
-    summary.textContent = 'Cost';
-    details.appendChild(summary);
-
-    const body = document.createElement('div');
-    body.className = 'cost-summary-body';
-    body.textContent = lines.join('\n');
-    details.appendChild(body);
-
-    appendToElement(outputDisplay, details);
 };
 
 export const createDisplay = (elements: DisplayElements): Display => {
@@ -587,88 +355,62 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const init = (): void => {
-        elements.outputDisplay.style.whiteSpace = 'pre-wrap';
         createLatexToggle();
     };
 
-    const appendSpan = (text: string, color: string): HTMLSpanElement => {
-        const span = createSpanElement(text.replace(/\\n/g, '\n'), color);
-        appendToElement(elements.outputDisplay, span);
+    const appendSpan = (text: string, kind: OutputKind): HTMLSpanElement => {
+        const span = createSpanElement(text, kind);
+        elements.outputDisplay.appendChild(span);
         return span;
     };
 
     const renderExecutionResult = (result: ExecuteResult): void => {
-        const debug = (result.debugOutput || '').trim();
-        const program = (result.output || '').trim();
+        const output = result.output ?? '';
+        const program = stripEmissionTerminator(output);
 
-        mainOutput = `${debug}\n${program}`;
-        clearElement(elements.outputDisplay);
+        mainOutput = program;
+        elements.outputDisplay.replaceChildren();
 
-        if (debug) {
-            appendSpan(debug, '#333');
+        if (output) {
+            appendSpan(program, 'program');
         }
 
-        if (debug && program) {
-            appendToElement(elements.outputDisplay, document.createElement('br'));
-        }
-
-        if (program) {
-            appendSpan(program, '#4DC4FF');
-        }
-
-        if (!debug && !program && result.status === 'OK') {
-            appendSpan('OK', '#333');
-        }
-
-        renderCostSummary(result, elements.outputDisplay);
-    };
-
-    const appendExecutionResult = (result: ExecuteResult): void => {
-        const filteredOutput = (result.output || '').trim();
-
-        if (filteredOutput) {
-            appendSpan(filteredOutput, '#4DC4FF');
+        if (!output && !isFailure(result)) {
+            appendSpan('OK', 'debug');
         }
     };
 
-    const renderOutput = (text: string): void => {
-        mainOutput = text;
-        clearElement(elements.outputDisplay);
-        appendSpan(text, '#4DC4FF');
-    };
-
-    /// An error is written *below* whatever the run already printed, never in
-    /// place of it. `PRINT` is the language's trace tool, and the run that ends
-    /// in an error is the run whose trace is wanted; clearing the area first
-    /// meant the one moment `PRINT` mattered most was the one moment it showed
-    /// nothing. `precedingOutput` is what the failing run printed before it
-    /// stopped (the host now reports it on the error path too).
+    // An error is written *below* whatever the run already printed, never in
+    // place of it. `PRINT` is the language's trace tool, and the run that ends
+    // in an error is the run whose trace is wanted, so clearing the area first
+    // would blank `PRINT` at the one moment it matters most. `precedingOutput`
+    // is what the failing run printed before it stopped, which the host
+    // reports on the error path too.
     const renderError = (
         error: Error | { message?: string } | string,
         precedingOutput = ''
     ): void => {
         const errorMessage = formatErrorMessage(error);
-        const printed = precedingOutput.trim();
+        const printed = stripEmissionTerminator(precedingOutput);
 
-        clearElement(elements.outputDisplay);
-        if (printed) {
-            appendSpan(printed, '#4DC4FF');
-            appendToElement(elements.outputDisplay, document.createElement('br'));
+        elements.outputDisplay.replaceChildren();
+        if (precedingOutput) {
+            appendSpan(printed, 'program');
+            elements.outputDisplay.appendChild(document.createElement('br'));
         }
-        mainOutput = printed ? `${printed}\n${errorMessage}` : errorMessage;
+        mainOutput = precedingOutput ? `${printed}\n${errorMessage}` : errorMessage;
 
-        const span = appendSpan(errorMessage, '#dc3545');
-        span.style.fontWeight = 'bold';
+        appendSpan(errorMessage, 'error');
     };
 
     const renderInfo = (text: string, append = false): void => {
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
             mainOutput = `${mainOutput}\n${text}`;
-            appendSpan('\n' + text, '#666');
+            appendSpan('\n' + text, 'info');
         } else {
             mainOutput = text;
-            clearElement(elements.outputDisplay);
-            appendSpan(text, '#666');
+            elements.outputDisplay.replaceChildren();
+            appendSpan(text, 'info');
         }
     };
 
@@ -676,11 +418,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
     // the way the cost summary is.
     //
     // A reasoned NIL is a value, not a failure: `1 0 DIV` answered what the
-    // language says it answers. Its diagnosis was printed in full anyway, so
-    // a correct ten-line answer arrived under a heading that reads like an
-    // error report. Folding it puts the reason one click away and leaves the
-    // stance of the language visible in the output. `mainOutput` still gets
-    // the text, so Copy copies what was said whether or not it was opened.
+    // language says it answers. Printed in full, its diagnosis would put a
+    // correct ten-line answer under a heading that reads like an error report.
+    // Folding it puts the reason one click away and leaves the stance of the
+    // language visible in the output. `mainOutput` still gets the text, so
+    // Copy copies what was said whether or not it was opened.
     const renderFoldedInfo = (label: string, text: string): void => {
         mainOutput = mainOutput ? `${mainOutput}\n${text}` : text;
 
@@ -696,24 +438,24 @@ export const createDisplay = (elements: DisplayElements): Display => {
         body.textContent = text;
         details.appendChild(body);
 
-        appendToElement(elements.outputDisplay, details);
+        elements.outputDisplay.appendChild(details);
     };
 
-    /// A Core Word's reference entry, as the host's lookup answered it.
-    /// Reference text is read rather than run, so
-    /// it is shown here instead of being written into the editor over whatever
-    /// the user was writing. `pre-wrap` is already set on the area, so the
-    /// entry's own line structure survives verbatim.
+    // A Core Word's reference entry, as the host's lookup answered it.
+    // Reference text is read rather than run, so
+    // it is shown here instead of being written into the editor over whatever
+    // the user was writing. `pre-wrap` is already set on the area, so the
+    // entry's own line structure survives verbatim.
     const renderDocumentation = (text: string): void => {
         mainOutput = text;
-        clearElement(elements.outputDisplay);
-        appendSpan(text, '#333');
+        elements.outputDisplay.replaceChildren();
+        appendSpan(text, 'debug');
     };
 
     const renderStack = (stack: Value[]): void => {
         lastStack = Array.isArray(stack) ? stack : [];
         const display = elements.stackDisplay;
-        clearElement(display);
+        display.replaceChildren();
 
         // The clear control follows the same rule the editor's does: it is not
         // drawn when there is nothing to clear. The flag goes on the panel
@@ -748,10 +490,10 @@ export const createDisplay = (elements: DisplayElements): Display => {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';
             }
-            appendToElement(container, elem);
+            container.appendChild(elem);
         });
 
-        appendToElement(display, container);
+        display.appendChild(container);
     };
 
     const extractState = (): DisplayState => ({ mainOutput });
@@ -759,8 +501,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
     return {
         init,
         renderExecutionResult,
-        appendExecutionResult,
-        renderOutput,
         renderError,
         renderInfo,
         renderFoldedInfo,

@@ -57,14 +57,6 @@ fn rendered_stack(interp: &Interpreter) -> Vec<String> {
         .collect()
 }
 
-fn hint_stack(interp: &Interpreter) -> Vec<String> {
-    interp
-        .get_stack()
-        .iter()
-        .map(|value| format!("{:?}", value.hint))
-        .collect()
-}
-
 fn assert_on_equals_off(src: &str) -> (Interpreter, Interpreter) {
     let on = run(src, true);
     let off = run(src, false);
@@ -77,11 +69,6 @@ fn assert_on_equals_off(src: &str) -> (Interpreter, Interpreter) {
         rendered_stack(&on),
         rendered_stack(&off),
         "fast path ON vs OFF render diverged for: {src}"
-    );
-    assert_eq!(
-        hint_stack(&on),
-        hint_stack(&off),
-        "fast path ON vs OFF hints diverged for: {src}"
     );
     (on, off)
 }
@@ -102,25 +89,20 @@ fn assert_direct_on_equals_off(
         rendered_stack(&off),
         "direct fast path ON vs OFF render diverged"
     );
-    assert_eq!(
-        hint_stack(&on),
-        hint_stack(&off),
-        "direct fast path ON vs OFF hints diverged"
-    );
     (on, off)
 }
 
 #[test]
 fn arithmetic_fast_path_matches_baseline_for_bare_scalars_and_singleton_tensors() {
     for src in [
-        "2 3 +",
-        "7 4 -",
-        "6 5 *",
-        "6 4 /",
-        "[ 1 ] [ 2 ] +",
-        "[ 7 ] [ 4 ] -",
-        "[ 6 ] [ 5 ] *",
-        "[ 6 ] [ 4 ] /",
+        "2 3 ADD",
+        "7 4 SUB",
+        "6 5 MUL",
+        "6 4 DIV",
+        "[ 1 ] [ 2 ] ADD",
+        "[ 7 ] [ 4 ] SUB",
+        "[ 6 ] [ 5 ] MUL",
+        "[ 6 ] [ 4 ] DIV",
     ] {
         let (on, off) = assert_on_equals_off(src);
         assert!(
@@ -137,14 +119,14 @@ fn arithmetic_fast_path_matches_baseline_for_bare_scalars_and_singleton_tensors(
 
 #[test]
 fn fast_path_preserves_tensor_wrapping() {
-    let (on, _) = assert_on_equals_off("[ 1 ] [ 2 ] +");
+    let (on, _) = assert_on_equals_off("[ 1 ] [ 2 ] ADD");
     let rendered = rendered_stack(&on);
     assert_eq!(rendered, vec!["[ 3/1 ]"]);
 }
 
 #[test]
 fn unsupported_or_semantically_sensitive_shapes_fall_back() {
-    for src in ["2 [ 3 ] +", "[ 2 ] 3 +", "NIL 3 +", "3 NIL >"] {
+    for src in ["2 [ 3 ] ADD", "[ 2 ] 3 ADD", "NIL 3 ADD", "3 NIL GT"] {
         let (on, off) = assert_on_equals_off(src);
         assert_eq!(
             on.runtime_metrics().scalar_fastpath_count,
@@ -152,34 +134,6 @@ fn unsupported_or_semantically_sensitive_shapes_fall_back() {
             "fast path should fall back for: {src}"
         );
         assert_eq!(off.runtime_metrics().scalar_fastpath_count, 0);
-    }
-}
-
-#[test]
-fn keep_mode_fast_path_preserves_operands_and_pushes_result() {
-    // The shaped comparison forms (`[ 3 ] [ 4 ] KEEP >`) moved out of this
-    // list with the singleton fast path; they lift now.
-    for src in [
-        "3 4 KEEP ADD",
-        "[ 3 ] [ 4 ] KEEP ADD",
-        "3 4 KEEP >",
-        "3 3 KEEP =",
-    ] {
-        let (on, off) = assert_on_equals_off(src);
-        assert!(
-            on.runtime_metrics().scalar_fastpath_count >= 1,
-            "expected KEEP scalar fast path to fire for: {src}"
-        );
-        assert_eq!(
-            off.runtime_metrics().scalar_fastpath_count,
-            0,
-            "disabled scalar fast path should not count for: {src}"
-        );
-        assert_eq!(
-            on.get_stack().len(),
-            3,
-            "KEEP fast path must retain both operands and push one result for: {src}"
-        );
     }
 }
 
@@ -229,7 +183,7 @@ fn string_operand_stays_on_baseline_path() {
 
 #[test]
 fn division_by_zero_matches_baseline() {
-    let (on, _) = assert_on_equals_off("6 0 /");
+    let (on, _) = assert_on_equals_off("6 0 DIV");
     assert!(
         on.runtime_metrics().scalar_fastpath_count >= 1,
         "division by zero still uses the scalar fast path to produce the same projected NIL"

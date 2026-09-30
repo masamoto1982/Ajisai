@@ -1,12 +1,8 @@
 // The seeded Example Words are the first thing a fresh session shows, and they
 // are the one place in the host that ships Ajisai source rather than reading it
 // from the interpreter. Nothing type-checks them: `restore_user_words` only
-// tokenizes a definition, so a body naming a word that no longer exists is
+// tokenizes a definition, so a body naming a word that does not exist is
 // defined without complaint and fails only when the user runs it.
-//
-// That is how every SAY word and GREET came to fail with "Unknown word: ,,"
-// on first launch: `,,` was the symbol for KEEP, and it was retired when every
-// symbol became one character.
 //
 // These tests check the shape of every token the seed data ships, so retired
 // residue is caught here instead of on someone's first run.
@@ -14,16 +10,18 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLE_USER_WORDS } from './example-words';
 
-// Symbols the lexer still accepts: one character each, plus the structural
-// delimiters. Kept as data so a token that is no longer one of these is a
-// visible diff rather than a silent runtime failure.
-const SYMBOL_ALIASES = ['+', '-', '*', '/', '%', '=', '<', '>', '?', '^'];
-const STRUCTURAL_TOKENS = ['[', ']', '{', '}', '|'];
+// The one delimiter pair the grammar allocates. Every other symbol is an
+// ordinary name the dictionary does not hold — `+` and `<` included, since a
+// Word has exactly one name — so any of them in a seeded definition is an
+// unknown word on the first run, and this check refuses it here instead.
+const STRUCTURAL_TOKENS = ['[', ']'];
 
-// Two-character symbols and the force/negation marks, all retired.
-const RETIRED_SYMBOLS = [',,', '<=', '>=', '<>', '&', '!', '..', '~'];
+// Two-character symbols, the force/negation marks and the former symbol
+// spellings of the arithmetic and comparison Words, all retired.
+const RETIRED_SYMBOLS = [',,', '<=', '>=', '<>', '&', '!', '..', '~', '+', '-', '*', '/', '%', '=', '<', '>', '?', '^'];
 
-const WORD_NAME = /^[A-Z][A-Z0-9-]*$/;
+// The canonical Word-name grammar (spec/words.schema.json `name`).
+const WORD_NAME = /^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$/;
 // Integers, fractions and decimals; digits are required on both sides of a point.
 const NUMBER_LITERAL = /^-?\d+(?:\/\d+|\.\d+)?$/;
 
@@ -56,8 +54,7 @@ describe('EXAMPLE_USER_WORDS', () => {
         '%s is built only from tokens the lexer still accepts',
         (name, definition) => {
             const unrecognized = tokenize(definition ?? '').filter(token =>
-                !SYMBOL_ALIASES.includes(token)
-                && !STRUCTURAL_TOKENS.includes(token)
+                !STRUCTURAL_TOKENS.includes(token)
                 && !NUMBER_LITERAL.test(token)
                 && !WORD_NAME.test(token)
             );
@@ -71,7 +68,7 @@ describe('EXAMPLE_USER_WORDS', () => {
         // (say GREET losing SAY-BANG) is caught: the dependency must be seeded.
         const greet = EXAMPLE_USER_WORDS.find(w => w.name === 'GREET');
         expect(greet).toBeDefined();
-        for (const token of tokenize(greet!.definition ?? '').filter(token => token !== '|')) {
+        for (const token of tokenize(greet!.definition ?? '')) {
             expect(exampleWordNames.has(token), `GREET calls unseeded ${token}`).toBe(true);
         }
     });

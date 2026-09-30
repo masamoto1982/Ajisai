@@ -48,6 +48,8 @@ fn unbounded() -> RuntimeLimits {
         max_collection_work: u64::MAX,
         max_bigint_bits: u64::MAX,
         max_algebraic_terms: usize::MAX,
+        // Not lifted: it bounds the native stack, not a price.
+        max_nesting_depth: RuntimeLimits::default().max_nesting_depth,
     }
 }
 
@@ -79,7 +81,7 @@ fn measure(name: String, source: &str) -> Measurement {
 /// The distinction is not cosmetic, and getting it wrong is how this harness
 /// under-reported a rate the host profile was later derived from. A rate is
 /// `charged units / elapsed ms`, so any time inside the measured interval that
-/// charges *this* meter nothing drags the rate down. `[ 0 99999 ] RANGE`
+/// charges *this* meter nothing drags the rate down. `0 99999 RANGE`
 /// materializes 100,000 elements — real milliseconds, and real
 /// `collectionWork` — while charging `numericWork` almost nothing. Timing it
 /// together with the twenty additions that follow made the dense-lane path
@@ -129,9 +131,9 @@ fn algebraic_product(factors: usize) -> String {
     const PAIRS: [(u32, u32); 6] = [(2, 3), (5, 7), (11, 13), (17, 19), (23, 29), (31, 37)];
     let mut source = String::new();
     for (index, (left, right)) in PAIRS.iter().take(factors).enumerate() {
-        source.push_str(&format!("{left} SQRT {right} SQRT +"));
+        source.push_str(&format!("{left} SQRT {right} SQRT ADD"));
         if index > 0 {
-            source.push_str(" *");
+            source.push_str(" MUL");
         }
         source.push(' ');
     }
@@ -183,7 +185,7 @@ fn steps_per_ms(source: &str) -> (u64, f64, f64) {
 
 /// A flat loop of `reps` cheap machine-word additions.
 fn add_loop(reps: usize) -> String {
-    format!("1{}", " 7 +".repeat(reps))
+    format!("1{}", " 7 ADD".repeat(reps))
 }
 
 /// A trampolined tail-recursive countdown, same construction as
@@ -192,7 +194,7 @@ fn add_loop(reps: usize) -> String {
 /// arithmetic op, so it prices dispatch overhead the flat loop cannot see.
 fn down_probe(n: usize) -> String {
     format!(
-        "{{\n{{ [ 0 ] > | [ 1 ] - DOWN }}\n{{ IDLE | [ 'done' ] }} COND\n}} 'DOWN' DEF\n{n} DOWN"
+        "{{\n{{ [ 0 ] GT | [ 1 ] SUB DOWN }}\n{{ IDLE | [ 'done' ] }} COND\n}} 'DOWN' DEF\n{n} DOWN"
     )
 }
 
@@ -212,13 +214,13 @@ fn main() {
         // limb-multiply.
         measure(
             "scalar wide MUL x20 (4096-digit)".into(),
-            &format!("{{ {wide} * }} 'M' DEF 1{}", " M".repeat(20)),
+            &format!("{{ {wide} MUL }} 'M' DEF 1{}", " M".repeat(20)),
         ),
         // Rational addition: cross-multiply plus gcd, and measurably dearer
         // than the multiplication above at the same width.
         measure(
             "scalar wide ADD x200 (4096-digit)".into(),
-            &format!("{{ {wide} + }} 'W' DEF 1{}", " W".repeat(200)),
+            &format!("{{ {wide} ADD }} 'W' DEF 1{}", " W".repeat(200)),
         ),
         // Dense `i64` lanes: one charged unit per lane, and a lane here is a
         // machine-word add inside a tensor kernel. This is the *floor* path —
@@ -228,14 +230,14 @@ fn main() {
         // is the add and not the measurement's own edges.
         measure_after_setup(
             "dense tensor lanes (100k x i64 add x200)".into(),
-            "[ 0 99999 ] RANGE",
-            &" 1 +".repeat(200),
+            "0 99999 RANGE",
+            &" 1 ADD".repeat(200),
         ),
         // A scalar operation on machine-word values. Its cost is dominated by
         // interpreter dispatch, which `executionSteps` prices, not this meter.
         measure(
             "scalar small ADD x200".into(),
-            &format!("1{}", " 7 +".repeat(200)),
+            &format!("1{}", " 7 ADD".repeat(200)),
         ),
         measure(
             "algebraic cascade (4 two-radical factors)".into(),

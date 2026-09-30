@@ -42,6 +42,7 @@ use crate::interpreter::{HostEffect, Interpreter};
 use crate::types::{Token, Value};
 use observation_digest::{observation_digest, ObservationDigestInput};
 use report::Report;
+use std::collections::HashMap;
 
 /// Options shared across agent operations. `json` only matters to the native
 /// CLI's own text-vs-JSON command rendering; the agent operations in this
@@ -54,6 +55,17 @@ pub(crate) struct Opts {
     /// `compute`: execution step budget override. `None` keeps the
     /// interpreter default.
     pub step_limit: Option<usize>,
+    /// `agent compute`: which resource ceilings apply.
+    pub limits: LimitProfile,
+}
+
+/// The resource ceilings an `agent compute` runs under: the tighter profile
+/// for untrusted, generated programs (the default), or the interpreter's own
+/// defaults, which `run` uses for a program its author trusts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum LimitProfile {
+    Agent,
+    Trusted,
 }
 
 pub(crate) fn error_report(
@@ -75,7 +87,7 @@ pub(crate) fn error_report(
     let diagnosis = diagnosis
         .clone()
         .with_source_position(interp.current_source_position());
-    let ai = diagnosis.ai_payload(category, None, None, None);
+    let ai = diagnosis.ai_payload(category);
     // The residue a failed run was holding is not worth the diagnosis that
     // explains it — see `agent::error_stack`.
     let residue = error_stack::elided_error_stack(interp);
@@ -91,14 +103,14 @@ pub(crate) fn error_report(
         error_category,
     });
     let resource_usage = interp.resource_usage();
-    let receipt = source.and_then(|source| {
+    let receipt = source.map(|source| {
         execution_receipt::build_receipt(
             source,
             interp.runtime_limits(),
             interp.max_execution_steps(),
             "error",
             &resource_usage,
-            digest.as_deref(),
+            &digest,
         )
     });
     Report {
@@ -124,11 +136,7 @@ pub(crate) fn error_report(
 /// payloads (`Vector`, `Tensor`, `Text`, `CodeBlock`) are all reference
 /// counted.
 pub(crate) fn stack_values(interp: &Interpreter) -> Vec<Value> {
-    interp
-        .get_stack()
-        .iter_slots()
-        .map(|(value, _role)| value.clone())
-        .collect()
+    interp.get_stack().to_vec()
 }
 
 /// `(normalized word name, content identity)` for every user word, sorted by
@@ -157,45 +165,13 @@ pub(crate) fn print_payloads(interp: &Interpreter) -> Vec<String> {
 }
 
 pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
-    // One shared `(value, role)` rendering (LANG.OBSERVATION.PROTOCOL) for every observation
-    // surface; the `Stack` owns aligned values and roles, so no snapshot/
-    // realignment step is needed here.
+    // One shared rendering (LANG.OBSERVATION.PROTOCOL) for every observation
+    // surface.
     crate::types::display::render_stack(interp.get_stack())
 }
 
-/// execution — this only front-loads the same failure for `check`.
-pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
-    // One stack over both delimiter pairs, so a crossed `[ }` is reported
-    // here too rather than read as balanced (`spec/grammar.json`,
-    // structuralValidation).
-    let mut open: Vec<&Token> = Vec::new();
-    for token in tokens {
-        match token {
-            Token::VectorStart | Token::RecordStart => open.push(token),
-            Token::VectorEnd => match open.pop() {
-                Some(Token::VectorStart) => {}
-                _ => return Err("Unexpected vector end".to_string()),
-            },
-            Token::RecordEnd => match open.pop() {
-                Some(Token::RecordStart) => {}
-                _ => return Err("Unexpected Record end".to_string()),
-            },
-            _ => {}
-        }
-    }
-    match open.last() {
-        Some(Token::RecordStart) => Err("Unclosed Record".to_string()),
-        Some(_) => Err("Unclosed vector".to_string()),
-        None => Ok(()),
-    }
-}
-
 pub(crate) fn normalize_word(symbol: &str) -> String {
-    match symbol {
-        "%" => "MOD".to_string(),
-        "&" => "AND".to_string(),
-        _ => symbol.to_uppercase(),
-    }
+    symbol.to_uppercase()
 }
 
 /// The outcome of best-effort static word resolution.
@@ -207,14 +183,29 @@ pub(crate) struct ResolvedWords {
     /// definitions the same source introduces — nothing else knows them, since
     /// static checking never executes the `DEF`.
     pub locally_defined: Vec<String>,
+    /// Unknown words that some *other* frame of the same file binds: a name
+    /// written inside a DEF body but bound at the top level, or the reverse.
+    /// The runtime refuses these with its "bound in another frame" message,
+    /// and `check` says the same thing instead of a bare "unknown word".
+    pub bound_elsewhere: Vec<String>,
 }
 
 /// Best-effort static resolution: a word resolves when it is a builtin, a
-/// canonical alias, or a word the file itself defines via DEF.
+/// word the file itself defines via DEF, or a name a
+/// `BIND` in the same frame region binds.
+///
+/// Frame regions follow `bindings.rs`'s rule: a binding is reachable in the
+/// frame that made it and in the blocks written there, never inside a Word
+/// called from it. Statically, a Word body is the block a `] 'NAME' DEF`
+/// closes; every token outside such a body belongs to the run's own frame,
+/// and every token inside one belongs to that body's frame. Blocks a Core
+/// Word evaluates (`EXEC`, `MAP`, `FOLD`) are transparent at runtime, so this
+/// does not open a region for them — which is also why order within a region
+/// does not matter: a block may be bound first and evaluated later.
 pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedWords {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
 
-    let mut locally_known: HashSet<String> = HashSet::new();
+    let mut defined: HashSet<String> = HashSet::new();
     // Pre-pass: `'NAME' DEF` definitions anywhere in the file (definitions may
     // be referenced before they appear, e.g. mutual recursion between user
     // words).
@@ -224,7 +215,6 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         };
         let next_words: Vec<String> = tokens[i + 1..]
             .iter()
-            .filter(|t| !matches!(t, Token::LineBreak))
             .take(2)
             .filter_map(|t| match t {
                 Token::Symbol(s) => Some(normalize_word(s)),
@@ -232,32 +222,44 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
             })
             .collect();
         if next_words.iter().any(|w| w == "DEF") {
-            locally_known.insert(text.to_uppercase());
+            defined.insert(text.to_uppercase());
         }
     }
 
-    // Names that are bindings rather than Words: every `'NAME' BIND`, and
-    // every parameter a body's header names (`[ A B | … ]`,
-    // LANG.SOURCE.FRAME). Neither is in the dictionary, and `check` resolves
-    // without running, so without this every local read as an unknown Word.
+    // Region of each token: 0 is the run's frame; a DEF body's region is the
+    // index of its opening `[`, and nested DEF bodies get their own.
+    let regions = frame_regions(tokens);
+
+    // Every `BIND` makes bindings rather than Words — one name (`'N' BIND`)
+    // or several (`[ 'A' 'B' ] BIND`). They are not in the dictionary, and
+    // `check` resolves without running, so without this every bound name read
+    // as an unknown Word and `check` refused programs that run.
+    let mut bound: HashMap<usize, HashSet<String>> = HashMap::new();
     for (i, token) in tokens.iter().enumerate() {
-        match token {
-            Token::String(text) if matches!(tokens.get(i + 1), Some(Token::Symbol(s)) if normalize_word(s) == "BIND") =>
-            {
-                locally_known.insert(text.to_uppercase());
+        if !matches!(token, Token::Symbol(s) if normalize_word(s) == "BIND") {
+            continue;
+        }
+        let region = regions[i];
+        match i.checked_sub(1).map(|j| (j, &tokens[j])) {
+            Some((_, Token::String(name))) => {
+                bound.entry(region).or_default().insert(name.to_uppercase());
             }
-            Token::VectorStart => {
-                let header: Vec<&str> = tokens[i + 1..]
-                    .iter()
-                    .map_while(|t| match t {
-                        Token::Symbol(s) => Some(s.as_ref()),
-                        _ => None,
-                    })
-                    .take_while(|s| *s != "|")
-                    .collect();
-                if matches!(tokens.get(i + 1 + header.len()), Some(Token::Symbol(s)) if s.as_ref() == "|")
-                {
-                    locally_known.extend(header.iter().map(|s| s.to_uppercase()));
+            Some((close, Token::VectorEnd)) => {
+                let mut depth = 0usize;
+                for t in tokens[..=close].iter().rev() {
+                    match t {
+                        Token::VectorEnd => depth += 1,
+                        Token::VectorStart => {
+                            depth -= 1;
+                            if depth == 0 {
+                                break;
+                            }
+                        }
+                        Token::String(name) if depth == 1 => {
+                            bound.entry(region).or_default().insert(name.to_uppercase());
+                        }
+                        _ => {}
+                    }
                 }
             }
             _ => {}
@@ -265,30 +267,84 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
     }
 
     let mut unknown: Vec<String> = Vec::new();
+    let mut bound_elsewhere: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
-    for token in tokens {
+    for (i, token) in tokens.iter().enumerate() {
         let Token::Symbol(symbol) = token else {
             continue;
         };
-        // The header separator is read by `DEF`, not resolved.
-        if symbol.as_ref() == "|" {
-            continue;
-        }
         let normalized = normalize_word(symbol);
-        let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
+        let canonical = crate::word_name::canonical_word_name(&normalized);
+        let bound_here = bound
+            .get(&regions[i])
+            .is_some_and(|names| names.contains(canonical.as_ref()));
         let resolved = interp.core_vocabulary.contains_key(canonical.as_ref())
             || crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
-            || locally_known.contains(canonical.as_ref());
+            || defined.contains(canonical.as_ref())
+            || bound_here;
         if !resolved && seen.insert(canonical.to_string()) {
+            if bound
+                .values()
+                .any(|names| names.contains(canonical.as_ref()))
+            {
+                bound_elsewhere.push(canonical.to_string());
+            }
             unknown.push(canonical.into_owned());
         }
     }
-    let mut locally_defined: Vec<String> = locally_known.into_iter().collect();
+    let mut locally_defined: Vec<String> = defined
+        .into_iter()
+        .chain(bound.into_values().flatten())
+        .collect();
     locally_defined.sort();
+    locally_defined.dedup();
     ResolvedWords {
         unknown,
         locally_defined,
+        bound_elsewhere,
     }
+}
+
+/// The frame region of every token (see [`resolve_words`]). Assumes the
+/// bracket structure already passed the tokenizer's structural validation
+/// (`tokenizer::validate_code_tokens`, which `tokenize` runs on every result).
+fn frame_regions(tokens: &[Token]) -> Vec<usize> {
+    // Match every `[` to its `]` first, so a block can be recognised as a
+    // DEF body from its opening side.
+    let mut close_of: HashMap<usize, usize> = HashMap::new();
+    let mut open_stack: Vec<usize> = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        match token {
+            Token::VectorStart => open_stack.push(i),
+            Token::VectorEnd => {
+                if let Some(open) = open_stack.pop() {
+                    close_of.insert(open, i);
+                }
+            }
+            _ => {}
+        }
+    }
+    let is_def_body = |open: usize| -> bool {
+        let Some(&close) = close_of.get(&open) else {
+            return false;
+        };
+        matches!(tokens.get(close + 1), Some(Token::String(_)))
+            && matches!(tokens.get(close + 2), Some(Token::Symbol(s)) if normalize_word(s) == "DEF")
+    };
+
+    let mut regions = Vec::with_capacity(tokens.len());
+    // (region id, index of the `]` that ends it)
+    let mut region_stack: Vec<(usize, usize)> = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        while region_stack.last().is_some_and(|(_, end)| *end < i) {
+            region_stack.pop();
+        }
+        if matches!(token, Token::VectorStart) && is_def_body(i) {
+            region_stack.push((i + 1, close_of[&i]));
+        }
+        regions.push(region_stack.last().map_or(0, |(id, _)| *id));
+    }
+    regions
 }
 
 /// Poll the interpreter future to completion. `Interpreter::execute` is

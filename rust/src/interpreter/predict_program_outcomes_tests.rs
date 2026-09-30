@@ -47,39 +47,15 @@ fn a_fully_supplied_call_does_not_predict_stack_underflow() {
     assert!(!predict("1 2 ADD").contains(&"error:stackUnderflow".to_string()));
 }
 
-/// A Record literal is a constant, so prediction answers exactly rather than
-/// widening: building it at prediction time is the whole decision. A literal
-/// that builds contributes no ERROR of its own, and one that cannot build
-/// contributes the ERROR it will raise every time it is reached.
-///
-/// Read on `duplicateKey`, which is declared rather than structural: the
-/// length mismatch a literal with an unpaired key raises is in the structural
-/// ceiling every non-empty program already carries (see the module doc), so
-/// it cannot show the difference this arm makes.
-#[test]
-fn a_record_literal_predicts_only_the_failure_it_actually_has() {
-    let good = predict("{ 'a' 1 'b' 2 }");
-    assert!(good.contains(&"value".to_string()), "{good:?}");
-    assert!(
-        !good.contains(&"error:duplicateKey".to_string()),
-        "{good:?}"
-    );
-
-    assert!(predict("{ 'a' 1 'a' 2 }").contains(&"error:duplicateKey".to_string()));
-    assert!(predict("{ 'a' 1 'b' }").contains(&"error:vectorLengthMismatch".to_string()));
-    // A Record nested in a Vector literal is reached through the same walk.
-    assert!(predict("[ { 'a' 1 'a' 2 } ]").contains(&"error:duplicateKey".to_string()));
-}
-
 #[test]
 fn a_called_user_word_contributes_its_bodys_vocabulary() {
-    assert!(predict("[ X | X 1 ADD ] 'INC' DEF 5 INC").contains(&"error:nonNumeric".to_string()));
+    assert!(predict("[ 1 ADD ] 'INC' DEF 5 INC").contains(&"error:nonNumeric".to_string()));
 }
 
 /// A Word name written inside a `[ ... ]` counts even where that literal is
 /// inert at the point it is written, because a block can be pushed by one
 /// Word and executed by another arbitrarily far away.
-/// `[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC` really does run that `ADD` and answer
+/// `[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC` really does run that `ADD` and answer
 /// `nonNumeric`; an earlier version consulted `classify_vector_positions`
 /// and skipped anything it called `Data`, which dropped exactly that
 /// outcome from the prediction. Over-approximating here (an uncalled
@@ -88,9 +64,9 @@ fn a_called_user_word_contributes_its_bodys_vocabulary() {
 /// module doc.
 #[test]
 fn a_word_named_inside_a_literal_still_contributes_its_vocabulary() {
-    assert!(predict("[ X | X 1 ADD ] 'INC' DEF").contains(&"error:nonNumeric".to_string()));
-    assert!(predict("[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC").contains(&"error:nonNumeric".to_string()));
-    assert!(predict("[ | [ 1 0 DIV ] ] 'G' DEF G EXEC").contains(&"nil:divisionByZero".to_string()));
+    assert!(predict("[ 1 ADD ] 'INC' DEF").contains(&"error:nonNumeric".to_string()));
+    assert!(predict("[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC").contains(&"error:nonNumeric".to_string()));
+    assert!(predict("[ [ 1 0 DIV ] ] 'G' DEF G EXEC").contains(&"nil:divisionByZero".to_string()));
 }
 
 #[test]
@@ -108,7 +84,7 @@ fn a_structural_category_no_reachable_word_can_raise_is_dropped() {
     for id in [
         "error:nameConflict",
         "error:selfReferentialDefinition",
-        "error:builtinProtection",
+        "error:protectedWord",
         "error:recursionLimitExceeded",
     ] {
         assert!(
@@ -125,13 +101,10 @@ fn a_structural_category_no_reachable_word_can_raise_is_dropped() {
 #[test]
 fn each_gated_category_returns_when_its_own_trigger_is_reachable() {
     for (source, id) in [
-        ("[ X | X 1 ADD ] 'INC' DEF", "error:nameConflict"),
-        (
-            "[ X | X 1 ADD ] 'INC' DEF",
-            "error:selfReferentialDefinition",
-        ),
-        ("[ X | X 1 ADD ] 'INC' DEF", "error:builtinProtection"),
-        ("'INC' DEL", "error:builtinProtection"),
+        ("[ 1 ADD ] 'INC' DEF", "error:nameConflict"),
+        ("[ 1 ADD ] 'INC' DEF", "error:selfReferentialDefinition"),
+        ("[ 1 ADD ] 'INC' DEF", "error:protectedWord"),
+        ("'INC' DEL", "error:protectedWord"),
     ] {
         assert!(
             predict(source).contains(&id.to_string()),
@@ -144,7 +117,7 @@ fn each_gated_category_returns_when_its_own_trigger_is_reachable() {
 /// needs a User-Word activation rather than a named Word.
 #[test]
 fn the_call_depth_guard_needs_a_user_word_to_be_possible() {
-    let calls_user_word = predict("[ X | X 1 ADD ] 'INC' DEF 5 INC");
+    let calls_user_word = predict("[ 1 ADD ] 'INC' DEF 5 INC");
     assert!(calls_user_word.contains(&"error:recursionLimitExceeded".to_string()));
     assert!(!predict("1 2 ADD").contains(&"error:recursionLimitExceeded".to_string()));
 }
@@ -157,9 +130,7 @@ fn the_call_depth_guard_needs_a_user_word_to_be_possible() {
 fn an_unresolved_name_restores_every_gated_category() {
     let outcomes = predict("FROBNICATE");
     for id in [
-        "error:nameConflict",
         "error:selfReferentialDefinition",
-        "error:builtinProtection",
         "error:recursionLimitExceeded",
     ] {
         assert!(
@@ -173,8 +144,8 @@ fn an_unresolved_name_restores_every_gated_category() {
 /// the reachability set it builds is not just the top-level symbols.
 #[test]
 fn a_gated_trigger_inside_a_definition_body_still_counts() {
-    let outcomes = predict("[ | 'INC' DEL ] 'DROP-INC' DEF DROP-INC");
-    assert!(outcomes.contains(&"error:builtinProtection".to_string()));
+    let outcomes = predict("[ 'INC' DEL ] 'DROP-INC' DEF DROP-INC");
+    assert!(outcomes.contains(&"error:protectedWord".to_string()));
 }
 
 /// A String is not a code operand, so neither of these runs `DEL` at all: both
@@ -199,7 +170,7 @@ fn a_string_is_not_a_code_operand() {
 #[test]
 fn a_string_that_names_no_word_stays_a_literal() {
     let outcomes = predict("5 'x' BIND");
-    assert!(!outcomes.contains(&"error:nameConflict".to_string()));
+    assert!(!outcomes.contains(&"error:wordNotFound".to_string()));
     assert!(!outcomes.contains(&"error:recursionLimitExceeded".to_string()));
 }
 
@@ -218,12 +189,12 @@ fn a_written_nil_predicts_its_own_literal_outcome() {
 }
 
 /// The trigger is what the program can *produce*, not what it writes:
-/// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET` answers `nil:literal` with no
+/// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET` answers `nil:literal` with no
 /// `NIL` token anywhere, because the divide-by-zero lane's reason does not
 /// survive a second lane-wise pass.
 #[test]
 fn a_computed_nil_admits_the_reasonless_one_too() {
-    let outcomes = predict("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET");
+    let outcomes = predict("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET");
     assert!(outcomes.contains(&"nil:divisionByZero".to_string()));
     assert!(
         outcomes.contains(&"nil:literal".to_string()),

@@ -17,10 +17,10 @@ const check = (code: string, title: string, detail: string) => ({
 describe('renderDiagnosisReport', () => {
     it('renders the frame a reader learns once', () => {
         const diagnosis: ProtocolDiagnosis = {
-            when: 'wordExecution',
+            when: 'executeWord',
             where: { kind: 'coreWord', word: 'DIV' },
             why: 'domain',
-            summary: 'wordExecution / DIV (coreWord) / domain',
+            summary: 'executeWord / DIV (coreWord) / domain (nil:divisionByZero)',
             evidence: ['sourceLine=3', 'sourceColumn=7', 'insideWords=SAFE-DIV,REPORT'],
             candidates: [],
             nextChecks: [check('checkDivisor', 'Check the divisor', 'A zero divisor projects NIL.')]
@@ -28,8 +28,8 @@ describe('renderDiagnosisReport', () => {
 
         expect(renderDiagnosisReport(diagnosis, { stackLenBefore: 2 })).toBe(
             [
-                '[DIAGNOSIS] wordExecution / DIV (coreWord) / domain',
-                'Q1 when: wordExecution',
+                '[DIAGNOSIS] executeWord / DIV (coreWord) / domain (nil:divisionByZero)',
+                'Q1 when: executeWord',
                 'Q2 where: DIV (coreWord), inside SAFE-DIV, REPORT at line 3, column 7, stack depth 2',
                 'Q3 why: domain',
                 'next: Check the divisor - A zero divisor projects NIL.'
@@ -37,29 +37,12 @@ describe('renderDiagnosisReport', () => {
         );
     });
 
-    // `1 + 2`: the failure is `ADD`'s, and `ADD` is not what the reader wrote.
-    it('names the alias the program was written with, in front of the Word it resolved to', () => {
-        const diagnosis: ProtocolDiagnosis = {
-            when: 'wordExecution',
-            where: { kind: 'coreWord', word: 'ADD' },
-            why: 'stackShape',
-            summary: 'wordExecution / ADD (coreWord) / stackShape',
-            evidence: ['sourceLine=1', 'sourceColumn=3', 'sourceWord=+'],
-            candidates: [],
-            nextChecks: []
-        };
-
-        expect(renderDiagnosisReport(diagnosis, { stackLenBefore: 1 })).toContain(
-            'Q2 where: + (alias of ADD, coreWord) at line 1, column 3, stack depth 1'
-        );
-    });
-
     it('omits the position, the depth and the hints it was given nothing for', () => {
         const diagnosis: ProtocolDiagnosis = {
-            when: 'nameResolution',
-            where: { kind: 'dictionary' },
+            when: 'resolveWord',
+            where: { kind: 'unknown' },
             why: 'typoOrUnknownName',
-            summary: 'nameResolution / dictionary / typoOrUnknownName',
+            summary: 'resolveWord / unknown / typoOrUnknownName (error:unknownWord)',
             evidence: [],
             candidates: ['DUP', 'DROP'],
             nextChecks: []
@@ -67,9 +50,9 @@ describe('renderDiagnosisReport', () => {
 
         expect(renderDiagnosisReport(diagnosis)).toBe(
             [
-                '[DIAGNOSIS] nameResolution / dictionary / typoOrUnknownName',
-                'Q1 when: nameResolution',
-                'Q2 where: dictionary',
+                '[DIAGNOSIS] resolveWord / unknown / typoOrUnknownName (error:unknownWord)',
+                'Q1 when: resolveWord',
+                'Q2 where: unknown',
                 'Q3 why: typoOrUnknownName',
                 'did you mean: DUP, DROP'
             ].join('\n')
@@ -78,10 +61,10 @@ describe('renderDiagnosisReport', () => {
 
     it('reports a declared ceiling with what was observed against it', () => {
         const diagnosis: ProtocolDiagnosis = {
-            when: 'wordExecution',
+            when: 'executeWord',
             where: { kind: 'coreWord', word: 'RANGE' },
             why: 'resourceLimit',
-            summary: 'wordExecution / RANGE (coreWord) / resourceLimit',
+            summary: 'executeWord / RANGE (coreWord) / resourceLimit (nil:spaceExhausted)',
             evidence: [],
             resourceLimit: { resource: 'materializedElements', limit: 1_000_000, observed: 4_000_000 },
             nextChecks: []
@@ -110,8 +93,8 @@ describe('describeTimeoutDiagnosis', () => {
                     + 'did not refuse this program; it was still running when the time ran out.',
                 'next: Rewrite the loop as a bulk operation - A whole-vector Word does in one step what a '
                     + 'per-element loop does in as many, and only the loop is charged per step.',
-                'next: Trim what the run carries - Exact values grow as they are combined; QUANTIZE bounds a '
-                    + 'denominator that is otherwise free to grow every iteration.',
+                'next: Trim what the run carries - Exact values grow as they are combined; rounding to a grid '
+                    + '(x d MUL FLOOR d DIV) bounds a denominator that is otherwise free to grow every iteration.',
                 'next: Check the host profile - This guard is not part of the language. Another host '
                     + '(the MCP server) applies different limits; the profile badge beside the build version '
                     + 'lists the ones in force here.'

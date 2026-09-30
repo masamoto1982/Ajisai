@@ -1,5 +1,7 @@
 
 
+import { isMobileViewport } from '../platform/viewport';
+import { ExecutionAbortedError } from './execution-aborted';
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
@@ -25,7 +27,6 @@ interface WorkerInstance {
     currentTaskId: string | null;
 }
 
-const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
 
 export class WorkerManager {
@@ -33,7 +34,7 @@ export class WorkerManager {
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
     private compiledModule: WebAssembly.Module | null = null;
-    private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
+    private maxWorkers = isMobileViewport()
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
         : navigator.hardwareConcurrency || 4;
     // Whether SharedArrayBuffer-backed wasm threading can run in this page
@@ -95,9 +96,6 @@ export class WorkerManager {
             case 'error':
                 task.reject(new Error(message.data));
                 break;
-            case 'aborted':
-                task.reject(new Error('Execution aborted'));
-                break;
         }
         this.completeTask(instance);
     }
@@ -131,13 +129,24 @@ export class WorkerManager {
     }
 
     private handleTaskTimeout(taskId: string): void {
+        this.stopActiveTask(taskId, new ExecutionTimeoutError(EXECUTION_TIMEOUT_MS));
+        this.processQueue();
+    }
+
+    // Stop a running task where it stands. The interpreter runs synchronously
+    // inside its worker, so a message asking it to stop is not read until the
+    // run is over; terminating the worker is the only stop that takes effect.
+    // A terminated worker cannot be reused, so we drop it from the pool and
+    // spawn a replacement immediately to keep the pool size constant. The
+    // wall-clock guard and Abort both stop a task this way.
+    private stopActiveTask(taskId: string, error: Error): void {
         const task = this.activeTasks.get(taskId);
         if (!task) return;
-        task.timeoutHandle = null;
+        if (task.timeoutHandle !== null) {
+            clearTimeout(task.timeoutHandle);
+            task.timeoutHandle = null;
+        }
 
-        // Terminate the worker carrying the runaway task; a terminated
-        // worker cannot be reused, so we drop it from the pool and spawn
-        // a replacement immediately to keep the pool size constant.
         const instance = this.workers.find(w => w.currentTaskId === taskId);
         if (instance) {
             instance.worker.terminate();
@@ -147,10 +156,9 @@ export class WorkerManager {
 
         this.activeTasks.delete(taskId);
 
-        task.reject(new ExecutionTimeoutError(EXECUTION_TIMEOUT_MS));
+        task.reject(error);
 
         this.createWorker();
-        this.processQueue();
     }
 
     private processQueue(): void {
@@ -221,19 +229,14 @@ export class WorkerManager {
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
 
-
-        const abortError = new Error('Execution aborted');
+        const abortError = new ExecutionAbortedError();
         for (const task of this.taskQueue) {
             task.reject(abortError);
         }
         this.taskQueue = [];
 
-
-        for (const id of this.activeTasks.keys()) {
-            const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
-            if (worker) {
-                worker.postMessage({ type: 'abort', id });
-            }
+        for (const id of [...this.activeTasks.keys()]) {
+            this.stopActiveTask(id, abortError);
         }
     }
 

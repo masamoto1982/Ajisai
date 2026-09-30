@@ -33,7 +33,7 @@ use super::RuntimeLimits;
 /// The number of ceilings in a limit profile: `RuntimeLimits`' own fields plus
 /// the execution-step budget, which lives beside rather than inside it (see
 /// `RuntimeLimits`' doc for why).
-pub(crate) const LIMIT_PROFILE_CEILINGS: usize = 8;
+pub(crate) const LIMIT_PROFILE_CEILINGS: usize = 9;
 
 /// Every ceiling of one run as `(published name, value)`, in the order the
 /// receipt's byte grammar writes them.
@@ -55,6 +55,7 @@ pub(crate) fn entries(
         max_collection_work,
         max_bigint_bits,
         max_algebraic_terms,
+        max_nesting_depth,
     } = *limits;
     [
         ("executionSteps", step_limit as u64),
@@ -65,6 +66,7 @@ pub(crate) fn entries(
         ("collectionWork", max_collection_work),
         ("bigintBits", max_bigint_bits),
         ("algebraicTerms", max_algebraic_terms as u64),
+        ("nestingDepth", max_nesting_depth as u64),
     ]
 }
 

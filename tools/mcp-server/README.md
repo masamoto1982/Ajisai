@@ -56,6 +56,17 @@ only working example — is an optional override, not a prerequisite:
 - `AJISAI_REPO` is a development-only fallback for discovering a locally built
   binary without naming it.
 
+Without either, a native binary is discovered only when this package is run
+from an Ajisai checkout (`tools/mcp-server` beside `rust/Cargo.toml`), and then
+the more recently built of `rust/target/release` and `rust/target/debug` is
+used. An installed copy under `node_modules` never looks outside itself: it
+runs the packaged WASM backend.
+
+The published package holds only what the server runs — the adapter, its two
+backends, the packaged assets and WASM module, `README.md`, `CHANGELOG.md` and
+`LICENSE`. The evaluation harness, its corpora and the tests stay in the
+repository (`npm run test:pack` fails if one ships).
+
 Both backends answer identically (see [Backends and
 provenance](#backends-and-provenance)); the override is about deployment, not
 about results.
@@ -72,7 +83,7 @@ node index.js --help
 ```
 
 `--doctor` exits 0 when every check passes and 1 when any fails, so it can gate
-a container start or a support request. It computes `2 3 / 1 3 / +` and
+a container start or a support request. It computes `2 3 DIV 1 3 DIV ADD` and
 `2 SQRT` through the selected backend: a server that starts and loads its
 assets but answers wrongly is still broken, and only running something proves
 otherwise. With no arguments the process speaks MCP on stdin/stdout and writes
@@ -85,6 +96,7 @@ nothing else there.
 | `compute` | execute source with time, source, output and step limits |
 | `check` | parse, resolve and conservatively verify declared contracts without execution |
 | `infer_contracts` | infer contracts for user-defined Words without execution |
+| `outcomes` | predict, without execution, the finite set of outcome ids a program could produce |
 | `word_contract` | query the complete canonical `spec/words.json` contract registry |
 
 Execution tools accept source text only. Deliberately omitting file-path input
@@ -98,16 +110,37 @@ stay inside a ceiling, or produce a value rather than a NIL. Nothing that only
 a run can decide is decided here. Read it as "this will get as far as
 executing", and read `compute` for what executing it does.
 
+The four source tools answer one program consistently, and
+`tool-consistency.test.js` (part of `npm run selftest`) holds them to it over
+every golden and corpus source:
+
+- `compute`'s `outcome` is always in the set `outcomes` predicts.
+- Source that does not parse is `malformedSource` to all four — `infer_contracts`
+  included — and `outcomes` answers it exactly.
+- `check` ok means the run does not fail on the program's form or its names.
+- `check` is stricter than a run: it rejects a name nothing defines even inside
+  a Word that is never called, which a run never reaches. `outcomes` still
+  allows for `unknownWord` there, and `infer_contracts` reports that Word as
+  `partial` with a `gap.unresolvedWord` gap.
+
 ### Three outcomes, kept distinct
 
-| Ajisai outcome | `status` | `isError` |
-|---|---|---|
-| a value | `ok` | — |
-| `NIL(reason)` | `ok`, with the absence reason | — |
-| language `ERROR` | `error`, with the full diagnosis | — |
-| a failure of the *host* | `hostError` | yes |
+| Ajisai outcome | `status` | `outcome` (compute) | `isError` |
+|---|---|---|---|
+| a value | `ok` | `value` | — |
+| `NIL(reason)` | `ok`, with the absence reason | `nil:<reason>` | — |
+| language `ERROR` | `error`, with the full diagnosis | `error:<category>` | — |
+| a failure of the *host* | `hostError` | — | yes |
 
-All four tools answer with the same envelope (`result.schema.json`, also served
+`outcome` uses the ids of `spec/outcomes.json` — the same ids the `outcomes`
+tool predicts — so a run is checked against its prediction with one membership
+test, and a reasoned absence is told apart from a value without reading the top
+stack node. `outcomes` answers `exact: true` only when it returns a single id:
+an empty program (`value`) or source that does not tokenize or balance its
+brackets (`error:malformedSource`). Every other program, a bare literal
+included, gets a sound superset with `exact: false`.
+
+All five tools answer with the same envelope (`result.schema.json`, also served
 as `ajisai://schema/result`), so one schema describes every result a caller can
 receive and there is no second contract to keep in step.
 
@@ -152,51 +185,56 @@ rather than a retry loop the caller has to write.
 
 ### Reading an algebraic value
 
-`2 SQRT` answers with four renderings of one number, and two of them mislead.
-On the stack node, read either of:
+`2 SQRT` answers with the value, a rendering of it, and an approximation.
+On the stack node, read:
 
 | field | what it is |
 |---|---|
-| `semantics.exactDisplay` | the value written short: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2) - sqrt(3)"` |
+| `stackDisplay` | the value written as one token: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2)-sqrt(3)"`, exact and never truncated |
 | `semantics.exactTerms` | the value itself: `Σ (numerator/denominator)·√radicand`, arbitrary-precision integers as strings |
 
-They are one fact in two shapes, derived from the same extraction, and the
-result schema requires each whenever the other is present — so a reader never
-has to decide which to believe. Compute with `exactTerms`; `exactDisplay` is a
-display, meant to be read rather than parsed.
+The display renders exactly the terms beside it. Compute with `exactTerms`;
+the display is meant to be read rather than parsed.
 
-The two that mislead are the ones a consumer meets first. `stackDisplay` is the
-LANG.VALUES.EXACT continued fraction **truncated at a display budget** — √2 runs to
-`[ 1; 2, 2, … ]`, ~101 characters, ending in the truncation marker `…`, so it
-looks complete and is not — and the
-node's own `value` is a rational approximation flagged `semantics.approximate`,
-so it looks exact and is not. Neither field changed; `exactDisplay` is what
-makes reading them unnecessary.
+The one that misleads is the node's own `value`: a rational approximation
+flagged `semantics.approximate`, so it looks exact and is not.
 
-`exactDisplay` renders the stored normal form faithfully, which means equal
-values can be written differently: `8 SQRT` gives `"sqrt(8)"` and
-`2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`, and `=` decides they are the same
-number. Reducing the display would only move the discrepancy, by making the
-string disagree with the `exactTerms` beside it. Comparison decides equality
-here; string comparison does not. Neither field appears on a rational or a
-vector of rationals, whose `stackDisplay` is already exact.
+The display writes the canonical normal form, so equal values are written
+the same way: `8 SQRT` and `2 SQRT 2 SQRT ADD` both give `2/1*sqrt(2)`, and
+`EQ` decides they are the same number. Comparison decides equality here;
+string comparison does not — the string is display text, not a value. `exactTerms` does not appear on a rational
+or a vector of rationals, whose `stackDisplay` is already the whole value.
 
 ### Diagnostics
 
 An unknown Word answers with `diagnosis.candidates` — the closest known names,
-best match first, drawn from the compiled-in vocabulary, the live dictionary
-and (for `check`) the Words the same source defines. `word_contract` answers an
+best match first, drawn from the compiled-in vocabulary and the Words the same
+source defines (each call runs in a fresh session, so the same source is the
+whole User dictionary). `word_contract` answers an
 unmatched name the same way, in `suggestions`.
 
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
 Match on `code`; the display text is localized and free to be reworded.
+
+`diagnosis` is the one copy of an error's diagnosis. `aiDiagnostic` only
+classifies it — `category` (the `spec/outcomes.json` error category, the same
+id as in `outcome`), `repair: "program"` when the registry says the program is
+what to change (absent: an operand is wrong), `word` and `family` — and the
+error's `errorFlowTrace` event does not repeat it. A `nilProduced` event keeps
+its own diagnosis, since a NIL has no other; it is recorded once, at the Word
+that projected the NIL, and the Words it then passed through record nothing. Repeating the diagnosis three times
+is what made `1 ADD` a 12 KB response; it is now 7 KB.
+
+`responseBytes` bounds the response as sent: the structured result, its
+serialized text mirror and provenance together. A result whose single copy
+fits the ceiling but whose response does not is `responseTooLarge`.
 
 A resource-limit failure carries `diagnosis.resourceLimit`
 (`{ resource, limit, observed }`), where `resource` is the name of the very
 entry in `mcp.limits` that fired.
 
 A ceiling can refuse a call without failing it. A well-formed generative Word
-whose result will not fit — `[ 0 100001 ] RANGE` against
+whose result will not fit — `0 100001 RANGE` against
 `materializedElements` — *projects* to NIL under the NIL Projection Rule, so
 the call is `status: ok` and there is no top-level `diagnosis` to carry
 anything. The same facts are on the value that came back instead:
@@ -211,7 +249,7 @@ All execution tools call the same host-neutral Rust agent boundary
 (`rust/src/agent`) through one of two interchangeable backends
 (`tools/mcp-server/backend/`): a native `ajisai` subprocess per call, or the
 same agent code compiled to WASM and run inside a `worker_threads` Worker per
-call. Both return the identical schema-1 envelope — verified case by case in
+call. Both return the identical result envelope — verified case by case in
 `backend/parity-test.js` — so Node never reinterprets command-specific results.
 
 The backend is chosen **once, at startup**, and named in `mcp.backend.kind`
@@ -221,7 +259,7 @@ path, with nothing in the response saying so. Parity is what makes the two
 answers equal; provenance is what would make an unequal one investigable.
 
 Every result also carries `mcp.serverVersion`, `mcp.engineVersion`,
-`mcp.registryDigest` and the applied `mcp.limits`. The two versions are two
+`mcp.assetDigest` and the applied `mcp.limits`. The two versions are two
 separately released components: `serverVersion` is this Node adapter, and
 `engineVersion` is the Ajisai language it speaks for. A saved result used to
 name only the second, so a field missing from an archived envelope could not be
@@ -244,30 +282,33 @@ reachable within `wallTimeMs` at their declared values. `golden/limits.json`
 and `docs/dev/mcp-host-profiles.md` say so explicitly rather than leaving the
 gap to be discovered.
 
-The playground applies a different, looser profile — `[ 0 100001 ] RANGE`
+The playground applies a different, looser profile — `0 100001 RANGE`
 succeeds there and answers `NIL(spaceExhausted)` here. Both hosts now publish
 what they apply, and the divergence is recorded as an explicit
 `hostDivergence` block on the golden case that shows it.
 
 ## Resources
 
-`ajisai://guide/quickstart`, `ajisai://vocabulary`, `ajisai://schema/result`
-and `ajisai://limits`. The `ajisai://words/{name}` template exposes the same
-complete Word contract as `word_contract` without a tool call. Contract lookups
-accept canonical names and aliases; their registry digest is calculated from
+`ajisai://guide/quickstart`, `ajisai://vocabulary`, `ajisai://contracts`,
+`ajisai://schema/result` and `ajisai://limits`. `ajisai://contracts` is every
+Word's full contract in one read; `ajisai://vocabulary` is the inventory only —
+each name with its `kind`, `family` and `vocabularyTier`. The
+`ajisai://words/{name}` template exposes the same complete Word contract as
+`word_contract` without a tool call. Word names are case-insensitive, in
+lookups as in programs (`add` runs as `ADD`); the registry digest is calculated from
 the canonical specification, not from a reduced documentation manifest.
 
 `ajisai://guide/quickstart` is an MCP preface (`mcp-quickstart.md`) followed by
 the generated writing protocol (`SKILL.md`), joined by `sync-assets.js`. The
 guide used to be `SKILL.md` alone, which opens on a CLI run loop — `ajisai run
 file --json`, commands a connected client cannot issue — and never says which
-of the four tools to call, so a model that read it first learned the language
+of the tools to call, so a model that read it first learned the language
 before it learned the interface. The preface answers tool selection, result
 branching and the algebraic-value trap in one screen, then hands off. Its own
 examples are executed against the live backend by the self-test, the same
 guarantee the generator gives the half below it.
 
-All four tools declare read-only, non-destructive and idempotent MCP
+All five tools declare read-only, non-destructive and idempotent MCP
 annotations.
 
 ## Development
@@ -295,8 +336,8 @@ backend.
 runs `backend/parity-test.js`) runs every golden case and every declared limit
 boundary against both backends and asserts they agree.
 
-`eval/cases.json` is the agent-evaluation corpus: 79 cases (59 positive, 20
-negative), each asked in English and Japanese, so 158 prompts. `npm run eval` executes every case's
+`eval/cases.json` is the agent-evaluation corpus: 78 cases (58 positive, 20
+negative), each asked in English and Japanese, so 156 prompts. `npm run eval` executes every case's
 expected tool call against the real backend. It measures backend semantic
 correctness only; model tool selection and source generation require captured
 model traces and are not claimed by this score.
@@ -362,7 +403,7 @@ the full-corpus pair. The intermediate captures taken while the tool
 descriptions were being tuned (baseline, after-syntax-rules, after-negatives,
 after-entry-surface, and their repair counterparts) were superseded by that
 pair and removed; git history holds them. `npm run eval:capture` drives a
-real model over the four tools — one
+real model over the server's tools — one
 call per corpus case per language, `tool_choice: auto` so the irrelevant-intent
 cases can correctly produce no call — and writes a
 `model` trace under `eval/traces/`, kept apart from the committed fixtures so no

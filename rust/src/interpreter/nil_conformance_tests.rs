@@ -41,9 +41,10 @@ fn reason_of(v: &Value) -> Option<NilReason> {
 enum NilClass {
     /// Any NIL operand collapses the result to NIL (arithmetic, comparison).
     BinaryBlanket,
-    /// AND/OR/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
+    /// A NIL operand passes through as the result (FLOOR, ROUND).
+    UnaryBlanket,
+    /// AND/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
-    ThreeValOr,
     ThreeValNot,
     /// SELECT: an UNKNOWN truth chooses neither candidate and answers that
     /// same absence. Not a blanket collapse — an absent *candidate* is only
@@ -59,20 +60,22 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    // MOD / FLOOR / CEIL / ROUND create NIL on a domain miss and are covered
-    // by projecting_word_set_matches_registry.
-    // The comparison words (EQ/LT/LTE/GT/GTE) are PassthroughThenProject,
-    // not pure Passthrough — a Tier 2 pair can exhaust its comparison budget
-    // and project to Unknown (LANG.VALUES.EXACT) — so they belong to
-    // PROJECTING_WORDS / tier2_undecidable_conformance_tests, not here.
+    ("FLOOR", NilClass::UnaryBlanket),
+    ("ROUND", NilClass::UnaryBlanket),
+    ("MIN", NilClass::BinaryBlanket),
+    ("MAX", NilClass::BinaryBlanket),
+    // Order and equality decide over every number (LANG.VALUES.EXACT), so
+    // the comparison words project nothing of their own.
+    ("EQ", NilClass::BinaryBlanket),
+    ("LT", NilClass::BinaryBlanket),
+    ("GT", NilClass::BinaryBlanket),
     ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
-    ("OR", NilClass::ThreeValOr),
     ("SELECT", NilClass::ThreeValSelect),
 ];
 
-/// Categories whose Core passthrough words this suite is responsible for.
-const COVERED_CATEGORIES: &[&str] = &["arithmetic", "comparison", "logic"];
+/// Families whose Core passthrough words this suite is responsible for.
+const COVERED_FAMILIES: &[&str] = &["exactArithmetic", "comparison", "booleanLogic"];
 
 fn lookup_class(name: &str) -> Option<NilClass> {
     CORE_PASSTHROUGH
@@ -88,14 +91,14 @@ fn core_passthrough_completeness() {
     for meta in get_builtin_word_registry() {
         let probed = meta.nil_policy == NilPolicy::Passthrough
             || meta.nil_policy == NilPolicy::KleeneAbsorbing;
-        let covered = probed && COVERED_CATEGORIES.contains(&meta.category.as_str());
+        let covered = probed && COVERED_FAMILIES.contains(&meta.family.as_str());
         if covered {
             assert!(
                 lookup_class(&meta.name).is_some(),
-                "Core passthrough/Kleene word `{}` (category {}) is not classified in \
+                "Core passthrough/Kleene word `{}` (family {}) is not classified in \
                  CORE_PASSTHROUGH; add its NIL behavior class",
                 meta.name,
-                meta.category
+                meta.family
             );
         }
     }
@@ -106,7 +109,7 @@ fn core_passthrough_completeness() {
             .find(|m| &m.name == name)
             .unwrap_or_else(|| panic!("classified word `{name}` is not registered"));
         let want = match class {
-            NilClass::BinaryBlanket => NilPolicy::Passthrough,
+            NilClass::BinaryBlanket | NilClass::UnaryBlanket => NilPolicy::Passthrough,
             _ => NilPolicy::KleeneAbsorbing,
         };
         assert_eq!(
@@ -133,11 +136,14 @@ async fn passthrough_blanket_collapses_to_nil() {
                     assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
                 }
             }
+            NilClass::UnaryBlanket => {
+                let code = format!("NIL {name}");
+                let stack = run_ok(&code).await;
+                assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+                assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
+            }
             // Not a blanket collapse; see `kleene_truth_conformance_tests`.
-            NilClass::ThreeValAnd
-            | NilClass::ThreeValOr
-            | NilClass::ThreeValNot
-            | NilClass::ThreeValSelect => {}
+            NilClass::ThreeValAnd | NilClass::ThreeValNot | NilClass::ThreeValSelect => {}
         }
     }
 }
@@ -146,29 +152,25 @@ async fn passthrough_blanket_collapses_to_nil() {
 
 /// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
-// `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`ORDER`/`SORT` are probed
-// in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
-// exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
-// `shape_ops`, beside the Word itself; `SHAPE` (a ragged operand) and `RESHAPE`
+// `RANGE`/`SQRT`/`STR` are probed
+// beside their own Words; `SHAPE` (a ragged operand) and `RESHAPE`
 // (the materialization ceiling) in `shape_words_tests`; `BSEARCH` and `SEARCH`
-// (an absent key or needle, and BSEARCH's undecidable order) in `search_words_tests`;
+// (an absent key or needle) in `search_words_tests`;
 // `ABSENT` (the reason a program states) in `declared_outcomes_tests`. `GET`/`TAKE`/`PUT` are probed together
 // in `index_projection_tests`: what they must agree on is one condition
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABS", "ABSENT", "AT", "BSEARCH", "CEIL", "CONTRACT", "COS", "DIGEST", "DIV", "DROP", "EQ",
-    "EXP", "FILL", "FLOOR", "FORMAT", "GCD", "GET", "GT", "GTE", "INDEX-OF", "JSON-DECODE",
-    "JSON-ENCODE", "LN", "LT", "LTE", "MAX", "MIN", "MOD", "NIL-REASON", "NUM", "ORDER",
-    "POW", "PUT", "QUANTIZE", "RANDOM", "RANGE", "RATIO", "RESHAPE", "ROUND", "SEARCH", "SHAPE",
-    "SIN", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
+    "ABSENT", "BSEARCH", "CONTRACT", "DIV", "DROP", "FILL", "GCD", "GET", "INDEX-OF",
+    "JSON-DECODE", "JSON-ENCODE", "NIL-REASON", "NUM", "POW", "PUT", "RANGE", "RATIO", "RESHAPE",
+    "SEARCH", "SHAPE", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
 /// NIL it produced, so **every** Word that declares one carries a behavioral
-/// probe. Declaring a NIL *policy* is not that claim: `NEG` declares
-/// `passthroughThenProject` with a projection of `never`, so nothing about it
-/// can produce a NIL and it needs no probe. The condition is what this set is
+/// probe. Declaring a NIL *policy* is not that claim: a Word that declared
+/// `passthroughThenProject` with a projection of `never` could produce no NIL
+/// of its own and would need no probe. The condition is what this set is
 /// keyed on.
 ///
 /// It used to be keyed on the policy as well — `createsNil` or
@@ -226,23 +228,6 @@ async fn top_of(code: &str) -> crate::types::Value {
     interp.stack.last().cloned().expect("an answer was pushed")
 }
 
-/// `QUANTIZE` projects on the condition it declares: a denominator that is not
-/// a positive integer is a well-formed operand outside the Word's domain, so it
-/// yields a reasoned NIL rather than an error — the `SQRT` of a negative rule.
-/// Malformed use (an operand that is not a single number at all) still raises.
-#[tokio::test]
-async fn nil_projection_quantize_projects_on_a_denominator_outside_its_domain() {
-    for code in ["7 0 QUANTIZE", "7 -4 QUANTIZE", "7 3/2 QUANTIZE"] {
-        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
-    }
-
-    let mut malformed = Interpreter::new();
-    assert!(
-        malformed.execute("7 'ten' QUANTIZE").await.is_err(),
-        "a denominator that is not a number at all is malformed use, not a domain miss"
-    );
-}
-
 /// `STR` projects on the condition it declares: the sealed numeric grammar
 /// writes integers and ratios, so an exact irrational has no lexeme and there
 /// is no text to answer with.
@@ -258,12 +243,10 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
     for code in [
         "2 SQRT STR",
         "2 SQRT 3 SQRT ADD STR",
-        "[ 1 2 ] 2 SQRT MUL STR",
+        // A lifted STR projects per lane.
+        "[ 1 2 ] 2 SQRT MUL STR 0 GET",
     ] {
-        assert_eq!(
-            projected_reason(code).await.as_deref(),
-            Some("invalidEncoding")
-        );
+        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
     }
 
     // An exact real that collapses to a rational *does* have a lexeme, and a
@@ -273,7 +256,9 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
     // The escape hatch is a Word, not a silent default: the caller names the
     // resolution, so the approximation is visible in the source.
     assert_eq!(
-        text_answer("2 SQRT 10000 QUANTIZE STR").await.as_deref(),
+        text_answer("2 SQRT 10000 MUL ROUND 10000 DIV STR")
+            .await
+            .as_deref(),
         Some("7071/5000")
     );
 }
@@ -282,9 +267,10 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
 /// operational NIL carrying a reason has no reason to read, so the answer is
 /// NIL rather than an error. A reasoned NIL answers with its reason string.
 ///
-/// The projected NIL carries the reason the contract registers, `notAvailable`.
-/// It used to be a bare literal NIL, which made
-/// `projection.reason: "notAvailable"` the one declared projection reason no
+/// The projected NIL carries the reason the contract registers, `domainMiss`:
+/// a value that is not a NIL is a well-formed operand outside the accessor's
+/// domain, the same reason `SQRT` gives a negative radicand. It used to be a
+/// bare literal NIL, which made the declared projection reason the one no
 /// program could observe — `5 NIL-REASON NIL-REASON` answered NIL instead of
 /// naming why. `LANG.FAILURE.PROJECT` requires a projection to produce "NIL
 /// with the reason its contract registers", and `LANG.VALUES.NIL` makes the
@@ -292,24 +278,21 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
 #[tokio::test]
 async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
-        assert_eq!(
-            projected_reason(code).await.as_deref(),
-            Some("notAvailable")
-        );
+        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
     }
 
     // Reading the projected NIL is what makes the registered reason
     // observable from inside the language.
     assert_eq!(
         text_answer("5 NIL-REASON NIL-REASON").await.as_deref(),
-        Some("notAvailable"),
+        Some("domainMiss"),
         "the projected NIL must name its own reason"
     );
 
-    // The retained operand keeps its place under the answer, and a NIL that
-    // does carry a reason reads back as that reason rather than projecting.
+    // A NIL that does carry a reason reads back as that reason rather than
+    // projecting.
     let mut interp = Interpreter::new();
-    interp.execute("1 0 / NIL-REASON").await.unwrap();
+    interp.execute("1 0 DIV NIL-REASON").await.unwrap();
     let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
     assert!(
         !answer.is_nil(),
@@ -318,7 +301,7 @@ async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
 }
 
 /// `NIL?` answers a question; it never projects. It declared
-/// `valueIsNotOperationalNilOrFieldAbsent` → `notAvailable`, the same condition
+/// `valueIsNotOperationalNilOrFieldAbsent`, the same condition
 /// as `NIL-REASON`, but a predicate that returned NIL for "not a NIL" could not
 /// be asked its question. Pinned so the declaration cannot drift back.
 #[tokio::test]
@@ -328,7 +311,7 @@ async fn nil_check_answers_rather_than_projecting() {
         ("[ 1 2 ] NIL?", false),
         ("'ab' NIL?", false),
         ("NIL NIL?", true),
-        ("1 0 / NIL?", true),
+        ("1 0 DIV NIL?", true),
     ] {
         let mut interp = Interpreter::new();
         interp
@@ -350,11 +333,10 @@ async fn nil_check_answers_rather_than_projecting() {
 
 #[tokio::test]
 async fn nil_projection_comparison_nil_input() {
-    // Comparison words are Projecting/PassthroughThenProject (LANG.CONTRACT.REGISTRY). A
+    // Comparison words are Total/Passthrough (LANG.CONTRACT.REGISTRY). A
     // NIL operand propagates as NIL output via the passthrough rule
-    // (LANG.FAILURE.PROJECT, LANG.FAILURE.PASSTHROUGH). (Budget exhaustion instead yields Unknown, a NIL
-    // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
-    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
+    // (LANG.FAILURE.PASSTHROUGH).
+    for name in &["EQ", "LT", "GT"] {
         for code in [
             format!("NIL 1 {name}"),
             format!("1 NIL {name}"),
@@ -373,18 +355,12 @@ async fn nil_projection_comparison_nil_input() {
 
 #[tokio::test]
 async fn projecting_arithmetic_nil_input_passes_through() {
-    // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil, but a NIL operand
-    // still propagates as NIL via the universal NIL Projection Rule (LANG.FAILURE.PROJECT)
-    // — the CreatesNil policy is about CF-budget exhaustion on irrational
-    // operands, not about rejecting NIL inputs.
+    // FLOOR/ROUND are Total/Passthrough: a NIL operand propagates as NIL
+    // (LANG.FAILURE.PASSTHROUGH), and every number has a floor and a nearest
+    // integer.
     for name in &["FLOOR", "ROUND"] {
         let code = format!("NIL {name}");
         let stack = run_ok(&code).await;
-        assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
-        assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
-    }
-    for code in ["NIL 1 MOD", "1 NIL MOD", "NIL NIL MOD"] {
-        let stack = run_ok(code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
         assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
     }
@@ -406,15 +382,15 @@ async fn malformed_use_raises_error_not_a_projected_nil() {
 #[tokio::test]
 async fn a_chosen_fallback_replaces_a_reasoned_nil() {
     // bare NIL replaced by the fallback
-    let stack = run_ok("[ 0 ] NIL NIL? SELECT").await;
+    let stack = run_ok("NIL 'S' BIND [ 0 ] S S NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 0/1 ]");
 
     // non-NIL value passes through unchanged
-    let stack = run_ok("[ 0 ] [ 42 ] NIL? SELECT").await;
+    let stack = run_ok("[ 42 ] 'S' BIND [ 0 ] S S NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 42/1 ]");
 
     // a reasoned NIL (division by zero) is replaced; no NIL survives
-    let stack = run_ok("[ 7 ] 1 0 DIV NIL? SELECT").await;
+    let stack = run_ok("1 0 DIV 'S' BIND [ 7 ] S S NIL? SELECT").await;
     assert!(
         !is_nil(&stack[0]),
         "the fallback must replace the reasoned NIL"
@@ -475,7 +451,7 @@ mod properties {
         // op total and NIL — never an error, never a definite value.
         #[test]
         fn binary_passthrough_with_nil_is_nil(a in -50i64..50) {
-            for op in ["ADD", "SUB", "MUL", "MOD", "LT", "LTE", "GT", "GTE", "EQ"] {
+            for op in ["ADD", "SUB", "MUL", "LT", "GT", "EQ"] {
                 let stack = block_on(run(&format!("{a} NIL {op}")))
                     .unwrap_or_else(|e| panic!("`{a} NIL {op}` errored: {e}"));
                 prop_assert_eq!(stack.len(), 1);

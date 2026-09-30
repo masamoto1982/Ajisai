@@ -1,5 +1,5 @@
 //! Behavioral probes for the search Words: the projections `BSEARCH` and
-//! `SEARCH` declare, `BSEARCH`'s order check, and `MEMBER` over every domain.
+//! `SEARCH` declare, `BSEARCH`'s order check, and `MEMBER?` over every domain.
 
 #[cfg(test)]
 mod search_words_tests {
@@ -49,12 +49,13 @@ mod search_words_tests {
     #[tokio::test]
     async fn member_answers_lane_for_lane_over_any_domain() {
         for (code, want) in [
-            ("[ 1 2 3 ] [ 2 5 ] MEMBER", "[ TRUE FALSE ]"),
-            ("[ 1 2 3 ] 2 MEMBER", "TRUE"),
-            ("[ 'a' 'b' ] [ 'b' 'c' ] MEMBER", "[ TRUE FALSE ]"),
-            ("[ [ 1 2 ] [ 3 ] ] [ [ 3 ] [ 1 ] ] MEMBER", "[ TRUE FALSE ]"),
-            ("[ ] [ 1 ] MEMBER", "[ FALSE ]"),
-            ("[ 1 2 ] [ ] MEMBER", "[ ]"),
+            ("[ 1 2 3 ] 2 MEMBER?", "TRUE"),
+            ("[ 1 2 3 ] 5 MEMBER?", "FALSE"),
+            ("[ 'a' 'b' ] 'b' MEMBER?", "TRUE"),
+            ("[ [ 1 2 ] [ 3 ] ] [ 3 ] MEMBER?", "TRUE"),
+            ("[ [ 1 2 ] [ 3 ] ] [ 1 ] MEMBER?", "FALSE"),
+            ("[ ] 1 MEMBER?", "FALSE"),
+            ("[ 1 2 ] [ ] MEMBER?", "FALSE"),
         ] {
             assert_eq!(top(code).await, want, "`{code}`");
         }
@@ -73,30 +74,30 @@ mod search_words_tests {
         }
         assert_eq!(
             reason("[ 1 3 5 7 ] 4 BSEARCH").await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
         assert_eq!(
-            top("[ 1 3 5 7 ] [ 4 5 ] BSEARCH [ 0 ] GET NIL-REASON").await,
-            "NIL 'missingField'"
+            top("[ 1 3 5 7 ] [ 4 5 ] BSEARCH 0 GET NIL-REASON").await,
+            "'notFound'"
         );
-        assert_eq!(
-            reason("[ ] 4 BSEARCH").await.as_deref(),
-            Some("missingField")
-        );
+        assert_eq!(reason("[ ] 4 BSEARCH").await.as_deref(), Some("notFound"));
     }
 
     /// The order is checked before the search: an unsorted operand is the
-    /// program being wrong, and a Tier 2 pair that never separates makes the
-    /// order — and so the answer — undecidable, as it does for SORT.
+    /// program being wrong.
     #[tokio::test]
     async fn bsearch_checks_the_order_first() {
         raises("[ 3 1 2 ] [ 2 ] BSEARCH", "BSEARCH").await;
-        raises("[ 1 'a' ] 1 BSEARCH", "comparable").await;
-        raises("[ 1 2 3 ] 'a' BSEARCH", "comparable").await;
-        assert_eq!(
-            reason("PI PI 2 COLLECT 1 BSEARCH").await.as_deref(),
-            Some("undecidable")
-        );
+        raises(
+            "[ 1 'a' ] 1 BSEARCH",
+            "expected Scalar elements, got String",
+        )
+        .await;
+        raises(
+            "[ 1 2 3 ] 'a' BSEARCH",
+            "expected Scalar elements, got String",
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -111,7 +112,7 @@ mod search_words_tests {
         }
         assert_eq!(
             reason("'hello' 'z' SEARCH").await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
         raises("'hello' 1 SEARCH", "SEARCH").await;
     }
@@ -128,11 +129,5 @@ mod search_words_tests {
             assert_eq!(top(code).await, want, "`{code}`");
         }
         raises("'a' 'b' 3 REPLACE", "REPLACE").await;
-    }
-
-    #[tokio::test]
-    async fn keep_retains_the_operands() {
-        assert_eq!(top("[ 1 2 ] KEEP 2 MEMBER").await, "[ 1/1 2/1 ] 2/1 TRUE");
-        assert_eq!(top("'ab' KEEP 'b' SEARCH").await, "'ab' 'b' 1/1");
     }
 }

@@ -1,13 +1,14 @@
-//! Lifting the arithmetic and comparison Words over Records
+//! Lifting the arithmetic Words over Records
 //! (LANG.COLLECTIONS.LIFT, LANG.RECORDS.STRUCTURE).
 //!
 //! A Record lifts in the value direction only: the keys are untouched and the
 //! result is a Record over the same key sequence. Two Records combine when
 //! their key sequences are equal, pairing values position by position; a
 //! Record combines with anything else by applying the Word to each value and
-//! that other operand. No other family lifts over a Record — the logic Words,
-//! the Vector Words and the text Words all reject one — so this module is the
-//! whole of the seventh domain's containment rule.
+//! that other operand. The comparison and logic Words lift over a Record
+//! through `lane_lift`, and every other Word through the dispatcher
+//! (`declared_lift`); this is the arithmetic family's entry to the same rule,
+//! ahead of its tensor path.
 //!
 //! The lift is generic over the Word rather than written once per Word: the
 //! Word's own entry point is run on each value pair on a scratch region of
@@ -17,7 +18,7 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::{RecordData, Value};
 
 type WordOp<'a> = &'a dyn Fn(&mut Interpreter) -> Result<()>;
@@ -59,30 +60,22 @@ pub(crate) fn lift_binary(interp: &mut Interpreter, op: WordOp) -> Result<bool> 
     })
 }
 
-/// Run `lift` over consumed operands with the scratch stack in consume mode,
-/// then push the result or put the operands back on an ERROR.
+/// Run `lift` over consumed operands, then push the result or put the
+/// operands back on an ERROR.
 fn run_lift(
     interp: &mut Interpreter,
     operands: Vec<Value>,
     lift: &dyn Fn(&mut Interpreter, &[Value]) -> Result<Value>,
 ) -> Result<bool> {
-    let mode = interp.consumption_mode;
-    // The leaves run the Word itself; each must eat its scratch operands
-    // whatever mode the outer Word was invoked in, which the outer
-    // `extract_operands` above has already honoured.
-    interp.consumption_mode = ConsumptionMode::Consume;
     let result = lift(interp, &operands);
-    interp.consumption_mode = mode;
     match result {
         Ok(value) => {
             interp.stack.push(value);
             Ok(true)
         }
         Err(e) => {
-            if mode != ConsumptionMode::Keep {
-                for operand in operands {
-                    interp.stack.push(operand);
-                }
+            for operand in operands {
+                interp.stack.push(operand);
             }
             Err(e)
         }
@@ -131,14 +124,18 @@ fn leaf(interp: &mut Interpreter, operands: Vec<Value>, op: WordOp) -> Result<Va
     for operand in operands {
         interp.stack.push(operand);
     }
-    let outcome = op(interp).and_then(|()| {
-        if interp.stack.len() != base + 1 {
-            return Err(AjisaiError::create_structure_error(
-                "one result from a lifted Word",
-                "a different stack height",
-            ));
-        }
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
+    let outcome = op(interp).map(|()| {
+        // Every Word lifted over a Record's values has one declared output,
+        // so this is the arity the registry states, not a check on input.
+        assert_eq!(
+            interp.stack.len(),
+            base + 1,
+            "a Word lifted over a Record's values leaves exactly one result"
+        );
+        interp
+            .stack
+            .pop()
+            .expect("the result just asserted to be there")
     });
     interp.stack.truncate(base);
     outcome

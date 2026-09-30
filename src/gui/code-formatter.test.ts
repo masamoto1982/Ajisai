@@ -54,6 +54,14 @@ describe('formatAjisaiSource', () => {
         expect(formatAjisaiSource('a~b')).toBe('a~b');
     });
 
+    test('keeps a hash or quote glued to a word as part of the word', () => {
+        // Only at the start of an atom do `#` and `'` start a comment or a
+        // string (rust/src/tokenizer.rs); inside a word they are name
+        // characters, and splitting them out would change the program.
+        expect(formatAjisaiSource('a#b 1')).toBe('a#b 1');
+        expect(formatAjisaiSource("a'b c")).toBe("a'b c");
+    });
+
     test('still pads an already-standalone bar between spaced tokens', () => {
         // Written with its own whitespace, `|` already scans as its own
         // token; the formatter just normalizes the spacing around it, same as
@@ -71,15 +79,15 @@ describe('formatAjisaiSource', () => {
     });
 
     test('leaves a string glued to a following bracket untouched', () => {
-        // Whitespace is the sole token delimiter now, so `[` no longer closes
-        // a string that runs right into it either — the real tokenizer finds
-        // no real close and reports an unclosed literal, and the formatter
-        // must refuse to reformat rather than confidently splitting off `[1]`.
+        // Whitespace is the sole token delimiter, so `[` does not close a
+        // string that runs right into it — the real tokenizer finds no real
+        // close and reports an unclosed literal, and the formatter must
+        // refuse to reformat rather than confidently splitting off `[1]`.
         expect(formatAjisaiSource("'foo'[1]")).toBe("'foo'[1]");
     });
 
     test('is idempotent on already-canonical input', () => {
-        const canonical = '[ [ 1 ] [ 2 ] + ] \'ADD12\' DEF';
+        const canonical = '[ [ 1 ] [ 2 ] ADD ] \'ADD12\' DEF';
         expect(formatAjisaiSource(canonical)).toBe(canonical);
     });
 
@@ -163,10 +171,9 @@ describe('formatAjisaiSource', () => {
     });
 });
 
-// The formatter adds no line break of its own. It used to split a `COND`'s `|`
-// clauses one per line; `COND` and its clauses are gone, so line structure is
-// now purely the author's — which is what makes the line-break rule of
-// LANG.SOURCE.TEXT safe to leave alone.
+// The formatter adds no line break of its own: line structure is purely the
+// author's, which is what makes the line-break rule of LANG.SOURCE.TEXT safe
+// to leave alone.
 describe('formatAjisaiSource line structure', () => {
     test('a branch written on one line stays on one line', () => {
         const source = "[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT";
@@ -179,8 +186,22 @@ describe('formatAjisaiSource line structure', () => {
     });
 
     test('an ordinary vector is not rearranged', () => {
-        expect(formatAjisaiSource('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP'))
-            .toBe('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP');
+        expect(formatAjisaiSource('[ 1 2 ] [ 1 MUL ] MAP [ 2 MUL ] MAP'))
+            .toBe('[ 1 2 ] [ 1 MUL ] MAP [ 2 MUL ] MAP');
     });
 });
 
+
+// The formatter runs before every Run in the GUI, so where it disagrees with
+// the tokenizer about what whitespace is, the GUI runs a different program
+// from the CLI. spec/grammar.json enumerates the class: U+FEFF is a name
+// character, U+0085 is whitespace; ECMAScript's `\s` says the opposite.
+describe('formatAjisaiSource whitespace class', () => {
+    test('keeps a byte-order mark glued to the first word, as the tokenizer reads it', () => {
+        expect(formatAjisaiSource('﻿1 2 ADD')).toBe('﻿1 2 ADD');
+    });
+
+    test('separates words on U+0085 like any other whitespace', () => {
+        expect(formatAjisaiSource('1\u00852 ADD')).toBe('1 2 ADD');
+    });
+});

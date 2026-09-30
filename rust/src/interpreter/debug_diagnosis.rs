@@ -5,6 +5,10 @@ use crate::error::{AjisaiError, ErrorCategory, NilReason};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorPhase {
     Tokenize,
+    /// Kept as a name in the diagnosis vocabulary (`DiagnosisPhase` in
+    /// `src/wasm-interpreter-types.ts`), but no longer produced: the
+    /// tokenizer runs the grammar's structural phase itself, so an unbalanced
+    /// bracket is reported as `Tokenize` like every other source error.
     ParseStructure,
     ResolveWord,
     ExecuteWord,
@@ -29,7 +33,6 @@ pub enum ErrorLocusKind {
 pub struct ErrorLocus {
     pub kind: ErrorLocusKind,
     pub word: Option<String>,
-    pub dictionary: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +42,6 @@ pub enum CauseClass {
     ValueShape,
     Domain,
     Index,
-    VectorLength,
     ShapeMismatch,
     NilFlow,
     Environment,
@@ -105,20 +107,16 @@ pub struct ResourceLimitFacts {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct AiDiagnosticPayload {
-    pub kind: Option<String>,
-    pub recoverability: String,
-    pub semantic_area: String,
+    /// The spec/outcomes.json error category, the id `error:<category>` names.
+    pub category: Option<String>,
+    /// `Some("program")` when the registry marks the category `repair:
+    /// program`; absent otherwise, as in the registry.
+    pub repair: Option<&'static str>,
     pub word: Option<String>,
-    pub semantic_role: String,
-    pub algebraic_family: String,
-    pub nil_reason: Option<String>,
-    pub truth_value: Option<String>,
-    pub effect: Option<String>,
-    pub next_checks: Vec<DebugCheck>,
-    /// Known Words within a small edit distance of an unrecognized name,
-    /// best match first. Empty for every other cause class.
-    pub candidates: Vec<String>,
-    pub resource_limit: Option<ResourceLimitFacts>,
+    /// The Word's semantic family as `spec/words.json` declares it, or
+    /// `None` when no Core Word is at fault. The one classification of a
+    /// Word the diagnosis reports is the registry's own.
+    pub family: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -129,12 +127,6 @@ pub struct DebugDiagnosis {
     pub summary: String,
     pub evidence: Vec<String>,
     pub next_checks: Vec<DebugCheck>,
-    /// CF-comparison agreed-prefix length (LANG.VALUES.NIL / LANG.VALUES.EXACT): the
-    /// number of leading partial quotients that matched before the
-    /// partial-quotient budget was exhausted on an `Unknown` (U)
-    /// comparison result. `None` for diagnoses unrelated to CF
-    /// comparison. Machine-readable; surfaced as `diagnosis.agreedPrefix`.
-    pub agreed_prefix: Option<usize>,
     /// Known Words within a small edit distance of an unrecognized name, best
     /// match first. "Check the spelling" without saying what the spelling
     /// might have been is the one repair hint an agent cannot act on, and the
@@ -182,7 +174,6 @@ impl CauseClass {
             CauseClass::ValueShape => "valueShape",
             CauseClass::Domain => "domain",
             CauseClass::Index => "index",
-            CauseClass::VectorLength => "vectorLength",
             CauseClass::ShapeMismatch => "shapeMismatch",
             CauseClass::NilFlow => "nilFlow",
             CauseClass::Environment => "environment",
@@ -202,13 +193,8 @@ impl CauseClass {
     pub fn from_error_category(category: &ErrorCategory) -> Self {
         match category {
             ErrorCategory::StackUnderflow => CauseClass::StackShape,
-            ErrorCategory::StructureError => CauseClass::ValueShape,
             ErrorCategory::UnknownWord => CauseClass::TypoOrUnknownName,
-            ErrorCategory::DivisionByZero => CauseClass::Domain,
-            ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
-            ErrorCategory::ShapeMismatch => CauseClass::ShapeMismatch,
             ErrorCategory::MalformedSource => CauseClass::SourceForm,
-            ErrorCategory::NameConflict => CauseClass::ContractViolation,
             // LANG.MACHINE.LIMITS calls the step and recursion budgets host
             // safety controls rather than language semantics, and the two
             // answers differ: "the program is wrong" is fixed by rewriting it,
@@ -218,11 +204,6 @@ impl CauseClass {
             ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
-            ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
-            // A cyclic DEF is a static shape rejected before anything runs —
-            // the same kind of fault as `NameConflict`, not a runtime resource
-            // question.
-            ErrorCategory::SelfReferentialDefinition => CauseClass::ContractViolation,
             // The registry named the condition at the raise site, so the class
             // follows from the spec's own vocabulary.
             ErrorCategory::Declared(condition) => {
@@ -245,13 +226,12 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         // A well-formed operand outside the operation's domain: a negative
         // radicand, a zero divisor.
         NilReason::DomainMiss | NilReason::DivisionByZero => CauseClass::Domain,
-        // Both are budgets rather than mistakes: the materialization ceiling
-        // and the comparison budget answer to "the request is too big", not
-        // "the program is wrong" — the distinction `ResourceLimit` exists for.
-        NilReason::SpaceExhausted | NilReason::Undecidable => CauseClass::ResourceLimit,
+        // A budget rather than a mistake: the materialization ceiling answers
+        // to "the request is too big", not "the program is wrong" — the
+        // distinction `ResourceLimit` exists for.
+        NilReason::SpaceExhausted => CauseClass::ResourceLimit,
         NilReason::IndexOutOfBounds => CauseClass::Index,
-        NilReason::MissingField | NilReason::InvalidEncoding => CauseClass::ValueShape,
-        NilReason::NotAvailable => CauseClass::Environment,
+        NilReason::NotFound | NilReason::InvalidEncoding => CauseClass::ValueShape,
         // Absence that no operation produced — a `NIL` in source, or one that
         // has passed through a dense lane, which carries presence but no
         // reason. Nothing is wrong; a NIL is simply flowing.
@@ -261,24 +241,22 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
     }
 }
 
+/// The locus as far as the compiled-in registry can tell: a Core Word, or not
+/// known yet. A User Word is only knowable where the live dictionary is — see
+/// `DebugDiagnosis::with_user_vocabulary`, which completes it there. This used
+/// to recognise a User Word by a `DICT@NAME` prefix, which no name has carried
+/// since the dictionary became two tiers; every failing User Word reported
+/// `kind: unknown`.
 pub(super) fn classify_locus(word: Option<&str>) -> ErrorLocus {
-    let (kind, dictionary) = match word {
-        None => (ErrorLocusKind::Unknown, None),
-        Some(name) => {
-            if let Some(idx) = name.find('@') {
-                let (dictionary, _) = name.split_at(idx);
-                (ErrorLocusKind::UserWord, Some(dictionary.to_string()))
-            } else if crate::coreword_registry::get_builtin_word_metadata(name).is_some() {
-                (ErrorLocusKind::CoreWord, None)
-            } else {
-                (ErrorLocusKind::Unknown, None)
-            }
+    let kind = match word {
+        Some(name) if crate::coreword_registry::get_coreword_metadata(name).is_some() => {
+            ErrorLocusKind::CoreWord
         }
+        _ => ErrorLocusKind::Unknown,
     };
     ErrorLocus {
         kind,
         word: word.map(|s| s.to_string()),
-        dictionary,
     }
 }
 
@@ -303,7 +281,7 @@ impl DebugDiagnosis {
         let mut diagnosis = Self::from_error_category(
             ErrorPhase::ExecuteWord,
             word,
-            Some(&category),
+            category.as_ref(),
             None,
             stack_len_before,
             stack_len_after,
@@ -345,9 +323,13 @@ impl DebugDiagnosis {
         let evidence = build_evidence(category, nil_reason, stack_len_before, stack_len_after);
         // Candidates first: the spelling check is written against them, and a
         // check that promises a list there is none is the failure this order
-        // prevents.
-        let candidates = match (&why, word) {
-            (CauseClass::TypoOrUnknownName, Some(name)) => suggest_words(name, std::iter::empty()),
+        // prevents. Only `unknownWord` puts the misspelled name in the locus;
+        // `wordNotFound` is raised by `DEL` about its operand, and spelling
+        // `DEL` against the vocabulary offered "DEF".
+        let candidates = match (&why, word, category) {
+            (CauseClass::TypoOrUnknownName, Some(name), Some(ErrorCategory::UnknownWord)) => {
+                suggest_words(name, std::iter::empty())
+            }
             _ => Vec::new(),
         };
         let next_checks = build_next_checks(
@@ -366,38 +348,31 @@ impl DebugDiagnosis {
             summary,
             evidence,
             next_checks,
-            agreed_prefix: None,
             candidates,
             resource_limit: None,
         }
     }
 
-    /// Build the AI-facing structured diagnostic payload used by tests, WASM
-    /// adapters, and review tooling. Human-readable `summary` stays separate;
-    /// this payload exposes stable protocol fields so agents can distinguish
-    /// NIL, UNKNOWN, host-effect violations, portability issues, and input
-    /// domain errors without matching display strings.
-    pub fn ai_payload(
-        &self,
-        category: Option<&ErrorCategory>,
-        nil_reason: Option<&NilReason>,
-        truth_value: Option<&str>,
-        effect: Option<&str>,
-    ) -> AiDiagnosticPayload {
+    /// Build the AI-facing structured diagnostic payload. Human-readable
+    /// `summary` stays separate; this payload exposes stable protocol fields
+    /// so an agent can branch on the failure without matching display
+    /// strings. It describes an ERROR: a NIL's reason, a truth value and an
+    /// effect are observed on the stack and in the output, not here — the
+    /// three fields that once carried them here were always null.
+    ///
+    /// It classifies and nothing more. `nextChecks`, `candidates` and
+    /// `resourceLimit` are the diagnosis's, and used to be copied here too, so
+    /// every error report carried them twice (three times, with the trace).
+    pub fn ai_payload(&self, category: Option<&ErrorCategory>) -> AiDiagnosticPayload {
         let word = self.where_.word.as_deref();
+        let category = category.map(ErrorCategory::as_protocol_str);
         AiDiagnosticPayload {
-            kind: category.map(|c| c.as_protocol_str().to_string()),
-            recoverability: recoverability_for(&self.why, category).to_string(),
-            semantic_area: semantic_area_for(word, &self.why).to_string(),
+            category: category.map(str::to_string),
+            repair: category.and_then(super::outcome_repair::repair_for_category),
             word: self.where_.word.clone(),
-            semantic_role: semantic_role_for(word).to_string(),
-            algebraic_family: algebraic_family_for(word, &self.why).to_string(),
-            nil_reason: nil_reason.map(|r| r.as_protocol_str().to_string()),
-            truth_value: truth_value.map(str::to_string),
-            effect: effect.map(str::to_string),
-            next_checks: self.next_checks.clone(),
-            candidates: self.candidates.clone(),
-            resource_limit: self.resource_limit.clone(),
+            family: word
+                .and_then(crate::kernel::generated::generated_word)
+                .map(|w| w.family.as_spec_str().to_string()),
         }
     }
 }
@@ -431,84 +406,6 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
     }
 }
 
-fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'static str {
-    match category {
-        Some(ErrorCategory::DivisionByZero)
-        | Some(ErrorCategory::StructureError)
-        | Some(ErrorCategory::ShapeMismatch)
-        | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
-        Some(ErrorCategory::UnknownWord)
-        | Some(ErrorCategory::StackUnderflow)
-        | Some(ErrorCategory::MalformedSource)
-        | Some(ErrorCategory::NameConflict)
-        | Some(ErrorCategory::SelfReferentialDefinition) => "fixProgram",
-        Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
-        Some(ErrorCategory::ExecutionLimitExceeded)
-        | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",
-        // A size ceiling is not fixed by letting the program run longer: the
-        // work itself has to get smaller, or the host has to declare a larger
-        // ceiling.
-        Some(ErrorCategory::ResourceLimitExceeded) => "reduceWorkOrRaiseLimit",
-        // A declared condition answers by what it names: a wrong operand is
-        // repaired in the input, a broken rule in the program.
-        Some(ErrorCategory::Declared(_)) => {
-            super::debug_declared_checks::repair_for_declared_condition(why)
-        }
-        None => match why {
-            CauseClass::Environment | CauseClass::Effect => "fixHost",
-            CauseClass::NilFlow => "handleUnknownOrNil",
-            _ => "inspectContext",
-        },
-    }
-}
-
-fn semantic_role_for(word: Option<&str>) -> &'static str {
-    let Some(word) = word else {
-        return "Unknown";
-    };
-    if let Some(meta) = crate::coreword_registry::get_coreword_metadata(word) {
-        return match meta.profile {
-            crate::coreword_registry::WordProfile::Hosted => "HostedEffect",
-            crate::coreword_registry::WordProfile::Core => {
-                if matches!(word, "COMPARE-WITHIN") {
-                    "Primitive"
-                } else {
-                    "Derived"
-                }
-            }
-        };
-    }
-    "Unknown"
-}
-
-fn semantic_area_for(word: Option<&str>, why: &CauseClass) -> &'static str {
-    match word {
-        Some("ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "SQRT" | "FLOOR" | "CEIL" | "ROUND") => {
-            "exact-real-arithmetic"
-        }
-        Some("EQ" | "LT" | "LTE" | "GT" | "GTE" | "COMPARE-WITHIN") => "exact-real-comparison",
-        Some("AND" | "OR" | "NOT") => "k3-truth",
-        Some(word) if word.contains('@') => "hosted-effect",
-        Some("PRINT") => "hosted-effect",
-        _ => match why {
-            CauseClass::Effect | CauseClass::Environment => "hosted-effect",
-            CauseClass::NilFlow => "unknown-or-absence",
-            CauseClass::StackShape | CauseClass::ValueShape => "stack-value-shape",
-            _ => "unknown",
-        },
-    }
-}
-
-fn algebraic_family_for(word: Option<&str>, why: &CauseClass) -> &'static str {
-    match semantic_area_for(word, why) {
-        "exact-real-arithmetic" => "exact-arithmetic",
-        "exact-real-comparison" => "observation",
-        "k3-truth" => "k3-truth",
-        "hosted-effect" => "hosted-effect",
-        other => other,
-    }
-}
-
 fn build_summary(
     when: &ErrorPhase,
     locus: &ErrorLocus,
@@ -521,18 +418,25 @@ fn build_summary(
         .word
         .clone()
         .unwrap_or_else(|| locus.kind.as_protocol_str().to_string());
-    let category_str = category
-        .map(|c| c.as_protocol_str().to_string())
-        .unwrap_or_else(|| "UnknownCategory".to_string());
-    let nil_str = nil_reason
-        .map(|r| format!(" nil={:?}", r))
-        .unwrap_or_default();
+    // The outcome in the ids spec/outcomes.json and `outcomes` use, not the
+    // engine's own type names: this line used to read
+    // `ExecuteWord / DIV / Domain (divisionByZero) nil=DivisionByZero`, four
+    // spellings for one fact, two of them Rust `Debug` output.
+    let outcome = match (nil_reason, category) {
+        (Some(reason), _) => format!("nil:{}", reason.as_protocol_str()),
+        (None, Some(category)) => format!("error:{}", category.as_protocol_str()),
+        (None, None) => "unknown".to_string(),
+    };
     let msg_str = message
         .map(|m| format!(" msg=\"{}\"", m))
         .unwrap_or_default();
     format!(
-        "{:?} / {} / {:?} ({}){}{}",
-        when, where_str, why, category_str, nil_str, msg_str
+        "{} / {} / {} ({}){}",
+        when.as_protocol_str(),
+        where_str,
+        why.as_protocol_str(),
+        outcome,
+        msg_str
     )
 }
 

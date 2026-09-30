@@ -43,7 +43,7 @@ mod tests {
         // read back as a scalar, so `5 ADD` answered `6/1` where `[ 6/1 ]` is
         // the answer and `[ 6 ] 6 EQ` is FALSE.
         assert_eq!(
-            run("[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP [ 0 ] GET 5 ADD").await,
+            run("[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP 0 GET 5 ADD").await,
             "[ 6/1 ]"
         );
     }
@@ -56,7 +56,7 @@ mod tests {
     #[tokio::test]
     async fn map_by_word_name_follows_the_same_rule() {
         assert_eq!(
-            run("[ X | X 1 COLLECT ] 'WRAP' DEF [ 1 2 ] [ WRAP ] MAP").await,
+            run("[ 1 COLLECT ] 'WRAP' DEF [ 1 2 ] [ WRAP ] MAP").await,
             "[ [ 1/1 ] [ 2/1 ] ]"
         );
     }
