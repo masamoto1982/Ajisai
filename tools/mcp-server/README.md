@@ -355,10 +355,13 @@ run into a committed claim that the model is perfect, which is the one thing
 this corpus is least entitled to say. A model trace is scored and reported,
 never asserted.
 
-**Model baselines have been captured** and are committed under `eval/traces/`;
-`claude-opus-5-full-corpus.json` and `claude-opus-5-repairs-full-corpus.json`
-are the current full-corpus pair, and `docs/dev/` records what each capture
-found. `npm run eval:capture` drives a real model over the four tools — one
+**Model baselines have been captured** and are committed under `eval/traces/`:
+`claude-opus-5-full-corpus.json` and `claude-opus-5-repairs-full-corpus.json`,
+the full-corpus pair. The intermediate captures taken while the tool
+descriptions were being tuned (baseline, after-syntax-rules, after-negatives,
+after-entry-surface, and their repair counterparts) were superseded by that
+pair and removed; git history holds them. `npm run eval:capture` drives a
+real model over the four tools — one
 call per corpus case per language, `tool_choice: auto` so the irrelevant-intent
 cases can correctly produce no call — and writes a
 `model` trace under `eval/traces/`, kept apart from the committed fixtures so no
