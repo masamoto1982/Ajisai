@@ -90,8 +90,9 @@ check_user_visible_absent 'memoization vocabulary' '[Mm]emoiz'
 # clause; check-reading-surfaces.mjs catches the vocabulary half.
 READING_SURFACES=(README.md public/docs/index.html public/docs/en/index.html public/docs/ja/index.html SPECIFICATION.html spec/language-semantics.md spec/gui-semantics.md)
 
-# The Reference's Word list is spec/words.json's own per-Word documentation,
-# rendered by scripts/generate-word-reference.mjs between two markers. Its
+# The Reference's built-in Words (the index and each family page's contracts)
+# are spec/words.json's own per-Word documentation, rendered by
+# scripts/generate-word-reference.mjs between BEGIN/END markers. Its
 # wording belongs to the registry, where a Word's effect is described ("the
 # name no longer names a Word" after DEL), so the rendered copy is left out of
 # this prose check; the hand-written pages around it are checked in full.
@@ -100,7 +101,7 @@ history_scratch="$(mktemp -d)"
 history_surfaces=()
 for surface in "${READING_SURFACES[@]}"; do
   mkdir -p "$history_scratch/$(dirname "$surface")"
-  sed '/<!-- BEGIN generated word index/,/<!-- END generated word index -->/d' "$surface" > "$history_scratch/$surface"
+  sed '/<!-- BEGIN generated word /,/<!-- END generated word /d' "$surface" > "$history_scratch/$surface"
   history_surfaces+=("$surface")
 done
 pushd "$history_scratch" > /dev/null

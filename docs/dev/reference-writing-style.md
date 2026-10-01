@@ -16,6 +16,7 @@ Ajisaiのドキュメント（`?` (LOOKUP) で表示するビルトイン説明�
 4. 本文中で記号やWord名を示すときはインラインコード（`` `+` ``, `` `NIL` ``）を使う。
 5. 本文の地の文に `[ 1 2 3 ] +` のような裸のAjisaiコードを書かない。書くなら必ずコードブロックに入れる。
 6. `# →` のような行内コメントで結果を併記する古い書式は使わない。コードと結果はブロックを分ける。
+7. Referenceは現在のAjisaiだけを、Ajisai自身の言葉で述べる。「以前のAjisaiではこうだったが、今はこうだ」という経緯や、「他の言語ではこうだが、Ajisaiではこうだ」という対比で説明しない。ないものを挙げて説明するのではなく、あるものを述べる。経緯は `docs/dev/` に置く。
 
 ## 補足
 
@@ -54,6 +55,6 @@ Result:
 | 表示面 | 保管場所 |
 |---|---|
 | `?` (LOOKUP) のビルトイン説明 | `rust/src/builtins/detail-lookup-*.rs` の raw string literal |
-| Reference ボタンから開くページ | `public/docs/en/index.html`・`public/docs/ja/index.html`（英日で内容を対応させる。共通の見た目と振る舞いは `public/docs/reference.css`・`reference.js`、ワード一覧は `scripts/generate-word-reference.mjs` が生成し、日本語の説明は `docs/i18n/word-summaries.ja.json`） |
+| Reference ボタンから開くページ | `public/docs/en/index.html`・`public/docs/ja/index.html`（英日で内容を対応させる。共通の見た目と振る舞いは `public/docs/reference.css`・`reference.js`、構成は分割の木（プログラム＝要素の並び→区切りと評価→要素の4種類→名前＝束縛かワード→ワードの族→個々のワード）。分けて語れなくなったところで終わる。「ワード」頁の組み込みワード一覧と各族の頁末尾の契約は `scripts/generate-word-reference.mjs` が生成し、日本語の説明は `docs/i18n/word-summaries.ja.json`） |
 
 ビルトイン説明テキストは段階的に本規約へ移行する。基準実装は `ADD`（`rust/src/builtins/detail-lookup-arithmetic-logic.rs`）。

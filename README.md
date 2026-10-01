@@ -54,7 +54,7 @@ Ajisai is built from ten concepts and nothing else.
 | Document | Audience | Rendered at |
 |---|---|---|
 | Specification | Builders and porters | [SPECIFICATION.html](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html) |
-| Reference (English) | Ajisai users | [docs/en/index.html](https://masamoto1982.github.io/Ajisai/docs/en/index.html) — the language with runnable samples, plus a Word list generated from `spec/words.json` |
+| Reference (English) | Ajisai users | [docs/en/index.html](https://masamoto1982.github.io/Ajisai/docs/en/index.html) — from a program down to its elements and every built-in Word with its contract (generated from `spec/words.json`), with runnable samples |
 | Reference (Japanese) | Ajisai users | [docs/ja/index.html](https://masamoto1982.github.io/Ajisai/docs/ja/index.html) — the same content in Japanese |
 | Reference (English) | Ajisai users | Not yet published — the Japanese edition is the current full Reference; the English Word Reference above covers the vocabulary |
 | Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Word Reference button links to the English Word Reference |

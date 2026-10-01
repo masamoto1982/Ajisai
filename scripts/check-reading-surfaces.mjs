@@ -108,12 +108,6 @@ const UNALLOCATED_MENTIONS = new Set([
   '.',
   // `{ ... }` sketches a block's shape; the ellipsis stands for a body
   '...',
-  // the two-argument clause names the classic stack operators precisely to say
-  // Ajisai has none of them: several values travel in a Vector, not on the
-  // stack. Naming them is the shortest way to answer the question a reader
-  // arrives with, and each is a statement that the language does not allocate
-  // it — the case this list exists for.
-  'DUP', 'SWAP', 'DROP', 'ROT',
   // `+ - * / = < >` were once second spellings of ADD SUB MUL DIV EQ LT GT
   // and are ordinary names now. The reference names `+`, `<` and a bare `/`
   // to say exactly that (its lexeme section), and writes `-` in notation that
@@ -171,8 +165,6 @@ for (const path of SURFACES) {
         if (known.has(token) || EXAMPLE_NAMES.has(token)) continue;
         if (HOST_COMMANDS.has(token)) continue;
         // A name may also be written only to say the language does not have it.
-        // That was a symbol-only case until the Reference had to answer "where
-        // is DUP?", which it answers by naming DUP.
         if (UNALLOCATED_MENTIONS.has(token)) continue;
         seen.set(token, (seen.get(token) ?? 0) + 1);
         continue;

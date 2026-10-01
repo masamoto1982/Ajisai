@@ -438,10 +438,11 @@ a {
     .ref-nav { padding: 1.25rem 1rem; }
 }
 
-/* Word list (#word-index): generated from spec/words.json by
-   scripts/generate-word-reference.mjs. The jump table at the top shows every
-   Word at a glance, grouped by family; each entry below keeps the contract
-   fields a table would crowd (stack effect, NIL policy, errors, clauses). */
+/* Built-in Words, generated from spec/words.json by
+   scripts/generate-word-reference.mjs: the index table on the "Kinds of token"
+   page shows every Word at a glance, grouped by family, and each family page
+   ends with its Words' contract entries, which keep the fields a table would
+   crowd (stack effect, NIL policy, errors, clauses). */
 .word-jump {
     margin: 0.75rem 0 1.25rem;
 
@@ -457,11 +458,6 @@ a {
         display: inline-block;
         margin: 0 0.5rem 0.25rem 0;
     }
-}
-
-.word-family-lead {
-    font-size: 0.85rem;
-    color: var(--color-text-light);
 }
 
 .word-entry {
@@ -515,3 +511,96 @@ a {
 .word-contract { grid-template-columns: minmax(0, 1fr); }
     .word-contract dd { margin-bottom: 0.35rem; }
 }
+
+/* The Reference is a tree: a program divides into elements, an element into
+   its kinds, a name into bindings and Words, and Words into families whose
+   individual Words are the leaves. The table of contents nests to match, and
+   every page heading carries its number in that tree. */
+.ref-nav {
+    & ul ul {
+        padding-left: 1.1rem;
+        margin: 0.15rem 0 0.25rem;
+    }
+
+    & li {
+        margin: 0.15rem 0;
+    }
+}
+
+.secnum {
+    color: var(--color-text-light);
+    font-weight: 500;
+    margin-right: 0.25rem;
+}
+
+/* Grammar in EBNF: notation, not Ajisai code, so it sits outside the gray
+   Ajisai channel. */
+.ref-article pre.ebnf {
+    font-family: var(--font-stack-mono);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0.75rem 0;
+    padding: 0.75rem 1rem;
+    border: var(--border-main);
+    border-radius: 3px;
+    overflow-x: auto;
+}
+
+/* The lexer diagram (#lexer). It scrolls sideways on a narrow screen rather
+   than shrinking its labels past reading. */
+.lexer-diagram {
+    margin: 1rem 0;
+    overflow-x: auto;
+
+    & svg {
+        display: block;
+        width: 100%;
+        min-width: 560px;
+        max-width: 680px;
+        height: auto;
+    }
+
+    & rect {
+        fill: var(--color-light);
+        stroke: var(--color-border);
+    }
+
+    & rect.action {
+        fill: oklch(100% 0 0);
+    }
+
+    & text {
+        fill: var(--color-text);
+        font-family: var(--font-stack-primary);
+        font-size: 13px;
+    }
+
+    & text.stage {
+        font-weight: 600;
+        fill: var(--color-text-light);
+    }
+
+    & text.mono {
+        font-family: var(--font-stack-mono);
+        font-size: 15px;
+    }
+
+    & text.result {
+        font-weight: 600;
+    }
+
+    & text.err {
+        fill: oklch(50% 0.15 25);
+    }
+
+    & .arrow {
+        stroke: var(--color-text-light);
+        stroke-width: 1.5;
+        fill: none;
+    }
+
+    & .head {
+        fill: var(--color-text-light);
+    }
+}
+
