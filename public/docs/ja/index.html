@@ -15,9 +15,11 @@
       サンプルを実行して確かめる）。見た目と振る舞いは両版共通の
       ../reference.css と ../reference.js にある。
 
-      構成は言語リファレンスの順に並ぶ: 概要 → 字句（字句解析・トークンの
-      種類）→ 構文 → 意味論・実行モデル → 組み込みワード（族ごとの頁）→ 付録。
-      「トークンの種類」頁の組み込みワード一覧と、各族の頁末尾の契約は
+      頁は木をなし、見出しと目次に番号を振る: プログラムは要素の並びで(1)、
+      区切られ(1.1)評価される(1.2)。要素は数・文字列・ベクトル・名前のどれか
+      で(2.1〜2.4)、名前は束縛かワードを名指す(2.4.1, 2.4.2)。ワードは族に
+      分かれ(2.4.2.x)、族の頁の最後にある個々のワードで分割は終わる。
+      「ワード」頁の組み込みワード一覧と、各族の頁末尾の契約は
       scripts/generate-word-reference.mjs が spec/words.json から生成して
       BEGIN/END 印の間に書き込む。手で編集しない（npm run word:reference）。
       各ワードの日本語の説明は docs/i18n/word-summaries.ja.json にある。
@@ -93,8 +95,9 @@
                 <section id="intro" class="ref-page">
                     <h2>はじめに</h2>
 
+
                     <p>Ajisaiは、監査可能で正確なベクトル計算と機械可読な契約を実現する、AIファーストのベクトル指向データフロー言語です。プログラムは<strong>ワード</strong>の並びとして構成されます。値は単一のスタック上で管理され、各ワードがスタックからオペランドを取り出し(消費し)、処理結果をスタックに積みます。分数とデータ構造における<strong>Vector</strong>が中心的な役割を持ちます。</p>
-                    <p>整った操作が値を作れなかったときは<code>NIL</code>となり、理由を持ったまま下流の計算へそのまま渡されます。一方、操作や入力の形そのものが誤っているときはエラーとなり、評価はその場で停止します。形が正しい場合でも、ホストが支えられる限度を超えれば同じくエラーになります。この限度については<a href="#costs">コストと上限</a>の頁で扱います。</p>
+                    <p>整った操作が値を作れなかったときは<code>NIL</code>となり、理由を持ったまま下流の計算へそのまま渡されます。一方、操作や入力の形そのものが誤っているときはエラーとなり、評価はその場で停止します。形が正しい場合でも、ホストが支えられる限度を超えれば同じくエラーになります。この限度については<a href="#costs">1.2.2 評価のコスト</a>で扱います。</p>
                     <h3>なぜAjisaiを作ったのか</h3>
                     <p>私がAjisaiを開発した理由は二つあります。一つは、あらゆるプログラミング言語の習得に挫折してきたこと。もう一つは、言語という道具でなにかをつくりたかったわけではなく、道具そのものをつくってみたかったことです。</p>
                     <p>そんな私に大きな転機をもたらしたのが、<strong>Forth</strong>との出会いです。スタック指向という、極限まで削ぎ落とされたミニマリズム。構文のノイズを排し、計算という行為そのものをむき出しにするその姿は、言語がここまで小さくてよいのだと教えてくれました。</p>
@@ -108,7 +111,8 @@
                     <p>すべての数値は厳密に扱われます。値は厳密な有理数と、それらを<code>SQRT</code>で閉じたときに生じる代数的無理数、すなわち多重二次正規形として保持されます。算術も比較も丸め誤差なしに実行されます。なお、スタック表示の<code>sqrt(2)</code>や<code>1/1+sqrt(2)</code>は正規形をそのまま一つのトークンとして書いた表示であり、打ち切りも近似もありません。Playgroundのスタック領域も同じトークンをそのまま表示します。</p>
                     <h3>本リファレンスの特徴</h3>
                     <p>本書では、各機能を検証済みの短いサンプルコードとともに解説します。すべての例には<strong>「Playgroundで開く」</strong>ボタンが用意されており、クリックするだけでアプリのエディタにコードが読み込まれ、実際の挙動をすぐに確認できます。</p>
-                    <h3>本リファレンスの位置づけ</h3>
+                    <p>本書は、プログラムを要素に分け、要素をさらに分けられる限り分けていく順に述べます。分けていった先にあるのが個々のワードで、そこで本書は終わります。</p>
+<h3>本リファレンスの位置づけ</h3>
                     <p>本リファレンスは、Ajisaiを利用・学習する方を対象としています。言語自体の実装や移植を行う場合は、唯一の設計上の典拠である<a href="../../SPECIFICATION.html">Specification</a>を参照してください。本書は、日常的な利用や学習向けにその内容を再構成したものです。</p>
                     <h3>例の読み方</h3>
                     <p>各セクションの<strong>Expected value</strong>(期待値)列には、プログラム実行後の最終的なスタックの状態を、言語の描画仕様に準拠して表示しています。あらかじめ把握しておくべき表示規則は次のとおりです。</p>
@@ -132,11 +136,22 @@
                     <h4>4. 記号・トークンの表記</h4>
                     <p>本書の本文中で灰色の背景が付いているテキストは、すべてAjisaiのトークンを表します。灰色の背景は、その表記が地の文ではなくプログラムコードの一部であることを示しています。記号だけで綴られたトークンも、ほかと同じ通常の名前です。</p>
                 
+                
+                </section>
+
+                <section id="program" class="ref-page">
+                    <h2><span class="secnum">1</span> プログラム</h2>
+<p>Ajisaiのプログラムは<strong>要素の並び</strong>です。</p>
+<pre class="ebnf">program = { element } ;</pre>
+<p>要素は空白で区切って書き、左から右へ1つずつ評価されます。条件分岐・反復・定義もワードであり、ほかの要素と同じく並びの中に書きます。<code>[ 2 MUL ] 'DOUBLE' DEF</code>は、ベクトル・文字列・名前の3要素からなるプログラムです。</p>
+<p>プログラムについて述べることは2つあります。テキストがどう要素に区切られるか(<a href="#tokens">1.1 要素の区切り</a>)と、並んだ要素がどう評価されるか(<a href="#stack">1.2 評価</a>)です。要素そのものは<a href="#elements">2 要素</a>で述べます。</p>
+
                 </section>
 
                 <section id="tokens" class="ref-page">
-                    <h2>字句解析(トークン, <code>#</code>)</h2>
-<p>Ajisaiのプログラムは、空白で区切られた<strong>トークン</strong>の並びです。ソーステキストからトークン列を作る規則は<code>spec/grammar.json</code>に一つだけ定義されており、どんなテキストも「ちょうど1つのトークン列」か「名前の付いた1つのソースエラー」のどちらかになります。それ以外の結果はありません。</p><h3 id="lexer">字句解析の流れ</h3>
+                    <h2><span class="secnum">1.1</span> 要素の区切り(空白, <code>#</code>)</h2>
+<p>要素は空白で区切られます。テキストはまず<strong>トークン</strong>の並びに分けられ、角括弧<code>[</code> <code>]</code>の組がベクトルにまとめられて、要素の並びになります。テキストからトークン列を作る規則は<code>spec/grammar.json</code>に一つだけ定義されており、どんなテキストも「ちょうど1つのトークン列」か「名前の付いた1つのソースエラー」のどちらかになります。</p>
+<h3 id="lexer">字句解析の流れ</h3>
 <p>レキサーはテキストを左から右へ読み、トークンを置ける位置ごとに次の4つの規則を<strong>上から順に</strong>試します。最初に当てはまった規則が、その位置の文字を消費します。</p>
 <div class="lexer-diagram"><svg viewBox="0 0 680 452" role="img" aria-label="レキサーの流れ: 走査、語の分類、括弧の対応検査">
 <defs><marker id="lexer-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker></defs>
@@ -230,43 +245,345 @@
 </table>
 </div>
 
+                
                 </section>
 
-                <section id="token-kinds" class="ref-page">
-                    <h2>トークンの種類</h2>
-<p>字句解析が生み出すトークンは5種類だけです。空白とコメントはトークンを生みません。</p>
+                <section id="stack" class="ref-page">
+                    <h2><span class="secnum">1.2</span> 評価</h2>
+
+<p>プログラムは要素ごとに、左から右へ評価されます。要素の種類ごとに起こることは次のとおりです。</p>
+<ul class="ref-list">
+<li><strong>数値リテラル・文字列リテラル</strong>: その値をスタックに積む。</li>
+<li><strong>ベクトル</strong><code>[ ... ]</code>: 中身を評価せず、ベクトルのまま積む。中の名前は、<code>TRUE</code> <code>FALSE</code> <code>NIL</code>を除いてSymbolとして残る。</li>
+<li><strong>名前</strong>: 束縛されていればその値を積み、そうでなければ辞書のその名前のワードを呼び出す。どちらでもなければエラー(<em>Unknown word</em>)。</li>
+</ul>
+<h3 id="value-kinds">スタックに載る値</h3>
+<p>評価によってスタックに積まれる値は、次の7つの定義域のどれか1つに属します。定義域どうしは互いに素で、間に暗黙の変換はありません。</p>
+<ul class="ref-list">
+<li><strong>数</strong>: 厳密な有理数と代数的無理数(<a href="#el-number">2.1 数</a>)</li>
+<li><strong>文字列</strong>(<a href="#el-string">2.2 文字列</a>)</li>
+<li><strong>ベクトル</strong>: 値の並び。コードとしても読まれる(<a href="#el-vector">2.3 ベクトル</a>)</li>
+<li><strong>Symbol</strong>: データとして持たれた名前(<a href="#name-inside-brackets">2.4.1 束縛</a>)</li>
+<li><strong>真偽値</strong>: <code>TRUE</code>と<code>FALSE</code>(<a href="#comparison">2.4.2.1 論理・比較・算術</a>)</li>
+<li><strong>Record</strong>: キーと値の対応(<a href="#records">2.4.2.3 キーによる対応</a>)</li>
+<li><strong><code>NIL</code></strong>: 理由を持つ不在(<a href="#failure">1.2.1 評価の結末</a>)</li>
+</ul>
+<h3 id="consumption">消費</h3>
+
+                    <p>Ajisaiのワードは、スタックからオペランドを取り出し、結果をスタックへ積み戻します。読み込んだ値は、その場で<strong>必ず消費</strong>されてスタックから取り除かれます。この挙動を変える修飾子はありません。<code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではなく、オペランドを消費します。</p>
+                    <h3>同じ値を2回使うには<code>BIND</code></h3>
+                    <p>1つの値を2回以上使いたいときは、<code>BIND</code>で名前を付け、その名前を必要な回数だけ書きます。名前を書くたびに、その値がスタックに積まれます。<code>5 'N' BIND N N 1 ADD</code>は<code>5/1 6/1</code>になります。値は名前で読まれるので、どの値がどこで使われるかが字面から分かります。</p>
+                    <h3>ワードは本体に置き換えられる</h3>
+                    <p>どの呼び出しも読んだオペランドをちょうど消費するので、自分で定義したワードを、その本体で置き換えて書いても、消費されるオペランドは変わりません。<code>[ 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 DOUBLE</code>と<code>5 2 MUL</code>はどちらも<code>10/1</code>です。ユーザー語を使ったプログラムを、Core語だけの形に展開して確かめられるのは、この性質があるからです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 4 ADD</code></td>
+                                    <td><code>7/1</code></td>
+                                    <td class="notes">両方のオペランドが消費され、和が積まれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5 'N' BIND N N 1 ADD</code></td>
+                                    <td><code>5/1 6/1</code></td>
+                                    <td class="notes">名前を付けた値は、名前を書くたびに積まれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                
+                </section>
+
+                <section id="failure" class="ref-page">
+                    <h2><span class="secnum">1.2.1</span> 評価の結末(値, <code>NIL</code>, エラー)</h2>
+<p>1つの要素の評価が行き着く先は3つです。値を積むか、理由を持つ<code>NIL</code>を積むか、エラーで評価全体を止めるかです。</p>
+<h3 id="nil">NILの規則</h3>
+                    <p>失敗のモデルは一言でまとめられます。<strong>値を作れなかったなら<code>NIL</code>、そもそも使い方が違うならエラー</strong>です。正しい形の操作が結果を作れない場合は、構造化された理由を伴う<code>NIL</code>に写像されます。一方、型違いやオペランド不足といった誤った使い方は、通常のエラーを送出します。</p>
+                    <h3>NILは伝播する</h3>
+                    <p>算術と比較はどちらも<code>NIL</code>をそのまま通します。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>も例外ではなく、<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>になります。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">ゼロ除算はトラップではなく、理由付きの<code>NIL</code>になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>NIL 1 ADD</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">NILは算術をそのまま通り抜け、その理由は追跡可能なまま保たれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 ] 5 GET</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">有効なベクトルに対する範囲外のインデックスは<code>NIL</code>になる(理由：indexOutOfBounds)。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] 5 TAKE</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">あるだけより多く要求するのも「末尾を越えた位置」を指す同じ問いであり、<code>GET</code>と同じ答えになる(理由：indexOutOfBounds)。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] 9 5 PUT</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes"><code>PUT</code>も同様。範囲外のインデックスは、プログラムの誤りではなくデータの都合なので<code>NIL</code>になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">1つの条件には1つの答えがあります。「末尾を越えた位置」は<code>GET</code>・<code>TAKE</code>・<code>PUT</code>のどれでも<code>NIL</code>であり、語彙全体で同じ扱いです。一方、整数ですらないカウントやインデックス(<code>[ 1 2 3 ] [ 'x' ] TAKE</code>)は今もエラーです——そちらは使い方が違うからです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'ABC' NUM</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">数としてパースできないテキストは<code>NIL</code>になる(理由：invalidEncoding)。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    
+                </section>
+
+                <section id="costs" class="ref-page">
+                    <h2><span class="secnum">1.2.2</span> 評価のコスト</h2>
+<h3 id="iterative">反復のコスト</h3>
+                    <p>厳密算術は、ループのコストを変えます。このリファレンスの他のすべての節はプログラムが<em>何を意味するか</em>についてですが、この節はそれを繰り返すことが<em>何のコストを伴うか</em>についてです。厳密性が見返りに何かを要求してくる、唯一の場所だからです。</p>
+                    <h3>コストはどこから来るのか</h3>
+                    <p>厳密な有理数は分子と分母の組として格納されており、分数と分数の積は分母同士の積になります。1回掛けるだけなら何も起きません。しかしループの中で掛け続けると、分母はステップを追うごとに大きくなります。勾配降下法、ニュートン法、k-means、べき乗法、その他あらゆる反復的手法がやっているのは、まさにこれです。何も失われず、何も近似されません。数はまったく正しいままです。ただ、その桁が記録しているのは<strong>その値がどう計算されたか</strong>であり、その履歴は回を追うごとに長くなります。</p>
+                    <p>以下は緩和ステップの例で、<code>x</code>が毎回2に向かって10分の1ずつ近づいていきます。<code>DELTA</code>が補正量、<code>STEP</code>がそれを適用します。ループは、要素が単なるカウンタでしかない範囲に対する<code>FOLD</code>であり、ブロックは要素を捨てて累積値だけを保持します。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>0 6 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
+                                    <td><code>7282969/1250000</code></td>
+                                    <td class="notes">10からの7ステップ(<code>0 6 RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p>問題は、どれか1つの数の大きさではなく、成長の形そのものです。同じループを21ステップ回すと<code>359418989131512359209/125000000000000000000</code>になります。21桁分の21桁で、値はおよそ2.875です。さらにステップを重ねるたびに分母は再び10倍になっていくので、答えはほとんど動かないのに、1ステップあたりのコストは際限なく上がっていきます。30回の反復なら一瞬で終わるループが、300回では這うように遅くなり得ます。</p>
+                    <h3>分解能を名指しする</h3>
+                    <p><code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の最も近い倍数に丸めます(ちょうど中間なら大きい側へ)。結果の分母は<code>d</code>の約数になり、それを超えて大きくなることは決してありません。1ステップにつき1回適用すれば、導出の履歴を捨てて値だけを保ちます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>0 20 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
+                                    <td><code>2877/1000</code></td>
+                                    <td class="notes">21ステップ経っても分母は1000のまま。<code>0 20 RANGE</code>は0から20までの21要素。丸めない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p>これは近似ですが、それこそが要点です。<strong>自分で書き記した</strong>近似だからです。分解能はソース中のリテラルとして、自分で選んだ場所に書かれており、それ以降のすべての値は正確に<code>1/d</code>の倍数になります。与り知らないところで何かが丸められることはなく、答えにどれだけの精度がふさわしいかを、何かが勝手に決めることもありません。</p>
+                    <p>この丸めを組み立てている<code>MUL</code>・<code>ADD</code>・<code>FLOOR</code>・<code>DIV</code>はどれもベクトルに対して持ち上がるので、パラメータベクトル全体を同じ一続きのワードで丸められます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 119/125 32/125 ] 10 MUL 1/2 ADD FLOOR 10 DIV</code></td>
+                                    <td><code>[ 1/1 3/10 ]</code></td>
+                                    <td class="notes">状態の形がどうであれ、1ステップにつき1回の呼び出し。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>閉じた形はループに勝る</h3>
+                    <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。Ajisaiは係数をまさにその有理数として返します。<code>R²</code>が<code>529/532</code>として返ってくるなら、それが厳密な答えです。</p>
+                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しないので、Ajisaiはそれらを扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
+
+                    <h3>もう一つのコスト: ホストの安全制御</h3>
+                    <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、1つの値そのものの生成が上限を超えれば理由付きの<strong><code>NIL</code></strong>に、実行そのものが続けられないほど超えれば<strong>エラー</strong>になり評価が停止します。</p>
+
+                    <h3 id="limits">実行時エラー: 複数の理由を持つ一つの結果</h3>
+                    <p>整った操作や入力であっても、ホストが支えられる限度を超えればエラーになり、評価はその場で停止します。限度は1つではなく、超過したものが何かによって少なくとも3つの名前で報告されます。名前が違うのは、直し方も違うからです。</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>報告される名前</th><th>何が超過したか</th><th>典型的な直し方</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>executionLimitExceeded</code></td><td class="notes">プログラム全体が費やせる作業ステップの総量</td><td class="notes">一括操作(<code>SORT</code>や<code>GET</code>)へ書き換える、終了条件を見直す</td></tr>
+                                <tr><td><code>resourceLimitExceeded</code></td><td class="notes">1つの値そのものの大きさ(係数のビット幅、代数項の数など)</td><td class="notes"><code>1/d</code>の格子に丸めて履歴を刈り込む、閉じた形を探す</td></tr>
+                                <tr><td><code>recursionLimitExceeded</code></td><td class="notes">呼び出し連鎖(循環はしないが極端に長い、ワードがワードを呼ぶ鎖)のネストの深さ</td><td class="notes">呼び出しの連鎖を浅くする、または一括操作に書き換える</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><code>executionLimitExceeded</code>には、CLIの<code>ajisai run --step-limit &lt;N&gt;</code>で明示的に指定できるという特徴があります。既定値はホストの実行環境が定める実装上の選択であり、本書が固定の数として約束するものではありません。</p>
+                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>0 100001 RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
+                    <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>0 99999 RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。格子に丸めて刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
+
+                    <h3>具体化の上限: 理由付きのNIL</h3>
+                    <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong><code>NIL</code></strong>になります。理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
+                                    <td><code>'spaceExhausted'</code></td>
+                                    <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの<code>NIL</code>になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
+                
+                
+                </section>
+
+                <section id="elements" class="ref-page">
+                    <h2><span class="secnum">2</span> 要素</h2>
+<p>要素は次の4種類です。</p>
+<pre class="ebnf">element = number | string | name | vector ;
+vector  = "[" , { element } , "]" ;</pre>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
-<thead><tr><th>種類</th><th>書き方の例</th><th>運ぶもの</th></tr></thead>
+<thead><tr><th>要素</th><th>例</th><th>評価すると</th></tr></thead>
 <tbody>
-<tr><td class="notes">数値リテラル</td><td><code>3</code> <code>-1/2</code> <code>0.25</code> <code>1e5</code></td><td class="notes">字句そのもの。厳密な数として読まれる</td></tr>
-<tr><td class="notes">文字列リテラル</td><td><code>'hello'</code></td><td class="notes">引用符の間のテキスト</td></tr>
-<tr><td class="notes">名前</td><td><code>ADD</code> <code>NIL?</code> <code>DOUBLE</code></td><td class="notes">書かれたとおりの字句。ワードか束縛を名指す(<code>[ ]</code>の中ではSymbol)</td></tr>
-<tr><td class="notes">ベクトル開始</td><td><code>[</code></td><td class="notes">なし</td></tr>
-<tr><td class="notes">ベクトル終了</td><td><code>]</code></td><td class="notes">なし</td></tr>
+<tr><td class="notes"><a href="#el-number">2.1 数</a></td><td><code>3</code> <code>-1/2</code> <code>0.25</code> <code>1e5</code></td><td class="notes">その数を積む</td></tr>
+<tr><td class="notes"><a href="#el-string">2.2 文字列</a></td><td><code>'hello'</code></td><td class="notes">その文字列を積む</td></tr>
+<tr><td class="notes"><a href="#el-vector">2.3 ベクトル</a></td><td><code>[ 1 2 3 ]</code></td><td class="notes">中身を評価せず、ベクトルとして積む</td></tr>
+<tr><td class="notes"><a href="#el-name">2.4 名前</a></td><td><code>ADD</code> <code>N</code> <code>DOUBLE</code></td><td class="notes">束縛されていればその値を積み、そうでなければ同じ名前のワードを呼び出す</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="all-words">操作はすべてワード</h3>
-<p>Ajisaiの字句が区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。算術も比較も、分岐・反復・定義・束縛も、値を1つ積む<code>TRUE</code> <code>FALSE</code> <code>NIL</code>でさえ、英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあり、名前で呼び出されます。</p>
-<div class="ref-table-wrap word-table">
-<table class="ref-table">
-<thead><tr><th>役割</th><th>ワード</th></tr></thead>
-<tbody>
-<tr><td class="notes">算術</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
-<tr><td class="notes">比較</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
-<tr><td class="notes">論理</td><td><code>AND</code> <code>NOT</code></td></tr>
-<tr><td class="notes">真偽値と不在</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
-<tr><td class="notes">選択</td><td><code>SELECT</code></td></tr>
-<tr><td class="notes">反復</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
-<tr><td class="notes">定義と束縛</td><td><code>DEF</code> <code>BIND</code></td></tr>
-</tbody>
-</table>
-</div>
-<p>すべてのワードの一覧は<a href="#word-index">組み込みワード</a>にあります。</p>
-<h3>記号とトークン判定</h3>
-                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ワードはどれも英語名1つだけで呼ばれ、記号の綴りを持つワードはありません。<code>+</code>や<code>&lt;</code>も通常の名前で、定義しなければ未定義ワードです。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>はただの名前としてパースされます。</p>
-                    <h3>数値リテラル</h3>
+<p>空白とコメントは要素ではありません(<a href="#tokens">1.1 要素の区切り</a>)。</p>
+
+                </section>
+
+                <section id="el-number" class="ref-page">
+                    <h2><span class="secnum">2.1</span> 数</h2>
+<h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
 <p>数の文法は次のとおりです。</p>
 <pre class="ebnf">number   = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;
@@ -287,178 +604,7 @@ exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
 </tbody>
 </table>
 </div>
-<h3>文字列リテラル</h3>
-                    <p class="ref-note">文字列リテラルは、トークン境界に位置する引用符(<code>'</code>)で閉じます。ここでもトークンを区切るのは空白だけなので、閉じる<code>'</code>の直後には空白(または入力の終わり)が必要です。文字列の内部にアポストロフィがあっても、直後が空白でなければ文字列は終了しません。これにより、エスケープ文字なしで<code>'It's fine'</code>のような文字列を1つのリテラルとして書けます。逆に、引用符の直後が空白以外であればテキストの内側にとどまるため、<code>'abc'CHARS</code>も<code>[ 'abc']</code>も、2つのトークンではなく閉じられていない文字列として扱われます。</p>
-                <h3 id="word-index">組み込みワード</h3>
-<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
-<p>正準な語彙の全78語を族ごとにまとめたものです(<code>spec/words.json</code>から生成)。48語がSemantic Kernel、30語がStandardワードで、どれも平易な名前で参照できる普通のCoreワードです。階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>)。ワードを選ぶとその契約(構文・スタック効果・NIL方針・ERROR条件など)へ、頁名を選ぶとサンプル付きの解説へ移ります。</p>
-<div class="ref-table-wrap word-jump">
-<table class="ref-table">
-<thead><tr><th>族</th><th>ワード</th><th>解説の頁</th></tr></thead>
-<tbody>
-<tr><td class="notes">論理</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td><td class="notes"><a href="#operators">論理・比較・算術</a></td></tr>
-<tr><td class="notes">比較</td><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td><td class="notes"><a href="#operators">論理・比較・算術</a></td></tr>
-<tr><td class="notes">厳密な算術</td><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td><td class="notes"><a href="#operators">論理・比較・算術</a></td></tr>
-<tr><td class="notes">ベクトル</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">ベクトル操作</a></td></tr>
-<tr><td class="notes">Record</td><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td><td class="notes"><a href="#records">キーによる対応</a></td></tr>
-<tr><td class="notes">反復</td><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td><td class="notes"><a href="#control">制御と反復</a></td></tr>
-<tr><td class="notes">文字列</td><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td><td class="notes"><a href="#strings-ops">文字列操作</a></td></tr>
-<tr><td class="notes">制御</td><td><a href="#word-EXEC"><code>EXEC</code></a> <a href="#word-FAIL"><code>FAIL</code></a></td><td class="notes"><a href="#control">制御と反復</a></td></tr>
-<tr><td class="notes">辞書と名前</td><td><a href="#word-CONTRACT"><code>CONTRACT</code></a> <a href="#word-BIND"><code>BIND</code></a> <a href="#word-DEF"><code>DEF</code></a> <a href="#word-DEL"><code>DEL</code></a> <a href="#word-DIGEST"><code>DIGEST</code></a></td><td class="notes"><a href="#words">ワードの定義と辞書</a></td></tr>
-<tr><td class="notes">不在(NIL)</td><td><a href="#word-NIL"><code>NIL</code></a> <a href="#word-NIL_3f"><code>NIL?</code></a> <a href="#word-NIL-REASON"><code>NIL-REASON</code></a> <a href="#word-ABSENT"><code>ABSENT</code></a></td><td class="notes"><a href="#failure">NILとエラー</a></td></tr>
-<tr><td class="notes">出力</td><td><a href="#word-PRINT"><code>PRINT</code></a></td><td class="notes"><a href="#output">出力</a></td></tr>
-</tbody>
-</table>
-</div>
-<!-- END generated word index -->
-
-                </section>
-
-                <section id="syntax" class="ref-page">
-                    <h2>構文</h2>
-<p>トークン列からプログラムを組み立てる規則は、次の3行で全部です。</p>
-<pre class="ebnf">program = { element } ;
-element = number | string | name | vector ;
-vector  = "[" , { element } , "]" ;</pre>
-<p>プログラムは要素の並びです。条件分岐・反復・定義もワードであり、ほかの要素と同じく並びの中に書きます。<code>[ 2 MUL ] 'DOUBLE' DEF</code>は、ベクトル・文字列・名前の3要素からなるプログラムです。要素は左から右へ1つずつ評価されます(<a href="#stack">評価とスタック</a>)。</p>
-<h3 id="vectors">ベクトル(<code>[ ]</code>)</h3>
-                    <p>ベクトルは、要素となる値を角括弧<code>[ ]</code>で囲み、空白で区切って記述します。ベクトルリテラルは評価されるとそのままベクトル値になり、自由に入れ子にできます。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ]</code></td>
-                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
-                                    <td class="notes">スタックに積まれたベクトル。整数は分母が1の厳密な分数として表示される。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
-                                    <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
-                                    <td class="notes">入れ子はそのまま保持され、グループ化されたデータや不揃いなデータを表現する手段になる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 7/3 ]</code></td>
-                                    <td><code>[ 7/3 ]</code></td>
-                                    <td class="notes">分数は第一級のリテラルであり、厳密なまま保たれる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>リテラル中の裸の名前</h3>
-                    <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>Symbol</strong>を表し、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は2つのSymbolからなるベクトル<code>[ FOO BAR ]</code>です。テキストが欲しければ引用符で囲んでください――<code>[ 'FOO' 'BAR' ]</code>はStringのベクトルになります。これは値に名前を付け始めたときに戸惑いやすい点でもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください。詳しくは<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はSymbolになる</a>を参照してください。</p>
-                    <h3>データとしてのコード</h3>
-                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>はその両方にとって唯一の括弧であり、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">構築の経緯は値の一部ではない：<code>EQ</code>には見分けがつかない。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 ADD ] EXEC</code></td>
-                                    <td><code>3/1</code></td>
-                                    <td class="notes"><code>EXEC</code>はオペランドがどう組み立てられたかを気にしない。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h4>実行時の値をブロックの中に入れる</h4>
-                    <p>ブロックはソースなので、プログラムの実行中に計算した値はその中には入っていません。<code>MAP</code>や<code>FILTER</code>はブロックだけしか取らないため、ここで現実的な疑問が生じます。実行時にしか分からない閾値でフィルタするには、どうすればよいのでしょうか。<code>[ 5 LT ]</code>はリテラルの5と比較しますが、その数がプログラムの計算結果である場合、書くべき5はどこにもありません。</p>
-                    <p>ブロックは普通のベクトルなので、普通のベクトル用ワードで組み立てられます。<code>CONCAT</code>は、実行時の値を持つ1要素ベクトルと、ブロックの実行に必要なSymbolを持つ1要素ベクトルを結合します――<code>[ 5 ] [ LT ]</code>は<code>[ 5 LT ]</code>になり、その結果はどんなブロックとも変わりません。<code>[ ]</code>で書かれていなくても、ブロックを取るすべてのワードがそれを受け入れます。独立した橋渡しは不要で、これは上のサンプルがすでに示していた構築そのものです。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 3 1 4 1 5 9 2 6 ]
-[ 5 ] [ LT ] CONCAT
-FILTER</code></td>
-                                    <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
-                                    <td class="notes">ここでの<code>5</code>は普通のスタック値。プログラムが計算した何かに置き換えれば、述語もそれに従う。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">これがAjisaiにおける部分適用のすべてです。そのための独立したワードはなく、必要もありません。ブロックとは、他のどんなベクトルとも同じように内容を計算できる値だからです。</p>
-
-                    <h3 id="display-forms">表示形式は構文ではない</h3>
-<p>スタックに表示される形のなかには、ソースに書いても同じ値にならないものがあります。Recordの<code>{ 'x' 1/1 }</code>(<a href="#records">キーによる対応</a>)と、無理数の<code>sqrt(2)</code>(<a href="#numbers">厳密な数</a>)は値の見え方であって、ソースの中では<code>{</code>、<code>}</code>、<code>sqrt(2)</code>はただの名前です。Recordは<code>RECORD</code>で、無理数は<code>SQRT</code>で作ります。</p>
-
-                </section>
-
-                <section id="values" class="ref-page">
-                    <h2>値と型</h2>
-<p>Ajisaiの値はどれも、それぞれ独立した値の定義域に属します。数は数、文字列は文字列で、定義域の間に暗黙の変換はありません。この頁では数と文字列を扱います。ベクトルは<a href="#syntax">構文</a>、Recordは<a href="#records">キーによる対応</a>、真偽値は<a href="#comparison">比較と真偽値</a>、不在(<code>NIL</code>)は<a href="#failure">NILとエラー</a>で扱います。</p><h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
-                    <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、<code>NIL</code>になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] [ 5 GT ] FILTER</code>の結果は<code>[ ]</code>です。</p>
-
-                    <h3 id="numbers">厳密な数</h3>
+<h3 id="numbers">厳密な数</h3>
                     <p>Ajisaiにおけるすべての数値は<strong>厳密数</strong>として扱われます。</p>
                     <h3>数値の表現と定義域</h3>
                     <p>整数、分数、小数、指数表記など各リテラルは、同一の厳密な値を表す異なる表記形式にすぎません。<code>0.5</code>は厳密な<code>1/2</code>そのものです。</p>
@@ -582,7 +728,14 @@ FILTER</code></td>
                     <p>無理数の表示形式は1つです。値の正規形を空白なしの一つのトークンとして書きます。<code>2 SQRT</code>は<code>sqrt(2)</code>、<code>1 2 SQRT ADD</code>は<code>1/1+sqrt(2)</code>、<code>2 SQRT 3 SQRT SUB</code>は<code>sqrt(2)-sqrt(3)</code>、<code>8 SQRT</code>は<code>2/1*sqrt(2)</code>です(根号の中は平方因子を持たない形に正規化されます)。打ち切りも近似もなく、ベクトルの中でも一要素として読めます。CLIやMCPホストの<code>stackDisplay</code>も、Playgroundのスタック領域も、この同じトークンを表示します。CLIとMCPでは同じ項が<code>semantics.exactTerms</code>に構造化されて並びます。</p>
                     <p class="ref-note">これは表示専用の出力であり、ソースコードの構文ではありません。<code>sqrt(2)</code>をプログラムに書いても未知の名前です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
 
-                    <h3 id="strings">文字列(<code>' '</code>)</h3>
+                    
+                </section>
+
+                <section id="el-string" class="ref-page">
+                    <h2><span class="secnum">2.2</span> 文字列(<code>' '</code>)</h2>
+<h3>文字列リテラル</h3>
+                    <p class="ref-note">文字列リテラルは、トークン境界に位置する引用符(<code>'</code>)で閉じます。ここでもトークンを区切るのは空白だけなので、閉じる<code>'</code>の直後には空白(または入力の終わり)が必要です。文字列の内部にアポストロフィがあっても、直後が空白でなければ文字列は終了しません。これにより、エスケープ文字なしで<code>'It's fine'</code>のような文字列を1つのリテラルとして書けます。逆に、引用符の直後が空白以外であればテキストの内側にとどまるため、<code>'abc'CHARS</code>も<code>[ 'abc']</code>も、2つのトークンではなく閉じられていない文字列として扱われます。</p>
+                <h3 id="strings">文字列(<code>' '</code>)</h3>
                     <p>文字列は<code>'</code>で引用され、スタック上では引用符付きで表示されます。この引用符は表示上の便宜であって、値の一部ではありません。<code>PRINT</code>は生のテキストを書き出すので、<code>'TEST'</code>は<code>TEST</code>として出力されます。詳しくは<a href="#output">出力</a>を参照してください。ただしコレクションの中に入れ子になった文字列は引用符を保ったままで、<code>[ 'AB' 'CD' ]</code>はそのままの形で表示されます。文字列と数や文字との相互変換については、<a href="#strings-ops">文字列操作</a>にまとめてあります。</p>
                     <h3 id="disjoint">独立した値の定義域</h3>
                     <p>文字列は6つの値の定義域の1つであって、コードポイントのベクトルではありません。<code>'A' [ 65 ] EQ</code>は<code>FALSE</code>になり、文字列に対する算術はコードに対する算術ではなくエラーになります。空文字列<code>''</code>は普通の文字列であり、<code>NIL</code>ではありません。</p>
@@ -607,23 +760,77 @@ FILTER</code></td>
                     </div>
 
                     
+                
                 </section>
 
-                <section id="stack" class="ref-page">
-                    <h2>評価とスタック</h2>
-<p>プログラムは要素ごとに、左から右へ評価されます。要素の種類ごとに起こることは次のとおりです。</p>
-<ul class="ref-list">
-<li><strong>数値リテラル・文字列リテラル</strong>: その値をスタックに積む。</li>
-<li><strong>ベクトル</strong><code>[ ... ]</code>: 中身を評価せず、ベクトルのまま積む。中の名前はSymbolとして残る。</li>
-<li><strong>名前</strong>: 束縛されていればその値を積み、そうでなければ辞書のその名前のワードを呼び出す。どちらでもなければエラー(<em>Unknown word</em>)。</li>
-</ul>
-<h3 id="consumption">消費</h3>
+                <section id="el-vector" class="ref-page">
+                    <h2><span class="secnum">2.3</span> ベクトル(<code>[ ]</code>)</h2>
+<h3 id="vectors">ベクトル(<code>[ ]</code>)</h3>
+                    <p>ベクトルは、要素となる値を角括弧<code>[ ]</code>で囲み、空白で区切って記述します。ベクトルリテラルは評価されるとそのままベクトル値になり、自由に入れ子にできます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ]</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">スタックに積まれたベクトル。整数は分母が1の厳密な分数として表示される。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
+                                    <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
+                                    <td class="notes">入れ子はそのまま保持され、グループ化されたデータや不揃いなデータを表現する手段になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 7/3 ]</code></td>
+                                    <td><code>[ 7/3 ]</code></td>
+                                    <td class="notes">分数は第一級のリテラルであり、厳密なまま保たれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>リテラル中の裸の名前</h3>
+                    <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>Symbol</strong>を表し、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は2つのSymbolからなるベクトル<code>[ FOO BAR ]</code>です。テキストが欲しければ引用符で囲んでください――<code>[ 'FOO' 'BAR' ]</code>はStringのベクトルになります。これは値に名前を付け始めたときに戸惑いやすい点でもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください。詳しくは<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はSymbolになる</a>を参照してください。</p>
+                    <h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
+                    <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、<code>NIL</code>になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] [ 5 GT ] FILTER</code>の結果は<code>[ ]</code>です。</p>
 
-                    <p>Ajisaiのワードは、スタックからオペランドを取り出し、結果をスタックへ積み戻します。読み込んだ値は、その場で<strong>必ず消費</strong>されてスタックから取り除かれます。この挙動を変える修飾子はありません。<code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではなく、オペランドを消費します。</p>
-                    <h3>同じ値を2回使うには<code>BIND</code></h3>
-                    <p>1つの値を2回以上使いたいときは、<code>BIND</code>で名前を付け、その名前を必要な回数だけ書きます。名前を書くたびに、その値がスタックに積まれます。<code>5 'N' BIND N N 1 ADD</code>は<code>5/1 6/1</code>になります。値は名前で読まれるので、どの値がどこで使われるかが字面から分かります。</p>
-                    <h3>ワードは本体に置き換えられる</h3>
-                    <p>どの呼び出しも読んだオペランドをちょうど消費するので、自分で定義したワードを、その本体で置き換えて書いても、消費されるオペランドは変わりません。<code>[ 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 DOUBLE</code>と<code>5 2 MUL</code>はどちらも<code>10/1</code>です。ユーザー語を使ったプログラムを、Core語だけの形に展開して確かめられるのは、この性質があるからです。</p>
+                    <h3>データとしてのコード</h3>
+                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>はその両方にとって唯一の括弧であり、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -632,9 +839,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>3 4 ADD</code></td>
-                                    <td><code>7/1</code></td>
-                                    <td class="notes">両方のオペランドが消費され、和が積まれる。</td>
+                                    <td><code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">構築の経緯は値の一部ではない：<code>EQ</code>には見分けがつかない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -651,9 +858,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>5 'N' BIND N N 1 ADD</code></td>
-                                    <td><code>5/1 6/1</code></td>
-                                    <td class="notes">名前を付けた値は、名前を書くたびに積まれる。</td>
+                                    <td><code>[ 1 2 ADD ] EXEC</code></td>
+                                    <td><code>3/1</code></td>
+                                    <td class="notes"><code>EXEC</code>はオペランドがどう組み立てられたかを気にしない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -662,7 +869,33 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
+                    <h4>実行時の値をブロックの中に入れる</h4>
+                    <p>ブロックはソースなので、プログラムの実行中に計算した値はその中には入っていません。<code>MAP</code>や<code>FILTER</code>はブロックだけしか取らないため、ここで現実的な疑問が生じます。実行時にしか分からない閾値でフィルタするには、どうすればよいのでしょうか。<code>[ 5 LT ]</code>はリテラルの5と比較しますが、その数がプログラムの計算結果である場合、書くべき5はどこにもありません。</p>
+                    <p>ブロックは普通のベクトルなので、普通のベクトル用ワードで組み立てられます。<code>CONCAT</code>は、実行時の値を持つ1要素ベクトルと、ブロックの実行に必要なSymbolを持つ1要素ベクトルを結合します――<code>[ 5 ] [ LT ]</code>は<code>[ 5 LT ]</code>になり、その結果はどんなブロックとも変わりません。<code>[ ]</code>で書かれていなくても、ブロックを取るすべてのワードがそれを受け入れます。独立した橋渡しは不要で、これは上のサンプルがすでに示していた構築そのものです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 3 1 4 1 5 9 2 6 ]
+[ 5 ] [ LT ] CONCAT
+FILTER</code></td>
+                                    <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
+                                    <td class="notes">ここでの<code>5</code>は普通のスタック値。プログラムが計算した何かに置き換えれば、述語もそれに従う。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">これがAjisaiにおける部分適用のすべてです。そのための独立したワードはなく、必要もありません。ブロックとは、他のどんなベクトルとも同じように内容を計算できる値だからです。</p>
+
+                    <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
                     <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>ADD</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
@@ -683,312 +916,56 @@ FILTER</code></td>
                     <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。ただしこれは評価の話であって、参照の話ではありません。定義しようとしているワード自身の名前が、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>の内側にしか書かれていなくても、<code>DEF</code>の<a href="#acyclic">非循環規則</a>はそれを検出し、定義そのものを拒否します。</p>
 
                     
+                
                 </section>
 
-                <section id="failure" class="ref-page">
-                    <h2>NILとエラー</h2>
-<h3 id="nil">NILの規則</h3>
-                    <p>失敗のモデルは一言でまとめられます。<strong>値を作れなかったなら<code>NIL</code>、そもそも使い方が違うならエラー</strong>です。正しい形の操作が結果を作れない場合は、構造化された理由を伴う<code>NIL</code>に写像されます。一方、型違いやオペランド不足といった誤った使い方は、通常のエラーを送出します。</p>
-                    <h3>NILは伝播する</h3>
-                    <p>算術と比較はどちらも<code>NIL</code>をそのまま通します。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>も例外ではなく、<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>になります。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">ゼロ除算はトラップではなく、理由付きの<code>NIL</code>になる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>NIL 1 ADD</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">NILは算術をそのまま通り抜け、その理由は追跡可能なまま保たれる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 10 20 30 ] 5 GET</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">有効なベクトルに対する範囲外のインデックスは<code>NIL</code>になる(理由：indexOutOfBounds)。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] 5 TAKE</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">あるだけより多く要求するのも「末尾を越えた位置」を指す同じ問いであり、<code>GET</code>と同じ答えになる(理由：indexOutOfBounds)。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] 9 5 PUT</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes"><code>PUT</code>も同様。範囲外のインデックスは、プログラムの誤りではなくデータの都合なので<code>NIL</code>になる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">1つの条件には1つの答えがあります。「末尾を越えた位置」は<code>GET</code>・<code>TAKE</code>・<code>PUT</code>のどれでも<code>NIL</code>であり、語彙全体で同じ扱いです。一方、整数ですらないカウントやインデックス(<code>[ 1 2 3 ] [ 'x' ] TAKE</code>)は今もエラーです——そちらは使い方が違うからです。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'ABC' NUM</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">数としてパースできないテキストは<code>NIL</code>になる(理由：invalidEncoding)。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>NILを調べる: <code>NIL?</code>と<code>NIL-REASON</code></h3>
-                    <p>この2つのワードは、<code>NIL</code>を調べます。<code>NIL?</code>はスタック最上位の値が<code>NIL</code>かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも他のワードと同じく<strong>調べた値を消費し</strong>、その場所に答えを積みます。調べたあとも値を使いたいなら、先に<code>BIND</code>で名前を付けてください。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV NIL?</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes"><code>NIL?</code>は最上位の値を消費し、その場所に答えを積む。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV NIL-REASON</code></td>
-                                    <td><code>'divisionByZero'</code></td>
-                                    <td class="notes">理由はプロトコル文字列なので、プログラムは値が欠けている理由によって分岐できる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3 id="declared-outcomes">自分で結末を宣言する: <code>ABSENT</code>と<code>FAIL</code></h3>
-                    <p>不在もエラーも、組み込みワードだけのものではありません。プログラム自身が「ここには値がない」「ここは誤用だ」と宣言できます。<code>ABSENT</code>は文字列を1つ受け取り、<strong>その文字列を理由にした<code>NIL</code></strong>を積みます。理由の識別子は<code>userDeclared</code>ですが、<code>NIL-REASON</code>が答えるのは渡した文字列そのものです。文字列は値の一部なので、違う文字列で作った2つの<code>ABSENT</code>は別の値です。</p>
-                    <p><code>FAIL</code>も文字列を1つ受け取り、その文字列をメッセージにした<strong>ERROR</strong>を起こします(分類は<code>declaredFailure</code>)。ERRORなので評価はそこで止まり、どのワードにも捕まえられません。<code>FAIL</code>は<code>ABSENT</code>の「強い版」ではなく、<a href="#nil">不在と誤用</a>の区別をプログラムの側から引くためのワードです。回復させたいなら<code>ABSENT</code>、呼び出し側の誤りとして止めたいなら<code>FAIL</code>を使ってください。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'rate not quoted' ABSENT NIL-REASON</code></td>
-                                    <td><code>'rate not quoted'</code></td>
-                                    <td class="notes">宣言した文字列がそのまま理由になる。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</code></td>
-                                    <td><code>0/1</code></td>
-                                    <td class="notes">普通の<code>NIL</code>なので、下の回復の書き方がそのまま効く。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>1 'width must be positive' FAIL 2</code></td>
-                                    <td>error</td>
-                                    <td class="notes">メッセージは<code>width must be positive</code>。評価は止まり、後続の<code>2</code>は実行されない。オペランドの<code>1</code>と文字列はスタックに残る。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3 id="recovery">代わりの値を与える: <code>BIND</code>・<code>NIL?</code>・<code>SELECT</code></h3>
-                    <p>不在の回復に専用の構文はありません。調べる値に<code>BIND</code>で名前を付け、<a href="#cond"><code>SELECT</code></a>と<code>NIL?</code>を並べるだけです。</p>
-                    <p><code>NIL?</code>は他のワードと同じく<strong>調べた値を消費し</strong>、それが不在だったかどうかの真偽値を積みます(<code>[ x ] -&gt; [ bool ]</code>)。そこで調べる値に一度だけ名前を付け、2回読みます。<code>調べる値 'S' BIND 代わりの値 S S NIL? SELECT</code>と書けば、積まれる順番が<code>SELECT</code>の求める順番(真のときの候補、偽のときの候補、真偽値)とちょうど一致し、「値があればその値、なければ代わりの値」になります。</p>
-                    <p class="ref-note">代わりの値は普通のオペランドなので、他のオペランドと同じく<code>SELECT</code>より前に計算され終わります。値がある場合でも代わりの値の計算は行われる、ということです(<a href="#cond"><code>SELECT</code></a>の節を参照)。重い計算や<code>PRINT</code>のような作用を代わりの値の位置に書かないでください。</p>
-                    <p class="ref-note"><code>NIL?</code>が尋ねるのは<strong>値全体</strong>についてです。ベクトルの中の1レーンが<code>NIL</code>でも、そのベクトル自体は不在ではないので<code>FALSE</code>と答えます。<code>[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</code>は<code>[ 1/1 NIL ]</code>であり、レーンの不在は回復されません。レーンを回復したいなら、ベクトルの外側ではなく内側で回復してください。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
-                                    <td><code>99/1</code></td>
-                                    <td class="notes">不在だったので代わりの値が選ばれる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>7 2 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
-                                    <td><code>7/2</code></td>
-                                    <td class="notes">結果が実際の値であるとき、代わりの値は選ばれない。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                <!-- BEGIN generated word contracts: failure -->
-<h3 id="family-absence">契約: 不在(NIL)</h3>
-<div class="word-entry" id="word-NIL">
-<h4><code>NIL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>プログラムに書かれた不在。<code>NIL NIL?</code>は<code>TRUE</code>で、理由は<code>literal</code>。<code>NIL NIL-REASON</code>は<code>'literal'</code>(LANG.VALUES.NIL)。プログラム自身の理由を持つ不在はABSENTで書く。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>NIL</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">-&gt; [ NIL ]</span></dd>
-<dt>スタック</dt><dd>入力 0 → 出力 1</dd>
-<dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-NIL_3f">
-<h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>値が不在かどうか。<code>1 0 DIV NIL?</code>は<code>TRUE</code>、<code>5 NIL?</code>は<code>FALSE</code>。値全体について問うので、NILを持つベクトルは存在している。<code>[ 1 NIL ] NIL?</code>は<code>FALSE</code>。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>1 0 DIV NIL?</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
-<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
-<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-NIL-REASON">
-<h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>不在が持つ理由をテキストで答える。<code>1 0 DIV NIL-REASON</code>は<code>'divisionByZero'</code>で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
-<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
-<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>valueIsNotNil</code> → <code>domainMiss</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-ABSENT">
-<h4><code>ABSENT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>プログラムが理由を述べるNIL。<code>'rate not quoted' ABSENT NIL?</code>は<code>TRUE</code>、<code>'rate not quoted' ABSENT NIL-REASON</code>は<code>'rate not quoted'</code>を答える。登録された理由は<code>userDeclared</code>で、テキストがNIL-REASONの答える理由になる。だからユーザーワードも、Coreワードの契約とまったく同じように答えがない理由を言え、呼び出し側も同じ書き方<code>subject 'S' BIND fallback S S NIL? SELECT</code>で回復できる。テキストは値の一部なので(LANG.VALUES.NIL)、テキストの違う2つの不在は2つの値である。テキストでないオペランドはプログラムの誤り。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>'rate not quoted' ABSENT</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ reason ] -&gt; [ NIL ]</span></dd>
-<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
-<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>always</code> → <code>userDeclared</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>ERROR条件</dt><dd><code>nonText</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
-</dl>
-</div>
-<!-- END generated word contracts: failure -->
+                <section id="el-name" class="ref-page">
+                    <h2><span class="secnum">2.4</span> 名前</h2>
+<p>名前は、数でも文字列でも角括弧でもない語のすべてです。角括弧を除き、空白でないどんな文字も名前に使えます。</p>
+<p>名前を評価すると、その名前が束縛されていれば値が積まれ(<a href="#names">2.4.1 束縛</a>)、そうでなければ同じ名前のワードが呼び出されます(<a href="#words">2.4.2 ワード</a>)。どちらでもない名前はエラー(<em>Unknown word</em>)です。<code>[ ]</code>の中に書かれた名前は評価されず、<code>TRUE</code> <code>FALSE</code> <code>NIL</code>を除いてSymbolという値になります。</p>
+<h3>記号とトークン判定</h3>
+                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ワードはどれも英語名1つだけで呼ばれ、記号の綴りを持つワードはありません。<code>+</code>や<code>&lt;</code>も通常の名前で、定義しなければ未定義ワードです。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>はただの名前としてパースされます。</p>
+                    <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
+                    <p>CoreワードまたはUserワードがすでに持っている名前を束縛することはできず、現在束縛されている名前でワードを定義することもできません。どちらの方向も拒否されるので、ある名前がどちらを経由して解決されたのかを考える必要は決してありません。<code>W</code>、<code>DX</code>、<code>LIMIT</code>のような短い使い捨ての名前は、ここではまさにふさわしいものです。ワード名と違って命名規則の警告の対象にもなりません。これらはローカルであり、そのスコープは目の前の画面の中に収まっているからです。</p>
 
+                    
+                <h3>名前解決と再定義</h3>
+                    <p>名前はCoreかUserのどちらかで解決され、UserがCoreを覆い隠すことは決してありません。したがってワードの名前が、そのワードの住所のすべてです。修飾された形もなく、選ぶべき辞書もなく、裸の名前が曖昧になる余地もありません。名前は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
+5 ADD10</code></td>
+                                    <td><code>15/1</code></td>
+                                    <td class="notes">定義済みのワードは、その名前で参照される。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 ] &#39;ADD&#39; DEF</code></td>
+                                    <td>error</td>
+                                    <td class="notes">Coreは封印されているので、Coreの名前を奪うことはできない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
+[ 20 ADD ] &#39;ADD10&#39; DEF
+5 ADD10</code></td>
+                                    <td><code>25/1</code></td>
+                                    <td class="notes">再定義は、唯一のUserエントリを束縛し直す。ただし他のワードがそれに依存している場合は、<code>DEF</code>が拒否する。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+
+                    
                 </section>
 
                 <section id="names" class="ref-page">
-                    <h2>名前とスコープ(<code>BIND</code>)</h2>
+                    <h2><span class="secnum">2.4.1</span> 束縛(<code>BIND</code>)</h2>
 <h3 id="bindings"><code>BIND</code>で名前を与える</h3>
                     <p>スタックは一度に1つの値しか手渡してくれませんが、書く価値のあるたいていの式は、1つの値を2回以上使います。残差は二乗誤差と勾配の両方に使われ、閾値は比較と報告の両方に使われ、座標の組は和と差の両方に使われます。Ajisaiのワードは読んだ値を必ず消費するので、2回目に使う値はスタックには残っていません。</p>
                     <p>そこで<code>BIND</code>は値に名前を与えます。値と名前を取って両方を消費し、それ以降その名前が<em>すなわち</em>その値になります。好きなだけ、好きな順序で使えます。</p>
@@ -1082,19 +1059,35 @@ FILTER</code></td>
                     </div>
                     <p><strong>名前は、呼び出した先のワードの中までは届きません。</strong>ワードの意味は、そのオペランドと辞書だけで決まり、それ以外の何ものでもありません。これがワードを単体で読めるようにしています。本体が読むのは自分自身の束縛だけであり、呼び出し元の束縛を読むことは決してありません。中でその値が必要なら、オペランドとして渡してください。それこそがオペランドの役目です。これを誤ると、未知のワードとして報告されるのではなく、はっきりとそう告げられます。</p>
                     <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です。フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまうからです。ここには名前空間は1つしかありません。保持しておきたいデータには、<code>[ [ 1 2 3 ] ] 'XS' DEF</code>のようにワードを定義してください。これはまさに辞書が本来するべき仕事です。</p>
-                    <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
-                    <p>CoreワードまたはUserワードがすでに持っている名前を束縛することはできず、現在束縛されている名前でワードを定義することもできません。どちらの方向も拒否されるので、ある名前がどちらを経由して解決されたのかを考える必要は決してありません。<code>W</code>、<code>DX</code>、<code>LIMIT</code>のような短い使い捨ての名前は、ここではまさにふさわしいものです。ワード名と違って命名規則の警告の対象にもなりません。これらはローカルであり、そのスコープは目の前の画面の中に収まっているからです。</p>
-
                     
                 </section>
 
-                <section id="costs" class="ref-page">
-                    <h2>コストと上限</h2>
-<h3 id="iterative">反復のコスト</h3>
-                    <p>厳密算術は、ループのコストを変えます。このリファレンスの他のすべての節はプログラムが<em>何を意味するか</em>についてですが、この節はそれを繰り返すことが<em>何のコストを伴うか</em>についてです。厳密性が見返りに何かを要求してくる、唯一の場所だからです。</p>
-                    <h3>コストはどこから来るのか</h3>
-                    <p>厳密な有理数は分子と分母の組として格納されており、分数と分数の積は分母同士の積になります。1回掛けるだけなら何も起きません。しかしループの中で掛け続けると、分母はステップを追うごとに大きくなります。勾配降下法、ニュートン法、k-means、べき乗法、その他あらゆる反復的手法がやっているのは、まさにこれです。何も失われず、何も近似されません。数はまったく正しいままです。ただ、その桁が記録しているのは<strong>その値がどう計算されたか</strong>であり、その履歴は回を追うごとに長くなります。</p>
-                    <p>以下は緩和ステップの例で、<code>x</code>が毎回2に向かって10分の1ずつ近づいていきます。<code>DELTA</code>が補正量、<code>STEP</code>がそれを適用します。ループは、要素が単なるカウンタでしかない範囲に対する<code>FOLD</code>であり、ブロックは要素を捨てて累積値だけを保持します。</p>
+                <section id="words" class="ref-page">
+                    <h2><span class="secnum">2.4.2</span> ワード(<code>DEF</code>)</h2>
+<p>ワードは辞書に登録された名前付きの操作です。名前で呼び出されると、スタックからオペランドを消費し、結果を積みます。組み込みワードはその働きごとに<a href="#word-index">族</a>に分かれ、族ごとの頁の最後に各ワードの契約があります。個々のワードが、このリファレンスの最後の単位です。</p>
+<h3 id="all-words">操作はすべてワード</h3>
+<p>Ajisaiの字句が区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。算術も比較も、分岐・反復・定義・束縛も、値を1つ積む<code>TRUE</code> <code>FALSE</code> <code>NIL</code>でさえ、英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあり、名前で呼び出されます。</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>役割</th><th>ワード</th></tr></thead>
+<tbody>
+<tr><td class="notes">算術</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
+<tr><td class="notes">比較</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
+<tr><td class="notes">論理</td><td><code>AND</code> <code>NOT</code></td></tr>
+<tr><td class="notes">真偽値と不在</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
+<tr><td class="notes">選択</td><td><code>SELECT</code></td></tr>
+<tr><td class="notes">反復</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
+<tr><td class="notes">定義と束縛</td><td><code>DEF</code> <code>BIND</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>すべてのワードの一覧は<a href="#word-index">組み込みワード</a>にあります。</p>
+<h3 id="dictionaries">辞書とワードの同一性</h3>
+                    <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は78個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この78個のワードは、<strong>48語のSemantic Kernel</strong>と<strong>30語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="#word-index">組み込みワード</a>の一覧と各頁の契約にあり、そのワードを調べたときにも表示されます。</p>
+                    <h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
+                    <p>新しいワードは、コードブロックと名前から定義されます：<code>[ body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1103,9 +1096,10 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>0 6 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
-                                    <td><code>7282969/1250000</code></td>
-                                    <td class="notes">10からの7ステップ(<code>0 6 RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
+                                    <td><code>[ [ 10 ] ADD ] 'ADD10' DEF
+5 ADD10</code></td>
+                                    <td><code>[ 15/1 ]</code></td>
+                                    <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1114,9 +1108,6 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p>問題は、どれか1つの数の大きさではなく、成長の形そのものです。同じループを21ステップ回すと<code>359418989131512359209/125000000000000000000</code>になります。21桁分の21桁で、値はおよそ2.875です。さらにステップを重ねるたびに分母は再び10倍になっていくので、答えはほとんど動かないのに、1ステップあたりのコストは際限なく上がっていきます。30回の反復なら一瞬で終わるループが、300回では這うように遅くなり得ます。</p>
-                    <h3>分解能を名指しする</h3>
-                    <p><code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の最も近い倍数に丸めます(ちょうど中間なら大きい側へ)。結果の分母は<code>d</code>の約数になり、それを超えて大きくなることは決してありません。1ステップにつき1回適用すれば、導出の履歴を捨てて値だけを保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1125,9 +1116,10 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>0 20 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
-                                    <td><code>2877/1000</code></td>
-                                    <td class="notes">21ステップ経っても分母は1000のまま。<code>0 20 RANGE</code>は0から20までの21要素。丸めない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
+                                    <td><code>[ 2 MUL ] 'DBL' DEF
+[ 1 2 3 ] [ DBL ] MAP</code></td>
+                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
+                                    <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1136,54 +1128,28 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p>これは近似ですが、それこそが要点です。<strong>自分で書き記した</strong>近似だからです。分解能はソース中のリテラルとして、自分で選んだ場所に書かれており、それ以降のすべての値は正確に<code>1/d</code>の倍数になります。与り知らないところで何かが丸められることはなく、答えにどれだけの精度がふさわしいかを、何かが勝手に決めることもありません。</p>
-                    <p>この丸めを組み立てている<code>MUL</code>・<code>ADD</code>・<code>FLOOR</code>・<code>DIV</code>はどれもベクトルに対して持ち上がるので、パラメータベクトル全体を同じ一続きのワードで丸められます。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 119/125 32/125 ] 10 MUL 1/2 ADD FLOOR 10 DIV</code></td>
-                                    <td><code>[ 1/1 3/10 ]</code></td>
-                                    <td class="notes">状態の形がどうであれ、1ステップにつき1回の呼び出し。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>閉じた形はループに勝る</h3>
-                    <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。Ajisaiは係数をまさにその有理数として返します。<code>R²</code>が<code>529/532</code>として返ってくるなら、それが厳密な答えです。</p>
-                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しないので、Ajisaiはそれらを扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
+                    <h3>DEFが検査すること、しないこと</h3>
+                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>[ TOTALL 1 ] 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
+                    <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出すことができ、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
+                    <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです。<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがなく、アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
+                    <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
+                    <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
+                    <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>
+                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
+                    <h3>ワードの管理</h3>
+                    <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません。先に依存している側を削除してください。</p>
+                    <p class="ref-note">ワード名は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>
 
-                    <h3>もう一つのコスト: ホストの安全制御</h3>
-                    <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、1つの値そのものの生成が上限を超えれば理由付きの<strong><code>NIL</code></strong>に、実行そのものが続けられないほど超えれば<strong>エラー</strong>になり評価が停止します。</p>
+                    <h3>ワードを調べる</h3>
+                    <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
+                    <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
 
-                    <h3 id="limits">実行時エラー: 複数の理由を持つ一つの結果</h3>
-                    <p>整った操作や入力であっても、ホストが支えられる限度を超えればエラーになり、評価はその場で停止します。限度は1つではなく、超過したものが何かによって少なくとも3つの名前で報告されます。名前が違うのは、直し方も違うからです。</p>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>報告される名前</th><th>何が超過したか</th><th>典型的な直し方</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><code>executionLimitExceeded</code></td><td class="notes">プログラム全体が費やせる作業ステップの総量</td><td class="notes">一括操作(<code>SORT</code>や<code>GET</code>)へ書き換える、終了条件を見直す</td></tr>
-                                <tr><td><code>resourceLimitExceeded</code></td><td class="notes">1つの値そのものの大きさ(係数のビット幅、代数項の数など)</td><td class="notes"><code>1/d</code>の格子に丸めて履歴を刈り込む、閉じた形を探す</td></tr>
-                                <tr><td><code>recursionLimitExceeded</code></td><td class="notes">呼び出し連鎖(循環はしないが極端に長い、ワードがワードを呼ぶ鎖)のネストの深さ</td><td class="notes">呼び出しの連鎖を浅くする、または一括操作に書き換える</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p><code>executionLimitExceeded</code>には、CLIの<code>ajisai run --step-limit &lt;N&gt;</code>で明示的に指定できるという特徴があります。既定値はホストの実行環境が定める実装上の選択であり、本書が固定の数として約束するものではありません。</p>
-                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>0 100001 RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
-                    <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>0 99999 RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。格子に丸めて刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
-
-                    <h3>具体化の上限: 理由付きのNIL</h3>
-                    <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong><code>NIL</code></strong>になります。理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
+                    <h3>ワードの同一性</h3>
+                    <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます。これは、正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です。依存しているのはワードに対してであって、綴りに対してではないからです。</p>
+                    <h3 id="reflection">辞書と契約を言語の中から読む: <code>DIGEST</code>・<code>CONTRACT</code></h3>
+                    <p>2つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。ワードを名指すオペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません（<code>CONTRACT</code>はコードブロックも受けます）。<code>'ADD' CONTRACT</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
+                    <p><code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
+                    <p class="ref-note">Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかは、<code>CONTRACT</code>が契約を答えるかどうかで分かります。ワードでない名前には理由付きの<code>NIL</code>が返るので、<code>sym CONTRACT NIL? NOT</code>がその問いになります。<code>NIL?</code>はオペランドを消費するので、残るのは真偽値だけです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1192,9 +1158,39 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
-                                    <td><code>'spaceExhausted'</code></td>
-                                    <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの<code>NIL</code>になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
+                                    <td><code>[ TWICE ] 0 GET CONTRACT NIL? NOT</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">未定義の名前には契約がないので<code>FALSE</code>。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'ADD' CONTRACT</code></td>
+                                    <td>error</td>
+                                    <td class="notes">文字列は名前ではない（<code>notASymbol</code>）。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">同一性は内容に対して、綴りに対してではない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">値は意味内容でダイジェストされる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' GET</code></td>
+                                    <td><code>[ 'divisionByZero' ]</code></td>
+                                    <td class="notes">登録済みの契約を、走らせずに読む。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 42 PRINT ] CONTRACT 'effects' GET</code></td>
+                                    <td><code>[ 'consoleWrite' ]</code></td>
+                                    <td class="notes">ブロックを渡すと走らせずに契約を推論する。何も出力されない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
+                                    <td><code>'notFound'</code></td>
+                                    <td class="notes">ワードでない名前は理由付きの<code>NIL</code>。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1203,12 +1199,117 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
                 
+                <h3 id="word-index">組み込みワード</h3>
+<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
+<p>正準な語彙の全78語を族ごとにまとめたものです(<code>spec/words.json</code>から生成)。48語がSemantic Kernel、30語がStandardワードで、どれも平易な名前で参照できる普通のCoreワードです。階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>)。ワードを選ぶとその契約(構文・スタック効果・NIL方針・ERROR条件など)へ、頁名を選ぶとサンプル付きの解説へ移ります。</p>
+<div class="ref-table-wrap word-jump">
+<table class="ref-table">
+<thead><tr><th>族</th><th>ワード</th><th>解説の頁</th></tr></thead>
+<tbody>
+<tr><td class="notes">論理</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
+<tr><td class="notes">比較</td><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
+<tr><td class="notes">厳密な算術</td><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
+<tr><td class="notes">ベクトル</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">2.4.2.2 ベクトル操作</a></td></tr>
+<tr><td class="notes">Record</td><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td><td class="notes"><a href="#records">2.4.2.3 キーによる対応</a></td></tr>
+<tr><td class="notes">反復</td><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td><td class="notes"><a href="#control">2.4.2.5 選択と反復</a></td></tr>
+<tr><td class="notes">文字列</td><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td><td class="notes"><a href="#strings-ops">2.4.2.4 文字列操作</a></td></tr>
+<tr><td class="notes">制御</td><td><a href="#word-EXEC"><code>EXEC</code></a> <a href="#word-FAIL"><code>FAIL</code></a></td><td class="notes"><a href="#control">2.4.2.5 選択と反復</a></td></tr>
+<tr><td class="notes">辞書と名前</td><td><a href="#word-CONTRACT"><code>CONTRACT</code></a> <a href="#word-BIND"><code>BIND</code></a> <a href="#word-DEF"><code>DEF</code></a> <a href="#word-DEL"><code>DEL</code></a> <a href="#word-DIGEST"><code>DIGEST</code></a></td><td class="notes"><a href="#words">2.4.2 ワード</a></td></tr>
+<tr><td class="notes">不在(NIL)</td><td><a href="#word-NIL"><code>NIL</code></a> <a href="#word-NIL_3f"><code>NIL?</code></a> <a href="#word-NIL-REASON"><code>NIL-REASON</code></a> <a href="#word-ABSENT"><code>ABSENT</code></a></td><td class="notes"><a href="#absence">2.4.2.6 不在を扱う</a></td></tr>
+<tr><td class="notes">出力</td><td><a href="#word-PRINT"><code>PRINT</code></a></td><td class="notes"><a href="#output">2.4.2.7 出力</a></td></tr>
+</tbody>
+</table>
+</div>
+<!-- END generated word index -->
+<!-- BEGIN generated word contracts: words -->
+<h3 id="family-dictionary">契約: 辞書と名前</h3>
+<div class="word-entry" id="word-CONTRACT">
+<h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ワードまたはブロックの契約をRecordで答える。<code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>symbolNamesNoWord</code> → <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>notASymbol</code></dd>
+<dt>条項</dt><dd><code>LANG.CONTRACT.REGISTRY</code>, <code>LANG.CONTRACT.CHECK</code>, <code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.SOURCE.CODE</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-BIND">
+<h4><code>BIND</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>値に名前を付け、それを作ったフレームの残りで使えるようにする。<code>5 'N' BIND N N ADD</code>は<code>10</code>、<code>[ 1 2 ] [ 'A' 'B' ] BIND B A SUB</code>は<code>1</code>。名前が1つなら値全体を受け取り、複数なら同じ長さのベクトルを位置ごとに分解する。両オペランドとも消費され、その後名前を書くたびに、何回でもその値が積まれる。束縛はそのフレームの中に書かれたブロックには届き、そこから呼ばれたワードには決して届かず、フレームが終わると終わる。CoreワードかUserワードがすでに持つ名前は拒否されるので、名前はワードか束縛のどちらかであって、両方にはならない。直接または他の束縛を通して自分自身の束縛を名指す値は、DEFと同じ規則で<code>selfReferentialDefinition</code>として拒否される(LANG.DICTIONARY.ACYCLIC)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] 'XS' BIND</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] [ name... ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code>, <code>nameConflict</code>, <code>shapeMismatch</code>, <code>invalidName</code>, <code>selfReferentialDefinition</code></dd>
+<dt>条項</dt><dd><code>LANG.SOURCE.FRAME</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEF">
+<h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義は、他がまだそれを呼んでいなければそれを置き換える(<code>definitionConflict</code>)。Coreワードの名前は<code>protectedWord</code>、束縛が持つ名前は<code>nameConflict</code>、1つのトークンとして書けない名前は<code>invalidName</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>control</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd><code>dictionaryWrite</code></dd>
+<dt>ERROR条件</dt><dd><code>invalidName</code>, <code>protectedWord</code>, <code>nameConflict</code>, <code>definitionConflict</code>, <code>selfReferentialDefinition</code>, <code>nonText</code>, <code>invalidDefinitionBody</code></dd>
+<dt>条項</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEL">
+<h4><code>DEL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>辞書からUserワードを削除する。<code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code>は<code>TRUE</code>。名前がもうワードを名指さないからである。Coreワードは拒否され(<code>protectedWord</code>)、どのUserワードも持たない名前は<code>wordNotFound</code>、他のUserワードがまだ呼んでいるワードは、それらを先に削除するまで<code>definitionConflict</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 ] 'W' DEF 'W' DEL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ name ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd><code>dictionaryDelete</code></dd>
+<dt>ERROR条件</dt><dd><code>wordNotFound</code>, <code>protectedWord</code>, <code>nonText</code>, <code>definitionConflict</code></dd>
+<dt>条項</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DIGEST">
+<h4><code>DIGEST</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ワードのコンテンツ同一性、または値の意味内容のダイジェストをテキストで答える。<code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code>は<code>TRUE</code>。UserワードをSymbolで名指せばそのワードのコンテンツ同一性(正規化された定義と、それが呼ぶワードたちの同一性にわたるダイジェストで、辞書がすでに保持しているもの。LANG.DICTIONARY.MUTATION)を、CoreワードをSymbolで名指せばその封印されたワードの固定の同一性を答える。それ以外の値は、何も名指さないSymbolを含め、その意味内容のダイジェストを答える。<code>EQ</code>が1つの値とみなす2つの値は、組み立て方によらず同じダイジェストになるので、<code>8 SQRT DIGEST</code>は<code>2 SQRT 2 SQRT ADD DIGEST</code>と等しく、NILは理由によってダイジェストされる。等しいダイジェストは1つのものを意味し、等しくないダイジェストは何も意味しない。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ ADD ] 0 GET DIGEST</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ digest ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+</dl>
+</div>
+<!-- END generated word contracts: words -->
+
                 </section>
 
                 <section id="operators" class="ref-page">
-                    <h2>論理・比較・算術(<code>AND</code>, <code>EQ</code>, <code>ADD</code>)</h2>
+                    <h2><span class="secnum">2.4.2.1</span> 論理・比較・算術(<code>AND</code>, <code>EQ</code>, <code>ADD</code>)</h2>
+
 
                     <h3 id="arithmetic">算術</h3>
                     <p>算術ワードは、ベクトル同士の要素ごとの演算として機能します。各ワードは英語名1つだけで書き、記号の綴りは持ちません。</p>
@@ -1531,6 +1632,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                
                 <!-- BEGIN generated word contracts: operators -->
 <h3 id="family-booleanLogic">契約: 論理</h3>
 <div class="word-entry" id="word-TRUE">
@@ -1855,7 +1957,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="vector-ops" class="ref-page">
-                    <h2>ベクトル操作(<code>GET</code>, <code>LENGTH</code>)</h2>
+                    <h2><span class="secnum">2.4.2.2</span> ベクトル操作(<code>GET</code>, <code>LENGTH</code>)</h2>
+
 
                     <p>ベクトルのインデックスは0始まりです。負のインデックスは末尾から数えます。<code>GET</code>や<code>LENGTH</code>のような読み取り系のワードは、他のすべてのワードと同様、読み取ったベクトルを消費します。元のベクトルを後でも使いたい場合は、<a href="#bindings"><code>BIND</code></a>で名前を付けてから読み取ってください。</p>
                     <h3>GETで読み取る</h3>
@@ -2151,6 +2254,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p class="ref-note"><code>UNIQUE</code>と<code>TALLY</code>は数だけでなくあらゆる値に対して働きます。ラベルは通常テキストなので、これは実用上の違いになります。一方<code>ORDER</code>と<code>SORT</code>はフラットな数のベクトルを必要とします。厳密な順序関係が定義されているのはそこだからです。<code>GROUP</code>は値とキーを位置によって対応付けるので、2つのオペランドは同じ長さでなければなりません。</p>
+                
                 <!-- BEGIN generated word contracts: vector-ops -->
 <h3 id="family-collection">契約: ベクトル</h3>
 <div class="word-entry" id="word-GET">
@@ -2491,7 +2595,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="records" class="ref-page">
-                    <h2>キーによる対応(<code>RECORD</code>, <code>GET</code>)</h2>
+                    <h2><span class="secnum">2.4.2.3</span> キーによる対応(<code>RECORD</code>, <code>GET</code>)</h2>
+
 
                     <p>名前の付いたデータ——価格表、設定、1行のレコード——を、Ajisaiは<strong>Record</strong>という第7の値領域で持ちます。Recordは<em>キー列</em>と<em>値列</em>を位置で対応付けたもので、キーは与えた順序を保ち、同じキーは一度しか現れません。キーには任意の値を使えます(ふつうは文字列)。ベクトルではないので、ベクトルのワードはRecordを受け取らず、Recordのワードはベクトルを受け取りません。暗黙の変換はどちら向きにもありません。</p>
                     <p>Recordは<code>RECORD</code>で作ります。キー列と値列を受け取り、位置で対応付けます。キーに対応する値が無ければ長さの不一致、同じキーが2回あれば<code>duplicateKey</code>のエラーになります。</p>
@@ -2626,6 +2731,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p class="ref-note"><a href="#ordering"><code>TALLY</code>と<code>GROUP</code></a>はRecordを返します。<code>TALLY</code>は「要素→件数」、<code>GROUP</code>は「キー→そのキーの値のベクトル」で、どちらもキーは最初の出現順です。<code>KEYS</code>を取れば<code>UNIQUE</code>の答えそのもの、<code>VALUES</code>を取れば以前の件数ベクトル・グループのベクトルが得られるので、失われた力はありません。表(table)は「列名→列ベクトル」のRecordとして持てば、<code>'price' GET</code>で1列を取り出し、算術で列ごとに計算できます。</p>
+                
                 <!-- BEGIN generated word contracts: records -->
 <h3 id="family-record">契約: Record</h3>
 <div class="word-entry" id="word-TALLY">
@@ -2761,7 +2867,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="strings-ops" class="ref-page">
-                    <h2>文字列操作(<code>CHARS</code>, <code>JOIN</code>)</h2>
+                    <h2><span class="secnum">2.4.2.4</span> 文字列操作(<code>CHARS</code>, <code>JOIN</code>)</h2>
+
 
                     <h3>ベクトルへ渡る: <code>CHARS</code>と<code>JOIN</code></h3>
                     <p>文字列はベクトルではないため、コレクション系のワードは文字列を受け付けません。<code>LENGTH</code>、<code>GET</code>、<code>REVERSE</code>、<code>CONCAT</code>はいずれも文字列に対してはエラーを送出します。まず<code>CHARS</code>でベクトルの定義域へ渡ってください。<code>'abc' CHARS LENGTH</code>は<code>3</code>になります。連結は<code>JOIN</code>で行います。これは文字列のベクトルを1つの文字列に変えるためのワードで、<code>[ 'ab' 'cd' ] JOIN</code>は<code>'abcd'</code>です。書いたものではなく計算した値を連結したい場合は、<code>'a' 'b' 2 COLLECT JOIN</code>のように、まず<code>COLLECT</code>で集めてください。</p>
@@ -3030,6 +3137,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                
                 <!-- BEGIN generated word contracts: strings-ops -->
 <h3 id="family-text">契約: 文字列</h3>
 <div class="word-entry" id="word-CHARS">
@@ -3243,7 +3351,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="control" class="ref-page">
-                    <h2>制御と反復(<code>SELECT</code>, <code>MAP</code>)</h2>
+                    <h2><span class="secnum">2.4.2.5</span> 選択と反復(<code>SELECT</code>, <code>MAP</code>)</h2>
+
 <h3 id="cond">条件分岐(<code>SELECT</code>)</h3>
                     <p><code>SELECT</code>は3つの引数を取ります。<strong>trueのときの値</strong>、<strong>falseのときの値</strong>、そして<strong>どちらを選ぶかを決める真偽値</strong>です。<code>[ whenTrue ] [ whenFalse ] [ mask ] SELECT</code>と並べます。真偽値を最後に置くのは、何をするかを決めるオペランドを最後に置くという他のワードと同じ並びだからです。</p>
                     <p><code>SELECT</code>は<strong>何も評価しません</strong>。2つの候補は、プログラムが既に組み立て終えた値です。つまりどちらの候補も、<code>SELECT</code>に届く前に一度ずつ、書かれた順に計算され終わっています。選ばれなかった側が「実行されない」のではなく、選ぶ時点で両方とも既に値になっている、ということです。ブロックを受け取って中身を走らせるワード(<code>MAP</code>や<code>EXEC</code>)とは、ここが根本的に違います。</p>
@@ -3548,7 +3657,8 @@ SELECT</code></td>
                     <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>0 GET</code>は最初の要素、<code>-1 GET</code>は最後の要素です。したがって<code>[ SORT -1 GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>は2要素の組の順序を入れ替え、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
                     <p class="ref-note">複製のための道具は<a href="#bindings"><code>BIND</code></a>です。値に名前を付ければ、名前を書くたびにその値が積まれるので、どんな種類の値でも必要な回数だけ使えます。</p>
 
-                    <!-- BEGIN generated word contracts: control -->
+                    
+                <!-- BEGIN generated word contracts: control -->
 <h3 id="family-higherOrder">契約: 反復</h3>
 <div class="word-entry" id="word-MAP">
 <h4><code>MAP</code> <span class="word-tier">Semantic Kernel</span></h4>
@@ -3651,10 +3761,10 @@ SELECT</code></td>
 
                 </section>
 
-                <section id="words" class="ref-page">
-                    <h2>ワードの定義と辞書(<code>DEF</code>, <code>DIGEST</code>)</h2>
-<h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
-                    <p>新しいワードは、コードブロックと名前から定義されます：<code>[ body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
+                <section id="absence" class="ref-page">
+                    <h2><span class="secnum">2.4.2.6</span> 不在を扱う(<code>NIL?</code>, <code>ABSENT</code>)</h2>
+<h3>NILを調べる: <code>NIL?</code>と<code>NIL-REASON</code></h3>
+                    <p>この2つのワードは、<code>NIL</code>を調べます。<code>NIL?</code>はスタック最上位の値が<code>NIL</code>かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも他のワードと同じく<strong>調べた値を消費し</strong>、その場所に答えを積みます。調べたあとも値を使いたいなら、先に<code>BIND</code>で名前を付けてください。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3663,137 +3773,9 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ [ 10 ] ADD ] 'ADD10' DEF
-5 ADD10</code></td>
-                                    <td><code>[ 15/1 ]</code></td>
-                                    <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 2 MUL ] 'DBL' DEF
-[ 1 2 3 ] [ DBL ] MAP</code></td>
-                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
-                                    <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>DEFが検査すること、しないこと</h3>
-                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>[ TOTALL 1 ] 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
-                    <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出すことができ、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
-                    <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです。<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがなく、アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
-                    <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
-                    <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
-                    <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>
-                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
-                    <h3>ワードの管理</h3>
-                    <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません。先に依存している側を削除してください。</p>
-                    <p class="ref-note">ワード名は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>
-
-                    <h3 id="dictionaries">辞書とワードの同一性</h3>
-                    <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は78個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この78個のワードは、<strong>48語のSemantic Kernel</strong>と<strong>30語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="#word-index">組み込みワード</a>の一覧と各頁の契約にあり、そのワードを調べたときにも表示されます。</p>
-                    <h3>ワードを調べる</h3>
-                    <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
-                    <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
-
-                    <h3>名前解決と再定義</h3>
-                    <p>名前はCoreかUserのどちらかで解決され、UserがCoreを覆い隠すことは決してありません。したがってワードの名前が、そのワードの住所のすべてです。修飾された形もなく、選ぶべき辞書もなく、裸の名前が曖昧になる余地もありません。名前は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
-5 ADD10</code></td>
-                                    <td><code>15/1</code></td>
-                                    <td class="notes">定義済みのワードは、その名前で参照される。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 1 ] &#39;ADD&#39; DEF</code></td>
-                                    <td>error</td>
-                                    <td class="notes">Coreは封印されているので、Coreの名前を奪うことはできない。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
-[ 20 ADD ] &#39;ADD10&#39; DEF
-5 ADD10</code></td>
-                                    <td><code>25/1</code></td>
-                                    <td class="notes">再定義は、唯一のUserエントリを束縛し直す。ただし他のワードがそれに依存している場合は、<code>DEF</code>が拒否する。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                    </div>
-
-                    <h3>ワードの同一性</h3>
-                    <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます。これは、正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です。依存しているのはワードに対してであって、綴りに対してではないからです。</p>
-                    <h3 id="reflection">辞書と契約を言語の中から読む: <code>DIGEST</code>・<code>CONTRACT</code></h3>
-                    <p>2つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。ワードを名指すオペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません（<code>CONTRACT</code>はコードブロックも受けます）。<code>'ADD' CONTRACT</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
-                    <p><code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
-                    <p class="ref-note">Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかは、<code>CONTRACT</code>が契約を答えるかどうかで分かります。ワードでない名前には理由付きの<code>NIL</code>が返るので、<code>sym CONTRACT NIL? NOT</code>がその問いになります。<code>NIL?</code>はオペランドを消費するので、残るのは真偽値だけです。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ TWICE ] 0 GET CONTRACT NIL? NOT</code></td>
-                                    <td><code>FALSE</code></td>
-                                    <td class="notes">未定義の名前には契約がないので<code>FALSE</code>。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>'ADD' CONTRACT</code></td>
-                                    <td>error</td>
-                                    <td class="notes">文字列は名前ではない（<code>notASymbol</code>）。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
+                                    <td><code>1 0 DIV NIL?</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">同一性は内容に対して、綴りに対してではない。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">値は意味内容でダイジェストされる。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' GET</code></td>
-                                    <td><code>[ 'divisionByZero' ]</code></td>
-                                    <td class="notes">登録済みの契約を、走らせずに読む。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 42 PRINT ] CONTRACT 'effects' GET</code></td>
-                                    <td><code>[ 'consoleWrite' ]</code></td>
-                                    <td class="notes">ブロックを渡すと走らせずに契約を推論する。何も出力されない。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
-                                    <td><code>'notFound'</code></td>
-                                    <td class="notes">ワードでない名前は理由付きの<code>NIL</code>。</td>
+                                    <td class="notes"><code>NIL?</code>は最上位の値を消費し、その場所に答えを積む。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -3802,93 +3784,170 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                <!-- BEGIN generated word contracts: words -->
-<h3 id="family-dictionary">契約: 辞書と名前</h3>
-<div class="word-entry" id="word-CONTRACT">
-<h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ワードまたはブロックの契約をRecordで答える。<code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV NIL-REASON</code></td>
+                                    <td><code>'divisionByZero'</code></td>
+                                    <td class="notes">理由はプロトコル文字列なので、プログラムは値が欠けている理由によって分岐できる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3 id="declared-outcomes">自分で結末を宣言する: <code>ABSENT</code>と<code>FAIL</code></h3>
+                    <p>不在もエラーも、組み込みワードだけのものではありません。プログラム自身が「ここには値がない」「ここは誤用だ」と宣言できます。<code>ABSENT</code>は文字列を1つ受け取り、<strong>その文字列を理由にした<code>NIL</code></strong>を積みます。理由の識別子は<code>userDeclared</code>ですが、<code>NIL-REASON</code>が答えるのは渡した文字列そのものです。文字列は値の一部なので、違う文字列で作った2つの<code>ABSENT</code>は別の値です。</p>
+                    <p><code>FAIL</code>も文字列を1つ受け取り、その文字列をメッセージにした<strong>ERROR</strong>を起こします(分類は<code>declaredFailure</code>)。ERRORなので評価はそこで止まり、どのワードにも捕まえられません。<code>FAIL</code>は<code>ABSENT</code>の「強い版」ではなく、<a href="#nil">不在と誤用</a>の区別をプログラムの側から引くためのワードです。回復させたいなら<code>ABSENT</code>、呼び出し側の誤りとして止めたいなら<code>FAIL</code>を使ってください。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'rate not quoted' ABSENT NIL-REASON</code></td>
+                                    <td><code>'rate not quoted'</code></td>
+                                    <td class="notes">宣言した文字列がそのまま理由になる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</code></td>
+                                    <td><code>0/1</code></td>
+                                    <td class="notes">普通の<code>NIL</code>なので、下の回復の書き方がそのまま効く。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1 'width must be positive' FAIL 2</code></td>
+                                    <td>error</td>
+                                    <td class="notes">メッセージは<code>width must be positive</code>。評価は止まり、後続の<code>2</code>は実行されない。オペランドの<code>1</code>と文字列はスタックに残る。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3 id="recovery">代わりの値を与える: <code>BIND</code>・<code>NIL?</code>・<code>SELECT</code></h3>
+                    <p>不在の回復に専用の構文はありません。調べる値に<code>BIND</code>で名前を付け、<a href="#cond"><code>SELECT</code></a>と<code>NIL?</code>を並べるだけです。</p>
+                    <p><code>NIL?</code>は他のワードと同じく<strong>調べた値を消費し</strong>、それが不在だったかどうかの真偽値を積みます(<code>[ x ] -&gt; [ bool ]</code>)。そこで調べる値に一度だけ名前を付け、2回読みます。<code>調べる値 'S' BIND 代わりの値 S S NIL? SELECT</code>と書けば、積まれる順番が<code>SELECT</code>の求める順番(真のときの候補、偽のときの候補、真偽値)とちょうど一致し、「値があればその値、なければ代わりの値」になります。</p>
+                    <p class="ref-note">代わりの値は普通のオペランドなので、他のオペランドと同じく<code>SELECT</code>より前に計算され終わります。値がある場合でも代わりの値の計算は行われる、ということです(<a href="#cond"><code>SELECT</code></a>の節を参照)。重い計算や<code>PRINT</code>のような作用を代わりの値の位置に書かないでください。</p>
+                    <p class="ref-note"><code>NIL?</code>が尋ねるのは<strong>値全体</strong>についてです。ベクトルの中の1レーンが<code>NIL</code>でも、そのベクトル自体は不在ではないので<code>FALSE</code>と答えます。<code>[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</code>は<code>[ 1/1 NIL ]</code>であり、レーンの不在は回復されません。レーンを回復したいなら、ベクトルの外側ではなく内側で回復してください。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>99/1</code></td>
+                                    <td class="notes">不在だったので代わりの値が選ばれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>7 2 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>7/2</code></td>
+                                    <td class="notes">結果が実際の値であるとき、代わりの値は選ばれない。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                
+                <!-- BEGIN generated word contracts: absence -->
+<h3 id="family-absence">契約: 不在(NIL)</h3>
+<div class="word-entry" id="word-NIL">
+<h4><code>NIL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>プログラムに書かれた不在。<code>NIL NIL?</code>は<code>TRUE</code>で、理由は<code>literal</code>。<code>NIL NIL-REASON</code>は<code>'literal'</code>(LANG.VALUES.NIL)。プログラム自身の理由を持つ不在はABSENTで書く。</p>
 <dl class="word-contract">
-<dt>構文</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
-<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
-<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>symbolNamesNoWord</code> → <code>notFound</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>構文</dt><dd><code>NIL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">-&gt; [ NIL ]</span></dd>
+<dt>スタック</dt><dd>入力 0 → 出力 1</dd>
+<dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
-<dt>ERROR条件</dt><dd><code>notASymbol</code></dd>
-<dt>条項</dt><dd><code>LANG.CONTRACT.REGISTRY</code>, <code>LANG.CONTRACT.CHECK</code>, <code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.SOURCE.CODE</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
 </dl>
 </div>
-<div class="word-entry" id="word-BIND">
-<h4><code>BIND</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>値に名前を付け、それを作ったフレームの残りで使えるようにする。<code>5 'N' BIND N N ADD</code>は<code>10</code>、<code>[ 1 2 ] [ 'A' 'B' ] BIND B A SUB</code>は<code>1</code>。名前が1つなら値全体を受け取り、複数なら同じ長さのベクトルを位置ごとに分解する。両オペランドとも消費され、その後名前を書くたびに、何回でもその値が積まれる。束縛はそのフレームの中に書かれたブロックには届き、そこから呼ばれたワードには決して届かず、フレームが終わると終わる。CoreワードかUserワードがすでに持つ名前は拒否されるので、名前はワードか束縛のどちらかであって、両方にはならない。直接または他の束縛を通して自分自身の束縛を名指す値は、DEFと同じ規則で<code>selfReferentialDefinition</code>として拒否される(LANG.DICTIONARY.ACYCLIC)。</p>
+<div class="word-entry" id="word-NIL_3f">
+<h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>値が不在かどうか。<code>1 0 DIV NIL?</code>は<code>TRUE</code>、<code>5 NIL?</code>は<code>FALSE</code>。値全体について問うので、NILを持つベクトルは存在している。<code>[ 1 NIL ] NIL?</code>は<code>FALSE</code>。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。</p>
 <dl class="word-contract">
-<dt>構文</dt><dd><code>[ 1 2 3 ] 'XS' BIND</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ x ] [ name... ] -&gt; [ ]</span></dd>
-<dt>スタック</dt><dd>入力 2 → 出力 0</dd>
-<dt>オペランド</dt><dd><code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>partial</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>ERROR条件</dt><dd><code>nonText</code>, <code>nameConflict</code>, <code>shapeMismatch</code>, <code>invalidName</code>, <code>selfReferentialDefinition</code></dd>
-<dt>条項</dt><dd><code>LANG.SOURCE.FRAME</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-DEF">
-<h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義は、他がまだそれを呼んでいなければそれを置き換える(<code>definitionConflict</code>)。Coreワードの名前は<code>protectedWord</code>、束縛が持つ名前は<code>nameConflict</code>、1つのトークンとして書けない名前は<code>invalidName</code>。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>
-<dt>スタック</dt><dd>入力 2 → 出力 0</dd>
-<dt>オペランド</dt><dd><code>control</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>partial</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
-<dt>作用</dt><dd><code>dictionaryWrite</code></dd>
-<dt>ERROR条件</dt><dd><code>invalidName</code>, <code>protectedWord</code>, <code>nameConflict</code>, <code>definitionConflict</code>, <code>selfReferentialDefinition</code>, <code>nonText</code>, <code>invalidDefinitionBody</code></dd>
-<dt>条項</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-DEL">
-<h4><code>DEL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>辞書からUserワードを削除する。<code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code>は<code>TRUE</code>。名前がもうワードを名指さないからである。Coreワードは拒否され(<code>protectedWord</code>)、どのUserワードも持たない名前は<code>wordNotFound</code>、他のUserワードがまだ呼んでいるワードは、それらを先に削除するまで<code>definitionConflict</code>。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>[ 1 ] 'W' DEF 'W' DEL</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ name ] -&gt; [ ]</span></dd>
-<dt>スタック</dt><dd>入力 1 → 出力 0</dd>
-<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>partial</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
-<dt>作用</dt><dd><code>dictionaryDelete</code></dd>
-<dt>ERROR条件</dt><dd><code>wordNotFound</code>, <code>protectedWord</code>, <code>nonText</code>, <code>definitionConflict</code></dd>
-<dt>条項</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-DIGEST">
-<h4><code>DIGEST</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ワードのコンテンツ同一性、または値の意味内容のダイジェストをテキストで答える。<code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code>は<code>TRUE</code>。UserワードをSymbolで名指せばそのワードのコンテンツ同一性(正規化された定義と、それが呼ぶワードたちの同一性にわたるダイジェストで、辞書がすでに保持しているもの。LANG.DICTIONARY.MUTATION)を、CoreワードをSymbolで名指せばその封印されたワードの固定の同一性を答える。それ以外の値は、何も名指さないSymbolを含め、その意味内容のダイジェストを答える。<code>EQ</code>が1つの値とみなす2つの値は、組み立て方によらず同じダイジェストになるので、<code>8 SQRT DIGEST</code>は<code>2 SQRT 2 SQRT ADD DIGEST</code>と等しく、NILは理由によってダイジェストされる。等しいダイジェストは1つのものを意味し、等しくないダイジェストは何も意味しない。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>[ ADD ] 0 GET DIGEST</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ digest ]</span></dd>
+<dt>構文</dt><dd><code>1 0 DIV NIL?</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
-<dt>条項</dt><dd><code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
 </dl>
 </div>
-<!-- END generated word contracts: words -->
+<div class="word-entry" id="word-NIL-REASON">
+<h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>不在が持つ理由をテキストで答える。<code>1 0 DIV NIL-REASON</code>は<code>'divisionByZero'</code>で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>valueIsNotNil</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-ABSENT">
+<h4><code>ABSENT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>プログラムが理由を述べるNIL。<code>'rate not quoted' ABSENT NIL?</code>は<code>TRUE</code>、<code>'rate not quoted' ABSENT NIL-REASON</code>は<code>'rate not quoted'</code>を答える。登録された理由は<code>userDeclared</code>で、テキストがNIL-REASONの答える理由になる。だからユーザーワードも、Coreワードの契約とまったく同じように答えがない理由を言え、呼び出し側も同じ書き方<code>subject 'S' BIND fallback S S NIL? SELECT</code>で回復できる。テキストは値の一部なので(LANG.VALUES.NIL)、テキストの違う2つの不在は2つの値である。テキストでないオペランドはプログラムの誤り。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'rate not quoted' ABSENT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ reason ] -&gt; [ NIL ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>always</code> → <code>userDeclared</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<!-- END generated word contracts: absence -->
 
                 </section>
 
                 <section id="output" class="ref-page">
-                    <h2>出力(<code>PRINT</code>)</h2>
+                    <h2><span class="secnum">2.4.2.7</span> 出力(<code>PRINT</code>)</h2>
+
 
                     <p><code>PRINT</code>は、スタック最上位の値を出力領域に書き出します。他のどのワードとも同様、オペランドを消費します。値をスタックにも残したい場合は、<code>BIND</code>で名前を付けてから名前を2回書きます。Playgroundは常に最終的なスタックを表示するので、<code>PRINT</code>は結果を見るためではなく、出力チャンネルのためのものです。</p>
                     <h3>引用符は表示上の便宜</h3>
@@ -3950,6 +4009,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                
                 <!-- BEGIN generated word contracts: output -->
 <h3 id="family-output">契約: 出力</h3>
 <div class="word-entry" id="word-PRINT">
@@ -3972,7 +4032,8 @@ SELECT</code></td>
                 </section>
 
                 <section id="patterns" class="ref-page">
-                    <h2>よくあるパターン</h2>
+                    <h2><span class="secnum">付録 A</span> よくあるパターン</h2>
+
 
                     <p>Ajisaiの語彙は78個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのような処理は、短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
@@ -4037,10 +4098,12 @@ SELECT</code></td>
                     </div>
 
                     
+                
                 </section>
 
                 <section id="identity-model" class="ref-page">
-                    <h2>同一性モデル</h2>
+                    <h2><span class="secnum">付録 B</span> 同一性モデル</h2>
+
 
                     <p>Ajisaiでは<code>EQ</code>、<code>LT</code>、<code>GT</code>のような普通の比較ワードを書けますが、言語は舞台裏でいくつもの「同じか?」という問いを別々に保っています。</p>
                     <div class="ref-table-wrap">
@@ -4058,47 +4121,51 @@ SELECT</code></td>
                     </div>
                     <p>比較ワードは最上位の層でのみ働きます。あらゆるAjisaiの値にわたって厳密かつ全域的であり、数学的な問いに答えます。それより下の層は値のモデルには関与しないので、表現や表示が比較の結果に影響することは決してありません。</p>
                 
+                
                 </section>
 
             </article>
 
             <nav class="ref-nav" aria-label="Index">
                 <h2>目次</h2>
-                <h3>概要</h3>
                 <ul>
                     <li><a href="#intro">はじめに</a></li>
-                </ul>
-                <h3>字句</h3>
-                <ul>
-                    <li><a href="#tokens">字句解析</a></li>
-                    <li><a href="#token-kinds">トークンの種類</a></li>
-                </ul>
-                <h3>構文</h3>
-                <ul>
-                    <li><a href="#syntax">構文</a></li>
-                </ul>
-                <h3>意味論・実行モデル</h3>
-                <ul>
-                    <li><a href="#values">値と型</a></li>
-                    <li><a href="#stack">評価とスタック</a></li>
-                    <li><a href="#failure">NILとエラー</a></li>
-                    <li><a href="#names">名前とスコープ</a></li>
-                    <li><a href="#costs">コストと上限</a></li>
-                </ul>
-                <h3>組み込みワード</h3>
-                <ul>
-                    <li><a href="#operators">論理・比較・算術</a></li>
-                    <li><a href="#vector-ops">ベクトル操作</a></li>
-                    <li><a href="#records">キーによる対応</a></li>
-                    <li><a href="#strings-ops">文字列操作</a></li>
-                    <li><a href="#control">制御と反復</a></li>
-                    <li><a href="#words">ワードの定義と辞書</a></li>
-                    <li><a href="#output">出力</a></li>
-                </ul>
-                <h3>付録</h3>
-                <ul>
-                    <li><a href="#patterns">よくあるパターン</a></li>
-                    <li><a href="#identity-model">同一性モデル</a></li>
+                    <li><a href="#program">1 プログラム</a>
+                        <ul>
+                            <li><a href="#tokens">1.1 要素の区切り</a></li>
+                            <li><a href="#stack">1.2 評価</a>
+                                <ul>
+                                    <li><a href="#failure">1.2.1 評価の結末</a></li>
+                                    <li><a href="#costs">1.2.2 評価のコスト</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#elements">2 要素</a>
+                        <ul>
+                            <li><a href="#el-number">2.1 数</a></li>
+                            <li><a href="#el-string">2.2 文字列</a></li>
+                            <li><a href="#el-vector">2.3 ベクトル</a></li>
+                            <li><a href="#el-name">2.4 名前</a>
+                                <ul>
+                                    <li><a href="#names">2.4.1 束縛</a></li>
+                                    <li><a href="#words">2.4.2 ワード</a>
+                                        <ul>
+                                            <li><a href="#operators">2.4.2.1 論理・比較・算術</a></li>
+                                            <li><a href="#vector-ops">2.4.2.2 ベクトル操作</a></li>
+                                            <li><a href="#records">2.4.2.3 キーによる対応</a></li>
+                                            <li><a href="#strings-ops">2.4.2.4 文字列操作</a></li>
+                                            <li><a href="#control">2.4.2.5 選択と反復</a></li>
+                                            <li><a href="#absence">2.4.2.6 不在を扱う</a></li>
+                                            <li><a href="#output">2.4.2.7 出力</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#patterns">付録 A よくあるパターン</a></li>
+                    <li><a href="#identity-model">付録 B 同一性モデル</a></li>
                 </ul>
             </nav>
         </main>

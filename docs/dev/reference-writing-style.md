@@ -55,6 +55,6 @@ Result:
 | 表示面 | 保管場所 |
 |---|---|
 | `?` (LOOKUP) のビルトイン説明 | `rust/src/builtins/detail-lookup-*.rs` の raw string literal |
-| Reference ボタンから開くページ | `public/docs/en/index.html`・`public/docs/ja/index.html`（英日で内容を対応させる。共通の見た目と振る舞いは `public/docs/reference.css`・`reference.js`、構成は言語リファレンスの順（概要→字句→構文→意味論・実行モデル→組み込みワード→付録）。「トークンの種類」頁の組み込みワード一覧と各族の頁末尾の契約は `scripts/generate-word-reference.mjs` が生成し、日本語の説明は `docs/i18n/word-summaries.ja.json`） |
+| Reference ボタンから開くページ | `public/docs/en/index.html`・`public/docs/ja/index.html`（英日で内容を対応させる。共通の見た目と振る舞いは `public/docs/reference.css`・`reference.js`、構成は分割の木（プログラム＝要素の並び→区切りと評価→要素の4種類→名前＝束縛かワード→ワードの族→個々のワード）。分けて語れなくなったところで終わる。「ワード」頁の組み込みワード一覧と各族の頁末尾の契約は `scripts/generate-word-reference.mjs` が生成し、日本語の説明は `docs/i18n/word-summaries.ja.json`） |
 
 ビルトイン説明テキストは段階的に本規約へ移行する。基準実装は `ADD`（`rust/src/builtins/detail-lookup-arithmetic-logic.rs`）。

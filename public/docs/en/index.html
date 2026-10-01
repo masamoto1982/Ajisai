@@ -17,13 +17,16 @@
       behavior are shared by both versions in ../reference.css and
       ../reference.js.
 
-      The pages follow the order of a language reference: overview →
-      lexical structure (lexical analysis, kinds of token) → syntax →
-      semantics and execution → built-in Words (one page per family) →
-      appendix. The index of built-in Words on the "Kinds of token" page and
-      each family page's contracts are generated from spec/words.json by
-      scripts/generate-word-reference.mjs, between BEGIN/END markers. Do not
-      edit them by hand (npm run word:reference).
+      The pages form a tree, numbered in the headings and the table of
+      contents: a program is a sequence of elements (1), separated (1.1) and
+      evaluated (1.2); an element is a number, a string, a Vector or a name
+      (2.1–2.4); a name is a binding or a Word (2.4.1, 2.4.2); the Words
+      divide into families (2.4.2.x), and each family page ends with its
+      individual Words, the leaves where the division stops. The index of
+      built-in Words on the Words page and each family page's contracts are
+      generated from spec/words.json by scripts/generate-word-reference.mjs,
+      between BEGIN/END markers. Do not edit them by hand
+      (npm run word:reference).
 
       The authority for the language's semantics is SPECIFICATION.html; this
       Reference is a reading surface derived from it. When the English and
@@ -95,8 +98,9 @@
                 <section id="intro" class="ref-page">
                     <h2>Introduction</h2>
 
+
                     <p>Ajisai is an AI-first, vector-oriented dataflow language for auditable, exact vector computation with machine-readable contracts. A program is a sequence of <strong>Words</strong>. Values live on a single stack: each Word takes (consumes) its operands from the stack and pushes its result back onto it. Fractions and the <strong>Vector</strong> as a data structure play the central roles.</p>
-                    <p>When a well-formed operation cannot produce a value, the result is <code>NIL</code>, which carries its reason and is handed on to downstream computation as it is. When the operation or the shape of its input is itself wrong, the result is an error and evaluation stops on the spot. Even a well-formed program is an error once it exceeds the limits the host can support; those limits are covered on the <a href="#costs">Costs and limits</a> page.</p>
+                    <p>When a well-formed operation cannot produce a value, the result is <code>NIL</code>, which carries its reason and is handed on to downstream computation as it is. When the operation or the shape of its input is itself wrong, the result is an error and evaluation stops on the spot. Even a well-formed program is an error once it exceeds the limits the host can support; those limits are covered in <a href="#costs">1.2.2 The cost of evaluation</a>.</p>
                     <h3>Why I made Ajisai</h3>
                     <p>I had two reasons for developing Ajisai. One is that I had given up on learning every programming language I tried. The other is that I never wanted to build something with the tool called a language — I wanted to build the tool itself.</p>
                     <p>The turning point came when I met <strong>Forth</strong>. Stack orientation: minimalism pared down to the limit. The way it strips away syntactic noise and lays the act of computation bare taught me that a language is allowed to be this small.</p>
@@ -110,7 +114,8 @@
                     <p>Every number is handled exactly. Values are held as exact rationals and as the algebraic irrationals that arise when those are closed under <code>SQRT</code> — the multi-quadratic normal form. Arithmetic and comparison both run without rounding error. The stack display <code>sqrt(2)</code> or <code>1/1+sqrt(2)</code> writes that normal form as a single token; nothing is truncated or approximated. The Playground's Stack area shows the same token as it is.</p>
                     <h3>What this Reference offers</h3>
                     <p>This Reference explains each feature together with a short, verified sample. Every example has an <strong>"Open in Playground"</strong> button: one click loads the code into the app's editor, so you can see the actual behavior immediately.</p>
-                    <h3>Where this Reference stands</h3>
+                    <p>This Reference divides a program into its elements, and divides each element further for as long as it can be divided. What lies at the end of that division is the individual Word, and that is where the Reference ends.</p>
+<h3>Where this Reference stands</h3>
                     <p>This Reference is for people who use and learn Ajisai. If you are implementing or porting the language itself, consult the <a href="../../SPECIFICATION.html">Specification</a>, the single design authority. This Reference reorganizes its content for everyday use and learning.</p>
                     <h3>How to read the examples</h3>
                     <p>The <strong>Expected value</strong> column of each section shows the final state of the stack after the program runs, rendered according to the language's display rules. These are the display rules to know in advance:</p>
@@ -134,11 +139,22 @@
                     <h4>4. How symbols and tokens are written</h4>
                     <p>Text with a gray background in the body of this Reference is always an Ajisai token. The gray background says the text is part of program code, not prose. A token spelled only with symbols is an ordinary name like any other.</p>
                 
+                
+                </section>
+
+                <section id="program" class="ref-page">
+                    <h2><span class="secnum">1</span> Program</h2>
+<p>An Ajisai program is a <strong>sequence of elements</strong>.</p>
+<pre class="ebnf">program = { element } ;</pre>
+<p>Elements are written separated by whitespace and evaluated one at a time, left to right. Branching, iteration and definition are Words, written in the sequence like any other element. <code>[ 2 MUL ] 'DOUBLE' DEF</code> is a program of three elements: a Vector, a string and a name.</p>
+<p>Two things are said about a program: how its text is divided into elements (<a href="#tokens">1.1 Separating elements</a>), and how the elements in sequence are evaluated (<a href="#stack">1.2 Evaluation</a>). The elements themselves are the subject of <a href="#elements">2 Elements</a>.</p>
+
                 </section>
 
                 <section id="tokens" class="ref-page">
-                    <h2>Lexical analysis (tokens, <code>#</code>)</h2>
-<p>An Ajisai program is a sequence of <strong>tokens</strong> separated by whitespace. The rules that turn source text into a token sequence are defined once, in <code>spec/grammar.json</code>, and every text becomes either exactly one token sequence or exactly one named source error. There is no other outcome.</p><h3 id="lexer">How the lexer works</h3>
+                    <h2><span class="secnum">1.1</span> Separating elements (whitespace, <code>#</code>)</h2>
+<p>Elements are separated by whitespace. The text is first divided into a sequence of <strong>tokens</strong>, and each pair of square brackets <code>[</code> <code>]</code> gathers its tokens into a Vector, giving the sequence of elements. The rules that turn text into tokens are defined once, in <code>spec/grammar.json</code>, and every text becomes either exactly one token sequence or exactly one named source error.</p>
+<h3 id="lexer">How the lexer works</h3>
 <p>The lexer reads the text left to right. At each position where a token may start, it tries the four rules below <strong>in order</strong>, and the first rule that applies consumes the characters there.</p>
 <div class="lexer-diagram"><svg viewBox="0 0 680 452" role="img" aria-label="The lexer: scan, classify each word, check bracket pairing">
 <defs><marker id="lexer-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker></defs>
@@ -232,43 +248,345 @@
 </table>
 </div>
 
+                
                 </section>
 
-                <section id="token-kinds" class="ref-page">
-                    <h2>Kinds of token</h2>
-<p>Lexical analysis produces only five kinds of token. Whitespace and comments produce none.</p>
+                <section id="stack" class="ref-page">
+                    <h2><span class="secnum">1.2</span> Evaluation</h2>
+
+<p>A program is evaluated element by element, left to right. What happens depends on the kind of element:</p>
+<ul class="ref-list">
+<li><strong>A number or string literal</strong>: its value is pushed onto the stack.</li>
+<li><strong>A Vector</strong> <code>[ ... ]</code>: pushed as a Vector without evaluating its contents. Names inside stay as Symbols, except <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>.</li>
+<li><strong>A name</strong>: if it is bound, its value is pushed; otherwise the Word of that name in the dictionary is called. If it is neither, it is an error (<em>Unknown word</em>).</li>
+</ul>
+<h3 id="value-kinds">Values on the stack</h3>
+<p>Every value evaluation pushes onto the stack belongs to exactly one of seven domains. The domains are disjoint, with no implicit conversion between them.</p>
+<ul class="ref-list">
+<li><strong>Numbers</strong>: exact rationals and algebraic irrationals (<a href="#el-number">2.1 Numbers</a>)</li>
+<li><strong>Strings</strong> (<a href="#el-string">2.2 Strings</a>)</li>
+<li><strong>Vectors</strong>: sequences of values, also read as code (<a href="#el-vector">2.3 Vectors</a>)</li>
+<li><strong>Symbols</strong>: names held as data (<a href="#name-inside-brackets">2.4.1 Bindings</a>)</li>
+<li><strong>Booleans</strong>: <code>TRUE</code> and <code>FALSE</code> (<a href="#comparison">2.4.2.1 Logic, comparison, arithmetic</a>)</li>
+<li><strong>Records</strong>: keys paired with values (<a href="#records">2.4.2.3 Keyed data</a>)</li>
+<li><strong><code>NIL</code></strong>: absence with a reason (<a href="#failure">1.2.1 Outcomes</a>)</li>
+</ul>
+<h3 id="consumption">Consumption</h3>
+
+                    <p>An Ajisai Word takes its operands from the stack and pushes its results back. A value that is read is <strong>always consumed</strong> on the spot and removed from the stack. No modifier changes this. Words that push no result, such as <code>BIND</code>, <code>DEF</code> and <code>DEL</code>, are no exception: they consume their operands too.</p>
+                    <h3>Using the same value twice: <code>BIND</code></h3>
+                    <p>To use one value more than once, name it with <code>BIND</code> and write the name as many times as you need. Each time the name is written, its value is pushed onto the stack. <code>5 'N' BIND N N 1 ADD</code> is <code>5/1 6/1</code>. Because values are read by name, you can see from the text alone which value is used where.</p>
+                    <h3>A Word can be replaced by its body</h3>
+                    <p>Every call consumes exactly the operands it reads, so writing a Word you defined as its body instead does not change which operands are consumed. Given <code>[ 2 MUL ] 'DOUBLE' DEF</code>, both <code>5 DOUBLE</code> and <code>5 2 MUL</code> are <code>10/1</code>. This property is what lets you check a program that uses User Words by expanding it into Core Words alone.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 4 ADD</code></td>
+                                    <td><code>7/1</code></td>
+                                    <td class="notes">Both operands are consumed and their sum is pushed.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5 'N' BIND N N 1 ADD</code></td>
+                                    <td><code>5/1 6/1</code></td>
+                                    <td class="notes">A named value is pushed every time its name is written.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                
+                </section>
+
+                <section id="failure" class="ref-page">
+                    <h2><span class="secnum">1.2.1</span> Outcomes (values, <code>NIL</code>, errors)</h2>
+<p>Evaluating one element ends in one of three ways: it pushes a value, it pushes a <code>NIL</code> carrying a reason, or it stops the whole evaluation with an error.</p>
+<h3 id="nil">The NIL rule</h3>
+                    <p>The failure model fits in one sentence: <strong>if a value could not be produced, <code>NIL</code>; if the usage itself is wrong, an error</strong>. A well-formed operation that cannot produce a result maps to <code>NIL</code> with a structured reason. Misuse — a wrong type, missing operands — raises an ordinary error.</p>
+                    <h3>NIL propagates</h3>
+                    <p>Arithmetic and comparison both pass <code>NIL</code> through. A <code>NIL</code> operand does not crash the pipeline; the result simply becomes <code>NIL</code>. <code>EQ</code> is no exception: <code>NIL 1 EQ</code> is <code>NIL</code>, not <code>FALSE</code>.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">Division by zero is not a trap; it becomes a reasoned <code>NIL</code>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>NIL 1 ADD</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">NIL passes straight through arithmetic, and its reason stays traceable.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 ] 5 GET</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">An out-of-range index into a valid Vector is <code>NIL</code> (reason: indexOutOfBounds).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] 5 TAKE</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">Asking for more than there is asks the same "past the end" question, and gets the same answer as <code>GET</code> (reason: indexOutOfBounds).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] 9 5 PUT</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes"><code>PUT</code> likewise. An out-of-range index is a fact about the data, not a mistake in the program, so it is <code>NIL</code>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">One condition has one answer. "Past the end" is <code>NIL</code> for <code>GET</code>, <code>TAKE</code> and <code>PUT</code> alike, the same across the whole vocabulary. A count or index that is not even an integer (<code>[ 1 2 3 ] [ 'x' ] TAKE</code>) is still an error — that one is wrong usage.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'ABC' NUM</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">Text that cannot be parsed as a number is <code>NIL</code> (reason: invalidEncoding).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    
+                </section>
+
+                <section id="costs" class="ref-page">
+                    <h2><span class="secnum">1.2.2</span> The cost of evaluation</h2>
+<h3 id="iterative">The cost of iteration</h3>
+                    <p>Exact arithmetic changes what a loop costs. Every other section of this Reference is about what a program <em>means</em>; this one is about what repeating it <em>costs</em>, because it is the one place where exactness asks for something in return.</p>
+                    <h3>Where the cost comes from</h3>
+                    <p>An exact rational is stored as a pair of numerator and denominator, and the product of two fractions has the product of their denominators. Multiply once and nothing happens. But keep multiplying in a loop, and the denominator grows step after step. That is exactly what gradient descent, Newton's method, k-means, power iteration and every other iterative method do. Nothing is lost and nothing is approximated; the number stays entirely correct. But its digits record <strong>how the value was computed</strong>, and that history grows longer every round.</p>
+                    <p>Here is a relaxation step in which <code>x</code> moves a tenth of the way toward 2 each time. <code>DELTA</code> is the correction and <code>STEP</code> applies it. The loop is a <code>FOLD</code> over a range whose elements are mere counters; the block discards the element and keeps only the accumulator.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>0 6 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
+                                    <td><code>7282969/1250000</code></td>
+                                    <td class="notes">Seven steps from 10 (<code>0 6 RANGE</code> is the seven elements 0 to 6). The denominator already has seven digits. The value is about 5.83.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p>The problem is not the size of any one number but the shape of the growth. Run the same loop for 21 steps and you get <code>359418989131512359209/125000000000000000000</code>: 21 digits over 21 digits, a value of about 2.875. Each further step multiplies the denominator by ten again, so the answer barely moves while the cost per step climbs without limit. A loop that finishes in an instant at 30 iterations can crawl at 300.</p>
+                    <h3>Naming the resolution</h3>
+                    <p><code>x d MUL 1/2 ADD FLOOR d DIV</code> rounds a value to the nearest multiple of <code>1/d</code> (an exact midpoint goes to the larger side). The result's denominator divides <code>d</code> and never grows beyond it. Applied once per step, it throws away the derivation history and keeps only the value.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>0 20 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
+                                    <td><code>2877/1000</code></td>
+                                    <td class="notes">After 21 steps the denominator is still 1000. <code>0 20 RANGE</code> is the 21 elements 0 to 20. The unrounded run gives 2.875351&hellip;, the same number to the resolution asked for.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p>This is an approximation, and that is exactly the point: it is an approximation <strong>you wrote down yourself</strong>. The resolution is a literal in the source, at a place you chose, and every value after it is exactly a multiple of <code>1/d</code>. Nothing is rounded behind your back, and nothing decides on its own how much precision the answer deserves.</p>
+                    <p><code>MUL</code>, <code>ADD</code>, <code>FLOOR</code> and <code>DIV</code>, which make up this rounding, all lift over Vectors, so a whole parameter Vector is rounded by the same run of Words.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 119/125 32/125 ] 10 MUL 1/2 ADD FLOOR 10 DIV</code></td>
+                                    <td><code>[ 1/1 3/10 ]</code></td>
+                                    <td class="notes">One call per step, whatever the shape of the state.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>A closed form beats a loop</h3>
+                    <p>Before reaching for an iterative method, check whether the problem has a closed form. In exact arithmetic a closed form is not only faster; it is a different kind of answer. Least squares, ridge regression with a rational penalty, k-nearest neighbours, naive Bayes over rational probabilities, decision trees with Gini splits, the perceptron and the simplex method all have exact solutions without iteration. Ajisai returns the coefficients as exactly those rationals: an <code>R²</code> that comes back as <code>529/532</code> is the exact answer.</p>
+                    <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer, and Ajisai does not handle them. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
+
+                    <h3>The other cost: the host's safety controls</h3>
+                    <p>The costs so far accumulate naturally from exact arithmetic itself, even in a correctly written program. Separately, the host sets several limits to protect its computing resources. Each is a safety control on the host side, not language semantics, and the concrete numbers are set by the implementation. The same source may pass on a host that declares larger limits. What happens on overrun is fixed, however: if producing a single value exceeds a limit, the result is a reasoned <strong><code>NIL</code></strong>; if the run itself exceeds a limit so far that it cannot continue, it is an <strong>error</strong> and evaluation stops.</p>
+
+                    <h3 id="limits">Run-time errors: one result with several reasons</h3>
+                    <p>Even a well-formed operation or input is an error once it exceeds what the host can support, and evaluation stops on the spot. There is more than one limit: overruns are reported under at least three names, depending on what was exceeded. The names differ because the fixes differ.</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Reported name</th><th>What was exceeded</th><th>Typical fix</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>executionLimitExceeded</code></td><td class="notes">The total number of work steps the whole program may spend</td><td class="notes">Rewrite with bulk operations (<code>SORT</code>, <code>GET</code>); review the termination condition</td></tr>
+                                <tr><td><code>resourceLimitExceeded</code></td><td class="notes">The size of a single value (coefficient bit width, number of algebraic terms and so on)</td><td class="notes">Round to a <code>1/d</code> grid to prune the history; look for a closed form</td></tr>
+                                <tr><td><code>recursionLimitExceeded</code></td><td class="notes">The nesting depth of a call chain (not cyclic, but an extremely long chain of Words calling Words)</td><td class="notes">Make the call chain shallower, or rewrite with bulk operations</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><code>executionLimitExceeded</code> can be set explicitly with the CLI's <code>ajisai run --step-limit &lt;N&gt;</code>. The default is an implementation choice made by the host's runtime, not a fixed number this Reference promises.</p>
+                    <p class="ref-note">The three above are limits the interpreter counts, but the Playground has one more: a <strong>wall-clock</strong> cut-off. When a single run exceeds 5 seconds, it is stopped together with its worker and reported as <code>Execution timed out after 5000 ms</code>. This is neither language semantics nor an interpreter budget but a host-side guard that only this screen has. That is why it carries none of the names above; instead it comes with a diagnosis that says which guard stopped the run and suggests rewriting with bulk operations or pruning by rounding to a grid. Hover over the <code>resource limits:</code> badge next to the build indicator at the top of the screen to list the host's limits (this guard is listed there too). The MCP host declares a different, stricter materialization limit. That is why the same <code>0 100001 RANGE</code> succeeds in the Playground but is <code>NIL</code> (<code>spaceExhausted</code>) on the MCP host.</p>
+                    <p class="ref-note">The work done by the whole program and the size of a single value are measured separately. Some Words, such as <code>0 99999 RANGE UNIQUE</code>, count as one step yet perform as many comparisons internally as there are elements, so the step budget alone does not show how heavy a value is. Recall the fraction whose denominator kept growing in the section on the cost of iteration: grow it without pruning to a grid, and exactly this <code>resourceLimitExceeded</code> is where it ends. <code>recursionLimitExceeded</code> is different again. <a href="#acyclic">A Word cannot call itself</a>, so this is not a recursion depth but the depth of a non-cyclic call chain that passes through many different Words, A→B→C→….</p>
+
+                    <h3>Materialization limits: a reasoned NIL</h3>
+                    <p><code>RANGE</code> and <code>FILL</code> have a limit on the size of the Vector one call produces. Even when the request itself is well-formed, trying to materialize beyond that limit gives a reasoned <strong><code>NIL</code></strong>, not an error. The reason is <code>spaceExhausted</code>. A dimension or shape that is itself wrong, such as a negative or non-integer number, is a different matter and is an error, as usual.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
+                                    <td><code>'spaceExhausted'</code></td>
+                                    <td class="notes">The request is well-formed but too large, so it is a reasoned <code>NIL</code>, not an error. <code>FILL</code> behaves the same way for the same reason.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">Being <code>NIL</code>, it can be <a href="#recovery">replaced with a fallback value</a> so the program moves on: <code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code> recovers to the empty Vector. An error has no such recovery.</p>
+                
+                
+                </section>
+
+                <section id="elements" class="ref-page">
+                    <h2><span class="secnum">2</span> Elements</h2>
+<p>There are four kinds of element.</p>
+<pre class="ebnf">element = number | string | name | vector ;
+vector  = "[" , { element } , "]" ;</pre>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
-<thead><tr><th>Kind</th><th>Examples</th><th>Carries</th></tr></thead>
+<thead><tr><th>Element</th><th>Examples</th><th>Evaluated, it</th></tr></thead>
 <tbody>
-<tr><td class="notes">Number literal</td><td><code>3</code> <code>-1/2</code> <code>0.25</code> <code>1e5</code></td><td class="notes">The lexeme itself, read as an exact number</td></tr>
-<tr><td class="notes">String literal</td><td><code>'hello'</code></td><td class="notes">The text between the quotes</td></tr>
-<tr><td class="notes">Name</td><td><code>ADD</code> <code>NIL?</code> <code>DOUBLE</code></td><td class="notes">The lexeme as written. It names a Word or a binding (a Symbol inside <code>[ ]</code>)</td></tr>
-<tr><td class="notes">Vector start</td><td><code>[</code></td><td class="notes">Nothing</td></tr>
-<tr><td class="notes">Vector end</td><td><code>]</code></td><td class="notes">Nothing</td></tr>
+<tr><td class="notes"><a href="#el-number">2.1 Number</a></td><td><code>3</code> <code>-1/2</code> <code>0.25</code> <code>1e5</code></td><td class="notes">pushes the number</td></tr>
+<tr><td class="notes"><a href="#el-string">2.2 String</a></td><td><code>'hello'</code></td><td class="notes">pushes the string</td></tr>
+<tr><td class="notes"><a href="#el-vector">2.3 Vector</a></td><td><code>[ 1 2 3 ]</code></td><td class="notes">pushes the Vector, without evaluating its contents</td></tr>
+<tr><td class="notes"><a href="#el-name">2.4 Name</a></td><td><code>ADD</code> <code>N</code> <code>DOUBLE</code></td><td class="notes">pushes the bound value if the name is bound; otherwise calls the Word of that name</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="all-words">Every operation is a Word</h3>
-<p>Ajisai's lexical structure tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Arithmetic and comparison, branching, iteration, definition and binding — even <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, which push one value — are ordinary <strong>Words</strong>, each with one English name, held in the dictionary and called by name.</p>
-<div class="ref-table-wrap word-table">
-<table class="ref-table">
-<thead><tr><th>Role</th><th>Words</th></tr></thead>
-<tbody>
-<tr><td class="notes">Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
-<tr><td class="notes">Comparison</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
-<tr><td class="notes">Logic</td><td><code>AND</code> <code>NOT</code></td></tr>
-<tr><td class="notes">Truth values and absence</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
-<tr><td class="notes">Choice</td><td><code>SELECT</code></td></tr>
-<tr><td class="notes">Iteration</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
-<tr><td class="notes">Definition and binding</td><td><code>DEF</code> <code>BIND</code></td></tr>
-</tbody>
-</table>
-</div>
-<p>Every Word is listed under <a href="#word-index">Built-in Words</a>.</p>
-<h3>Symbols and how tokens are recognized</h3>
-                    <p>A symbol in Ajisai is simply a name spelled with symbol characters. Every Word is called by its one English name, and no Word has a symbol spelling. <code>+</code> and <code>&lt;</code> are ordinary names too, undefined unless you define them. Because a symbol is just one way of spelling a name, even a multi-character symbol does not complicate the rule above: a token ends only at whitespace, never partway through. A token's meaning is decided by the lexeme of the whole token, not by its first character. For example, <code>1/2</code> is parsed as a whole fraction literal, while a lone <code>/</code> is parsed as a plain name.</p>
-                    <h3>Number literals</h3>
+<p>Whitespace and comments are not elements (<a href="#tokens">1.1 Separating elements</a>).</p>
+
+                </section>
+
+                <section id="el-number" class="ref-page">
+                    <h2><span class="secnum">2.1</span> Numbers</h2>
+<h3>Number literals</h3>
                     <p>A decimal literal needs at least one digit on <strong>both sides</strong> of the point. <code>0.5</code> and <code>5.0</code> are numbers; <code>.5</code> and <code>5.</code> are not. Because of this rule the point is never the first or last character of a number, so a lone <code>.</code> can safely be an ordinary name rather than an incomplete literal.</p>
 <p>The number grammar is:</p>
 <pre class="ebnf">number   = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;
@@ -289,178 +607,7 @@ exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
 </tbody>
 </table>
 </div>
-<h3>String literals</h3>
-                    <p class="ref-note">A string literal is closed by a quote (<code>'</code>) at a token boundary. Here too only whitespace separates tokens, so the closing <code>'</code> must be followed by whitespace (or the end of input). An apostrophe inside the string does not end it unless whitespace follows. This lets you write a string such as <code>'It's fine'</code> as a single literal, with no escape character. Conversely, a quote followed by anything other than whitespace stays inside the text, so both <code>'abc'CHARS</code> and <code>[ 'abc']</code> are an unterminated string, not two tokens.</p>
-                <h3 id="word-index">Built-in Words</h3>
-<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
-<p>The 78 Words of the canonical vocabulary, by family, generated from <code>spec/words.json</code>. 48 of them form the Semantic Kernel and 30 are Standard Words; every one is an ordinary Core Word reached by its plain name, and the tier only says where it sits in the design (<a href="#dictionaries">Dictionaries and Word identity</a>). Choose a Word for its contract — syntax, stack effect, NIL policy, ERROR conditions — or a page for the explanation with samples.</p>
-<div class="ref-table-wrap word-jump">
-<table class="ref-table">
-<thead><tr><th>Family</th><th>Words</th><th>Explained in</th></tr></thead>
-<tbody>
-<tr><td class="notes">Logic</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td><td class="notes"><a href="#operators">Logic, comparison, arithmetic</a></td></tr>
-<tr><td class="notes">Comparison</td><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td><td class="notes"><a href="#operators">Logic, comparison, arithmetic</a></td></tr>
-<tr><td class="notes">Exact arithmetic</td><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td><td class="notes"><a href="#operators">Logic, comparison, arithmetic</a></td></tr>
-<tr><td class="notes">Vectors</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">Vector operations</a></td></tr>
-<tr><td class="notes">Records</td><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td><td class="notes"><a href="#records">Keyed data</a></td></tr>
-<tr><td class="notes">Iteration</td><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td><td class="notes"><a href="#control">Control and iteration</a></td></tr>
-<tr><td class="notes">Text</td><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td><td class="notes"><a href="#strings-ops">String operations</a></td></tr>
-<tr><td class="notes">Control</td><td><a href="#word-EXEC"><code>EXEC</code></a> <a href="#word-FAIL"><code>FAIL</code></a></td><td class="notes"><a href="#control">Control and iteration</a></td></tr>
-<tr><td class="notes">Dictionary and names</td><td><a href="#word-CONTRACT"><code>CONTRACT</code></a> <a href="#word-BIND"><code>BIND</code></a> <a href="#word-DEF"><code>DEF</code></a> <a href="#word-DEL"><code>DEL</code></a> <a href="#word-DIGEST"><code>DIGEST</code></a></td><td class="notes"><a href="#words">Defining Words</a></td></tr>
-<tr><td class="notes">Absence (NIL)</td><td><a href="#word-NIL"><code>NIL</code></a> <a href="#word-NIL_3f"><code>NIL?</code></a> <a href="#word-NIL-REASON"><code>NIL-REASON</code></a> <a href="#word-ABSENT"><code>ABSENT</code></a></td><td class="notes"><a href="#failure">NIL and errors</a></td></tr>
-<tr><td class="notes">Output</td><td><a href="#word-PRINT"><code>PRINT</code></a></td><td class="notes"><a href="#output">Output</a></td></tr>
-</tbody>
-</table>
-</div>
-<!-- END generated word index -->
-
-                </section>
-
-                <section id="syntax" class="ref-page">
-                    <h2>Syntax</h2>
-<p>The rules that build a program from the token sequence are these three lines, and nothing more.</p>
-<pre class="ebnf">program = { element } ;
-element = number | string | name | vector ;
-vector  = "[" , { element } , "]" ;</pre>
-<p>A program is a sequence of elements. Branching, iteration and definition are Words, written in the sequence like any other element. <code>[ 2 MUL ] 'DOUBLE' DEF</code> is a program of three elements: a Vector, a string and a name. The elements are evaluated one at a time, left to right (<a href="#stack">Evaluation and the stack</a>).</p>
-<h3 id="vectors">Vectors (<code>[ ]</code>)</h3>
-                    <p>A Vector is written by enclosing its element values in square brackets <code>[ ]</code>, separated by whitespace. A Vector literal evaluates to that Vector value as it is, and literals nest freely.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ]</code></td>
-                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
-                                    <td class="notes">A Vector pushed on the stack. Integers are shown as exact fractions with denominator 1.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
-                                    <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
-                                    <td class="notes">Nesting is kept as it is, which is how grouped data and ragged data are expressed.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 7/3 ]</code></td>
-                                    <td><code>[ 7/3 ]</code></td>
-                                    <td class="notes">Fractions are first-class literals and stay exact.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3>Bare names inside a literal</h3>
-                    <p class="ref-note">A Vector literal is a literal all the way through. A bare name written inside <code>[ ]</code> denotes a <strong>Symbol</strong>; it is neither run as a Word call nor an undefined-Word error. So <code>[ FOO BAR ]</code> is the Vector <code>[ FOO BAR ]</code> of two Symbols. If you want text, quote it — <code>[ 'FOO' 'BAR' ]</code> is a Vector of Strings. This is an easy point to trip over once you start naming values. To put the value of a variable, or the result of running a Word, into a Vector, use a run-time collection builder such as <code>COLLECT</code> rather than a literal. See <a href="#name-inside-brackets">A name inside <code>[ ]</code> is a Symbol</a> for more.</p>
-                    <h3>Code as data</h3>
-                    <p class="ref-note">A code block and a Vector are <strong>the same kind of value</strong>. <code>[ ]</code> is the only bracket for both; a block is just a Vector holding source to be evaluated later, not a domain separate from data. It is read as something executable only when a Word's contract asks for it as code, so a block on the stack is displayed just like any Vector: <code>[ 2 MUL ]</code> is shown as <code>[ 2/1 MUL ]</code>, and <code>[ ]</code> as <code>[ ]</code>. <code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code> is <code>TRUE</code> — how a value was built (its construction history) is not part of the value, so whether a Vector is "code" or "data" is not decided before it is used. A bare name inside a block — <code>MUL</code> above — is a Symbol and is not looked up when the literal is built. <code>EXEC</code> and the Words that ask for evaluation run it; nothing else does.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">How it was built is not part of the value: <code>EQ</code> cannot tell them apart.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 ADD ] EXEC</code></td>
-                                    <td><code>3/1</code></td>
-                                    <td class="notes"><code>EXEC</code> does not care how its operand was built.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h4>Putting a run-time value into a block</h4>
-                    <p>A block is source, so values computed while the program runs are not inside it. <code>MAP</code> and <code>FILTER</code> take only a block, which raises a practical question: how do you filter by a threshold known only at run time? <code>[ 5 LT ]</code> compares against the literal 5, but when the number is something the program computed, there is no 5 to write.</p>
-                    <p>A block is an ordinary Vector, so it can be built with ordinary Vector Words. <code>CONCAT</code> joins a one-element Vector holding the run-time value with a one-element Vector holding the Symbol the block needs to run — <code>[ 5 ] [ LT ]</code> becomes <code>[ 5 LT ]</code>, and the result is no different from any other block. Even though it was not written with <code>[ ]</code>, every Word that takes a block accepts it. No separate bridge is needed; this is the very construction the sample above already showed.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 3 1 4 1 5 9 2 6 ]
-[ 5 ] [ LT ] CONCAT
-FILTER</code></td>
-                                    <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
-                                    <td class="notes">The <code>5</code> here is an ordinary stack value. Replace it with something the program computed, and the predicate follows.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">That is all there is to partial application in Ajisai. There is no separate Word for it, and none is needed, because a block is a value whose contents can be computed like any other Vector's.</p>
-
-                    <h3 id="display-forms">Display forms are not syntax</h3>
-<p>Some forms shown on the stack do not build the same value when written in source. A Record's <code>{ 'x' 1/1 }</code> (<a href="#records">Keyed data</a>) and an irrational's <code>sqrt(2)</code> (<a href="#numbers">Exact numbers</a>) are how values look; in source, <code>{</code>, <code>}</code> and <code>sqrt(2)</code> are plain names. A Record is built with <code>RECORD</code>, an irrational with <code>SQRT</code>.</p>
-
-                </section>
-
-                <section id="values" class="ref-page">
-                    <h2>Values and types</h2>
-<p>Every Ajisai value belongs to a value domain of its own: a number is a number and a string is a string, with no implicit conversion between domains. This page covers numbers and strings. Vectors are covered under <a href="#syntax">Syntax</a>, Records under <a href="#records">Keyed data</a>, Booleans under <a href="#comparison">Comparison and Booleans</a>, and absence (<code>NIL</code>) under <a href="#failure">NIL and errors</a>.</p><h3><code>[ ]</code> versus <code>NIL</code></h3>
-                    <p class="ref-note"><code>[ ]</code> is the empty Vector. It is a collection holding no values, but it is an ordinary value you can write, nest and measure: <code>[ ] LENGTH</code> is <code>0</code>. It is not <code>NIL</code>. <code>NIL</code> is the absence of a value, which is a different thing from a collection that happens to hold nothing. An operation whose result is empty returns <code>[ ]</code>, not <code>NIL</code>: <code>[ 1 2 3 ] [ 5 GT ] FILTER</code> is <code>[ ]</code>.</p>
-
-                    <h3 id="numbers">Exact numbers</h3>
+<h3 id="numbers">Exact numbers</h3>
                     <p>Every number in Ajisai is an <strong>exact number</strong>.</p>
                     <h3>How numbers are written, and their domain</h3>
                     <p>Integer, fraction, decimal and exponent literals are only different notations for the same exact value. <code>0.5</code> is exactly <code>1/2</code>.</p>
@@ -584,7 +731,14 @@ FILTER</code></td>
                     <p>Irrationals have one display form: the value's normal form written as a single token with no whitespace. <code>2 SQRT</code> is <code>sqrt(2)</code>, <code>1 2 SQRT ADD</code> is <code>1/1+sqrt(2)</code>, <code>2 SQRT 3 SQRT SUB</code> is <code>sqrt(2)-sqrt(3)</code>, and <code>8 SQRT</code> is <code>2/1*sqrt(2)</code> (the radicand is normalized to be square-free). Nothing is truncated or approximated, and inside a Vector it reads as a single element. The <code>stackDisplay</code> of the CLI and MCP hosts and the Playground's Stack area all show this same token. The CLI and MCP also list the same terms, structured, under <code>semantics.exactTerms</code>.</p>
                     <p class="ref-note">This is display-only output, not source syntax. Writing <code>sqrt(2)</code> in a program gives an unknown name. <code>(</code> <code>)</code> are name characters, not syntax, so written in a program they do not act as parentheses.</p>
 
-                    <h3 id="strings">Strings (<code>' '</code>)</h3>
+                    
+                </section>
+
+                <section id="el-string" class="ref-page">
+                    <h2><span class="secnum">2.2</span> Strings (<code>' '</code>)</h2>
+<h3>String literals</h3>
+                    <p class="ref-note">A string literal is closed by a quote (<code>'</code>) at a token boundary. Here too only whitespace separates tokens, so the closing <code>'</code> must be followed by whitespace (or the end of input). An apostrophe inside the string does not end it unless whitespace follows. This lets you write a string such as <code>'It's fine'</code> as a single literal, with no escape character. Conversely, a quote followed by anything other than whitespace stays inside the text, so both <code>'abc'CHARS</code> and <code>[ 'abc']</code> are an unterminated string, not two tokens.</p>
+                <h3 id="strings">Strings (<code>' '</code>)</h3>
                     <p>Strings are quoted with <code>'</code> and shown with their quotes on the stack. The quotes are a display convenience, not part of the value. <code>PRINT</code> writes the raw text, so <code>'TEST'</code> is output as <code>TEST</code>; see <a href="#output">Output</a> for more. A string nested inside a collection keeps its quotes, though: <code>[ 'AB' 'CD' ]</code> is shown just as written. Conversions between strings and numbers or characters are collected under <a href="#strings-ops">String operations</a>.</p>
                     <h3 id="disjoint">A value domain of its own</h3>
                     <p>A string is one of the six value domains, not a Vector of code points. <code>'A' [ 65 ] EQ</code> is <code>FALSE</code>, and arithmetic on a string is an error, not arithmetic on codes. The empty string <code>''</code> is an ordinary string, not <code>NIL</code>.</p>
@@ -609,23 +763,77 @@ FILTER</code></td>
                     </div>
 
                     
+                
                 </section>
 
-                <section id="stack" class="ref-page">
-                    <h2>Evaluation and the stack</h2>
-<p>A program is evaluated element by element, left to right. What happens depends on the kind of element:</p>
-<ul class="ref-list">
-<li><strong>A number or string literal</strong>: its value is pushed onto the stack.</li>
-<li><strong>A Vector</strong> <code>[ ... ]</code>: pushed as a Vector without evaluating its contents. Names inside stay as Symbols.</li>
-<li><strong>A name</strong>: if it is bound, its value is pushed; otherwise the Word of that name in the dictionary is called. If it is neither, it is an error (<em>Unknown word</em>).</li>
-</ul>
-<h3 id="consumption">Consumption</h3>
+                <section id="el-vector" class="ref-page">
+                    <h2><span class="secnum">2.3</span> Vectors (<code>[ ]</code>)</h2>
+<h3 id="vectors">Vectors (<code>[ ]</code>)</h3>
+                    <p>A Vector is written by enclosing its element values in square brackets <code>[ ]</code>, separated by whitespace. A Vector literal evaluates to that Vector value as it is, and literals nest freely.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ]</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">A Vector pushed on the stack. Integers are shown as exact fractions with denominator 1.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
+                                    <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
+                                    <td class="notes">Nesting is kept as it is, which is how grouped data and ragged data are expressed.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 7/3 ]</code></td>
+                                    <td><code>[ 7/3 ]</code></td>
+                                    <td class="notes">Fractions are first-class literals and stay exact.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>Bare names inside a literal</h3>
+                    <p class="ref-note">A Vector literal is a literal all the way through. A bare name written inside <code>[ ]</code> denotes a <strong>Symbol</strong>; it is neither run as a Word call nor an undefined-Word error. So <code>[ FOO BAR ]</code> is the Vector <code>[ FOO BAR ]</code> of two Symbols. If you want text, quote it — <code>[ 'FOO' 'BAR' ]</code> is a Vector of Strings. This is an easy point to trip over once you start naming values. To put the value of a variable, or the result of running a Word, into a Vector, use a run-time collection builder such as <code>COLLECT</code> rather than a literal. See <a href="#name-inside-brackets">A name inside <code>[ ]</code> is a Symbol</a> for more.</p>
+                    <h3><code>[ ]</code> versus <code>NIL</code></h3>
+                    <p class="ref-note"><code>[ ]</code> is the empty Vector. It is a collection holding no values, but it is an ordinary value you can write, nest and measure: <code>[ ] LENGTH</code> is <code>0</code>. It is not <code>NIL</code>. <code>NIL</code> is the absence of a value, which is a different thing from a collection that happens to hold nothing. An operation whose result is empty returns <code>[ ]</code>, not <code>NIL</code>: <code>[ 1 2 3 ] [ 5 GT ] FILTER</code> is <code>[ ]</code>.</p>
 
-                    <p>An Ajisai Word takes its operands from the stack and pushes its results back. A value that is read is <strong>always consumed</strong> on the spot and removed from the stack. No modifier changes this. Words that push no result, such as <code>BIND</code>, <code>DEF</code> and <code>DEL</code>, are no exception: they consume their operands too.</p>
-                    <h3>Using the same value twice: <code>BIND</code></h3>
-                    <p>To use one value more than once, name it with <code>BIND</code> and write the name as many times as you need. Each time the name is written, its value is pushed onto the stack. <code>5 'N' BIND N N 1 ADD</code> is <code>5/1 6/1</code>. Because values are read by name, you can see from the text alone which value is used where.</p>
-                    <h3>A Word can be replaced by its body</h3>
-                    <p>Every call consumes exactly the operands it reads, so writing a Word you defined as its body instead does not change which operands are consumed. Given <code>[ 2 MUL ] 'DOUBLE' DEF</code>, both <code>5 DOUBLE</code> and <code>5 2 MUL</code> are <code>10/1</code>. This property is what lets you check a program that uses User Words by expanding it into Core Words alone.</p>
+                    <h3>Code as data</h3>
+                    <p class="ref-note">A code block and a Vector are <strong>the same kind of value</strong>. <code>[ ]</code> is the only bracket for both; a block is just a Vector holding source to be evaluated later, not a domain separate from data. It is read as something executable only when a Word's contract asks for it as code, so a block on the stack is displayed just like any Vector: <code>[ 2 MUL ]</code> is shown as <code>[ 2/1 MUL ]</code>, and <code>[ ]</code> as <code>[ ]</code>. <code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code> is <code>TRUE</code> — how a value was built (its construction history) is not part of the value, so whether a Vector is "code" or "data" is not decided before it is used. A bare name inside a block — <code>MUL</code> above — is a Symbol and is not looked up when the literal is built. <code>EXEC</code> and the Words that ask for evaluation run it; nothing else does.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -634,9 +842,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>3 4 ADD</code></td>
-                                    <td><code>7/1</code></td>
-                                    <td class="notes">Both operands are consumed and their sum is pushed.</td>
+                                    <td><code>[ 1 2 ADD ] [ 1 2 ADD ] EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">How it was built is not part of the value: <code>EQ</code> cannot tell them apart.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -653,9 +861,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>5 'N' BIND N N 1 ADD</code></td>
-                                    <td><code>5/1 6/1</code></td>
-                                    <td class="notes">A named value is pushed every time its name is written.</td>
+                                    <td><code>[ 1 2 ADD ] EXEC</code></td>
+                                    <td><code>3/1</code></td>
+                                    <td class="notes"><code>EXEC</code> does not care how its operand was built.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -664,7 +872,33 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                <h3 id="blocks-frames">Blocks and evaluation frames (<code>[ ]</code>)</h3>
+                    <h4>Putting a run-time value into a block</h4>
+                    <p>A block is source, so values computed while the program runs are not inside it. <code>MAP</code> and <code>FILTER</code> take only a block, which raises a practical question: how do you filter by a threshold known only at run time? <code>[ 5 LT ]</code> compares against the literal 5, but when the number is something the program computed, there is no 5 to write.</p>
+                    <p>A block is an ordinary Vector, so it can be built with ordinary Vector Words. <code>CONCAT</code> joins a one-element Vector holding the run-time value with a one-element Vector holding the Symbol the block needs to run — <code>[ 5 ] [ LT ]</code> becomes <code>[ 5 LT ]</code>, and the result is no different from any other block. Even though it was not written with <code>[ ]</code>, every Word that takes a block accepts it. No separate bridge is needed; this is the very construction the sample above already showed.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 3 1 4 1 5 9 2 6 ]
+[ 5 ] [ LT ] CONCAT
+FILTER</code></td>
+                                    <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
+                                    <td class="notes">The <code>5</code> here is an ordinary stack value. Replace it with something the program computed, and the predicate follows.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">That is all there is to partial application in Ajisai. There is no separate Word for it, and none is needed, because a block is a value whose contents can be computed like any other Vector's.</p>
+
+                    <h3 id="blocks-frames">Blocks and evaluation frames (<code>[ ]</code>)</h3>
                     <p>A block has <strong>no stack discipline of its own</strong>. The Word that evaluates a block decides what the block can reach and what it may leave behind. Read with the wrong rule, an <code>ADD</code> inside a block either finds two operands or finds none. There are five rules, and the block's own text does not say which one applies. The Word that receives the block decides.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
@@ -685,312 +919,56 @@ FILTER</code></td>
                     <p class="ref-note">A block written <em>inside</em> another block is data where it is written. It is evaluated only when the Word that receives it runs it, and then under that receiving Word's own rule, not the outer block's. That is about evaluation, though, not reference. Even when the name of the Word being defined appears only inside a <code>[ ]</code> passed to <code>MAP</code> or <code>EXEC</code>, <code>DEF</code>'s <a href="#acyclic">acyclicity rule</a> detects it and rejects the definition itself.</p>
 
                     
+                
                 </section>
 
-                <section id="failure" class="ref-page">
-                    <h2>NIL and errors</h2>
-<h3 id="nil">The NIL rule</h3>
-                    <p>The failure model fits in one sentence: <strong>if a value could not be produced, <code>NIL</code>; if the usage itself is wrong, an error</strong>. A well-formed operation that cannot produce a result maps to <code>NIL</code> with a structured reason. Misuse — a wrong type, missing operands — raises an ordinary error.</p>
-                    <h3>NIL propagates</h3>
-                    <p>Arithmetic and comparison both pass <code>NIL</code> through. A <code>NIL</code> operand does not crash the pipeline; the result simply becomes <code>NIL</code>. <code>EQ</code> is no exception: <code>NIL 1 EQ</code> is <code>NIL</code>, not <code>FALSE</code>.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">Division by zero is not a trap; it becomes a reasoned <code>NIL</code>.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>NIL 1 ADD</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">NIL passes straight through arithmetic, and its reason stays traceable.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 10 20 30 ] 5 GET</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">An out-of-range index into a valid Vector is <code>NIL</code> (reason: indexOutOfBounds).</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] 5 TAKE</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">Asking for more than there is asks the same "past the end" question, and gets the same answer as <code>GET</code> (reason: indexOutOfBounds).</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] 9 5 PUT</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes"><code>PUT</code> likewise. An out-of-range index is a fact about the data, not a mistake in the program, so it is <code>NIL</code>.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">One condition has one answer. "Past the end" is <code>NIL</code> for <code>GET</code>, <code>TAKE</code> and <code>PUT</code> alike, the same across the whole vocabulary. A count or index that is not even an integer (<code>[ 1 2 3 ] [ 'x' ] TAKE</code>) is still an error — that one is wrong usage.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'ABC' NUM</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">Text that cannot be parsed as a number is <code>NIL</code> (reason: invalidEncoding).</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3>Inspecting NIL: <code>NIL?</code> and <code>NIL-REASON</code></h3>
-                    <p>These two Words inspect <code>NIL</code>. <code>NIL?</code> asks whether the top of the stack is <code>NIL</code>; <code>NIL-REASON</code> reads the reason it carries. Like every other Word, both <strong>consume the value they inspect</strong> and push their answer in its place. If you still need the value afterwards, name it with <code>BIND</code> first.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV NIL?</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes"><code>NIL?</code> consumes the top value and pushes its answer in its place.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV NIL-REASON</code></td>
-                                    <td><code>'divisionByZero'</code></td>
-                                    <td class="notes">The reason is a protocol string, so a program can branch on why a value is missing.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3 id="declared-outcomes">Declaring an outcome yourself: <code>ABSENT</code> and <code>FAIL</code></h3>
-                    <p>Absence and errors do not belong only to the built-in Words. A program can itself declare "there is no value here" or "this is misuse". <code>ABSENT</code> takes one string and pushes <strong>a <code>NIL</code> whose reason is that string</strong>. The reason identifier is <code>userDeclared</code>, but what <code>NIL-REASON</code> answers is the string you passed. The string is part of the value, so two <code>ABSENT</code>s made from different strings are different values.</p>
-                    <p><code>FAIL</code> also takes one string and raises an <strong>ERROR</strong> with that string as its message (classified <code>declaredFailure</code>). Being an ERROR, it stops evaluation there, and no Word can catch it. <code>FAIL</code> is not a "stronger <code>ABSENT</code>"; it is the Word for drawing the line between <a href="#nil">absence and misuse</a> from the program's side. Use <code>ABSENT</code> when the caller should be able to recover, and <code>FAIL</code> when it should stop as the caller's mistake.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'rate not quoted' ABSENT NIL-REASON</code></td>
-                                    <td><code>'rate not quoted'</code></td>
-                                    <td class="notes">The declared string becomes the reason as it is.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</code></td>
-                                    <td><code>0/1</code></td>
-                                    <td class="notes">It is an ordinary <code>NIL</code>, so the recovery phrase below works on it unchanged.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>1 'width must be positive' FAIL 2</code></td>
-                                    <td>error</td>
-                                    <td class="notes">The message is <code>width must be positive</code>. Evaluation stops, and the following <code>2</code> does not run. The operand <code>1</code> and the string stay on the stack.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3 id="recovery">Supplying a fallback value: <code>BIND</code>, <code>NIL?</code>, <code>SELECT</code></h3>
-                    <p>There is no special syntax for recovering from absence. Name the value being tested with <code>BIND</code>, then line up <a href="#cond"><code>SELECT</code></a> and <code>NIL?</code>.</p>
-                    <p>Like every other Word, <code>NIL?</code> <strong>consumes the value it inspects</strong> and pushes a Boolean saying whether it was absent (<code>[ x ] -&gt; [ bool ]</code>). So name the value once and read it twice. Writing <code>value 'S' BIND fallback S S NIL? SELECT</code> pushes things in exactly the order <code>SELECT</code> asks for (the candidate when true, the candidate when false, the Boolean), giving "the value if there is one, otherwise the fallback".</p>
-                    <p class="ref-note">The fallback is an ordinary operand, so like any other operand it has been computed before <code>SELECT</code> runs. In other words the fallback is computed even when the value is present (see the <a href="#cond"><code>SELECT</code></a> section). Do not put a heavy computation or an effect such as <code>PRINT</code> in the fallback position.</p>
-                    <p class="ref-note"><code>NIL?</code> asks about the <strong>whole value</strong>. Even if one lane of a Vector is <code>NIL</code>, the Vector itself is not absent, so the answer is <code>FALSE</code>. <code>[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</code> is <code>[ 1/1 NIL ]</code>: the lane's absence is not recovered. To recover a lane, recover inside the Vector rather than outside it.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
-                                    <td><code>99/1</code></td>
-                                    <td class="notes">The value was absent, so the fallback is chosen.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>7 2 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
-                                    <td><code>7/2</code></td>
-                                    <td class="notes">When the result is a real value, the fallback is not chosen.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                <!-- BEGIN generated word contracts: failure -->
-<h3 id="family-absence">Contracts: Absence (NIL)</h3>
-<div class="word-entry" id="word-NIL">
-<h4><code>NIL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The absence written into the program: <code>NIL NIL?</code> is <code>TRUE</code>, and its reason is <code>literal</code>: <code>NIL NIL-REASON</code> is <code>'literal'</code> (LANG.VALUES.NIL). ABSENT writes one with a reason of the program's own.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>NIL</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">-&gt; [ NIL ]</span></dd>
-<dt>Stack</dt><dd>0 input(s) → 1 output(s)</dd>
-<dt>NIL policy</dt><dd><code>preserveReason</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-NIL_3f">
-<h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Whether a value is absent: <code>1 0 DIV NIL?</code> is <code>TRUE</code> and <code>5 NIL?</code> is <code>FALSE</code>. It asks about the whole value, so a Vector holding a NIL is present: <code>[ 1 NIL ] NIL?</code> is <code>FALSE</code>. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>1 0 DIV NIL?</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
-<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
-<dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-NIL-REASON">
-<h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The reason an absence carries, as text: <code>1 0 DIV NIL-REASON</code> is <code>'divisionByZero'</code>, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
-<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
-<dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: <code>valueIsNotNil</code> → <code>domainMiss</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-ABSENT">
-<h4><code>ABSENT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>A NIL whose reason the program states: <code>'rate not quoted' ABSENT NIL?</code> is <code>TRUE</code>. <code>'rate not quoted' ABSENT NIL-REASON</code> answers <code>'rate not quoted'</code>. Its registered reason is <code>userDeclared</code>, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, <code>subject 'S' BIND fallback S S NIL? SELECT</code>. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>'rate not quoted' ABSENT</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ reason ] -&gt; [ NIL ]</span></dd>
-<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
-<dt>Operands</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>createsNil</code>; projection: <code>always</code> → <code>userDeclared</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>ERROR conditions</dt><dd><code>nonText</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
-</dl>
-</div>
-<!-- END generated word contracts: failure -->
+                <section id="el-name" class="ref-page">
+                    <h2><span class="secnum">2.4</span> Names</h2>
+<p>A name is every word that is not a number, a string or a square bracket. Any character that is not whitespace, except the square brackets, can be part of a name.</p>
+<p>Evaluating a name pushes its value if the name is bound (<a href="#names">2.4.1 Bindings</a>), and otherwise calls the Word of that name (<a href="#words">2.4.2 Words</a>). A name that is neither is an error (<em>Unknown word</em>). A name written inside <code>[ ]</code> is not evaluated; except for <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, it becomes a value called a Symbol.</p>
+<h3>Symbols and how tokens are recognized</h3>
+                    <p>A symbol in Ajisai is simply a name spelled with symbol characters. Every Word is called by its one English name, and no Word has a symbol spelling. <code>+</code> and <code>&lt;</code> are ordinary names too, undefined unless you define them. Because a symbol is just one way of spelling a name, even a multi-character symbol does not complicate the rule above: a token ends only at whitespace, never partway through. A token's meaning is decided by the lexeme of the whole token, not by its first character. For example, <code>1/2</code> is parsed as a whole fraction literal, while a lone <code>/</code> is parsed as a plain name.</p>
+                    <h3>A name is a Word or a binding, never both</h3>
+                    <p>You cannot bind a name that a Core or User Word already has, and you cannot define a Word under a name that is currently bound. Both directions are rejected, so you never have to think about which of the two a name resolved through. Short throwaway names such as <code>W</code>, <code>DX</code> and <code>LIMIT</code> are exactly right here, and unlike Word names they are not subject to naming-convention warnings: they are local, and their scope fits on the screen in front of you.</p>
 
+                    
+                <h3>Name resolution and redefinition</h3>
+                    <p>A name resolves in either Core or User, and User never shadows Core. So a Word's name is the whole of its address: there is no qualified form, no dictionary to choose, and no room for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same Word.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
+5 ADD10</code></td>
+                                    <td><code>15/1</code></td>
+                                    <td class="notes">A defined Word is referred to by its name.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 ] &#39;ADD&#39; DEF</code></td>
+                                    <td>error</td>
+                                    <td class="notes">Core is sealed, so a Core name cannot be taken.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
+[ 20 ADD ] &#39;ADD10&#39; DEF
+5 ADD10</code></td>
+                                    <td><code>25/1</code></td>
+                                    <td class="notes">Redefinition rebinds the single User entry — unless other Words depend on it, in which case <code>DEF</code> refuses.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+
+                    
                 </section>
 
                 <section id="names" class="ref-page">
-                    <h2>Names and scope (<code>BIND</code>)</h2>
+                    <h2><span class="secnum">2.4.1</span> Bindings (<code>BIND</code>)</h2>
 <h3 id="bindings">Giving names with <code>BIND</code></h3>
                     <p>The stack hands you one value at a time, but most expressions worth writing use a value more than once. A residual is used in both the squared error and the gradient; a threshold in both the comparison and the report; a pair of coordinates in both their sum and their difference. An Ajisai Word always consumes the values it reads, so by its second use a value is already gone from the stack.</p>
                     <p>So <code>BIND</code> gives a value a name. It takes a value and a name, consumes both, and from then on the name <em>is</em> that value. Use it as often as you like, in any order.</p>
@@ -1084,19 +1062,35 @@ FILTER</code></td>
                     </div>
                     <p><strong>A name does not reach into the Words you call.</strong> A Word's meaning is decided by its operands and the dictionary alone, and by nothing else. That is what makes a Word readable on its own. A body reads only its own bindings, never its caller's. If a value is needed inside, pass it as an operand — that is exactly what operands are for. Get this wrong and you are told so plainly, rather than seeing it reported as an unknown Word.</p>
                     <p>A Word that binds leaves no names behind for its caller, and a run's bindings disappear when the run ends. This is deliberate: a name that outlived its frame would become a second, editable namespace next to the dictionary. There is only one namespace here. For data you want to keep, define a Word, as in <code>[ [ 1 2 3 ] ] 'XS' DEF</code>. That is exactly the job the dictionary is for.</p>
-                    <h3>A name is a Word or a binding, never both</h3>
-                    <p>You cannot bind a name that a Core or User Word already has, and you cannot define a Word under a name that is currently bound. Both directions are rejected, so you never have to think about which of the two a name resolved through. Short throwaway names such as <code>W</code>, <code>DX</code> and <code>LIMIT</code> are exactly right here, and unlike Word names they are not subject to naming-convention warnings: they are local, and their scope fits on the screen in front of you.</p>
-
                     
                 </section>
 
-                <section id="costs" class="ref-page">
-                    <h2>Costs and limits</h2>
-<h3 id="iterative">The cost of iteration</h3>
-                    <p>Exact arithmetic changes what a loop costs. Every other section of this Reference is about what a program <em>means</em>; this one is about what repeating it <em>costs</em>, because it is the one place where exactness asks for something in return.</p>
-                    <h3>Where the cost comes from</h3>
-                    <p>An exact rational is stored as a pair of numerator and denominator, and the product of two fractions has the product of their denominators. Multiply once and nothing happens. But keep multiplying in a loop, and the denominator grows step after step. That is exactly what gradient descent, Newton's method, k-means, power iteration and every other iterative method do. Nothing is lost and nothing is approximated; the number stays entirely correct. But its digits record <strong>how the value was computed</strong>, and that history grows longer every round.</p>
-                    <p>Here is a relaxation step in which <code>x</code> moves a tenth of the way toward 2 each time. <code>DELTA</code> is the correction and <code>STEP</code> applies it. The loop is a <code>FOLD</code> over a range whose elements are mere counters; the block discards the element and keeps only the accumulator.</p>
+                <section id="words" class="ref-page">
+                    <h2><span class="secnum">2.4.2</span> Words (<code>DEF</code>)</h2>
+<p>A Word is a named operation registered in the dictionary. Called by its name, it consumes operands from the stack and pushes its results. The built-in Words are grouped by what they do into <a href="#word-index">families</a>, and each family page ends with the contract of each of its Words. The individual Word is the last unit of this Reference.</p>
+<h3 id="all-words">Every operation is a Word</h3>
+<p>Ajisai's lexical structure tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Arithmetic and comparison, branching, iteration, definition and binding — even <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, which push one value — are ordinary <strong>Words</strong>, each with one English name, held in the dictionary and called by name.</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>Role</th><th>Words</th></tr></thead>
+<tbody>
+<tr><td class="notes">Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
+<tr><td class="notes">Comparison</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
+<tr><td class="notes">Logic</td><td><code>AND</code> <code>NOT</code></td></tr>
+<tr><td class="notes">Truth values and absence</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
+<tr><td class="notes">Choice</td><td><code>SELECT</code></td></tr>
+<tr><td class="notes">Iteration</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
+<tr><td class="notes">Definition and binding</td><td><code>DEF</code> <code>BIND</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Every Word is listed under <a href="#word-index">Built-in Words</a>.</p>
+<h3 id="dictionaries">Dictionaries and Word identity</h3>
+                    <h3>Two tiers: <code>Core</code> and <code>User</code></h3>
+                    <p>The dictionary has <strong>two tiers</strong>, and that is all. <strong>Core</strong> holds the 78 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you defined with <code>DEF</code>.</p>
+                    <p>These 78 Words divide into the <strong>48-Word Semantic Kernel</strong> and <strong>30 Standard Words</strong>. A Kernel Word either builds or observes some kind of value, or is the one explicit way to do something — running a code block, recovering from NIL, changing the dictionary, output. A Standard Word, such as <code>SUB</code>, <code>MIN</code>, <code>SORT</code> or <code>TRIM</code>, gives a frequent idea one fixed name and contract. The division only tells you where a Word sits in the design; it changes nothing about how you use it. All 78 are ordinary Core Words in the same single flat dictionary, reached by their plain names, with the same contracts, examples and error conditions. Each Word's tier is listed with the <a href="#word-index">built-in Words</a> and in each page's contracts, and it is also shown when you look the Word up.</p>
+                    <h3 id="define">Making a new Word with <code>DEF</code></h3>
+                    <p>A new Word is defined from a code block and a name: <code>[ body ] 'NAME' DEF</code>. The body runs every time the Word is called.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1105,9 +1099,10 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>0 6 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
-                                    <td><code>7282969/1250000</code></td>
-                                    <td class="notes">Seven steps from 10 (<code>0 6 RANGE</code> is the seven elements 0 to 6). The denominator already has seven digits. The value is about 5.83.</td>
+                                    <td><code>[ [ 10 ] ADD ] 'ADD10' DEF
+5 ADD10</code></td>
+                                    <td><code>[ 15/1 ]</code></td>
+                                    <td class="notes">Defines <code>ADD10</code> and calls it.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1116,9 +1111,6 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p>The problem is not the size of any one number but the shape of the growth. Run the same loop for 21 steps and you get <code>359418989131512359209/125000000000000000000</code>: 21 digits over 21 digits, a value of about 2.875. Each further step multiplies the denominator by ten again, so the answer barely moves while the cost per step climbs without limit. A loop that finishes in an instant at 30 iterations can crawl at 300.</p>
-                    <h3>Naming the resolution</h3>
-                    <p><code>x d MUL 1/2 ADD FLOOR d DIV</code> rounds a value to the nearest multiple of <code>1/d</code> (an exact midpoint goes to the larger side). The result's denominator divides <code>d</code> and never grows beyond it. Applied once per step, it throws away the derivation history and keeps only the value.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1127,9 +1119,10 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>0 20 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
-                                    <td><code>2877/1000</code></td>
-                                    <td class="notes">After 21 steps the denominator is still 1000. <code>0 20 RANGE</code> is the 21 elements 0 to 20. The unrounded run gives 2.875351&hellip;, the same number to the resolution asked for.</td>
+                                    <td><code>[ 2 MUL ] 'DBL' DEF
+[ 1 2 3 ] [ DBL ] MAP</code></td>
+                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
+                                    <td class="notes">A user-defined Word combines with higher-order Words through its quoted name.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1138,54 +1131,28 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p>This is an approximation, and that is exactly the point: it is an approximation <strong>you wrote down yourself</strong>. The resolution is a literal in the source, at a place you chose, and every value after it is exactly a multiple of <code>1/d</code>. Nothing is rounded behind your back, and nothing decides on its own how much precision the answer deserves.</p>
-                    <p><code>MUL</code>, <code>ADD</code>, <code>FLOOR</code> and <code>DIV</code>, which make up this rounding, all lift over Vectors, so a whole parameter Vector is rounded by the same run of Words.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 119/125 32/125 ] 10 MUL 1/2 ADD FLOOR 10 DIV</code></td>
-                                    <td><code>[ 1/1 3/10 ]</code></td>
-                                    <td class="notes">One call per step, whatever the shape of the state.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3>A closed form beats a loop</h3>
-                    <p>Before reaching for an iterative method, check whether the problem has a closed form. In exact arithmetic a closed form is not only faster; it is a different kind of answer. Least squares, ridge regression with a rational penalty, k-nearest neighbours, naive Bayes over rational probabilities, decision trees with Gini splits, the perceptron and the simplex method all have exact solutions without iteration. Ajisai returns the coefficients as exactly those rationals: an <code>R²</code> that comes back as <code>529/532</code> is the exact answer.</p>
-                    <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer, and Ajisai does not handle them. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
+                    <h3>What DEF checks, and what it does not</h3>
+                    <p><code>DEF</code> only stores the body; it does not resolve the names inside it. A definition whose body calls a Word that does not exist is accepted and reported as defined. The failure surfaces the first time the Word is <strong>called</strong>: <code>[ TOTALL 1 ] 'FOO' DEF</code> succeeds, and only running <code>FOO</code> reports <em>Unknown word: TOTALL</em>.</p>
+                    <p>This is a design choice, not a gap in checking. Names are resolved at call time. This lets a Word call another Word defined after it, so you never have to reorder definitions to match their dependencies.</p>
+                    <p class="ref-note">The price is that a typo in a body lies quietly in wait until something calls it. The headless CLI can catch it in advance: <code>ajisai check</code> resolves every name in a file without running anything and reports the unknown ones, and <code>ajisai check --contract</code> also verifies declared Word contracts. The Playground has no equivalent; inside the app, calling a Word is itself the check.</p>
+                    <h3 id="acyclic">A Word cannot call itself</h3>
+                    <p>The reference graph of the User dictionary has no cycles. If a body contains the name of the very Word being defined, as in <code>[ REC ] 'REC' DEF</code>, <code>DEF</code> rejects it with an error. It does not matter where the name is written: directly in the body, or only inside a <code>[ ]</code> block passed to <code>MAP</code> or <code>EXEC</code>, it is the same.</p>
+                    <p>This extends to indirect cycles. Define <code>A</code> to call <code>B</code>, then try to define <code>B</code> to call <code>A</code>, and the second <code>DEF</code> is rejected: <code>A</code>'s body already contains the name <code>B</code> (even though it does not exist yet), and adding a reference from <code>B</code> to <code>A</code> would close a cycle back to <code>A</code>. A new definition is free to call Words that already exist. The only thing forbidden is for the chain to come back to the Word being defined right now.</p>
+                    <p class="ref-note">Iteration cannot be expressed by a Word calling itself. <code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code> over an already finite <code>Vector</code> are the only means of iteration. With no cycles in the User dictionary no Word can call itself, so every evaluation is structurally finite. This is a stronger property than the run-time step budget (covered under <a href="#limits">Run-time errors</a>): the budget still limits the cost of a single evaluation, but there is no such thing as a program that would not stop however large the budget.</p>
+                    <h3>Managing Words</h3>
+                    <p><code>DEL</code> deletes a user-defined Word by its quoted name. Dependencies are tracked, and a Word that other Words depend on cannot be deleted at all, so dangling references cannot happen. Delete the dependent side first.</p>
+                    <p class="ref-note">Word names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same Word. By convention they follow a verb-object form such as <code>APPLY-GAIN</code>. How a name is matched to a definition is covered in <a href="#dictionaries">Dictionaries and Word identity</a>.</p>
 
-                    <h3>The other cost: the host's safety controls</h3>
-                    <p>The costs so far accumulate naturally from exact arithmetic itself, even in a correctly written program. Separately, the host sets several limits to protect its computing resources. Each is a safety control on the host side, not language semantics, and the concrete numbers are set by the implementation. The same source may pass on a host that declares larger limits. What happens on overrun is fixed, however: if producing a single value exceeds a limit, the result is a reasoned <strong><code>NIL</code></strong>; if the run itself exceeds a limit so far that it cannot continue, it is an <strong>error</strong> and evaluation stops.</p>
+                    <h3>Looking up a Word</h3>
+                    <p>Put the cursor on a Word and press <code>Ctrl+Alt+L</code>, and the Playground answers from the dictionary in the Output area: a Core Word's Reference entry, or the <code>DEF</code> of a Word you defined, both shown the same way, as text to read — not in a form to put back into the editor. This is something the editor does, not the program. Nothing is pushed, nothing is consumed, and the answer is text rather than a value, so there is no Word a program could call here.</p>
+                    <p>Three other operations exist only as shortcuts: Reset <code>Ctrl+Alt+Enter</code>, Stack clear <code>Ctrl+Alt+S</code> and Editor clear <code>Ctrl+Alt+E</code>, which discard the whole session, the stack, and the text of this input area respectively. None of these four can be typed and run or called from a program. A Word named <code>RESET</code> or <code>LOOKUP</code>, if there were one, would be an ordinary Word like any other name.</p>
 
-                    <h3 id="limits">Run-time errors: one result with several reasons</h3>
-                    <p>Even a well-formed operation or input is an error once it exceeds what the host can support, and evaluation stops on the spot. There is more than one limit: overruns are reported under at least three names, depending on what was exceeded. The names differ because the fixes differ.</p>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Reported name</th><th>What was exceeded</th><th>Typical fix</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><code>executionLimitExceeded</code></td><td class="notes">The total number of work steps the whole program may spend</td><td class="notes">Rewrite with bulk operations (<code>SORT</code>, <code>GET</code>); review the termination condition</td></tr>
-                                <tr><td><code>resourceLimitExceeded</code></td><td class="notes">The size of a single value (coefficient bit width, number of algebraic terms and so on)</td><td class="notes">Round to a <code>1/d</code> grid to prune the history; look for a closed form</td></tr>
-                                <tr><td><code>recursionLimitExceeded</code></td><td class="notes">The nesting depth of a call chain (not cyclic, but an extremely long chain of Words calling Words)</td><td class="notes">Make the call chain shallower, or rewrite with bulk operations</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p><code>executionLimitExceeded</code> can be set explicitly with the CLI's <code>ajisai run --step-limit &lt;N&gt;</code>. The default is an implementation choice made by the host's runtime, not a fixed number this Reference promises.</p>
-                    <p class="ref-note">The three above are limits the interpreter counts, but the Playground has one more: a <strong>wall-clock</strong> cut-off. When a single run exceeds 5 seconds, it is stopped together with its worker and reported as <code>Execution timed out after 5000 ms</code>. This is neither language semantics nor an interpreter budget but a host-side guard that only this screen has. That is why it carries none of the names above; instead it comes with a diagnosis that says which guard stopped the run and suggests rewriting with bulk operations or pruning by rounding to a grid. Hover over the <code>resource limits:</code> badge next to the build indicator at the top of the screen to list the host's limits (this guard is listed there too). The MCP host declares a different, stricter materialization limit. That is why the same <code>0 100001 RANGE</code> succeeds in the Playground but is <code>NIL</code> (<code>spaceExhausted</code>) on the MCP host.</p>
-                    <p class="ref-note">The work done by the whole program and the size of a single value are measured separately. Some Words, such as <code>0 99999 RANGE UNIQUE</code>, count as one step yet perform as many comparisons internally as there are elements, so the step budget alone does not show how heavy a value is. Recall the fraction whose denominator kept growing in the section on the cost of iteration: grow it without pruning to a grid, and exactly this <code>resourceLimitExceeded</code> is where it ends. <code>recursionLimitExceeded</code> is different again. <a href="#acyclic">A Word cannot call itself</a>, so this is not a recursion depth but the depth of a non-cyclic call chain that passes through many different Words, A→B→C→….</p>
-
-                    <h3>Materialization limits: a reasoned NIL</h3>
-                    <p><code>RANGE</code> and <code>FILL</code> have a limit on the size of the Vector one call produces. Even when the request itself is well-formed, trying to materialize beyond that limit gives a reasoned <strong><code>NIL</code></strong>, not an error. The reason is <code>spaceExhausted</code>. A dimension or shape that is itself wrong, such as a negative or non-integer number, is a different matter and is an error, as usual.</p>
+                    <h3>Word identity</h3>
+                    <p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls. Two definitions with the same identity are the same Word whatever their names, and changing a definition changes the identity of everything that depends on it. This is why <code>DEF</code> and <code>DEL</code> refuse to disturb a Word something else still refers to: the dependency is on the Word, not on its spelling.</p>
+                    <h3 id="reflection">Reading the dictionary and contracts from inside the language: <code>DIGEST</code> and <code>CONTRACT</code></h3>
+                    <p>Two Words read, from inside the language, what the machine already knows about the dictionary. The operand that names a Word is a <strong>Symbol</strong> — a bare name written inside <code>[ ]</code> — not a string (<code>CONTRACT</code> also accepts a code block). <code>'ADD' CONTRACT</code> is a <code>notASymbol</code> error. A Word that could look a name up from text would break the fact that "no Word turns text into a Symbol", which the cycle check at <code>DEF</code> time relies on.</p>
+                    <p><code>DIGEST</code> answers, as text, the content identity of a Symbol that names a Word, and the digest of the meaning of any other value. The same digest means the same thing; different digests mean nothing. <code>CONTRACT</code> answers a Word's contract as a Record: the registered contract for a Core Word (<code>inputs</code>, <code>outputs</code>, <code>nil</code>, <code>projection</code>, <code>errors</code>, <code>purity</code>, <code>cost</code> and so on), or the contract inferred from the body for a Word you defined. Pass a code block as it is, and its contract is inferred <strong>without running it</strong> — the pre-execution check (<code>ajisai check --contract</code>) called from inside the language, with <code>confidence</code> and <code>gaps</code> carrying "what could and could not be verified" as values. This is where the ability to ask about the cost class before running comes from.</p>
+                    <p class="ref-note">Whether a Symbol resolves as a <code>Core</code> or <code>User</code> Word shows in whether <code>CONTRACT</code> answers a contract. A name that is not a Word returns a reasoned <code>NIL</code>, so <code>sym CONTRACT NIL? NOT</code> is that question. <code>NIL?</code> consumes its operand, so only the Boolean remains.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1194,9 +1161,39 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
-                                    <td><code>'spaceExhausted'</code></td>
-                                    <td class="notes">The request is well-formed but too large, so it is a reasoned <code>NIL</code>, not an error. <code>FILL</code> behaves the same way for the same reason.</td>
+                                    <td><code>[ TWICE ] 0 GET CONTRACT NIL? NOT</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">An undefined name has no contract, so <code>FALSE</code>.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'ADD' CONTRACT</code></td>
+                                    <td>error</td>
+                                    <td class="notes">A string is not a name (<code>notASymbol</code>).</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">Identity is over content, not over spelling.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">A value is digested by its meaning.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' GET</code></td>
+                                    <td><code>[ 'divisionByZero' ]</code></td>
+                                    <td class="notes">Reads the registered contract without running anything.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 42 PRINT ] CONTRACT 'effects' GET</code></td>
+                                    <td><code>[ 'consoleWrite' ]</code></td>
+                                    <td class="notes">Given a block, it infers the contract without running it. Nothing is output.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
+                                    <td><code>'notFound'</code></td>
+                                    <td class="notes">A name that is not a Word is a reasoned <code>NIL</code>.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1205,12 +1202,117 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Being <code>NIL</code>, it can be <a href="#recovery">replaced with a fallback value</a> so the program moves on: <code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code> recovers to the empty Vector. An error has no such recovery.</p>
                 
+                <h3 id="word-index">Built-in Words</h3>
+<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
+<p>The 78 Words of the canonical vocabulary, by family, generated from <code>spec/words.json</code>. 48 of them form the Semantic Kernel and 30 are Standard Words; every one is an ordinary Core Word reached by its plain name, and the tier only says where it sits in the design (<a href="#dictionaries">Dictionaries and Word identity</a>). Choose a Word for its contract — syntax, stack effect, NIL policy, ERROR conditions — or a page for the explanation with samples.</p>
+<div class="ref-table-wrap word-jump">
+<table class="ref-table">
+<thead><tr><th>Family</th><th>Words</th><th>Explained in</th></tr></thead>
+<tbody>
+<tr><td class="notes">Logic</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
+<tr><td class="notes">Comparison</td><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
+<tr><td class="notes">Exact arithmetic</td><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
+<tr><td class="notes">Vectors</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">2.4.2.2 Vector operations</a></td></tr>
+<tr><td class="notes">Records</td><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td><td class="notes"><a href="#records">2.4.2.3 Keyed data</a></td></tr>
+<tr><td class="notes">Iteration</td><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td><td class="notes"><a href="#control">2.4.2.5 Choice and iteration</a></td></tr>
+<tr><td class="notes">Text</td><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td><td class="notes"><a href="#strings-ops">2.4.2.4 String operations</a></td></tr>
+<tr><td class="notes">Control</td><td><a href="#word-EXEC"><code>EXEC</code></a> <a href="#word-FAIL"><code>FAIL</code></a></td><td class="notes"><a href="#control">2.4.2.5 Choice and iteration</a></td></tr>
+<tr><td class="notes">Dictionary and names</td><td><a href="#word-CONTRACT"><code>CONTRACT</code></a> <a href="#word-BIND"><code>BIND</code></a> <a href="#word-DEF"><code>DEF</code></a> <a href="#word-DEL"><code>DEL</code></a> <a href="#word-DIGEST"><code>DIGEST</code></a></td><td class="notes"><a href="#words">2.4.2 Words</a></td></tr>
+<tr><td class="notes">Absence (NIL)</td><td><a href="#word-NIL"><code>NIL</code></a> <a href="#word-NIL_3f"><code>NIL?</code></a> <a href="#word-NIL-REASON"><code>NIL-REASON</code></a> <a href="#word-ABSENT"><code>ABSENT</code></a></td><td class="notes"><a href="#absence">2.4.2.6 Handling absence</a></td></tr>
+<tr><td class="notes">Output</td><td><a href="#word-PRINT"><code>PRINT</code></a></td><td class="notes"><a href="#output">2.4.2.7 Output</a></td></tr>
+</tbody>
+</table>
+</div>
+<!-- END generated word index -->
+<!-- BEGIN generated word contracts: words -->
+<h3 id="family-dictionary">Contracts: Dictionary and names</h3>
+<div class="word-entry" id="word-CONTRACT">
+<h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>The contract of a Word or of a block, as a Record: <code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code> is <code>'projecting'</code>. For a Symbol naming a Core Word it is the registered record of <code>spec/words.json</code> (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — <code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>, so <code>[ DIV ] 0 GET CONTRACT 'cost' GET</code> asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference <code>ajisai check --contract</code> runs from outside the language — keyed <code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code> — the same keys, in the same vocabulary, so the two compare directly — and <code>confidence</code> <code>gaps</code>, where <code>confidence</code> and <code>gaps</code> carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so <code>[ 42 PRINT ] CONTRACT</code> reports <code>consoleWrite</code> under <code>effects</code> without printing. A Symbol that names no Word projects <code>notFound</code>; an operand that is neither a Symbol nor a block is an ERROR (<code>notASymbol</code>).</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
+<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
+<dt>Operands</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>createsNil</code>; projection: <code>symbolNamesNoWord</code> → <code>notFound</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>ERROR conditions</dt><dd><code>notASymbol</code></dd>
+<dt>Clauses</dt><dd><code>LANG.CONTRACT.REGISTRY</code>, <code>LANG.CONTRACT.CHECK</code>, <code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.SOURCE.CODE</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-BIND">
+<h4><code>BIND</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Name a value for the rest of the frame that made it: <code>5 'N' BIND N N ADD</code> is <code>10</code>, and <code>[ 1 2 ] [ 'A' 'B' ] BIND B A SUB</code> is <code>1</code>. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both. A value that names its own binding, directly or through other bindings, is refused as <code>selfReferentialDefinition</code>, the same rule DEF applies (LANG.DICTIONARY.ACYCLIC).</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>[ 1 2 3 ] 'XS' BIND</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ x ] [ name... ] -&gt; [ ]</span></dd>
+<dt>Stack</dt><dd>2 input(s) → 0 output(s)</dd>
+<dt>Operands</dt><dd><code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>partial</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>ERROR conditions</dt><dd><code>nonText</code>, <code>nameConflict</code>, <code>shapeMismatch</code>, <code>invalidName</code>, <code>selfReferentialDefinition</code></dd>
+<dt>Clauses</dt><dd><code>LANG.SOURCE.FRAME</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEF">
+<h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>A User Word defined from a body and a name: <code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code> is <code>10</code>. The body may call Core and User Words but never, directly or through others, the Word being defined (<code>selfReferentialDefinition</code>, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (<code>definitionConflict</code>); a Core Word's name is <code>protectedWord</code>, a name held by a binding is <code>nameConflict</code>, and a name that cannot be written as one token is <code>invalidName</code>.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>
+<dt>Stack</dt><dd>2 input(s) → 0 output(s)</dd>
+<dt>Operands</dt><dd><code>control</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>rejectNil</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>partial</code></dd>
+<dt>Purity / determinism</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
+<dt>Effects</dt><dd><code>dictionaryWrite</code></dd>
+<dt>ERROR conditions</dt><dd><code>invalidName</code>, <code>protectedWord</code>, <code>nameConflict</code>, <code>definitionConflict</code>, <code>selfReferentialDefinition</code>, <code>nonText</code>, <code>invalidDefinitionBody</code></dd>
+<dt>Clauses</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEL">
+<h4><code>DEL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Delete a User Word from the dictionary: <code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code> is <code>TRUE</code>, since the name no longer names a Word. A Core Word is refused (<code>protectedWord</code>), a name no User Word holds is <code>wordNotFound</code>, and a Word other User Words still call is <code>definitionConflict</code> until they are deleted first.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>[ 1 ] 'W' DEF 'W' DEL</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ name ] -&gt; [ ]</span></dd>
+<dt>Stack</dt><dd>1 input(s) → 0 output(s)</dd>
+<dt>Operands</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>rejectNil</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>partial</code></dd>
+<dt>Purity / determinism</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
+<dt>Effects</dt><dd><code>dictionaryDelete</code></dd>
+<dt>ERROR conditions</dt><dd><code>wordNotFound</code>, <code>protectedWord</code>, <code>nonText</code>, <code>definitionConflict</code></dd>
+<dt>Clauses</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DIGEST">
+<h4><code>DIGEST</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>The content identity of a Word, or the digest of a value's denotation, as text: <code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code> is <code>TRUE</code>. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that <code>EQ</code> calls one value digest alike, however each was built, so <code>8 SQRT DIGEST</code> equals <code>2 SQRT 2 SQRT ADD DIGEST</code>, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>[ ADD ] 0 GET DIGEST</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ digest ]</span></dd>
+<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
+<dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>Clauses</dt><dd><code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+</dl>
+</div>
+<!-- END generated word contracts: words -->
+
                 </section>
 
                 <section id="operators" class="ref-page">
-                    <h2>Logic, comparison and arithmetic (<code>AND</code>, <code>EQ</code>, <code>ADD</code>)</h2>
+                    <h2><span class="secnum">2.4.2.1</span> Logic, comparison and arithmetic (<code>AND</code>, <code>EQ</code>, <code>ADD</code>)</h2>
+
 
                     <h3 id="arithmetic">Arithmetic</h3>
                     <p>The arithmetic Words work element-wise between Vectors. Each is written with its one English name and has no symbol spelling.</p>
@@ -1533,6 +1635,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
+                
                 <!-- BEGIN generated word contracts: operators -->
 <h3 id="family-booleanLogic">Contracts: Logic</h3>
 <div class="word-entry" id="word-TRUE">
@@ -1857,7 +1960,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="vector-ops" class="ref-page">
-                    <h2>Vector operations (<code>GET</code>, <code>LENGTH</code>)</h2>
+                    <h2><span class="secnum">2.4.2.2</span> Vector operations (<code>GET</code>, <code>LENGTH</code>)</h2>
+
 
                     <p>Vector indices start at 0. A negative index counts from the end. Reading Words such as <code>GET</code> and <code>LENGTH</code> consume the Vector they read, like every other Word. If you want to use the original Vector later, name it with <a href="#bindings"><code>BIND</code></a> before reading it.</p>
                     <h3>Reading with GET</h3>
@@ -2153,6 +2257,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p class="ref-note"><code>UNIQUE</code> and <code>TALLY</code> work on any value, not only numbers. Labels are usually text, so this is a practical difference. <code>ORDER</code> and <code>SORT</code>, on the other hand, need a flat Vector of numbers, because that is where an exact ordering is defined. <code>GROUP</code> pairs values with keys by position, so its two operands must have the same length.</p>
+                
                 <!-- BEGIN generated word contracts: vector-ops -->
 <h3 id="family-collection">Contracts: Vectors</h3>
 <div class="word-entry" id="word-GET">
@@ -2493,7 +2598,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="records" class="ref-page">
-                    <h2>Keyed data (<code>RECORD</code>, <code>GET</code>)</h2>
+                    <h2><span class="secnum">2.4.2.3</span> Keyed data (<code>RECORD</code>, <code>GET</code>)</h2>
+
 
                     <p>Named data — a price list, a configuration, one row of a table — is held in Ajisai by the <strong>Record</strong>, the seventh value domain. A Record pairs a <em>key column</em> with a <em>value column</em> by position; the keys keep the order they were given in, and no key appears twice. Any value can be a key (usually a string). A Record is not a Vector, so Vector Words do not accept a Record and Record Words do not accept a Vector. There is no implicit conversion in either direction.</p>
                     <p>A Record is made with <code>RECORD</code>, which takes a key column and a value column and pairs them by position. A key with no value to pair is a length-mismatch error, and a key given twice is a <code>duplicateKey</code> error.</p>
@@ -2628,6 +2734,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p class="ref-note"><a href="#ordering"><code>TALLY</code> and <code>GROUP</code></a> return Records: <code>TALLY</code> maps "element → count", and <code>GROUP</code> maps "key → the Vector of that key's values", both with keys in order of first appearance. Taking <code>KEYS</code> gives exactly <code>UNIQUE</code>'s answer, and taking <code>VALUES</code> gives the Vector of counts or of groups, so no power is lost. Hold a table as a Record of "column name → column Vector", and <code>'price' GET</code> takes out one column while arithmetic computes column by column.</p>
+                
                 <!-- BEGIN generated word contracts: records -->
 <h3 id="family-record">Contracts: Records</h3>
 <div class="word-entry" id="word-TALLY">
@@ -2763,7 +2870,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="strings-ops" class="ref-page">
-                    <h2>String operations (<code>CHARS</code>, <code>JOIN</code>)</h2>
+                    <h2><span class="secnum">2.4.2.4</span> String operations (<code>CHARS</code>, <code>JOIN</code>)</h2>
+
 
                     <h3>Crossing over to Vectors: <code>CHARS</code> and <code>JOIN</code></h3>
                     <p>A string is not a Vector, so the collection Words do not accept strings. <code>LENGTH</code>, <code>GET</code>, <code>REVERSE</code> and <code>CONCAT</code> all raise an error on a string. Cross over to the Vector domain with <code>CHARS</code> first: <code>'abc' CHARS LENGTH</code> is <code>3</code>. Concatenation is done by <code>JOIN</code>, the Word that turns a Vector of strings into one string: <code>[ 'ab' 'cd' ] JOIN</code> is <code>'abcd'</code>. To concatenate computed values rather than written ones, collect them with <code>COLLECT</code> first, as in <code>'a' 'b' 2 COLLECT JOIN</code>.</p>
@@ -3032,6 +3140,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
+                
                 <!-- BEGIN generated word contracts: strings-ops -->
 <h3 id="family-text">Contracts: Text</h3>
 <div class="word-entry" id="word-CHARS">
@@ -3245,7 +3354,8 @@ FILTER</code></td>
                 </section>
 
                 <section id="control" class="ref-page">
-                    <h2>Control and iteration (<code>SELECT</code>, <code>MAP</code>)</h2>
+                    <h2><span class="secnum">2.4.2.5</span> Choice and iteration (<code>SELECT</code>, <code>MAP</code>)</h2>
+
 <h3 id="cond">Conditional choice (<code>SELECT</code>)</h3>
                     <p><code>SELECT</code> takes three arguments: <strong>the value when true</strong>, <strong>the value when false</strong>, and <strong>the Boolean that decides which</strong>. Line them up as <code>[ whenTrue ] [ whenFalse ] [ mask ] SELECT</code>. The Boolean comes last because, as with other Words, the operand that decides what to do goes last.</p>
                     <p><code>SELECT</code> <strong>evaluates nothing</strong>. The two candidates are values the program has already built. That is, each candidate has been computed once, in the order written, before it reaches <code>SELECT</code>. It is not that the side not chosen "does not run"; by the time the choice is made, both are already values. This is the fundamental difference from Words that take a block and run its contents (<code>MAP</code>, <code>EXEC</code>).</p>
@@ -3550,7 +3660,8 @@ SELECT</code></td>
                     <p>When you need one position rather than a fold, read it with <code>GET</code>: <code>0 GET</code> is the first element and <code>-1 GET</code> the last. So <code>[ SORT -1 GET ] 'PMAX' DEF</code> answers the larger of two values. <code>REVERSE</code> exchanges the two elements of a pair, and <code>TAKE</code> combined with <code>CONCAT</code> rebuilds one Vector from parts of another.</p>
                     <p class="ref-note">The tool for duplication is <a href="#bindings"><code>BIND</code></a>. Name a value and it is pushed every time the name is written, so a value of any kind can be used as many times as needed.</p>
 
-                    <!-- BEGIN generated word contracts: control -->
+                    
+                <!-- BEGIN generated word contracts: control -->
 <h3 id="family-higherOrder">Contracts: Iteration</h3>
 <div class="word-entry" id="word-MAP">
 <h4><code>MAP</code> <span class="word-tier">Semantic Kernel</span></h4>
@@ -3653,10 +3764,10 @@ SELECT</code></td>
 
                 </section>
 
-                <section id="words" class="ref-page">
-                    <h2>Defining Words and the dictionary (<code>DEF</code>, <code>DIGEST</code>)</h2>
-<h3 id="define">Making a new Word with <code>DEF</code></h3>
-                    <p>A new Word is defined from a code block and a name: <code>[ body ] 'NAME' DEF</code>. The body runs every time the Word is called.</p>
+                <section id="absence" class="ref-page">
+                    <h2><span class="secnum">2.4.2.6</span> Handling absence (<code>NIL?</code>, <code>ABSENT</code>)</h2>
+<h3>Inspecting NIL: <code>NIL?</code> and <code>NIL-REASON</code></h3>
+                    <p>These two Words inspect <code>NIL</code>. <code>NIL?</code> asks whether the top of the stack is <code>NIL</code>; <code>NIL-REASON</code> reads the reason it carries. Like every other Word, both <strong>consume the value they inspect</strong> and push their answer in its place. If you still need the value afterwards, name it with <code>BIND</code> first.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3665,137 +3776,9 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ [ 10 ] ADD ] 'ADD10' DEF
-5 ADD10</code></td>
-                                    <td><code>[ 15/1 ]</code></td>
-                                    <td class="notes">Defines <code>ADD10</code> and calls it.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 2 MUL ] 'DBL' DEF
-[ 1 2 3 ] [ DBL ] MAP</code></td>
-                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
-                                    <td class="notes">A user-defined Word combines with higher-order Words through its quoted name.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3>What DEF checks, and what it does not</h3>
-                    <p><code>DEF</code> only stores the body; it does not resolve the names inside it. A definition whose body calls a Word that does not exist is accepted and reported as defined. The failure surfaces the first time the Word is <strong>called</strong>: <code>[ TOTALL 1 ] 'FOO' DEF</code> succeeds, and only running <code>FOO</code> reports <em>Unknown word: TOTALL</em>.</p>
-                    <p>This is a design choice, not a gap in checking. Names are resolved at call time. This lets a Word call another Word defined after it, so you never have to reorder definitions to match their dependencies.</p>
-                    <p class="ref-note">The price is that a typo in a body lies quietly in wait until something calls it. The headless CLI can catch it in advance: <code>ajisai check</code> resolves every name in a file without running anything and reports the unknown ones, and <code>ajisai check --contract</code> also verifies declared Word contracts. The Playground has no equivalent; inside the app, calling a Word is itself the check.</p>
-                    <h3 id="acyclic">A Word cannot call itself</h3>
-                    <p>The reference graph of the User dictionary has no cycles. If a body contains the name of the very Word being defined, as in <code>[ REC ] 'REC' DEF</code>, <code>DEF</code> rejects it with an error. It does not matter where the name is written: directly in the body, or only inside a <code>[ ]</code> block passed to <code>MAP</code> or <code>EXEC</code>, it is the same.</p>
-                    <p>This extends to indirect cycles. Define <code>A</code> to call <code>B</code>, then try to define <code>B</code> to call <code>A</code>, and the second <code>DEF</code> is rejected: <code>A</code>'s body already contains the name <code>B</code> (even though it does not exist yet), and adding a reference from <code>B</code> to <code>A</code> would close a cycle back to <code>A</code>. A new definition is free to call Words that already exist. The only thing forbidden is for the chain to come back to the Word being defined right now.</p>
-                    <p class="ref-note">Iteration cannot be expressed by a Word calling itself. <code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code> over an already finite <code>Vector</code> are the only means of iteration. With no cycles in the User dictionary no Word can call itself, so every evaluation is structurally finite. This is a stronger property than the run-time step budget (covered under <a href="#limits">Run-time errors</a>): the budget still limits the cost of a single evaluation, but there is no such thing as a program that would not stop however large the budget.</p>
-                    <h3>Managing Words</h3>
-                    <p><code>DEL</code> deletes a user-defined Word by its quoted name. Dependencies are tracked, and a Word that other Words depend on cannot be deleted at all, so dangling references cannot happen. Delete the dependent side first.</p>
-                    <p class="ref-note">Word names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same Word. By convention they follow a verb-object form such as <code>APPLY-GAIN</code>. How a name is matched to a definition is covered in <a href="#dictionaries">Dictionaries and Word identity</a>.</p>
-
-                    <h3 id="dictionaries">Dictionaries and Word identity</h3>
-                    <h3>Two tiers: <code>Core</code> and <code>User</code></h3>
-                    <p>The dictionary has <strong>two tiers</strong>, and that is all. <strong>Core</strong> holds the 78 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you defined with <code>DEF</code>.</p>
-                    <p>These 78 Words divide into the <strong>48-Word Semantic Kernel</strong> and <strong>30 Standard Words</strong>. A Kernel Word either builds or observes some kind of value, or is the one explicit way to do something — running a code block, recovering from NIL, changing the dictionary, output. A Standard Word, such as <code>SUB</code>, <code>MIN</code>, <code>SORT</code> or <code>TRIM</code>, gives a frequent idea one fixed name and contract. The division only tells you where a Word sits in the design; it changes nothing about how you use it. All 78 are ordinary Core Words in the same single flat dictionary, reached by their plain names, with the same contracts, examples and error conditions. Each Word's tier is listed with the <a href="#word-index">built-in Words</a> and in each page's contracts, and it is also shown when you look the Word up.</p>
-                    <h3>Looking up a Word</h3>
-                    <p>Put the cursor on a Word and press <code>Ctrl+Alt+L</code>, and the Playground answers from the dictionary in the Output area: a Core Word's Reference entry, or the <code>DEF</code> of a Word you defined, both shown the same way, as text to read — not in a form to put back into the editor. This is something the editor does, not the program. Nothing is pushed, nothing is consumed, and the answer is text rather than a value, so there is no Word a program could call here.</p>
-                    <p>Three other operations exist only as shortcuts: Reset <code>Ctrl+Alt+Enter</code>, Stack clear <code>Ctrl+Alt+S</code> and Editor clear <code>Ctrl+Alt+E</code>, which discard the whole session, the stack, and the text of this input area respectively. None of these four can be typed and run or called from a program. A Word named <code>RESET</code> or <code>LOOKUP</code>, if there were one, would be an ordinary Word like any other name.</p>
-
-                    <h3>Name resolution and redefinition</h3>
-                    <p>A name resolves in either Core or User, and User never shadows Core. So a Word's name is the whole of its address: there is no qualified form, no dictionary to choose, and no room for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same Word.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
-5 ADD10</code></td>
-                                    <td><code>15/1</code></td>
-                                    <td class="notes">A defined Word is referred to by its name.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 1 ] &#39;ADD&#39; DEF</code></td>
-                                    <td>error</td>
-                                    <td class="notes">Core is sealed, so a Core name cannot be taken.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
-[ 20 ADD ] &#39;ADD10&#39; DEF
-5 ADD10</code></td>
-                                    <td><code>25/1</code></td>
-                                    <td class="notes">Redefinition rebinds the single User entry — unless other Words depend on it, in which case <code>DEF</code> refuses.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                    </div>
-
-                    <h3>Word identity</h3>
-                    <p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls. Two definitions with the same identity are the same Word whatever their names, and changing a definition changes the identity of everything that depends on it. This is why <code>DEF</code> and <code>DEL</code> refuse to disturb a Word something else still refers to: the dependency is on the Word, not on its spelling.</p>
-                    <h3 id="reflection">Reading the dictionary and contracts from inside the language: <code>DIGEST</code> and <code>CONTRACT</code></h3>
-                    <p>Two Words read, from inside the language, what the machine already knows about the dictionary. The operand that names a Word is a <strong>Symbol</strong> — a bare name written inside <code>[ ]</code> — not a string (<code>CONTRACT</code> also accepts a code block). <code>'ADD' CONTRACT</code> is a <code>notASymbol</code> error. A Word that could look a name up from text would break the fact that "no Word turns text into a Symbol", which the cycle check at <code>DEF</code> time relies on.</p>
-                    <p><code>DIGEST</code> answers, as text, the content identity of a Symbol that names a Word, and the digest of the meaning of any other value. The same digest means the same thing; different digests mean nothing. <code>CONTRACT</code> answers a Word's contract as a Record: the registered contract for a Core Word (<code>inputs</code>, <code>outputs</code>, <code>nil</code>, <code>projection</code>, <code>errors</code>, <code>purity</code>, <code>cost</code> and so on), or the contract inferred from the body for a Word you defined. Pass a code block as it is, and its contract is inferred <strong>without running it</strong> — the pre-execution check (<code>ajisai check --contract</code>) called from inside the language, with <code>confidence</code> and <code>gaps</code> carrying "what could and could not be verified" as values. This is where the ability to ask about the cost class before running comes from.</p>
-                    <p class="ref-note">Whether a Symbol resolves as a <code>Core</code> or <code>User</code> Word shows in whether <code>CONTRACT</code> answers a contract. A name that is not a Word returns a reasoned <code>NIL</code>, so <code>sym CONTRACT NIL? NOT</code> is that question. <code>NIL?</code> consumes its operand, so only the Boolean remains.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ TWICE ] 0 GET CONTRACT NIL? NOT</code></td>
-                                    <td><code>FALSE</code></td>
-                                    <td class="notes">An undefined name has no contract, so <code>FALSE</code>.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>'ADD' CONTRACT</code></td>
-                                    <td>error</td>
-                                    <td class="notes">A string is not a name (<code>notASymbol</code>).</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
+                                    <td><code>1 0 DIV NIL?</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">Identity is over content, not over spelling.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">A value is digested by its meaning.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' GET</code></td>
-                                    <td><code>[ 'divisionByZero' ]</code></td>
-                                    <td class="notes">Reads the registered contract without running anything.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 42 PRINT ] CONTRACT 'effects' GET</code></td>
-                                    <td><code>[ 'consoleWrite' ]</code></td>
-                                    <td class="notes">Given a block, it infers the contract without running it. Nothing is output.</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
-                                    <td><code>'notFound'</code></td>
-                                    <td class="notes">A name that is not a Word is a reasoned <code>NIL</code>.</td>
+                                    <td class="notes"><code>NIL?</code> consumes the top value and pushes its answer in its place.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -3804,93 +3787,170 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                <!-- BEGIN generated word contracts: words -->
-<h3 id="family-dictionary">Contracts: Dictionary and names</h3>
-<div class="word-entry" id="word-CONTRACT">
-<h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The contract of a Word or of a block, as a Record: <code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code> is <code>'projecting'</code>. For a Symbol naming a Core Word it is the registered record of <code>spec/words.json</code> (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — <code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>, so <code>[ DIV ] 0 GET CONTRACT 'cost' GET</code> asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference <code>ajisai check --contract</code> runs from outside the language — keyed <code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code> — the same keys, in the same vocabulary, so the two compare directly — and <code>confidence</code> <code>gaps</code>, where <code>confidence</code> and <code>gaps</code> carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so <code>[ 42 PRINT ] CONTRACT</code> reports <code>consoleWrite</code> under <code>effects</code> without printing. A Symbol that names no Word projects <code>notFound</code>; an operand that is neither a Symbol nor a block is an ERROR (<code>notASymbol</code>).</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV NIL-REASON</code></td>
+                                    <td><code>'divisionByZero'</code></td>
+                                    <td class="notes">The reason is a protocol string, so a program can branch on why a value is missing.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3 id="declared-outcomes">Declaring an outcome yourself: <code>ABSENT</code> and <code>FAIL</code></h3>
+                    <p>Absence and errors do not belong only to the built-in Words. A program can itself declare "there is no value here" or "this is misuse". <code>ABSENT</code> takes one string and pushes <strong>a <code>NIL</code> whose reason is that string</strong>. The reason identifier is <code>userDeclared</code>, but what <code>NIL-REASON</code> answers is the string you passed. The string is part of the value, so two <code>ABSENT</code>s made from different strings are different values.</p>
+                    <p><code>FAIL</code> also takes one string and raises an <strong>ERROR</strong> with that string as its message (classified <code>declaredFailure</code>). Being an ERROR, it stops evaluation there, and no Word can catch it. <code>FAIL</code> is not a "stronger <code>ABSENT</code>"; it is the Word for drawing the line between <a href="#nil">absence and misuse</a> from the program's side. Use <code>ABSENT</code> when the caller should be able to recover, and <code>FAIL</code> when it should stop as the caller's mistake.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'rate not quoted' ABSENT NIL-REASON</code></td>
+                                    <td><code>'rate not quoted'</code></td>
+                                    <td class="notes">The declared string becomes the reason as it is.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</code></td>
+                                    <td><code>0/1</code></td>
+                                    <td class="notes">It is an ordinary <code>NIL</code>, so the recovery phrase below works on it unchanged.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1 'width must be positive' FAIL 2</code></td>
+                                    <td>error</td>
+                                    <td class="notes">The message is <code>width must be positive</code>. Evaluation stops, and the following <code>2</code> does not run. The operand <code>1</code> and the string stay on the stack.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3 id="recovery">Supplying a fallback value: <code>BIND</code>, <code>NIL?</code>, <code>SELECT</code></h3>
+                    <p>There is no special syntax for recovering from absence. Name the value being tested with <code>BIND</code>, then line up <a href="#cond"><code>SELECT</code></a> and <code>NIL?</code>.</p>
+                    <p>Like every other Word, <code>NIL?</code> <strong>consumes the value it inspects</strong> and pushes a Boolean saying whether it was absent (<code>[ x ] -&gt; [ bool ]</code>). So name the value once and read it twice. Writing <code>value 'S' BIND fallback S S NIL? SELECT</code> pushes things in exactly the order <code>SELECT</code> asks for (the candidate when true, the candidate when false, the Boolean), giving "the value if there is one, otherwise the fallback".</p>
+                    <p class="ref-note">The fallback is an ordinary operand, so like any other operand it has been computed before <code>SELECT</code> runs. In other words the fallback is computed even when the value is present (see the <a href="#cond"><code>SELECT</code></a> section). Do not put a heavy computation or an effect such as <code>PRINT</code> in the fallback position.</p>
+                    <p class="ref-note"><code>NIL?</code> asks about the <strong>whole value</strong>. Even if one lane of a Vector is <code>NIL</code>, the Vector itself is not absent, so the answer is <code>FALSE</code>. <code>[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</code> is <code>[ 1/1 NIL ]</code>: the lane's absence is not recovered. To recover a lane, recover inside the Vector rather than outside it.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>99/1</code></td>
+                                    <td class="notes">The value was absent, so the fallback is chosen.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>7 2 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>7/2</code></td>
+                                    <td class="notes">When the result is a real value, the fallback is not chosen.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                
+                <!-- BEGIN generated word contracts: absence -->
+<h3 id="family-absence">Contracts: Absence (NIL)</h3>
+<div class="word-entry" id="word-NIL">
+<h4><code>NIL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>The absence written into the program: <code>NIL NIL?</code> is <code>TRUE</code>, and its reason is <code>literal</code>: <code>NIL NIL-REASON</code> is <code>'literal'</code> (LANG.VALUES.NIL). ABSENT writes one with a reason of the program's own.</p>
 <dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
-<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
-<dt>Operands</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>createsNil</code>; projection: <code>symbolNamesNoWord</code> → <code>notFound</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>Syntax</dt><dd><code>NIL</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">-&gt; [ NIL ]</span></dd>
+<dt>Stack</dt><dd>0 input(s) → 1 output(s)</dd>
+<dt>NIL policy</dt><dd><code>preserveReason</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
-<dt>ERROR conditions</dt><dd><code>notASymbol</code></dd>
-<dt>Clauses</dt><dd><code>LANG.CONTRACT.REGISTRY</code>, <code>LANG.CONTRACT.CHECK</code>, <code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.SOURCE.CODE</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
 </dl>
 </div>
-<div class="word-entry" id="word-BIND">
-<h4><code>BIND</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Name a value for the rest of the frame that made it: <code>5 'N' BIND N N ADD</code> is <code>10</code>, and <code>[ 1 2 ] [ 'A' 'B' ] BIND B A SUB</code> is <code>1</code>. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both. A value that names its own binding, directly or through other bindings, is refused as <code>selfReferentialDefinition</code>, the same rule DEF applies (LANG.DICTIONARY.ACYCLIC).</p>
+<div class="word-entry" id="word-NIL_3f">
+<h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Whether a value is absent: <code>1 0 DIV NIL?</code> is <code>TRUE</code> and <code>5 NIL?</code> is <code>FALSE</code>. It asks about the whole value, so a Vector holding a NIL is present: <code>[ 1 NIL ] NIL?</code> is <code>FALSE</code>. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).</p>
 <dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ 1 2 3 ] 'XS' BIND</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ x ] [ name... ] -&gt; [ ]</span></dd>
-<dt>Stack</dt><dd>2 input(s) → 0 output(s)</dd>
-<dt>Operands</dt><dd><code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>partial</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>ERROR conditions</dt><dd><code>nonText</code>, <code>nameConflict</code>, <code>shapeMismatch</code>, <code>invalidName</code>, <code>selfReferentialDefinition</code></dd>
-<dt>Clauses</dt><dd><code>LANG.SOURCE.FRAME</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-DEF">
-<h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>A User Word defined from a body and a name: <code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code> is <code>10</code>. The body may call Core and User Words but never, directly or through others, the Word being defined (<code>selfReferentialDefinition</code>, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (<code>definitionConflict</code>); a Core Word's name is <code>protectedWord</code>, a name held by a binding is <code>nameConflict</code>, and a name that cannot be written as one token is <code>invalidName</code>.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>
-<dt>Stack</dt><dd>2 input(s) → 0 output(s)</dd>
-<dt>Operands</dt><dd><code>control</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>rejectNil</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>partial</code></dd>
-<dt>Purity / determinism</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
-<dt>Effects</dt><dd><code>dictionaryWrite</code></dd>
-<dt>ERROR conditions</dt><dd><code>invalidName</code>, <code>protectedWord</code>, <code>nameConflict</code>, <code>definitionConflict</code>, <code>selfReferentialDefinition</code>, <code>nonText</code>, <code>invalidDefinitionBody</code></dd>
-<dt>Clauses</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-DEL">
-<h4><code>DEL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Delete a User Word from the dictionary: <code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code> is <code>TRUE</code>, since the name no longer names a Word. A Core Word is refused (<code>protectedWord</code>), a name no User Word holds is <code>wordNotFound</code>, and a Word other User Words still call is <code>definitionConflict</code> until they are deleted first.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ 1 ] 'W' DEF 'W' DEL</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ name ] -&gt; [ ]</span></dd>
-<dt>Stack</dt><dd>1 input(s) → 0 output(s)</dd>
-<dt>Operands</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>rejectNil</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>partial</code></dd>
-<dt>Purity / determinism</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
-<dt>Effects</dt><dd><code>dictionaryDelete</code></dd>
-<dt>ERROR conditions</dt><dd><code>wordNotFound</code>, <code>protectedWord</code>, <code>nonText</code>, <code>definitionConflict</code></dd>
-<dt>Clauses</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-DIGEST">
-<h4><code>DIGEST</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The content identity of a Word, or the digest of a value's denotation, as text: <code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code> is <code>TRUE</code>. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that <code>EQ</code> calls one value digest alike, however each was built, so <code>8 SQRT DIGEST</code> equals <code>2 SQRT 2 SQRT ADD DIGEST</code>, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ ADD ] 0 GET DIGEST</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ digest ]</span></dd>
+<dt>Syntax</dt><dd><code>1 0 DIV NIL?</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL policy</dt><dd><code>consumeNil</code>; projection: none</dd>
 <dt>Partiality</dt><dd><code>total</code></dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
-<dt>Clauses</dt><dd><code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
 </dl>
 </div>
-<!-- END generated word contracts: words -->
+<div class="word-entry" id="word-NIL-REASON">
+<h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>The reason an absence carries, as text: <code>1 0 DIV NIL-REASON</code> is <code>'divisionByZero'</code>, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
+<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
+<dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: <code>valueIsNotNil</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-ABSENT">
+<h4><code>ABSENT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>A NIL whose reason the program states: <code>'rate not quoted' ABSENT NIL?</code> is <code>TRUE</code>. <code>'rate not quoted' ABSENT NIL-REASON</code> answers <code>'rate not quoted'</code>. Its registered reason is <code>userDeclared</code>, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, <code>subject 'S' BIND fallback S S NIL? SELECT</code>. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>'rate not quoted' ABSENT</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ reason ] -&gt; [ NIL ]</span></dd>
+<dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
+<dt>Operands</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>createsNil</code>; projection: <code>always</code> → <code>userDeclared</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>ERROR conditions</dt><dd><code>nonText</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<!-- END generated word contracts: absence -->
 
                 </section>
 
                 <section id="output" class="ref-page">
-                    <h2>Output (<code>PRINT</code>)</h2>
+                    <h2><span class="secnum">2.4.2.7</span> Output (<code>PRINT</code>)</h2>
+
 
                     <p><code>PRINT</code> writes the top value of the stack to the output area. Like every other Word, it consumes its operand. To keep the value on the stack as well, name it with <code>BIND</code> and write the name twice. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
                     <h3>Quotes are a display convenience</h3>
@@ -3952,6 +4012,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
+                
                 <!-- BEGIN generated word contracts: output -->
 <h3 id="family-output">Contracts: Output</h3>
 <div class="word-entry" id="word-PRINT">
@@ -3974,7 +4035,8 @@ SELECT</code></td>
                 </section>
 
                 <section id="patterns" class="ref-page">
-                    <h2>Common patterns</h2>
+                    <h2><span class="secnum">Appendix A</span> Common patterns</h2>
+
 
                     <p>Ajisai's vocabulary is 78 Words, deliberately kept small. A Word that a user definition can express <em>at the same cost</em> does not belong in Core. So operations such as argmin — the position of the smallest value — or a relaxation loop are written as combinations of short phrases. The common ones are collected below. Each is verified, and if you use one more than once it makes a fine body for your own <code>DEF</code>.</p>
                     <div class="sample">
@@ -4039,10 +4101,12 @@ SELECT</code></td>
                     </div>
 
                     
+                
                 </section>
 
                 <section id="identity-model" class="ref-page">
-                    <h2>The identity model</h2>
+                    <h2><span class="secnum">Appendix B</span> The identity model</h2>
+
 
                     <p>In Ajisai you write ordinary comparison Words such as <code>EQ</code>, <code>LT</code> and <code>GT</code>, but behind the scenes the language keeps several separate "is it the same?" questions.</p>
                     <div class="ref-table-wrap">
@@ -4060,47 +4124,51 @@ SELECT</code></td>
                     </div>
                     <p>The comparison Words work only at the top layer. They are exact and total across every Ajisai value, and they answer the mathematical question. The layers below take no part in the value model, so representation and display never affect a comparison's result.</p>
                 
+                
                 </section>
 
             </article>
 
             <nav class="ref-nav" aria-label="Index">
                 <h2>Contents</h2>
-                <h3>Overview</h3>
                 <ul>
                     <li><a href="#intro">Introduction</a></li>
-                </ul>
-                <h3>Lexical structure</h3>
-                <ul>
-                    <li><a href="#tokens">Lexical analysis</a></li>
-                    <li><a href="#token-kinds">Kinds of token</a></li>
-                </ul>
-                <h3>Syntax</h3>
-                <ul>
-                    <li><a href="#syntax">Syntax</a></li>
-                </ul>
-                <h3>Semantics and execution</h3>
-                <ul>
-                    <li><a href="#values">Values and types</a></li>
-                    <li><a href="#stack">Evaluation and the stack</a></li>
-                    <li><a href="#failure">NIL and errors</a></li>
-                    <li><a href="#names">Names and scope</a></li>
-                    <li><a href="#costs">Costs and limits</a></li>
-                </ul>
-                <h3>Built-in Words</h3>
-                <ul>
-                    <li><a href="#operators">Logic, comparison, arithmetic</a></li>
-                    <li><a href="#vector-ops">Vector operations</a></li>
-                    <li><a href="#records">Keyed data</a></li>
-                    <li><a href="#strings-ops">String operations</a></li>
-                    <li><a href="#control">Control and iteration</a></li>
-                    <li><a href="#words">Defining Words</a></li>
-                    <li><a href="#output">Output</a></li>
-                </ul>
-                <h3>Appendix</h3>
-                <ul>
-                    <li><a href="#patterns">Common patterns</a></li>
-                    <li><a href="#identity-model">The identity model</a></li>
+                    <li><a href="#program">1 Program</a>
+                        <ul>
+                            <li><a href="#tokens">1.1 Separating elements</a></li>
+                            <li><a href="#stack">1.2 Evaluation</a>
+                                <ul>
+                                    <li><a href="#failure">1.2.1 Outcomes</a></li>
+                                    <li><a href="#costs">1.2.2 The cost of evaluation</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#elements">2 Elements</a>
+                        <ul>
+                            <li><a href="#el-number">2.1 Numbers</a></li>
+                            <li><a href="#el-string">2.2 Strings</a></li>
+                            <li><a href="#el-vector">2.3 Vectors</a></li>
+                            <li><a href="#el-name">2.4 Names</a>
+                                <ul>
+                                    <li><a href="#names">2.4.1 Bindings</a></li>
+                                    <li><a href="#words">2.4.2 Words</a>
+                                        <ul>
+                                            <li><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></li>
+                                            <li><a href="#vector-ops">2.4.2.2 Vector operations</a></li>
+                                            <li><a href="#records">2.4.2.3 Keyed data</a></li>
+                                            <li><a href="#strings-ops">2.4.2.4 String operations</a></li>
+                                            <li><a href="#control">2.4.2.5 Choice and iteration</a></li>
+                                            <li><a href="#absence">2.4.2.6 Handling absence</a></li>
+                                            <li><a href="#output">2.4.2.7 Output</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#patterns">Appendix A Common patterns</a></li>
+                    <li><a href="#identity-model">Appendix B The identity model</a></li>
                 </ul>
             </nav>
         </main>

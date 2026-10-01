@@ -74,10 +74,9 @@ const output = `${lines.join('\n').trimEnd()}\n`;
 // The same inventory, in both language versions of the Reference
 // (public/docs/en/index.html and public/docs/ja/index.html), in two places:
 //
-//   - the index of built-in Words on the "Kinds of token" page, where a list
-//     of keywords and operators would stand in another language: every Word
-//     by family, each linking to its contract and to the page that explains
-//     its family;
+//   - the index of built-in Words on the Words page (2.4.2): every Word by
+//     family, each linking to its contract and to the page that explains its
+//     family;
 //   - each family's contracts at the end of that family's page, below the
 //     narrative and samples that explain it.
 //
@@ -119,7 +118,7 @@ const FAMILIES = {
   text: { en: 'Text', ja: '文字列', page: 'strings-ops' },
   control: { en: 'Control', ja: '制御', page: 'control' },
   dictionary: { en: 'Dictionary and names', ja: '辞書と名前', page: 'words' },
-  absence: { en: 'Absence (NIL)', ja: '不在(NIL)', page: 'failure' },
+  absence: { en: 'Absence (NIL)', ja: '不在(NIL)', page: 'absence' },
   output: { en: 'Output', ja: '出力', page: 'output' },
 };
 

@@ -512,20 +512,25 @@ a {
     .word-contract dd { margin-bottom: 0.35rem; }
 }
 
-/* Navigation groups: the Reference reads as a language reference, from the
-   lexical structure through syntax and semantics to the built-in Words. */
+/* The Reference is a tree: a program divides into elements, an element into
+   its kinds, a name into bindings and Words, and Words into families whose
+   individual Words are the leaves. The table of contents nests to match, and
+   every page heading carries its number in that tree. */
 .ref-nav {
-    & h3 {
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        color: var(--color-text-light);
-        margin: 1rem 0 0.25rem;
+    & ul ul {
+        padding-left: 1.1rem;
+        margin: 0.15rem 0 0.25rem;
     }
 
-    & ul {
-        padding-left: 1.25rem;
+    & li {
+        margin: 0.15rem 0;
     }
+}
+
+.secnum {
+    color: var(--color-text-light);
+    font-weight: 500;
+    margin-right: 0.25rem;
 }
 
 /* Grammar in EBNF: notation, not Ajisai code, so it sits outside the gray
