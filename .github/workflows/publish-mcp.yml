@@ -8,7 +8,9 @@ name: Publish MCP server
 #
 # Release by pushing a tag `mcp-v<version>` whose version equals
 # tools/mcp-server/package.json's. workflow_dispatch re-runs a release whose
-# run failed part-way; both publish steps skip what is already published.
+# run failed part-way: the npm step skips a version npm already holds, so a run
+# that failed at the registry can be repeated. The registry refuses a version
+# it already lists, so a run that got that far has nothing left to do.
 on:
   push:
     tags: ["mcp-v*"]
