@@ -18,12 +18,16 @@
 
 /**
  * One line of the sheet: what it does, and how — `keys` is a chord written
- * `Ctrl+Enter`, with ` / ` between alternatives; `gesture` is a touch
- * gesture or a pointer action, written as prose. A line with neither is a note.
+ * `Ctrl+Enter`, with ` / ` between alternatives; `touch` is one touch control
+ * (a gesture, or a button's glyph), drawn as a keycap like a key, with `where`
+ * as plain prose after it; `gesture` is an outcome or an action written as
+ * prose only. A line with none of them is a note.
  */
 export interface HintEntry {
     readonly label: string;
     readonly keys?: string;
+    readonly touch?: string;
+    readonly where?: string;
     readonly gesture?: string;
 }
 
@@ -101,26 +105,26 @@ export const MOBILE_EDITOR_HINT: HintSheet = {
     groups: [
         {
             entries: [
-                { label: 'run it', gesture: 'triple-tap here' },
-                { label: 'change surface', gesture: 'swipe' }
+                { label: 'run it', touch: 'triple-tap', where: 'here' },
+                { label: 'change surface', touch: 'swipe' }
             ]
         },
         {
             entries: [
-                { label: 'format', gesture: 'lower-right icon' },
-                { label: 'clear', gesture: '× upper right' }
+                { label: 'format', touch: '≡', where: 'lower right' },
+                { label: 'clear', touch: '×', where: 'upper right' }
             ]
         },
         {
             entries: [
-                { label: 'tap a Dictionary word too' },
+                { label: 'write a word', touch: 'tap', where: 'in Dictionary' },
                 { label: 'two letters', gesture: 'suggestions' }
             ]
         },
         {
             entries: [
                 { label: 'the stack survives reload' },
-                { label: '× on Stack empties it' }
+                { label: 'empty the stack', touch: '×', where: 'on Stack' }
             ]
         },
         {
@@ -148,7 +152,9 @@ export const formatHintSheetText = (sheet: HintSheet): string => {
         if (group.heading !== undefined) lines.push(group.heading);
         const width = Math.max(...group.entries.map((entry) => entry.label.length));
         for (const entry of group.entries) {
-            const how = entry.keys ?? entry.gesture;
+            const how = entry.keys
+                ?? (entry.touch === undefined ? undefined : [entry.touch, entry.where].filter(Boolean).join(' '))
+                ?? entry.gesture;
             lines.push(how === undefined ? entry.label : `${entry.label.padEnd(width)} → ${how}`);
         }
     }
@@ -174,6 +180,11 @@ const renderHow = (doc: Document, entry: HintEntry): HTMLElement => {
             if (index > 0) how.append(' / ');
             how.append(renderChord(doc, chord));
         });
+    } else if (entry.touch !== undefined) {
+        const kbd = doc.createElement('kbd');
+        kbd.textContent = entry.touch;
+        how.append(kbd);
+        if (entry.where !== undefined) how.append(` ${entry.where}`);
     } else if (entry.gesture !== undefined) {
         how.textContent = `→ ${entry.gesture}`;
     }
@@ -201,7 +212,7 @@ export const renderHintSheet = (container: HTMLElement, sheet: HintSheet): void 
             const label = doc.createElement('dt');
             label.textContent = entry.label;
             // A note spans both columns; the empty <dd> keeps the list valid.
-            if (entry.keys === undefined && entry.gesture === undefined) label.className = 'editor-hint-note';
+            if (entry.keys === undefined && entry.touch === undefined && entry.gesture === undefined) label.className = 'editor-hint-note';
             list.append(label, renderHow(doc, entry));
         }
         parts.push(list);
