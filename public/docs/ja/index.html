@@ -96,7 +96,7 @@
                     <h2>はじめに</h2>
 
 
-                    <p>Ajisaiは、監査可能で正確なベクトル計算と機械可読な契約を実現する、AIファーストのベクトル指向データフロー言語です。プログラムは<strong>ワード</strong>の並びとして構成されます。値は単一のスタック上で管理され、各ワードがスタックからオペランドを取り出し(消費し)、処理結果をスタックに積みます。分数とデータ構造における<strong>Vector</strong>が中心的な役割を持ちます。</p>
+                    <p>Ajisaiは、監査可能で正確なベクトル計算と機械可読な契約を実現する、AIファーストのベクトル指向データフロー言語です。プログラムは<strong>要素</strong>の並びであり、その要素の多くは<strong>ワード</strong>の呼び出しです。値は単一のスタック上で管理され、各ワードがスタックからオペランドを取り出し(消費し)、処理結果をスタックに積みます。分数とデータ構造における<strong>Vector</strong>が中心的な役割を持ちます。</p>
                     <p>整った操作が値を作れなかったときは<code>NIL</code>となり、理由を持ったまま下流の計算へそのまま渡されます。一方、操作や入力の形そのものが誤っているときはエラーとなり、評価はその場で停止します。形が正しい場合でも、ホストが支えられる限度を超えれば同じくエラーになります。この限度については<a href="#costs">1.2.2 評価のコスト</a>で扱います。</p>
                     <h3>なぜAjisaiを作ったのか</h3>
                     <p>私がAjisaiを開発した理由は二つあります。一つは、あらゆるプログラミング言語の習得に挫折してきたこと。もう一つは、言語という道具でなにかをつくりたかったわけではなく、道具そのものをつくってみたかったことです。</p>
@@ -230,7 +230,21 @@
                             </tbody>
                         </table>
                     </div>
-                    <h3 id="source-errors">ソースエラー</h3>
+                    <h3 id="token-kinds">トークンの種類</h3>
+<p>字句解析が生み出すトークンは5種類だけです。空白とコメントはトークンを生みません。</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>種類</th><th>書き方の例</th><th>運ぶもの</th></tr></thead>
+<tbody>
+<tr><td class="notes">数値リテラル</td><td><code>3</code> <code>-1/2</code> <code>0.25</code> <code>1e5</code></td><td class="notes">字句そのもの。厳密な数として読まれる</td></tr>
+<tr><td class="notes">文字列リテラル</td><td><code>'hello'</code></td><td class="notes">引用符の間のテキスト</td></tr>
+<tr><td class="notes">名前</td><td><code>ADD</code> <code>NIL?</code> <code>DOUBLE</code></td><td class="notes">書かれたとおりの字句。ワードか束縛を名指す(<code>[ ]</code>の中ではSymbol)</td></tr>
+<tr><td class="notes">ベクトル開始</td><td><code>[</code></td><td class="notes">なし</td></tr>
+<tr><td class="notes">ベクトル終了</td><td><code>]</code></td><td class="notes">なし</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="source-errors">ソースエラー</h3>
 <p>字句解析で起こりうるエラーは次の5つだけで、分類はどれも<code>malformedSource</code>です。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
@@ -318,7 +332,7 @@
 
                 <section id="failure" class="ref-page">
                     <h2><span class="secnum">1.2.1</span> 評価の結末(値, <code>NIL</code>, エラー)</h2>
-<p>1つの要素の評価が行き着く先は3つです。値を積むか、理由を持つ<code>NIL</code>を積むか、エラーで評価全体を止めるかです。</p>
+<p>1つの要素の評価が行き着く先は3つです。成功して契約どおりの結果を積む(結果が1つもないワードもあります)か、理由を持つ<code>NIL</code>を積むか、エラーで評価全体を止めるかです。</p>
 <h3 id="nil">NILの規則</h3>
                     <p>失敗のモデルは一言でまとめられます。<strong>値を作れなかったなら<code>NIL</code>、そもそも使い方が違うならエラー</strong>です。正しい形の操作が結果を作れない場合は、構造化された理由を伴う<code>NIL</code>に写像されます。一方、型違いやオペランド不足といった誤った使い方は、通常のエラーを送出します。</p>
                     <h3>NILは伝播する</h3>
@@ -578,6 +592,8 @@ vector  = "[" , { element } , "]" ;</pre>
 </table>
 </div>
 <p>空白とコメントは要素ではありません(<a href="#tokens">1.1 要素の区切り</a>)。</p>
+<h3 id="display-forms">表示形式は要素ではない</h3>
+<p>スタックに表示される形のなかには、要素として書いても同じ値にならないものがあります。Recordの<code>{ 'x' 1/1 }</code>(<a href="#records">2.4.2.3 キーによる対応</a>)と、無理数の<code>sqrt(2)</code>(<a href="#el-number">2.1 数</a>)は値の見え方であって、ソースの中では<code>{</code>、<code>}</code>、<code>sqrt(2)</code>はただの名前です。Recordは<code>RECORD</code>で、無理数は<code>SQRT</code>で作ります。</p>
 
                 </section>
 
@@ -738,7 +754,7 @@ exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
                 <h3 id="strings">文字列(<code>' '</code>)</h3>
                     <p>文字列は<code>'</code>で引用され、スタック上では引用符付きで表示されます。この引用符は表示上の便宜であって、値の一部ではありません。<code>PRINT</code>は生のテキストを書き出すので、<code>'TEST'</code>は<code>TEST</code>として出力されます。詳しくは<a href="#output">出力</a>を参照してください。ただしコレクションの中に入れ子になった文字列は引用符を保ったままで、<code>[ 'AB' 'CD' ]</code>はそのままの形で表示されます。文字列と数や文字との相互変換については、<a href="#strings-ops">文字列操作</a>にまとめてあります。</p>
                     <h3 id="disjoint">独立した値の定義域</h3>
-                    <p>文字列は6つの値の定義域の1つであって、コードポイントのベクトルではありません。<code>'A' [ 65 ] EQ</code>は<code>FALSE</code>になり、文字列に対する算術はコードに対する算術ではなくエラーになります。空文字列<code>''</code>は普通の文字列であり、<code>NIL</code>ではありません。</p>
+                    <p>文字列は7つの値の定義域の1つであって、コードポイントのベクトルではありません。<code>'A' [ 65 ] EQ</code>は<code>FALSE</code>になり、文字列に対する算術はコードに対する算術ではなくエラーになります。空文字列<code>''</code>は普通の文字列であり、<code>NIL</code>ではありません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -921,7 +937,7 @@ FILTER</code></td>
 
                 <section id="el-name" class="ref-page">
                     <h2><span class="secnum">2.4</span> 名前</h2>
-<p>名前は、数でも文字列でも角括弧でもない語のすべてです。角括弧を除き、空白でないどんな文字も名前に使えます。</p>
+<p>名前は、数でも文字列でも角括弧でもない語のすべてです。空白と角括弧を除くどんな文字も名前の一部になれます。ただし語の先頭の<code>#</code>はコメントを、<code>'</code>は文字列を始めるので、名前はこの2文字では始まりません(<a href="#tokens">1.1 要素の区切り</a>)。</p>
 <p>名前を評価すると、その名前が束縛されていれば値が積まれ(<a href="#names">2.4.1 束縛</a>)、そうでなければ同じ名前のワードが呼び出されます(<a href="#words">2.4.2 ワード</a>)。どちらでもない名前はエラー(<em>Unknown word</em>)です。<code>[ ]</code>の中に書かれた名前は評価されず、<code>TRUE</code> <code>FALSE</code> <code>NIL</code>を除いてSymbolという値になります。</p>
 <h3>記号とトークン判定</h3>
                     <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ワードはどれも英語名1つだけで呼ばれ、記号の綴りを持つワードはありません。<code>+</code>や<code>&lt;</code>も通常の名前で、定義しなければ未定義ワードです。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>はただの名前としてパースされます。</p>
@@ -1064,7 +1080,7 @@ FILTER</code></td>
 
                 <section id="words" class="ref-page">
                     <h2><span class="secnum">2.4.2</span> ワード(<code>DEF</code>)</h2>
-<p>ワードは辞書に登録された名前付きの操作です。名前で呼び出されると、スタックからオペランドを消費し、結果を積みます。組み込みワードはその働きごとに<a href="#word-index">族</a>に分かれ、族ごとの頁の最後に各ワードの契約があります。個々のワードが、このリファレンスの最後の単位です。</p>
+<p>ワードは辞書に登録された名前付きの操作です。名前で呼び出されると、スタックからオペランドを消費し、契約どおりの結果(あれば)を積みます。組み込みワードはその働きごとに<a href="#word-index">族</a>に分かれ、族ごとの頁の最後に各ワードの契約があります。個々のワードが、このリファレンスの最後の単位です。</p>
 <h3 id="all-words">操作はすべてワード</h3>
 <p>Ajisaiの字句が区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。算術も比較も、分岐・反復・定義・束縛も、値を1つ積む<code>TRUE</code> <code>FALSE</code> <code>NIL</code>でさえ、英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあり、名前で呼び出されます。</p>
 <div class="ref-table-wrap word-table">

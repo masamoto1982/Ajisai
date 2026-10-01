@@ -99,7 +99,7 @@
                     <h2>Introduction</h2>
 
 
-                    <p>Ajisai is an AI-first, vector-oriented dataflow language for auditable, exact vector computation with machine-readable contracts. A program is a sequence of <strong>Words</strong>. Values live on a single stack: each Word takes (consumes) its operands from the stack and pushes its result back onto it. Fractions and the <strong>Vector</strong> as a data structure play the central roles.</p>
+                    <p>Ajisai is an AI-first, vector-oriented dataflow language for auditable, exact vector computation with machine-readable contracts. A program is a sequence of <strong>elements</strong>, most of them calls to <strong>Words</strong>. Values live on a single stack: each Word takes (consumes) its operands from the stack and pushes its result back onto it. Fractions and the <strong>Vector</strong> as a data structure play the central roles.</p>
                     <p>When a well-formed operation cannot produce a value, the result is <code>NIL</code>, which carries its reason and is handed on to downstream computation as it is. When the operation or the shape of its input is itself wrong, the result is an error and evaluation stops on the spot. Even a well-formed program is an error once it exceeds the limits the host can support; those limits are covered in <a href="#costs">1.2.2 The cost of evaluation</a>.</p>
                     <h3>Why I made Ajisai</h3>
                     <p>I had two reasons for developing Ajisai. One is that I had given up on learning every programming language I tried. The other is that I never wanted to build something with the tool called a language — I wanted to build the tool itself.</p>
@@ -233,7 +233,21 @@
                             </tbody>
                         </table>
                     </div>
-                    <h3 id="source-errors">Source errors</h3>
+                    <h3 id="token-kinds">Kinds of token</h3>
+<p>Lexical analysis produces only five kinds of token. Whitespace and comments produce none.</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>Kind</th><th>Examples</th><th>Carries</th></tr></thead>
+<tbody>
+<tr><td class="notes">Number literal</td><td><code>3</code> <code>-1/2</code> <code>0.25</code> <code>1e5</code></td><td class="notes">The lexeme itself, read as an exact number</td></tr>
+<tr><td class="notes">String literal</td><td><code>'hello'</code></td><td class="notes">The text between the quotes</td></tr>
+<tr><td class="notes">Name</td><td><code>ADD</code> <code>NIL?</code> <code>DOUBLE</code></td><td class="notes">The lexeme as written. It names a Word or a binding (a Symbol inside <code>[ ]</code>)</td></tr>
+<tr><td class="notes">Vector start</td><td><code>[</code></td><td class="notes">Nothing</td></tr>
+<tr><td class="notes">Vector end</td><td><code>]</code></td><td class="notes">Nothing</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="source-errors">Source errors</h3>
 <p>These five are the only errors lexical analysis can raise, all classified <code>malformedSource</code>.</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
@@ -321,7 +335,7 @@
 
                 <section id="failure" class="ref-page">
                     <h2><span class="secnum">1.2.1</span> Outcomes (values, <code>NIL</code>, errors)</h2>
-<p>Evaluating one element ends in one of three ways: it pushes a value, it pushes a <code>NIL</code> carrying a reason, or it stops the whole evaluation with an error.</p>
+<p>Evaluating one element ends in one of three ways: it succeeds and pushes the outputs its contract registers (some Words have none), it pushes a <code>NIL</code> carrying a reason, or it stops the whole evaluation with an error.</p>
 <h3 id="nil">The NIL rule</h3>
                     <p>The failure model fits in one sentence: <strong>if a value could not be produced, <code>NIL</code>; if the usage itself is wrong, an error</strong>. A well-formed operation that cannot produce a result maps to <code>NIL</code> with a structured reason. Misuse — a wrong type, missing operands — raises an ordinary error.</p>
                     <h3>NIL propagates</h3>
@@ -581,6 +595,8 @@ vector  = "[" , { element } , "]" ;</pre>
 </table>
 </div>
 <p>Whitespace and comments are not elements (<a href="#tokens">1.1 Separating elements</a>).</p>
+<h3 id="display-forms">Display forms are not elements</h3>
+<p>Some forms shown on the stack do not build the same value when written as elements. A Record's <code>{ 'x' 1/1 }</code> (<a href="#records">2.4.2.3 Keyed data</a>) and an irrational's <code>sqrt(2)</code> (<a href="#el-number">2.1 Numbers</a>) are how values look; in source, <code>{</code>, <code>}</code> and <code>sqrt(2)</code> are plain names. A Record is built with <code>RECORD</code>, an irrational with <code>SQRT</code>.</p>
 
                 </section>
 
@@ -741,7 +757,7 @@ exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
                 <h3 id="strings">Strings (<code>' '</code>)</h3>
                     <p>Strings are quoted with <code>'</code> and shown with their quotes on the stack. The quotes are a display convenience, not part of the value. <code>PRINT</code> writes the raw text, so <code>'TEST'</code> is output as <code>TEST</code>; see <a href="#output">Output</a> for more. A string nested inside a collection keeps its quotes, though: <code>[ 'AB' 'CD' ]</code> is shown just as written. Conversions between strings and numbers or characters are collected under <a href="#strings-ops">String operations</a>.</p>
                     <h3 id="disjoint">A value domain of its own</h3>
-                    <p>A string is one of the six value domains, not a Vector of code points. <code>'A' [ 65 ] EQ</code> is <code>FALSE</code>, and arithmetic on a string is an error, not arithmetic on codes. The empty string <code>''</code> is an ordinary string, not <code>NIL</code>.</p>
+                    <p>A string is one of the seven value domains, not a Vector of code points. <code>'A' [ 65 ] EQ</code> is <code>FALSE</code>, and arithmetic on a string is an error, not arithmetic on codes. The empty string <code>''</code> is an ordinary string, not <code>NIL</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -924,7 +940,7 @@ FILTER</code></td>
 
                 <section id="el-name" class="ref-page">
                     <h2><span class="secnum">2.4</span> Names</h2>
-<p>A name is every word that is not a number, a string or a square bracket. Any character that is not whitespace, except the square brackets, can be part of a name.</p>
+<p>A name is every word that is not a number, a string or a square bracket. Any character other than whitespace and the square brackets can be part of a name; but a word beginning with <code>#</code> is a comment and one beginning with <code>'</code> is a string, so a name never begins with either (<a href="#tokens">1.1 Separating elements</a>).</p>
 <p>Evaluating a name pushes its value if the name is bound (<a href="#names">2.4.1 Bindings</a>), and otherwise calls the Word of that name (<a href="#words">2.4.2 Words</a>). A name that is neither is an error (<em>Unknown word</em>). A name written inside <code>[ ]</code> is not evaluated; except for <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, it becomes a value called a Symbol.</p>
 <h3>Symbols and how tokens are recognized</h3>
                     <p>A symbol in Ajisai is simply a name spelled with symbol characters. Every Word is called by its one English name, and no Word has a symbol spelling. <code>+</code> and <code>&lt;</code> are ordinary names too, undefined unless you define them. Because a symbol is just one way of spelling a name, even a multi-character symbol does not complicate the rule above: a token ends only at whitespace, never partway through. A token's meaning is decided by the lexeme of the whole token, not by its first character. For example, <code>1/2</code> is parsed as a whole fraction literal, while a lone <code>/</code> is parsed as a plain name.</p>
@@ -1067,7 +1083,7 @@ FILTER</code></td>
 
                 <section id="words" class="ref-page">
                     <h2><span class="secnum">2.4.2</span> Words (<code>DEF</code>)</h2>
-<p>A Word is a named operation registered in the dictionary. Called by its name, it consumes operands from the stack and pushes its results. The built-in Words are grouped by what they do into <a href="#word-index">families</a>, and each family page ends with the contract of each of its Words. The individual Word is the last unit of this Reference.</p>
+<p>A Word is a named operation registered in the dictionary. Called by its name, it consumes operands from the stack and pushes the outputs its contract registers, if any. The built-in Words are grouped by what they do into <a href="#word-index">families</a>, and each family page ends with the contract of each of its Words. The individual Word is the last unit of this Reference.</p>
 <h3 id="all-words">Every operation is a Word</h3>
 <p>Ajisai's lexical structure tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Arithmetic and comparison, branching, iteration, definition and binding — even <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, which push one value — are ordinary <strong>Words</strong>, each with one English name, held in the dictionary and called by name.</p>
 <div class="ref-table-wrap word-table">
