@@ -28,7 +28,6 @@ fn every_check_carries_a_code_and_both_locales() {
         CauseClass::Domain,
         CauseClass::StackShape,
         CauseClass::TypoOrUnknownName,
-        CauseClass::Environment,
         CauseClass::ValueShape,
         CauseClass::Index,
         CauseClass::ShapeMismatch,
@@ -36,10 +35,7 @@ fn every_check_carries_a_code_and_both_locales() {
         CauseClass::ResourceLimit,
         CauseClass::UserLogic,
         CauseClass::ContractViolation,
-        CauseClass::Effect,
         CauseClass::NilFlow,
-        CauseClass::OptimizerMismatch,
-        CauseClass::InternalInvariant,
         CauseClass::Unknown,
     ];
     let categories = [
@@ -313,7 +309,6 @@ mod diagnosis_vocabulary_is_real {
             CauseClass::Domain,
             CauseClass::StackShape,
             CauseClass::TypoOrUnknownName,
-            CauseClass::Environment,
             CauseClass::ValueShape,
             CauseClass::Index,
             CauseClass::ShapeMismatch,
@@ -321,10 +316,7 @@ mod diagnosis_vocabulary_is_real {
             CauseClass::ResourceLimit,
             CauseClass::UserLogic,
             CauseClass::ContractViolation,
-            CauseClass::Effect,
             CauseClass::NilFlow,
-            CauseClass::OptimizerMismatch,
-            CauseClass::InternalInvariant,
             CauseClass::Unknown,
         ];
         let categories = [

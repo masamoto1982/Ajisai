@@ -4,28 +4,17 @@ use crate::error::{AjisaiError, ErrorCategory, NilReason};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorPhase {
+    /// Every source error, the grammar's structural phase included: an
+    /// unbalanced bracket is a `Tokenize` failure like any other.
     Tokenize,
-    /// Kept as a name in the diagnosis vocabulary (`DiagnosisPhase` in
-    /// `src/wasm-interpreter-types.ts`), but no longer produced: the
-    /// tokenizer runs the grammar's structural phase itself, so an unbalanced
-    /// bracket is reported as `Tokenize` like every other source error.
-    ParseStructure,
     ResolveWord,
     ExecuteWord,
-    NilPropagation,
-    Assertion,
-    HostIo,
-    OptimizationValidation,
-    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorLocusKind {
     UserWord,
     CoreWord,
-    BuiltinWord,
-    HostEnvironment,
-    Optimizer,
     Unknown,
 }
 
@@ -44,14 +33,10 @@ pub enum CauseClass {
     Index,
     ShapeMismatch,
     NilFlow,
-    Environment,
-    Effect,
     UserLogic,
     ResourceLimit,
     SourceForm,
     ContractViolation,
-    OptimizerMismatch,
-    InternalInvariant,
     Unknown,
 }
 
@@ -141,14 +126,8 @@ impl ErrorPhase {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             ErrorPhase::Tokenize => "tokenize",
-            ErrorPhase::ParseStructure => "parseStructure",
             ErrorPhase::ResolveWord => "resolveWord",
             ErrorPhase::ExecuteWord => "executeWord",
-            ErrorPhase::NilPropagation => "nilPropagation",
-            ErrorPhase::Assertion => "assertion",
-            ErrorPhase::HostIo => "hostIo",
-            ErrorPhase::OptimizationValidation => "optimizationValidation",
-            ErrorPhase::Unknown => "unknown",
         }
     }
 }
@@ -158,9 +137,6 @@ impl ErrorLocusKind {
         match self {
             ErrorLocusKind::UserWord => "userWord",
             ErrorLocusKind::CoreWord => "coreWord",
-            ErrorLocusKind::BuiltinWord => "builtinWord",
-            ErrorLocusKind::HostEnvironment => "hostEnvironment",
-            ErrorLocusKind::Optimizer => "optimizer",
             ErrorLocusKind::Unknown => "unknown",
         }
     }
@@ -176,14 +152,10 @@ impl CauseClass {
             CauseClass::Index => "index",
             CauseClass::ShapeMismatch => "shapeMismatch",
             CauseClass::NilFlow => "nilFlow",
-            CauseClass::Environment => "environment",
-            CauseClass::Effect => "effect",
             CauseClass::UserLogic => "userLogic",
             CauseClass::ResourceLimit => "resourceLimit",
             CauseClass::SourceForm => "sourceForm",
             CauseClass::ContractViolation => "contractViolation",
-            CauseClass::OptimizerMismatch => "optimizerMismatch",
-            CauseClass::InternalInvariant => "internalInvariant",
             CauseClass::Unknown => "unknown",
         }
     }

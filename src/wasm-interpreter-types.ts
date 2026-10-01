@@ -163,7 +163,6 @@ export interface ProtocolDebugCheck {
  */
 export type DiagnosisPhase =
     | 'tokenize'
-    | 'parseStructure'
     | 'resolveWord'
     | 'executeWord'
     | 'hostGuard';
