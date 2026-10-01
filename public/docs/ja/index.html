@@ -142,7 +142,7 @@
                 <section id="program" class="ref-page">
                     <h2><span class="secnum">1</span> プログラム</h2>
 <p>Ajisaiのプログラムは<strong>要素の並び</strong>です。</p>
-<pre class="ebnf">program = { element } ;</pre>
+<p>要素を0個以上、空白で区切って並べたものがプログラムです。</p>
 <p>要素は空白で区切って書き、左から右へ1つずつ評価されます。条件分岐・反復・定義もワードであり、ほかの要素と同じく並びの中に書きます。<code>[ 2 MUL ] 'DOUBLE' DEF</code>は、ベクトル・文字列・名前の3要素からなるプログラムです。</p>
 <p>プログラムについて述べることは2つあります。テキストがどう要素に区切られるか(<a href="#tokens">1.1 要素の区切り</a>)と、並んだ要素がどう評価されるか(<a href="#stack">1.2 評価</a>)です。要素そのものは<a href="#elements">2 要素</a>で述べます。</p>
 
@@ -578,8 +578,7 @@
                 <section id="elements" class="ref-page">
                     <h2><span class="secnum">2</span> 要素</h2>
 <p>要素は次の4種類です。</p>
-<pre class="ebnf">element = number | string | name | vector ;
-vector  = "[" , { element } , "]" ;</pre>
+<p>要素は、数・文字列・名前・ベクトルのどれか1つです。ベクトルは<code>[</code>と<code>]</code>のあいだに要素を0個以上並べたもので、要素の中に要素が入る唯一の形です。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>要素</th><th>例</th><th>評価すると</th></tr></thead>
@@ -593,7 +592,7 @@ vector  = "[" , { element } , "]" ;</pre>
 </div>
 <p>空白とコメントは要素ではありません(<a href="#tokens">1.1 要素の区切り</a>)。</p>
 <h3 id="display-forms">表示形式は要素ではない</h3>
-<p>スタックに表示される形のなかには、要素として書いても同じ値にならないものがあります。Recordの<code>{ 'x' 1/1 }</code>(<a href="#records">2.4.2.3 キーによる対応</a>)と、無理数の<code>sqrt(2)</code>(<a href="#el-number">2.1 数</a>)は値の見え方であって、ソースの中では<code>{</code>、<code>}</code>、<code>sqrt(2)</code>はただの名前です。Recordは<code>RECORD</code>で、無理数は<code>SQRT</code>で作ります。</p>
+<p>スタックに表示される形は、そのまま要素として書けば同じ値になるものを基本とします。例外は無理数の<code>sqrt(2)</code>(<a href="#el-number">2.1 数</a>)で、これは値の見え方であって、要素として書けば<code>sqrt(2)</code>はただの名前です。無理数は<code>SQRT</code>で作ります。Recordに専用の見え方はなく、<code>[ 'x' ] [ 1/1 ] RECORD</code>のように、それを組み立てるプログラムとして表示されます(<a href="#records">2.4.2.3 キーによる対応</a>)。</p>
 
                 </section>
 
@@ -601,14 +600,19 @@ vector  = "[" , { element } , "]" ;</pre>
                     <h2><span class="secnum">2.1</span> 数</h2>
 <h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
-<p>数の文法は次のとおりです。</p>
-<pre class="ebnf">number   = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;
-sign     = "-" | "+" ;
-digits   = ascii digit , { ascii digit } ;
-rational = "/" , digits ;
-fraction = "." , digits ;
-exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
-<p>この文法は語の<strong>全体</strong>に当てはめます。途中まで数に見えても最後まで一致しなければ、壊れた数ではなく名前です。数字はASCIIの<code>0</code>〜<code>9</code>だけで、全角数字は名前の文字です。</p>
+<p>数の書き方は次の4つの形です。「数字の並び」はASCIIの<code>0</code>〜<code>9</code>を1桁以上並べたものです。</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>形</th><th>書き方</th><th>例</th></tr></thead>
+<tbody>
+<tr><td class="notes">整数</td><td class="notes">数字の並び。先頭に<code>-</code>か<code>+</code>を付けてよい</td><td><code>5</code> <code>-5</code> <code>+5</code> <code>007</code></td></tr>
+<tr><td class="notes">分数</td><td class="notes">整数、<code>/</code>、数字の並び</td><td><code>1/2</code> <code>-1/2</code></td></tr>
+<tr><td class="notes">小数</td><td class="notes">整数、<code>.</code>、数字の並び</td><td><code>0.5</code> <code>5.0</code></td></tr>
+<tr><td class="notes">指数付き</td><td class="notes">整数か小数のあとに<span class="notation">e</span>か<span class="notation">E</span>、符号(省略可)、数字の並び</td><td><code>1e5</code> <code>1E5</code> <code>1e-5</code> <code>1.5e+3</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>分数には小数部も指数も付きません(<code>1/2.5</code>や<code>1/2e3</code>は名前です)。この書き方は語の<strong>全体</strong>に当てはめます。途中まで数に見えても最後まで一致しなければ、壊れた数ではなく名前です。全角数字は名前の文字です。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>数になる</th><th>名前になる</th></tr></thead>
@@ -2227,10 +2231,10 @@ FILTER</code></td>
                             <tbody>
                                 <tr><td><code>ORDER</code></td><td><code>[ 30 10 20 ] ORDER</code></td><td class="notes"><code>[ 1/1 2/1 0/1 ]</code> — 昇順の位置。同点は元の位置のまま残る</td></tr>
                                 <tr><td><code>UNIQUE</code></td><td><code>[ 'b' 'a' 'b' ] UNIQUE</code></td><td class="notes"><code>[ 'b' 'a' ]</code> — 重複のない値。最初の出現順</td></tr>
-                                <tr><td><code>TALLY</code></td><td><code>[ 'b' 'a' 'b' ] TALLY</code></td><td class="notes"><code>{ 'b' 2/1 'a' 1/1 }</code> — 要素ごとの件数を<a href="#records">Record</a>で返す。キーは<code>UNIQUE</code>の並び、<code>VALUES</code>を取れば件数だけのベクトル</td></tr>
+                                <tr><td><code>TALLY</code></td><td><code>[ 'b' 'a' 'b' ] TALLY</code></td><td class="notes"><code>[ 'b' 'a' ] [ 2/1 1/1 ] RECORD</code> — 要素ごとの件数を<a href="#records">Record</a>で返す。キーは<code>UNIQUE</code>の並び、<code>VALUES</code>を取れば件数だけのベクトル</td></tr>
                                 <tr><td><code>ZIP</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] ZIP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</code> — 位置ごとの束ね直し。これは転置でもある</td></tr>
                                 <tr><td><code>PUT</code></td><td><code>[ 1 2 3 ] 1 9 PUT</code></td><td class="notes"><code>[ 1/1 9/1 3/1 ]</code> — 1つの位置を置き換える。負のインデックスは末尾から数える</td></tr>
-                                <tr><td><code>GROUP</code></td><td><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></td><td class="notes"><code>{ 'a' [ 1/1 3/1 ] 'b' [ 2/1 ] }</code> — キーごとに束ねた値を<a href="#records">Record</a>で返す。キーは<code>UNIQUE</code>の順序に従い、<code>'a' GET</code>で1つの組を取り出せる</td></tr>
+                                <tr><td><code>GROUP</code></td><td><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></td><td class="notes"><code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code> — キーごとに束ねた値を<a href="#records">Record</a>で返す。キーは<code>UNIQUE</code>の順序に従い、<code>'a' GET</code>で1つの組を取り出せる</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2616,7 +2620,7 @@ FILTER</code></td>
 
                     <p>名前の付いたデータ——価格表、設定、1行のレコード——を、Ajisaiは<strong>Record</strong>という第7の値領域で持ちます。Recordは<em>キー列</em>と<em>値列</em>を位置で対応付けたもので、キーは与えた順序を保ち、同じキーは一度しか現れません。キーには任意の値を使えます(ふつうは文字列)。ベクトルではないので、ベクトルのワードはRecordを受け取らず、Recordのワードはベクトルを受け取りません。暗黙の変換はどちら向きにもありません。</p>
                     <p>Recordは<code>RECORD</code>で作ります。キー列と値列を受け取り、位置で対応付けます。キーに対応する値が無ければ長さの不一致、同じキーが2回あれば<code>duplicateKey</code>のエラーになります。</p>
-                    <p>表示は<code>{ 'x' 1/1 'y' 2/1 }</code>の形です。これは値の見え方であって、ソースに書ける形ではありません。Ajisaiの区切り記号は<code>[ ]</code>だけで、<code>{</code>や<code>}</code>は普通の名前の文字です。</p>
+                    <p>表示は<code>[ 'x' 'y' ] [ 1/1 2/1 ] RECORD</code>の形です。これはそのRecordを組み立てるプログラムそのもので、そのまま書けば同じ値になります。ベクトルの中にあるRecordは、<code>[ 'a' ] [ 1/1 ] RECORD 1 COLLECT</code>のように、要素を並べて<code>COLLECT</code>で集める形で表示されます。<code>[ ]</code>の中に書いた名前はSymbolになるので、そこに<code>RECORD</code>を書いてもRecordにはならないからです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2626,7 +2630,7 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></td>
-                                    <td><code>{ 'x' 1/1 'y' 2/1 }</code></td>
+                                    <td><code>[ 'x' 'y' ] [ 1/1 2/1 ] RECORD</code></td>
                                     <td class="notes">キー列と値列を位置で対応付ける。</td>
                                 </tr>
                                 <tr>
@@ -2636,7 +2640,7 @@ FILTER</code></td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 'v' 'r' ] [ 1 2 ] [ 'k' ] [ 3 ] RECORD 2 COLLECT RECORD</code></td>
-                                    <td><code>{ 'v' [ 1/1 2/1 ] 'r' { 'k' 3/1 } }</code></td>
+                                    <td><code>[ 'v' 'r' ] [ 1/1 2/1 ] [ 'k' ] [ 3/1 ] RECORD 2 COLLECT RECORD</code></td>
                                     <td class="notes">値列にRecordを入れれば入れ子になる。</td>
                                 </tr>
                             </tbody>
@@ -2652,14 +2656,14 @@ FILTER</code></td>
                                 <tr><th>ワード</th><th>例</th><th>結果</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>RECORD</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></td><td class="notes"><code>{ 'x' 1/1 'y' 2/1 }</code> — キー列と値列を位置で対応付ける。長さが違えばエラー、同じキーが2回あれば<code>duplicateKey</code>のエラー(後勝ちで黙って捨てない)</td></tr>
+                                <tr><td><code>RECORD</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></td><td class="notes"><code>[ 'x' 'y' ] [ 1/1 2/1 ] RECORD</code> — キー列と値列を位置で対応付ける。長さが違えばエラー、同じキーが2回あれば<code>duplicateKey</code>のエラー(後勝ちで黙って捨てない)</td></tr>
                                 <tr><td><code>KEYS</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD KEYS</code></td><td class="notes"><code>[ 'x' 'y' ]</code> — キー列。与えた順序のまま</td></tr>
                                 <tr><td><code>VALUES</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD VALUES</code></td><td class="notes"><code>[ 1/1 2/1 ]</code> — 値列。<code>KEYS</code>と位置が揃う。ここから先はベクトルの語彙がそのまま使える</td></tr>
                                 <tr><td><code>GET</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'y' GET</code></td><td class="notes"><code>2/1</code> — キーの下の値。ベクトルを位置で読む<code>GET</code>が、Recordはキーで読む。ないキーは<code>NIL</code>(<code>notFound</code>)</td></tr>
-                                <tr><td><code>PUT</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'y' 2 PUT</code></td><td class="notes"><code>{ 'x' 1/1 'y' 2/1 }</code> — 1つのキーに値を与えた新しいRecord(ベクトルの位置を書き換える<code>PUT</code>と同じワード)。既にあるキーは位置を動かさず値だけ替わり、ないキーは末尾に足される</td></tr>
-                                <tr><td><code>WITHOUT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</code></td><td class="notes"><code>{ 'y' 2/1 }</code> — 1つのキーを除いた新しいRecord。ないキーを除こうとすると<code>NIL</code>(<code>notFound</code>)</td></tr>
+                                <tr><td><code>PUT</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'y' 2 PUT</code></td><td class="notes"><code>[ 'x' 'y' ] [ 1/1 2/1 ] RECORD</code> — 1つのキーに値を与えた新しいRecord(ベクトルの位置を書き換える<code>PUT</code>と同じワード)。既にあるキーは位置を動かさず値だけ替わり、ないキーは末尾に足される</td></tr>
+                                <tr><td><code>WITHOUT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</code></td><td class="notes"><code>[ 'y' ] [ 2/1 ] RECORD</code> — 1つのキーを除いた新しいRecord。ないキーを除こうとすると<code>NIL</code>(<code>notFound</code>)</td></tr>
                                 <tr><td><code>HAS?</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'x' HAS?</code></td><td class="notes"><code>TRUE</code> — キーがあるかどうか。値を読まずに答えるので、「キーがない」と「値が<code>NIL</code>」を区別できる</td></tr>
-                                <tr><td><code>MERGE</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE</code></td><td class="notes"><code>{ 'x' 1/1 'y' 9/1 'z' 3/1 }</code> — 2つのRecordの合併。同じキーは右が勝ち、左の順序を保ち、右にしかないキーは末尾に足される。既定値に上書きを重ねる形</td></tr>
+                                <tr><td><code>MERGE</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE</code></td><td class="notes"><code>[ 'x' 'y' 'z' ] [ 1/1 9/1 3/1 ] RECORD</code> — 2つのRecordの合併。同じキーは右が勝ち、左の順序を保ち、右にしかないキーは末尾に足される。既定値に上書きを重ねる形</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2700,17 +2704,17 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 10 MUL</code></td>
-                                    <td><code>{ 'x' 10/1 'y' 20/1 }</code></td>
+                                    <td><code>[ 'x' 'y' ] [ 10/1 20/1 ] RECORD</code></td>
                                     <td class="notes">キーは変わらず、値だけが10倍される。</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 1 GT</code></td>
-                                    <td><code>{ 'x' FALSE 'y' TRUE }</code></td>
+                                    <td><code>[ 'x' 'y' ] [ FALSE TRUE ] RECORD</code></td>
                                     <td class="notes">比較も同じ規則で、真偽値のRecordになる。</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD ADD</code></td>
-                                    <td><code>{ 'x' 2/1 'y' 4/1 }</code></td>
+                                    <td><code>[ 'x' 'y' ] [ 2/1 4/1 ] RECORD</code></td>
                                     <td class="notes">キー列が等しい2つのRecordは値ごとに足される。</td>
                                 </tr>
                             </tbody>
@@ -3118,7 +3122,7 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>'{"a": 1, "b": [true, null]}' JSON-DECODE</code></td>
-                                    <td><code>{ 'a' 1/1 'b' [ TRUE NIL ] }</code></td>
+                                    <td><code>[ 'a' 'b' ] [ 1/1 [ TRUE NIL ] ] RECORD</code></td>
                                     <td class="notes">オブジェクトはRecord、配列はベクトル。</td>
                                 </tr>
                                 <tr>

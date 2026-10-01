@@ -9,10 +9,10 @@ const R: &str = "[ 'x' 'y' ] [ 1 2 ] RECORD";
 
 #[tokio::test]
 async fn record_builds_and_reads_back_in_order() {
-    assert_eq!(top(R).await, "{ 'x' 1/1 'y' 2/1 }");
+    assert_eq!(top(R).await, "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD");
     assert_eq!(top(&format!("{R} KEYS")).await, "[ 'x' 'y' ]");
     assert_eq!(top(&format!("{R} VALUES")).await, "[ 1/1 2/1 ]");
-    assert_eq!(top("[ ] [ ] RECORD").await, "{ }");
+    assert_eq!(top("[ ] [ ] RECORD").await, "[ ] [ ] RECORD");
     // The two bridges compose to the identity.
     assert_eq!(
         top(&format!("{R} {R} KEYS {R} VALUES RECORD EQ")).await,
@@ -26,11 +26,11 @@ async fn record_builds_and_reads_back_in_order() {
 async fn a_record_takes_any_key_and_nests() {
     assert_eq!(
         top("[ 1 TRUE ] [ 'one' 'yes' ] RECORD").await,
-        "{ 1/1 'one' TRUE 'yes' }"
+        "[ 1/1 TRUE ] [ 'one' 'yes' ] RECORD"
     );
     assert_eq!(
         top("[ 'v' 'r' ] [ 1 2 ] [ 'k' ] [ 3 ] RECORD 2 COLLECT RECORD").await,
-        "{ 'v' [ 1/1 2/1 ] 'r' { 'k' 3/1 } }"
+        "[ 'v' 'r' ] [ 1/1 2/1 ] [ 'k' ] [ 3/1 ] RECORD 2 COLLECT RECORD"
     );
     assert_eq!(top("[ 'a' ] [ 1 ] RECORD 1 COLLECT LENGTH").await, "1/1");
 }
@@ -75,13 +75,16 @@ async fn get_reads_a_record_by_key_and_projects_not_found() {
 
 #[tokio::test]
 async fn put_sets_a_record_key_in_place_or_appends() {
-    assert_eq!(top(&format!("{R} 'x' 9 PUT")).await, "{ 'x' 9/1 'y' 2/1 }");
+    assert_eq!(
+        top(&format!("{R} 'x' 9 PUT")).await,
+        "[ 'x' 'y' ] [ 9/1 2/1 ] RECORD"
+    );
     assert_eq!(top(&format!("{R} 'z' 3 PUT KEYS")).await, "[ 'x' 'y' 'z' ]");
     // The operand is a value: it is not changed by PUT, so the bound
     // Record reads unchanged after the answer.
     assert_eq!(
         top(&format!("{R} 'REC' BIND REC 'z' 3 PUT REC")).await,
-        "{ 'x' 1/1 'y' 2/1 'z' 3/1 } { 'x' 1/1 'y' 2/1 }"
+        "[ 'x' 'y' 'z' ] [ 1/1 2/1 3/1 ] RECORD [ 'x' 'y' ] [ 1/1 2/1 ] RECORD"
     );
     // The key is data: an absent key passes through.
     assert_eq!(top(&format!("{R} NIL 1 PUT NIL?")).await, "TRUE");
@@ -89,7 +92,10 @@ async fn put_sets_a_record_key_in_place_or_appends() {
 
 #[tokio::test]
 async fn without_removes_or_projects() {
-    assert_eq!(top(&format!("{R} 'x' WITHOUT")).await, "{ 'y' 2/1 }");
+    assert_eq!(
+        top(&format!("{R} 'x' WITHOUT")).await,
+        "[ 'y' ] [ 2/1 ] RECORD"
+    );
     assert_eq!(
         reason(&format!("{R} 'z' WITHOUT")).await.as_deref(),
         Some("notFound")
@@ -100,7 +106,7 @@ async fn without_removes_or_projects() {
 async fn merge_is_right_biased_and_order_preserving() {
     assert_eq!(
         top(&format!("{R} [ 'y' 'z' ] [ 9 3 ] RECORD MERGE")).await,
-        "{ 'x' 1/1 'y' 9/1 'z' 3/1 }"
+        "[ 'x' 'y' 'z' ] [ 1/1 9/1 3/1 ] RECORD"
     );
     assert_eq!(error_of(&format!("{R} [ 1 ] MERGE")).await, "nonRecord");
 }
@@ -131,16 +137,34 @@ async fn identity_is_the_key_and_value_sequences() {
 /// Containment rule 1: arithmetic and comparison lift over the values.
 #[tokio::test]
 async fn arithmetic_and_comparison_lift_over_values() {
-    assert_eq!(top(&format!("{R} 10 MUL")).await, "{ 'x' 10/1 'y' 20/1 }");
-    assert_eq!(top(&format!("10 {R} SUB")).await, "{ 'x' 9/1 'y' 8/1 }");
-    assert_eq!(top(&format!("{R} -1 MUL")).await, "{ 'x' -1/1 'y' -2/1 }");
-    assert_eq!(top(&format!("{R} {R} ADD")).await, "{ 'x' 2/1 'y' 4/1 }");
-    assert_eq!(top(&format!("{R} 1 GT")).await, "{ 'x' FALSE 'y' TRUE }");
-    assert_eq!(top(&format!("{R} 1 MAX")).await, "{ 'x' 1/1 'y' 2/1 }");
+    assert_eq!(
+        top(&format!("{R} 10 MUL")).await,
+        "[ 'x' 'y' ] [ 10/1 20/1 ] RECORD"
+    );
+    assert_eq!(
+        top(&format!("10 {R} SUB")).await,
+        "[ 'x' 'y' ] [ 9/1 8/1 ] RECORD"
+    );
+    assert_eq!(
+        top(&format!("{R} -1 MUL")).await,
+        "[ 'x' 'y' ] [ -1/1 -2/1 ] RECORD"
+    );
+    assert_eq!(
+        top(&format!("{R} {R} ADD")).await,
+        "[ 'x' 'y' ] [ 2/1 4/1 ] RECORD"
+    );
+    assert_eq!(
+        top(&format!("{R} 1 GT")).await,
+        "[ 'x' 'y' ] [ FALSE TRUE ] RECORD"
+    );
+    assert_eq!(
+        top(&format!("{R} 1 MAX")).await,
+        "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD"
+    );
     // A Vector value lifts on inside the Record.
     assert_eq!(
         top("[ 'v' ] [ [ 1 2 ] ] RECORD 2 MUL").await,
-        "{ 'v' [ 2/1 4/1 ] }"
+        "[ 'v' ] [ [ 2/1 4/1 ] ] RECORD"
     );
     // Division by zero empties the lane, not the Record.
     assert_eq!(
@@ -153,7 +177,7 @@ async fn arithmetic_and_comparison_lift_over_values() {
     );
     assert_eq!(
         top(&format!("{R} 'REC' BIND REC REC 2 MUL")).await,
-        "{ 'x' 1/1 'y' 2/1 } { 'x' 2/1 'y' 4/1 }"
+        "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD [ 'x' 'y' ] [ 2/1 4/1 ] RECORD"
     );
 }
 
@@ -168,12 +192,18 @@ async fn no_other_family_accepts_a_record() {
 
 #[tokio::test]
 async fn tally_and_group_answer_records() {
-    assert_eq!(top("[ 'b' 'a' 'b' ] TALLY").await, "{ 'b' 2/1 'a' 1/1 }");
-    assert_eq!(top("[ 3 1 3 ] TALLY").await, "{ 3/1 2/1 1/1 1/1 }");
+    assert_eq!(
+        top("[ 'b' 'a' 'b' ] TALLY").await,
+        "[ 'b' 'a' ] [ 2/1 1/1 ] RECORD"
+    );
+    assert_eq!(
+        top("[ 3 1 3 ] TALLY").await,
+        "[ 3/1 1/1 ] [ 2/1 1/1 ] RECORD"
+    );
     assert_eq!(top("[ 3 1 3 ] TALLY VALUES").await, "[ 2/1 1/1 ]");
     assert_eq!(
         top("[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP").await,
-        "{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }"
+        "[ 'b' 'a' ] [ [ 1/1 3/1 ] [ 2/1 4/1 ] ] RECORD"
     );
     assert_eq!(
         top("[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP 'a' GET").await,

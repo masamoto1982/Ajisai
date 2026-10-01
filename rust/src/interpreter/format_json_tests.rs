@@ -53,13 +53,13 @@ async fn format_refuses_malformed_use_and_restores_operands() {
 async fn json_decode_lands_each_json_kind_on_its_domain() {
     assert_eq!(
         top("'{\"a\": 1, \"b\": [true, null, \"x\"]}' JSON-DECODE").await,
-        "{ 'a' 1/1 'b' [ TRUE NIL 'x' ] }"
+        "[ 'a' 'b' ] [ 1/1 [ TRUE NIL 'x' ] ] RECORD"
     );
     assert_eq!(top("'0.1' JSON-DECODE").await, "1/10");
     assert_eq!(top("'0.1' JSON-DECODE 10 MUL 1 EQ").await, "TRUE");
     assert_eq!(top("'-1.5e2' JSON-DECODE").await, "-150/1");
     assert_eq!(top("'[]' JSON-DECODE").await, "[ ]");
-    assert_eq!(top("'{}' JSON-DECODE").await, "{ }");
+    assert_eq!(top("'{}' JSON-DECODE").await, "[ ] [ ] RECORD");
     assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "'literal'");
     assert_eq!(top("'\"caf\\u00e9\"' JSON-DECODE").await, "'café'");
     assert_eq!(

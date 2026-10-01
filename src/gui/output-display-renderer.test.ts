@@ -31,41 +31,56 @@ type Node = Parameters<typeof formatValue>[0];
 
 const render = (node: Node): string => formatValue(node, 0);
 
-describe('a Record renders as its own literal', () => {
+describe('a Record renders as the phrase that builds it', () => {
     test("[ 'x' 'y' ] [ 1 2 ] RECORD", () => {
         expect(render(rec([str('x'), str('y')], [num(1), num(2)]))).toBe(
-            "{ 'x' 1/1 'y' 2/1 }"
+            "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD"
         );
     });
 
-    test('the empty Record is an empty literal', () => {
-        expect(render(rec([], []))).toBe('{ }');
+    test('the empty Record is two empty Vectors and RECORD', () => {
+        expect(render(rec([], []))).toBe('[ ] [ ] RECORD');
     });
 
     test('a Record whose value is a Vector — the shape GROUP answers', () => {
         expect(
             render(rec([str('a'), str('b')], [vec(num(1), num(3)), vec(num(2))]))
-        ).toBe("{ 'a' [ 1/1 3/1 ] 'b' [ 2/1 ] }");
+        ).toBe("[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD");
     });
 });
 
-describe('a Vector holding a Record is an ordinary literal', () => {
-    // A Record literal is one element, so the Vector needs no phrase of its
-    // own to read back as itself.
+describe('a Vector holding a Record is a COLLECT phrase', () => {
+    // A Record has no literal, so inside `[ ]` its phrase would be data; the
+    // Vector is written as its elements followed by `n COLLECT`, which reads
+    // back as itself.
     test('one Record', () => {
-        expect(render(vec(rec([str('a')], [num(1)])))).toBe("[ { 'a' 1/1 } ]");
+        expect(render(vec(rec([str('a')], [num(1)])))).toBe("[ 'a' ] [ 1/1 ] RECORD 1 COLLECT");
     });
 
     test('a Record beside an ordinary value', () => {
         expect(render(vec(num(1), rec([str('a')], [num(2)])))).toBe(
-            "[ 1/1 { 'a' 2/1 } ]"
+            "1/1 [ 'a' ] [ 2/1 ] RECORD 2 COLLECT"
         );
     });
 
-    test('the literals nest', () => {
+    test('the phrases nest', () => {
         expect(render(vec(vec(rec([str('a')], [num(1)]))))).toBe(
-            "[ [ { 'a' 1/1 } ] ]"
+            "[ 'a' ] [ 1/1 ] RECORD 1 COLLECT 1 COLLECT"
         );
+    });
+});
+
+describe('a Symbol inside a COLLECT phrase is read out of a literal', () => {
+    const sym = (name: string): Value => ({ type: 'symbol', value: name } as Value);
+
+    test('beside a Record it is written [ NAME ] 0 GET, not called', () => {
+        expect(render(vec(rec([str('k')], [num(1)]), sym('V')))).toBe(
+            "[ 'k' ] [ 1/1 ] RECORD [ V ] 0 GET 2 COLLECT"
+        );
+    });
+
+    test('inside a bracket literal it stays bare', () => {
+        expect(render(vec(sym('V'), num(1)))).toBe('[ V 1/1 ]');
     });
 });
 

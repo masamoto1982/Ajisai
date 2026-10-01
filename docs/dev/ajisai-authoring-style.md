@@ -203,7 +203,9 @@ The loss shows up in three shapes:
 
 Two cases fixed the criterion. `{` `}` had no writing-side use when the
 per-character rejection rules were removed from the grammar, so they were
-*taken*, for the Record literal. `:` was at work (the two shapes above), so
+*taken*, for the Record display of the time (since replaced by the
+`[ keys ] [ values ] RECORD` phrase, which is source and takes no mark of
+its own, so `{` `}` are plain name characters again). `:` was at work (the two shapes above), so
 it was *left alone* — the owner's decision, reinforced by the small gain on
 offer: a quote closes only before whitespace, so `{ 'x': 1 }` could never be
 written and the best available form was a floating `{ 'x' : 1 }`; the

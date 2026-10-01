@@ -81,7 +81,7 @@ async fn a_symbol_beside_a_record_stays_data() {
         .unwrap();
     assert_eq!(
         format!("{}", interp.get_stack().last().expect("a result")),
-        "[ { 'k' 1/1 } V ]"
+        "[ 'k' ] [ 1/1 ] RECORD [ V ] 0 GET 2 COLLECT"
     );
     let text = definition_text(&interp, "M");
     assert_eq!(text, "[ 'k' ] [ 1 ] RECORD [ V ] 0 GET 2 COLLECT");
@@ -89,7 +89,7 @@ async fn a_symbol_beside_a_record_stays_data() {
     fresh.execute("M").await.unwrap();
     assert_eq!(
         format!("{}", fresh.get_stack().last().expect("a result")),
-        "[ { 'k' 1/1 } V ]"
+        "[ 'k' ] [ 1/1 ] RECORD [ V ] 0 GET 2 COLLECT"
     );
 }
 
@@ -160,7 +160,7 @@ async fn a_value_carried_whole_through_exec_is_written_as_source() {
     fresh.execute("X").await.expect("the restored Word runs");
     assert_eq!(
         format!("{}", fresh.get_stack().last().expect("a result")),
-        "{ 'k' 5/1 }"
+        "[ 'k' ] [ 5/1 ] RECORD"
     );
 }
 

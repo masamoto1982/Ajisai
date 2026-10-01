@@ -19,7 +19,7 @@ import { alphaNormalize, closure, norm, prelude } from './source.mjs';
 const PROBES = [
   '0', '1', '-2', '7/3',
   '[ 2 ]', '[ 3 1 4 1 5 ]', '[ 10 -2 7/2 ]', '[ [ 1 2 ] [ 3 4 ] ]',
-  'NIL', "'hello world'", "'a rose is a rose'", "{ 'a' 1 'b' 2 }",
+  'NIL', "'hello world'", "'a rose is a rose'", "[ 'a' 'b' ] [ 1 2 ] RECORD",
   // Irregular text: without these, a word-splitting title-caser and a
   // character-scanning one answered alike on every probe (pilot, 2026-09-23).
   "''", "'x  y'", "' lead'",

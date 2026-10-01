@@ -129,17 +129,35 @@ const formatElementAt = (item: Value, depth: number): string => {
     try { return formatValue(item, depth); } catch { return '?'; }
 };
 
-// A Vector renders as source that rebuilds it — a bracket literal, whatever
-// it holds — matching the engine's own renderer
-// (`rust/src/types/display.rs`). A nested Record is one element,
-// because it has a literal of its own (`formatRecord`).
+// Whether a value holds a Record anywhere inside it, so that no bracket
+// literal denotes it and the Vector around it is drawn as the phrase that
+// builds it.
+const holdsRecord = (item: Value): boolean =>
+    item.type === 'record'
+    || (item.type === 'vector' && Array.isArray(item.value) && (item.value as Value[]).some(holdsRecord));
+
+// One element of a `COLLECT` phrase: a Symbol is written `[ NAME ] 0 GET`,
+// which reads the name out of a literal rather than calling it; everything
+// else is drawn as it is.
+const formatPhraseElementAt = (item: Value, depth: number): string =>
+    item.type === 'symbol' ? `[ ${String(item.value)} ] 0 GET` : formatElementAt(item, depth);
+
+// A Vector renders as source that rebuilds it, matching the engine's own
+// renderer (`rust/src/types/display.rs`): a bracket literal when every
+// element has a literal, and otherwise — when it holds a Record, which has
+// no literal — its elements followed by `n COLLECT`, since inside `[ ]` the
+// Record's own phrase would be read as data.
 //
 // The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
 // (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
 // rather than an empty Vector.
 const formatVector = (value: unknown, depth: number): string => {
     if (!Array.isArray(value) || value.length === 0) return '[ ]';
-    return `[ ${value.map((v: Value) => formatElementAt(v, depth + 1)).join(' ')} ]`;
+    const items = value as Value[];
+    if (items.some(holdsRecord)) {
+        return `${items.map((v) => formatPhraseElementAt(v, depth + 1)).join(' ')} ${items.length} COLLECT`;
+    }
+    return `[ ${items.map((v) => formatElementAt(v, depth + 1)).join(' ')} ]`;
 };
 
 // The undrawn tail of a collection, stated as a count rather than drawn. See
@@ -182,8 +200,8 @@ const NIL: Value = { type: 'nil' } as Value;
 
 // A collection's literal as DOM: `open`, the drawn children each preceded by
 // a space, the elision marker for the rest, a space, `close` — the same
-// spacing as the canonical text (`[ 1 2 ]`, `{ k v }`), which is source that
-// rebuilds the value. Every child is drawn under the one render budget.
+// spacing as the canonical text (`[ 1 2 ]`), which is source that rebuilds
+// the value. Every child is drawn under the one render budget.
 const renderCollectionNode = (
     node: HTMLElement,
     open: string,
@@ -208,23 +226,60 @@ const renderCollectionNode = (
     return node;
 };
 
+// A Vector that holds a Record, as DOM: its elements each followed by a
+// space, the elision marker for the rest, then `n COLLECT` — the phrase
+// `formatVector` writes for it. A Symbol element is drawn as `[ NAME ] 0 GET`.
+const renderPhraseNode = (
+    node: HTMLElement,
+    children: readonly Value[],
+    depth: number,
+    budget: RenderBudget
+): HTMLElement => {
+    const { shown, elided } = planCollectionRender(children.length, budget);
+    node.dataset.depth = String(depth);
+    for (let index = 0; index < shown; index++) {
+        if (index > 0) node.append(' ');
+        const child = children[index]!;
+        if (child.type === 'symbol') {
+            const symbol = document.createElement('span');
+            symbol.className = 'stack-node';
+            symbol.textContent = formatPhraseElementAt(child, depth + 1);
+            node.appendChild(symbol);
+        } else {
+            node.appendChild(renderStackValueNode(child, depth + 1, budget));
+        }
+    }
+    if (elided > 0) {
+        if (shown > 0) node.append(' ');
+        node.appendChild(createElisionSpan(elided));
+    }
+    node.append(`${shown > 0 || elided > 0 ? ' ' : ''}${children.length} COLLECT`);
+    return node;
+};
+
 const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
-        return renderCollectionNode(node, '[', ']', item.value as Value[], depth, budget);
+        const children = item.value as Value[];
+        if (children.some(holdsRecord)) return renderPhraseNode(node, children, depth, budget);
+        return renderCollectionNode(node, '[', ']', children, depth, budget);
     }
 
-    // A Record's keys and values are two aligned arrays; they are drawn
-    // interleaved, a missing value padded with NIL (see `formatRecord`). Each
-    // pair counts as two children of the budget.
+    // A Record is drawn as the phrase that builds it: its keys and its
+    // values, each a Vector drawn as any other, then `RECORD` (see
+    // `formatRecord`).
     if (item.type === 'record') {
-        const { keys, values } = readRecordParts(item.value);
-        const pairs = keys.flatMap((key, index) => [key, values[index] ?? NIL]);
+        const { keys, values } = recordParts(item.value);
         node.classList.add('stack-node-record');
-        return renderCollectionNode(node, '{', '}', pairs, depth, budget);
+        node.dataset.depth = String(depth);
+        node.appendChild(renderStackValueNode({ type: 'vector', value: keys } as Value, depth + 1, budget));
+        node.append(' ');
+        node.appendChild(renderStackValueNode({ type: 'vector', value: values } as Value, depth + 1, budget));
+        node.append(' RECORD');
+        return node;
     }
 
     if (depth === 1) {
@@ -299,24 +354,24 @@ export const formatValue = (item: Value, depth: number): string => {
 };
 
 // A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
-// arrays of nodes, and renders as its own literal — `{ key value … }`, each
-// key beside the value under it — which is the same display the engine's own
-// stack rendering produces (`rust/src/types/display.rs`).
-//
-// The empty Record is `{ }`, which needs no case of its own.
+// arrays of nodes, and renders as the phrase that builds it — its keys and
+// its values, each as a Vector, then `RECORD` — which is the same display the
+// engine's own stack rendering produces (`rust/src/types/display.rs`) and
+// reads back as the same value. The empty Record is `[ ] [ ] RECORD`, which
+// needs no case of its own.
 //
 // A short value array is padded with NIL rather than dropped, because the
 // two arrays are aligned by position and a missing slot is the protocol
 // having been malformed, not a Record with fewer values than keys — and
-// neither `RECORD` nor the literal admits a length mismatch.
-const formatRecord = (value: unknown, depth: number): string => {
+// `RECORD` does not admit a length mismatch.
+const recordParts = (value: unknown): { keys: Value[]; values: Value[] } => {
     const { keys, values } = readRecordParts(value);
-    if (keys.length === 0) return '{ }';
-    const pairs: string[] = keys.map((key, index) => {
-        const paired = values[index] ?? NIL;
-        return `${formatElementAt(key, depth + 1)} ${formatElementAt(paired, depth + 1)}`;
-    });
-    return `{ ${pairs.join(' ')} }`;
+    return { keys, values: keys.map((_, index) => values[index] ?? NIL) };
+};
+
+const formatRecord = (value: unknown, depth: number): string => {
+    const { keys, values } = recordParts(value);
+    return `${formatVector(keys, depth + 1)} ${formatVector(values, depth + 1)} RECORD`;
 };
 
 // ── Math view (LaTeX) ───────────────────────────────────────────────────────
