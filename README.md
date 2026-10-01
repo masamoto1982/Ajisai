@@ -29,9 +29,10 @@ As it happens, a flower takes its scientific name from the Greek for "water vess
 ## Status
 
 <table>
-<tr><td>Release stage</td><td>Alpha</td></tr>
+<tr><td>Release stage</td><td>Beta</td></tr>
+<tr><td>Version</td><td>1.0.0-beta.1 (implementation and specification)</td></tr>
 <tr><td>Specification</td><td>Regenerated from the implementation — see <a href="spec/README.md"><code>spec/README.md</code></a></td></tr>
-<tr><td>Compatibility promise</td><td>None while alpha holds</td></tr>
+<tr><td>Compatibility promise</td><td>From 1.0.0. Until then a breaking change raises the specification version and is named in the release that ships it</td></tr>
 </table>
 
 ## Ten concepts

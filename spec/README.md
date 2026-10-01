@@ -52,14 +52,15 @@ it); the other JSON sources are validated by the gates that consume them
 document beside them.
 
 Ajisai carries exactly two version numbers, not three: the implementation's
-(`package.json`, `src-tauri/tauri.conf.json`, e.g. `0.2.0-alpha.1`) and the
-specification's own. A build-date stamp on the specification would have been
-a third, redundant axis, so the Status block does not carry one; git history
-is the record of when a given specification text was current. Alpha carries
-no compatibility promise, so there is nothing yet for a language version
-number to pin — the Status block names the release stage instead
-(`Alpha`), and the specification gets its own real version number, tracked
-independently of the implementation's, once beta is declared.
+(`package.json`, `src-tauri/tauri.conf.json`, `npm run check:version-sync`)
+and the specification's own, which the Status block of
+`language-semantics.md` states beside the release stage. The two are tracked
+independently — they both began beta at `1.0.0-beta.1` — and the
+specification's moves only when the language does: a breaking change to the
+vocabulary, to program meaning, or to the host protocol raises it. A
+build-date stamp on the specification would have been a third, redundant
+axis, so the Status block does not carry one; git history is the record of
+when a given specification text was current.
 
 `npm run semantic-kernel:check` enforces the budgets that keep the language
 small — ceilings on the kernel's lines, on semantic families and on canonical
