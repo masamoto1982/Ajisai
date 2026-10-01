@@ -202,17 +202,14 @@ fn node_payload_bytes(node: &ProtocolNode) -> usize {
 /// Terms an algebraic value carries, for the record of what was dropped: with
 /// `exactTerms` gone from an elided slot, this is what says how much there was.
 fn algebraic_term_count(node: &ProtocolNode) -> Option<usize> {
-    match &node.semantics.as_ref()?.data {
+    match &node.semantics.data {
         ValueData::ExactScalar(exact) => Some(exact.algebraic_term_count()),
         _ => None,
     }
 }
 
 fn exact_terms_bytes(node: &ProtocolNode) -> usize {
-    let Some(source) = &node.semantics else {
-        return 0;
-    };
-    match &source.data {
+    match &node.semantics.data {
         ValueData::ExactScalar(exact) => exact.algebraic_term_count() * EXACT_TERM_BYTES,
         _ => 0,
     }
@@ -227,21 +224,19 @@ fn exact_terms_bytes(node: &ProtocolNode) -> usize {
 /// names the real domain) and by the presence of `elided`.
 fn elided_node_json(node: &ProtocolNode, approx_bytes: usize, elements: Option<usize>) -> Json {
     let mut obj = Map::new();
-    if let Some(source) = &node.semantics {
-        // For an algebraic value the number itself lives in
-        // `semantics.exactTerms`, not in `value` — `value` is only the marked
-        // approximation. Eliding `value` and keeping `semantics` therefore
-        // dropped the cheap half and kept the expensive one: eighteen 512-term
-        // values still came to 388 KB with seventeen of them "elided". What a
-        // reader needs from a dropped slot is what kind of value it was, which
-        // is everything in the block except the exact form; the term count goes
-        // into the `elided` record instead, so nothing is silently missing.
-        let mut semantics = semantics_json(source);
-        if let Some(object) = semantics.as_object_mut() {
-            object.remove("exactTerms");
-        }
-        obj.insert("semantics".into(), semantics);
+    // For an algebraic value the number itself lives in
+    // `semantics.exactTerms`, not in `value` — `value` is only the marked
+    // approximation. Eliding `value` and keeping `semantics` therefore
+    // dropped the cheap half and kept the expensive one: eighteen 512-term
+    // values still came to 388 KB with seventeen of them "elided". What a
+    // reader needs from a dropped slot is what kind of value it was, which
+    // is everything in the block except the exact form; the term count goes
+    // into the `elided` record instead, so nothing is silently missing.
+    let mut semantics = semantics_json(&node.semantics);
+    if let Some(object) = semantics.as_object_mut() {
+        object.remove("exactTerms");
     }
+    obj.insert("semantics".into(), semantics);
     obj.insert("type".into(), json!(node.type_str));
     obj.insert("value".into(), Json::Null);
     let mut record = Map::new();

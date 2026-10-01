@@ -242,13 +242,11 @@ pub(crate) struct UserWordData {
 /// protocol, where LANG.OBSERVATION.PROTOCOL promises one.
 fn protocol_to_js(node: &ProtocolNode) -> JsValue {
     let obj = js_sys::Object::new();
-    if let Some(source) = &node.semantics {
-        set_js_prop(
-            &obj,
-            "semantics",
-            &json_to_js(crate::agent::report::semantics_json(source)),
-        );
-    }
+    set_js_prop(
+        &obj,
+        "semantics",
+        &json_to_js(crate::agent::report::semantics_json(&node.semantics)),
+    );
     set_js_prop(&obj, "type", &node.type_str.into());
     match &node.value {
         ProtocolValue::Null => set_js_prop(&obj, "value", &JsValue::NULL),
