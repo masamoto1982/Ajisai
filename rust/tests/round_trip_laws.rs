@@ -10,18 +10,23 @@
 //! exactly what may change; this pins the property that makes the spelling
 //! worth having.
 //!
+//! A Record has no literal — only `[ ]` delimits — so it renders as the phrase
+//! that builds it, `[ keys ] [ values ] RECORD`, and a Vector holding one as
+//! its elements followed by `n COLLECT`; both are source, and both are held to
+//! the law below.
+//!
 //! Three kinds of value are deliberately out of scope, because the display
 //! does not claim to round-trip them and `types/display.rs` says so:
 //!
-//! - A Record renders as `{ key value … }`, which is a display, not source:
-//!   only `[ ]` delimits, and `RECORD` is how a program builds one. A Vector
-//!   holding a Record inherits this.
-//! - A Symbol renders as its bare name, which calls a Word rather than
-//!   pushing the name.
+//! - A Symbol on its own renders as its bare name, which calls a Word rather
+//!   than pushing the name. (Inside a `COLLECT` phrase it is written
+//!   `[ NAME ] 0 GET`, which does round-trip.)
 //! - An irrational scalar renders its normal form as one token,
 //!   `1/1+sqrt(2)`: no literal denotes an irrational, and the source that
 //!   builds one (`1 2 SQRT ADD`) would read as three elements inside a
 //!   Vector literal.
+//! - A NIL carrying a reason renders as `NIL`, the name that denotes only the
+//!   literal NIL.
 
 use ajisai_core::interpreter::Interpreter;
 
@@ -125,19 +130,35 @@ async fn an_irrational_displays_but_is_not_source() {
     assert!(interpreter.execute("sqrt(2)").await.is_err());
 }
 
-/// A Record displays key beside value, and the display is not source: `{` is
-/// an ordinary name, so reading it back is a call of an unknown Word.
+/// A Record renders as the phrase that builds it, and that phrase is source:
+/// running the display leaves the same Record. A Vector holding a Record
+/// renders as a `COLLECT` phrase for the same reason, and a Symbol inside
+/// that phrase is read out of a literal rather than called.
 #[tokio::test]
-async fn a_record_displays_but_is_not_source() {
+async fn a_record_renders_as_the_phrase_that_builds_it() {
+    for program in [
+        "[ 'x' 'y' ] [ 1 2 ] RECORD",
+        "[ ] [ ] RECORD",
+        "[ 1 TRUE ] [ 'one' 'yes' ] RECORD",
+        "[ 'a' ] [ 1 ] RECORD 1 COLLECT",
+        "1 [ 'a' ] [ 2 ] RECORD 2 COLLECT",
+        "[ 'a' ] [ 1 ] RECORD 1 COLLECT 1 COLLECT",
+        "[ 'v' 'r' ] [ 1 2 ] [ 'k' ] [ 3 ] RECORD 2 COLLECT RECORD",
+        "[ 'k' ] [ 1 ] RECORD [ V ] 0 GET 2 COLLECT",
+    ] {
+        assert_round_trips(program).await;
+    }
     assert_eq!(
         run("[ 'x' 'y' ] [ 1 2 ] RECORD").await,
-        ["{ 'x' 1/1 'y' 2/1 }"]
+        ["[ 'x' 'y' ] [ 1/1 2/1 ] RECORD"]
     );
-    assert_eq!(run("[ ] [ ] RECORD").await, ["{ }"]);
+    assert_eq!(run("[ ] [ ] RECORD").await, ["[ ] [ ] RECORD"]);
     assert_eq!(
         run("[ 'a' ] [ 1 ] RECORD 1 COLLECT").await,
-        ["[ { 'a' 1/1 } ]"]
+        ["[ 'a' ] [ 1/1 ] RECORD 1 COLLECT"]
     );
+    // `{` is an ordinary name, so the old `{ key value }` spelling is a call
+    // of an unknown Word, not a Record.
     let mut interpreter = Interpreter::new();
     assert!(interpreter.execute("{ 'x' 1/1 }").await.is_err());
 }

@@ -358,7 +358,7 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - FOLD needs an explicit initial value
   `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD` → stack: `[ 6/1 ]`
 - A Record from a Vector of keys and a Vector of values
-  `[ 'x' 'y' ] [ 1 2 ] RECORD` → stack: `{ 'x' 1/1 'y' 2/1 }`
+  `[ 'x' 'y' ] [ 1 2 ] RECORD` → stack: `[ 'x' 'y' ] [ 1/1 2/1 ] RECORD`
 - Define a user word: [ body ] then name, then DEF
   `[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - SELECT: the two candidates, then the truth that chooses between them

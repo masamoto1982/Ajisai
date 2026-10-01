@@ -24,16 +24,21 @@ impl fmt::Display for Value {
 ///
 /// Everything this writes must satisfy `tests/round_trip_laws.rs`, except
 /// what that file names out of scope: an irrational scalar, whose display is
-/// truncated at a budget (LANG.VALUES.EXACT), a Symbol, and a Record, whose
-/// `{ key value … }` display has no literal behind it.
+/// truncated at a budget (LANG.VALUES.EXACT), a NIL carrying a reason, which
+/// renders as the bare `NIL` that denotes only the literal one, and a Symbol
+/// on its own.
 ///
-/// Every fragment is one unit, so fragments nest without a phrase to compose.
-/// `tests/round_trip_laws.rs` holds the domains that have a literal to
-/// rebuilding themselves by executing what this writes.
+/// A value with a literal renders as that literal, and a fragment with a
+/// literal is one unit, so such fragments nest without a phrase to compose.
+/// A Record has no literal — only `[ ]` delimits, and `{` `}` are ordinary
+/// name characters — so it renders as the phrase that builds it,
+/// `[ keys ] [ values ] RECORD`, and a Vector holding one renders as its
+/// elements followed by `n COLLECT`, since inside `[ ]` that phrase would be
+/// data. This is the same writing `value_as_code.rs` gives a definition body.
 ///
-/// A Symbol does not round-trip and is not claimed to: it renders as its bare
-/// name, which *calls* a Word rather than pushing the name. Nor does a
-/// Record: it renders key beside value in `{ }`, which is a display only.
+/// A Symbol on its own renders as its bare name, which *calls* a Word rather
+/// than pushing the name, and is not claimed to round-trip; inside a
+/// `COLLECT` phrase it is written as `[ NAME ] 0 GET`, which does.
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
@@ -44,30 +49,62 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
-        // A Record renders each key beside the value under it, in the order
-        // the Record holds them. The empty Record falls out as `{ }`, with no
-        // case of its own.
+        // A Record renders as the phrase that builds it: its keys and its
+        // values, each as a Vector, then `RECORD`. The empty Record falls out
+        // as `[ ] [ ] RECORD`, with no case of its own.
         ValueData::Record(record) => {
-            let mut elements: Vec<String> = Vec::with_capacity(record.len() * 2);
-            for (key, value) in record.entries() {
-                elements.push(format_value_recursive(&key.data, depth + 1));
-                elements.push(format_value_recursive(&value.data, depth + 1));
-            }
-            render_delimited("{", "}", &elements)
+            let keys: Vec<&Value> = record.entries().map(|(key, _)| key).collect();
+            let values: Vec<&Value> = record.entries().map(|(_, value)| value).collect();
+            format!(
+                "{} {} RECORD",
+                render_vector(&keys, depth + 1),
+                render_vector(&values, depth + 1)
+            )
         }
         ValueData::Vector(v) => {
-            let elements: Vec<String> = v
-                .iter()
-                // A String child renders quoted (`'AB'`), so strings stay
-                // recognizable inside a collection.
-                .map(|child| format_value_recursive(&child.data, depth + 1))
-                .collect();
-            render_delimited("[", "]", &elements)
+            let children: Vec<&Value> = v.iter().collect();
+            render_vector(&children, depth)
         }
         ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
         // A Symbol renders as its own bare name — unquoted, unlike Text.
         ValueData::Symbol(name) => name.to_string(),
     }
+}
+
+/// Whether a value holds a Record anywhere inside it, so that no bracket
+/// literal denotes it and the Vector around it must be built by a phrase.
+fn holds_record(data: &ValueData) -> bool {
+    match data {
+        ValueData::Record(_) => true,
+        ValueData::Vector(children) => children.iter().any(|child| holds_record(&child.data)),
+        _ => false,
+    }
+}
+
+/// A Vector renders as its literal, `[ … ]`, when every element has a
+/// literal; one that holds a Record renders as the phrase that builds it, its
+/// elements followed by `n COLLECT`, because inside `[ ]` the Record's own
+/// phrase would be read as data. A Symbol inside that phrase is written
+/// `[ NAME ] 0 GET`, which reads the name out of a literal rather than
+/// calling it.
+fn render_vector(children: &[&Value], depth: usize) -> String {
+    if children.iter().any(|child| holds_record(&child.data)) {
+        let elements: Vec<String> = children
+            .iter()
+            .map(|child| match &child.data {
+                ValueData::Symbol(name) => format!("[ {name} ] 0 GET"),
+                _ => format_value_recursive(&child.data, depth + 1),
+            })
+            .collect();
+        return format!("{} {} COLLECT", elements.join(" "), children.len());
+    }
+    let elements: Vec<String> = children
+        .iter()
+        // A String child renders quoted (`'AB'`), so strings stay
+        // recognizable inside a collection.
+        .map(|child| format_value_recursive(&child.data, depth + 1))
+        .collect();
+    render_delimited("[", "]", &elements)
 }
 
 /// A collection renders as its delimiters and its elements, spaced.
