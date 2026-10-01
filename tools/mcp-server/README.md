@@ -15,15 +15,33 @@ Host-by-host resource ceilings are compared in `docs/dev/mcp-host-profiles.md`.
 
 ## Install and connect
 
-> **Not on npm yet.** `ajisai-mcp-server` is unpublished, so `npm install -g
-> ajisai-mcp-server` and `npx -y ajisai-mcp-server` do not resolve. Publishing
-> is a release decision, not a missing feature; until it is made, connect from
-> a checkout as below. This section will lead with the registry recipe on the
-> day `npm view ajisai-mcp-server version` answers.
+Requirements: **Node 20 or newer**. Nothing else — no build step, no `cargo`,
+no native binary: the package carries its WASM backend.
 
-Requirements: **Node 20 or newer**, and a checkout of this repository. Nothing
-else — no build step, no `cargo`, no native binary. The WASM backend is
-committed under `wasm/generated/`, so a fresh clone computes immediately.
+The server is published on npm as `ajisai-mcp-server` and listed in the
+official MCP Registry as `io.github.masamoto1982/ajisai`. Most MCP clients take
+a JSON server entry. Claude Desktop (`claude_desktop_config.json`), Claude Code
+(`.mcp.json`) and Cursor (`.cursor/mcp.json`) all use this shape:
+
+```json
+{
+  "mcpServers": {
+    "ajisai": {
+      "command": "npx",
+      "args": ["-y", "ajisai-mcp-server"]
+    }
+  }
+}
+```
+
+`npx -y ajisai-mcp-server --doctor` exits 0 when the installed copy can
+actually compute.
+
+### From a checkout
+
+A clone runs the same server without npm, which is how the repository's own
+tests and an unreleased engine are reached. The WASM backend is committed under
+`wasm/generated/`, so a fresh clone computes immediately.
 
 ```sh
 git clone https://github.com/masamoto1982/Ajisai.git
@@ -32,9 +50,7 @@ npm install
 node index.js --doctor     # exits 0 when this copy can actually compute
 ```
 
-Most MCP clients take a JSON server entry. Claude Desktop
-(`claude_desktop_config.json`), Claude Code (`.mcp.json`) and Cursor
-(`.cursor/mcp.json`) all use this shape:
+The server entry then names the checkout's `index.js`:
 
 ```json
 {
