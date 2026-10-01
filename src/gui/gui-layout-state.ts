@@ -10,6 +10,7 @@
 // `gui-layout-state.test.ts`.
 
 import { isMobileViewport } from '../platform/viewport';
+import { applyEditorHint, DESKTOP_EDITOR_HINT, MOBILE_EDITOR_HINT } from './editor-hint';
 
 export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary';
 
@@ -131,6 +132,7 @@ export const detectSwipeDirection = (
 
 export interface GUIElements {
     readonly codeInput: HTMLTextAreaElement;
+    readonly editorHint: HTMLElement;
     readonly editorClearBtn: HTMLButtonElement;
     readonly stackClearBtn: HTMLButtonElement;
     readonly editorFormatBtn: HTMLButtonElement;
@@ -245,86 +247,6 @@ export const createMobileHandler = (
 
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
-
-// Plain-text placeholder cheat sheet shown in the empty editor. Desktop lists
-// keyboard shortcuts; mobile lists the equivalent touch gestures. A non-empty
-// placeholder also drives the :placeholder-shown CSS that hides the inline
-// clear/format buttons while the field is empty.
-// Every operation here lives only as a shortcut (or, for the two clears, also
-// a button) — none can be typed into the editor and run. That is deliberate:
-// the vocabulary holds nothing that throws away the values a program was
-// handed, the text it was typed as, or the dictionary it was defined in, and
-// the Input surface holds nothing but the program being written.
-const DESKTOP_EDITOR_PLACEHOLDER = [
-    'Enter code here',
-    '',
-    'run this code                  → Shift+Enter',
-    'run one step at a time         → Ctrl+Enter',
-    'format this code               → Shift+Alt+F',
-    'look up the word at the cursor → Ctrl+Alt+L',
-    '',
-    'clear the stack, keep your words   → Ctrl+Alt+S',
-    'clear this editor, keep everything → Ctrl+Alt+E',
-    // Reset is the one line here a reader acts on expecting an empty
-    // dictionary: it clears the stack and the words you defined, then seeds
-    // the Example Words back (`fullReset` → `loadExampleWords`). The line says
-    // so, so the seeded words do not read as leftovers of your own work.
-    'reset: erase the stack and your words, keep the example words → Ctrl+Alt+Enter',
-    '',
-    'bring back your last program → Ctrl+Up / Ctrl+Down',
-    'stop a run or a step         → Escape',
-    '',
-    // The dictionary panel writes into this editor, and the space *between* its
-    // buttons is a control of its own: a click there types a space, a
-    // double-click takes the last word back. Undocumented, it reads as a
-    // misfired click on a word button.
-    'click a word in the dictionary → write it here',
-    'click the space around them    → write a space',
-    'double-click that space        → take back the last word'
-].join('\n');
-
-// The mobile sheet carries the whole touch vocabulary, because on a phone this
-// is the only place it is written down. A bar of labelled buttons would take
-// its height out of the editor, and the editor is the thing the page is for.
-// Prose in the placeholder costs nothing — the editor is empty whenever it
-// shows — so the sheet is where the teaching goes, and it is allowed to be
-// long. It scrolls, and its first four lines are the ones a first-time reader
-// needs.
-//
-// Ordered by what a reader reaches for: run it, move between surfaces, fix the
-// text, then what types for you, then the stack's own control. The last block
-// is the honest one — five operations have a shortcut and no touch control,
-// and saying so beats letting someone hunt for a button that is not there
-// (spec/gui-semantics.md, rule 4: nothing a surface is reached by goes
-// unsaid, and recall of a submitted program is reached only by Ctrl+Up).
-//
-// Every line is kept under 27 characters on purpose. A textarea placeholder
-// wraps on width, and a hand-aligned continuation (`'    or the list above'`)
-// lands wherever the wrap leaves it, which on a 360px phone turns a tidy
-// two-column sheet into ragged prose. Short whole lines wrap nowhere, so the
-// sheet reads the same on every phone from 320px up.
-const MOBILE_EDITOR_PLACEHOLDER = [
-    'Enter code here',
-    '',
-    'run it → triple-tap here',
-    'change surface → swipe',
-    '',
-    'format → lower-right icon',
-    'clear  → × upper right',
-    '',
-    'tap a Dictionary word too',
-    'two letters → suggestions',
-    '',
-    'the stack survives reload',
-    '× on Stack empties it',
-    '',
-    'keyboard only, for now:',
-    'step    Ctrl+Enter',
-    'stop    Escape',
-    'look up Ctrl+Alt+L',
-    'recall  Ctrl+Up / Down',
-    'reset   Ctrl+Alt+Enter'
-].join('\n');
 
 /** The one record of which surface is showing; every other view of it is derived. */
 export interface LayoutState {
@@ -469,9 +391,11 @@ export const applyExecutionAreaState = (
 };
 
 export const updateEditorPlaceholder = (elements: GUIElements, mobile: MobileHandler): void => {
-    elements.codeInput.placeholder = mobile.isMobile()
-        ? MOBILE_EDITOR_PLACEHOLDER
-        : DESKTOP_EDITOR_PLACEHOLDER;
+    applyEditorHint(
+        elements.codeInput,
+        elements.editorHint,
+        mobile.isMobile() ? MOBILE_EDITOR_HINT : DESKTOP_EDITOR_HINT
+    );
 };
 
 export type LayoutController = {

@@ -806,8 +806,11 @@ footer {
         outline-offset: -2px;
     }
 
+    /* The placeholder still holds the cheat sheet — for screen readers, for
+       :placeholder-shown, and for the scroll extent of the empty editor — but
+       #editor-hint draws it, with keycaps, on top. */
     &::placeholder {
-        color: var(--input-placeholder);
+        color: transparent;
     }
 
     /* iOS Safari zooms into a field under 16px and does not zoom back. */
@@ -820,6 +823,85 @@ footer {
     &:placeholder-shown ~ :is(#editor-clear-btn, #editor-format-btn) {
         display: none;
     }
+
+    &:not(:placeholder-shown) ~ .editor-hint {
+        display: none;
+    }
+}
+
+/* The empty editor's cheat sheet, laid over the textarea at its text inset.
+   It ignores the pointer, so every tap and click lands on the editor. */
+.editor-hint {
+    position: absolute;
+    inset: 0;
+    padding: calc(var(--space-sm) + 1px);
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    color: var(--input-placeholder);
+
+    @media (width <= 768px) {
+        font-size: 1rem;
+    }
+
+    & p {
+        margin: 0;
+    }
+
+    & .editor-hint-heading {
+        margin-top: var(--space-sm);
+    }
+}
+
+/* One group: what it does, then how, in two aligned columns. */
+.editor-hint-group {
+    display: grid;
+    grid-template-columns: fit-content(26em) auto;
+    column-gap: var(--space-md);
+    row-gap: var(--space-2xs);
+    align-items: center;
+    margin: var(--space-sm) 0 0;
+
+    & dd {
+        margin: 0;
+    }
+
+    & .editor-hint-note {
+        grid-column: 1 / -1;
+    }
+
+    & .editor-hint-note + dd {
+        display: none;
+    }
+
+    @media (width <= 768px) {
+        column-gap: var(--space-sm);
+    }
+}
+
+.editor-hint-chord {
+    white-space: nowrap;
+}
+
+/* A key drawn as a keycap: a raised, lettered tile, so a shortcut reads as
+   the keys to press rather than as prose. */
+.editor-hint kbd {
+    display: inline-block;
+    min-width: 1.8em;
+    margin: 0 0.15em;
+    padding: 0 0.4em;
+    border: var(--border-main);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-word-button);
+    background-color: var(--color-white);
+    color: var(--color-text-light);
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+    text-align: center;
 }
 
 .inline-clear-btn {
