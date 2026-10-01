@@ -886,8 +886,10 @@ footer {
     white-space: nowrap;
 }
 
-/* A key drawn as a keycap: a raised, lettered tile, so a shortcut reads as
-   the keys to press rather than as prose. */
+/* A key — or, on mobile, a touch control — drawn as a keycap: an outlined,
+   lettered tile, so a shortcut reads as the thing to press rather than as
+   prose. No fill: the outline is enough, and a filled tile outweighs the
+   faint sheet it sits in. */
 .editor-hint kbd {
     display: inline-block;
     min-width: 1.8em;
@@ -896,7 +898,7 @@ footer {
     border: var(--border-main);
     border-bottom-width: 2px;
     border-radius: var(--radius-word-button);
-    background-color: var(--color-white);
+    background-color: transparent;
     color: var(--color-text-light);
     font-family: var(--font-stack-mono);
     font-size: var(--text-xs);

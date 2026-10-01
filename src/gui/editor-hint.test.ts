@@ -32,6 +32,13 @@ describe('formatHintSheetText', () => {
         ].join('\n'));
     });
 
+    it('writes a touch control and where it is as one line', () => {
+        expect(formatHintSheetText({
+            lead: 'Enter code here',
+            groups: [{ entries: [{ label: 'run it', touch: 'triple-tap', where: 'here' }, { label: 'swap', touch: 'swipe' }] }]
+        })).toBe(['Enter code here', '', 'run it → triple-tap here', 'swap   → swipe'].join('\n'));
+    });
+
     it('starts both sheets with the lead line', () => {
         for (const sheet of [DESKTOP_EDITOR_HINT, MOBILE_EDITOR_HINT]) {
             expect(formatHintSheetText(sheet).split('\n')[0]).toBe('Enter code here');
