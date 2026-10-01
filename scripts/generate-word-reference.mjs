@@ -71,14 +71,18 @@ for (const entry of words.entries) {
 
 const output = `${lines.join('\n').trimEnd()}\n`;
 
-// The same inventory, as the Word list page (#word-index) of the Reference, in
-// both languages: public/docs/en/index.html and public/docs/ja/index.html. The
-// narrative guide explains the language; this page lists every Word with its
-// contract, so a reader can see the whole vocabulary at a glance and jump from
-// a Word to the guide page that explains its family. The page is written
-// between two markers of each Reference file and nowhere else, and it loads
-// nothing new: the Reference's own stylesheet (public/docs/reference.css)
-// styles it.
+// The same inventory, in both language versions of the Reference
+// (public/docs/en/index.html and public/docs/ja/index.html), in two places:
+//
+//   - the index of built-in Words on the "Kinds of token" page, where a list
+//     of keywords and operators would stand in another language: every Word
+//     by family, each linking to its contract and to the page that explains
+//     its family;
+//   - each family's contracts at the end of that family's page, below the
+//     narrative and samples that explain it.
+//
+// Each is written between a pair of markers in the page and nowhere else, and
+// loads nothing new: the Reference's own stylesheet styles it.
 //
 // Every field except the summary is an identifier from spec/words.json and is
 // the same in both languages; only the labels around it are translated. The
@@ -86,8 +90,10 @@ const output = `${lines.join('\n').trimEnd()}\n`;
 // digest of the English summary it translates, so a changed English summary
 // fails this script until its translation is revisited.
 
-const BEGIN = '<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->';
-const END = '<!-- END generated word index -->';
+const INDEX_BEGIN = '<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->';
+const INDEX_END = '<!-- END generated word index -->';
+const contractsBegin = (page) => `<!-- BEGIN generated word contracts: ${page} -->`;
+const contractsEnd = (page) => `<!-- END generated word contracts: ${page} -->`;
 
 const escapeHtml = (text) => String(text)
   .replace(/&/g, '&amp;')
@@ -101,29 +107,30 @@ const anchorOf = (name) => `word-${Array.from(name, (ch) => (/[A-Za-z0-9-]/.test
 const backticked = (text) => [...text.matchAll(/`([^`]+)`/g)].map((m) => m[1]).sort();
 const digestOf = (text) => createHash('sha256').update(text).digest('hex').slice(0, 16);
 
-// Each family's label, and the guide section that explains it.
+// Each family's label, and the Reference page that explains it and carries its
+// contracts. A page may carry several families.
 const FAMILIES = {
-  booleanLogic: { en: 'Logic', ja: '論理', guide: 'logic' },
-  comparison: { en: 'Comparison', ja: '比較', guide: 'comparison' },
-  exactArithmetic: { en: 'Exact arithmetic', ja: '厳密な算術', guide: 'arithmetic' },
-  collection: { en: 'Vectors', ja: 'ベクトル', guide: 'vector-ops' },
-  record: { en: 'Records', ja: 'Record', guide: 'records' },
-  higherOrder: { en: 'Iteration', ja: '反復', guide: 'higher-order' },
-  text: { en: 'Text', ja: '文字列', guide: 'strings-ops' },
-  control: { en: 'Control', ja: '制御', guide: 'control' },
-  dictionary: { en: 'Dictionary and names', ja: '辞書と名前', guide: 'words' },
-  absence: { en: 'Absence (NIL)', ja: '不在(NIL)', guide: 'nil' },
-  output: { en: 'Output', ja: '出力', guide: 'output' },
+  booleanLogic: { en: 'Logic', ja: '論理', page: 'operators' },
+  comparison: { en: 'Comparison', ja: '比較', page: 'operators' },
+  exactArithmetic: { en: 'Exact arithmetic', ja: '厳密な算術', page: 'operators' },
+  collection: { en: 'Vectors', ja: 'ベクトル', page: 'vector-ops' },
+  record: { en: 'Records', ja: 'Record', page: 'records' },
+  higherOrder: { en: 'Iteration', ja: '反復', page: 'control' },
+  text: { en: 'Text', ja: '文字列', page: 'strings-ops' },
+  control: { en: 'Control', ja: '制御', page: 'control' },
+  dictionary: { en: 'Dictionary and names', ja: '辞書と名前', page: 'words' },
+  absence: { en: 'Absence (NIL)', ja: '不在(NIL)', page: 'failure' },
+  output: { en: 'Output', ja: '出力', page: 'output' },
 };
 
 const LANGUAGES = {
   en: {
     path: 'public/docs/en/index.html',
-    title: 'Word list',
-    intro: (total, kernel, standard) => `Every Word of the canonical vocabulary with its contract, generated from <code>spec/words.json</code>: ${total} Words, of which ${kernel} form the Semantic Kernel and ${standard} are Standard Words. Every one is an ordinary Core Word reached by its plain name; the tier only says where it sits in the design (see <a href="#dictionaries">Dictionaries and Word identity</a>). The table below lists them by family; each family links to the page of this Reference that explains it with samples.`,
+    intro: (total, kernel, standard) => `The ${total} Words of the canonical vocabulary, by family, generated from <code>spec/words.json</code>. ${kernel} of them form the Semantic Kernel and ${standard} are Standard Words; every one is an ordinary Core Word reached by its plain name, and the tier only says where it sits in the design (<a href="#dictionaries">Dictionaries and Word identity</a>). Choose a Word for its contract — syntax, stack effect, NIL policy, ERROR conditions — or a page for the explanation with samples.`,
     familyHeading: 'Family',
     wordsHeading: 'Words',
-    explained: 'Explained with samples in',
+    pageHeading: 'Explained in',
+    contracts: 'Contracts',
     kernel: 'Semantic Kernel',
     standard: 'Standard',
     none: 'none',
@@ -145,11 +152,11 @@ const LANGUAGES = {
   },
   ja: {
     path: 'public/docs/ja/index.html',
-    title: 'ワード一覧',
-    intro: (total, kernel, standard) => `正準な語彙のすべてのワードを、その契約とともに<code>spec/words.json</code>から生成した一覧です。全${total}語のうち${kernel}語がSemantic Kernel、${standard}語がStandardワードです。どれも平易な名前で参照できる普通のCoreワードで、階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>を参照)。下の表は族ごとにまとめたもので、各族からはサンプル付きで解説している本書の頁へ移れます。`,
+    intro: (total, kernel, standard) => `正準な語彙の全${total}語を族ごとにまとめたものです(<code>spec/words.json</code>から生成)。${kernel}語がSemantic Kernel、${standard}語がStandardワードで、どれも平易な名前で参照できる普通のCoreワードです。階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>)。ワードを選ぶとその契約(構文・スタック効果・NIL方針・ERROR条件など)へ、頁名を選ぶとサンプル付きの解説へ移ります。`,
     familyHeading: '族',
     wordsHeading: 'ワード',
-    explained: 'サンプル付きの解説',
+    pageHeading: '解説の頁',
+    contracts: '契約',
     kernel: 'Semantic Kernel',
     standard: 'Standard',
     none: 'なし',
@@ -233,59 +240,69 @@ function htmlEntry(entry, lang) {
   ].join('\n');
 }
 
+const groups = () => families().map(({ id }) => {
+  const family = FAMILIES[id];
+  if (!family) fail(`family ${id} has no entry in scripts/generate-word-reference.mjs FAMILIES`);
+  return { id, family, members: words.entries.filter((entry) => entry.family === id) };
+});
+
 function wordIndex(lang) {
-  const groups = families().map(({ id }) => {
-    const family = FAMILIES[id];
-    if (!family) fail(`family ${id} has no label in scripts/generate-word-reference.mjs FAMILIES`);
-    return { id, family, members: words.entries.filter((entry) => entry.family === id) };
-  });
-  const jump = groups.map(({ id, family, members }) => [
-    `<tr><th scope="row"><a href="#family-${id}">${family[lang.code]}</a></th>`,
-    `<td>${members.map((entry) => `<a href="#${anchorOf(entry.name)}"><code>${escapeHtml(entry.name)}</code></a>`).join(' ')}</td></tr>`,
+  const rows = groups().map(({ family, members }) => [
+    `<tr><td class="notes">${family[lang.code]}</td>`,
+    `<td>${members.map((entry) => `<a href="#${anchorOf(entry.name)}"><code>${escapeHtml(entry.name)}</code></a>`).join(' ')}</td>`,
+    `<td class="notes"><a href="#${family.page}">${pageTitle(lang, family.page)}</a></td></tr>`,
   ].join(''));
-  const sections = groups.map(({ id, family, members }) => [
-    `<h3 id="family-${id}">${family[lang.code]}</h3>`,
-    `<p class="word-family-lead">${lang.explained}: <a href="#${family.guide}">${guideTitle(lang, family.guide)}</a></p>`,
-    ...members.map((entry) => htmlEntry(entry, lang)),
-  ].join('\n'));
   return [
-    BEGIN,
-    '<section id="word-index" class="ref-page">',
-    `<h2>${lang.title}</h2>`,
+    INDEX_BEGIN,
     `<p>${lang.intro(words.entries.length, tierCount('kernel'), tierCount('standard'))}</p>`,
     '<div class="ref-table-wrap word-jump">',
     '<table class="ref-table">',
-    `<thead><tr><th>${lang.familyHeading}</th><th>${lang.wordsHeading}</th></tr></thead>`,
+    `<thead><tr><th>${lang.familyHeading}</th><th>${lang.wordsHeading}</th><th>${lang.pageHeading}</th></tr></thead>`,
     '<tbody>',
-    ...jump,
+    ...rows,
     '</tbody>',
     '</table>',
     '</div>',
-    ...sections,
-    '</section>',
-    END,
+    INDEX_END,
   ].join('\n');
 }
 
-// A family's guide link reads as the heading of the section it points at, taken
-// from the page itself, so a renamed heading cannot leave a stale label here.
-function guideTitle(lang, id) {
-  const match = new RegExp(`<(?:section|h[2-4])[^>]*\\bid="${id}"[^>]*>(?:\\s*<h2>)?([\\s\\S]*?)</h[2-4]>`).exec(lang.source);
-  if (!match) fail(`${lang.path} has no section or heading with id "${id}" for the Word list to link to`);
+function pageContracts(lang, page) {
+  const sections = groups().filter(({ family }) => family.page === page).map(({ id, family, members }) => [
+    `<h3 id="family-${id}">${lang.contracts}: ${family[lang.code]}</h3>`,
+    ...members.map((entry) => htmlEntry(entry, lang)),
+  ].join('\n'));
+  return [contractsBegin(page), ...sections, contractsEnd(page)].join('\n');
+}
+
+// The index names each page as the page's own table of contents does, read
+// from the page, so a renamed page cannot leave a stale label behind.
+function pageTitle(lang, id) {
+  const nav = /<nav class="ref-nav"[\s\S]*?<\/nav>/.exec(lang.source);
+  const match = nav && new RegExp(`<a href="#${id}">([^<]*)</a>`).exec(nav[0]);
+  if (!match) fail(`${lang.path} has no table-of-contents entry for page "${id}" for the built-in Words to link to`);
   return match[1].trim();
+}
+
+function replaceBetween(source, path, begin, end, content) {
+  const from = source.indexOf(begin);
+  const to = source.indexOf(end);
+  if (from < 0 || to < from) fail(`${path} lacks the markers ${begin} … ${end}`);
+  if (source.indexOf(begin, from + 1) >= 0) fail(`${path} has the marker ${begin} twice`);
+  return source.slice(0, from) + content + source.slice(to + end.length);
 }
 
 const pages = Object.entries(LANGUAGES).map(([code, lang]) => {
   lang.code = code;
   lang.source = readText(lang.path);
-  const begin = lang.source.indexOf(BEGIN);
-  const end = lang.source.indexOf(END);
-  if (begin < 0 || end < begin) fail(`${lang.path} lacks the generated word index markers`);
-  const content = lang.source.slice(0, begin) + wordIndex(lang) + lang.source.slice(end + END.length);
+  let content = replaceBetween(lang.source, lang.path, INDEX_BEGIN, INDEX_END, wordIndex(lang));
+  for (const page of new Set(Object.values(FAMILIES).map((family) => family.page))) {
+    content = replaceBetween(content, lang.path, contractsBegin(page), contractsEnd(page), pageContracts(lang, page));
+  }
   return { path: lang.path, content, stale: `${lang.path} is stale; run npm run word:reference` };
 });
 
-// The English Word Reference used to be its own page; it is the Word list of
+// The English Word Reference used to be its own page; its content lives in
 // the Reference now. The old address forwards there, keeping a #word-… anchor.
 const redirect = `<!DOCTYPE html>
 <!-- Generated by scripts/generate-word-reference.mjs; do not edit. -->
@@ -293,13 +310,13 @@ const redirect = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ajisai Word list</title>
+<title>Ajisai built-in Words</title>
 <meta http-equiv="refresh" content="0; url=index.html#word-index">
 <link rel="canonical" href="index.html#word-index">
 <script>location.replace('index.html' + (location.hash || '#word-index'));</script>
 </head>
 <body>
-<p>The Word list is part of the <a href="index.html#word-index">Ajisai Reference</a>.</p>
+<p>The built-in Words are part of the <a href="index.html#word-index">Ajisai Reference</a>.</p>
 </body>
 </html>
 `;
@@ -313,6 +330,6 @@ writeOrCheck(
   ],
   {
     current: `${words.entries.length} canonical Word entries are up to date.`,
-    wrote: `wrote ${words.entries.length} entries to docs/word-reference.md and the Word list of public/docs/en/index.html and public/docs/ja/index.html`,
+    wrote: `wrote ${words.entries.length} entries to docs/word-reference.md and to the built-in Words of public/docs/en/index.html and public/docs/ja/index.html`,
   },
 );
