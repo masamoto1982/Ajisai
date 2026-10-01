@@ -247,24 +247,23 @@
 </tbody>
 </table>
 </div>
-<h3 id="no-keywords">キーワードも演算子もない</h3>
-<p>多くの言語は、予約語(キーワード)・演算子・区切り記号を字句の段階で区別します。Ajisaiが字句の段階で区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。他の言語ならキーワードや演算子になるものは、すべて英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあります。</p>
+<h3 id="all-words">操作はすべてワード</h3>
+<p>Ajisaiの字句が区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。算術も比較も、分岐・反復・定義・束縛も、値を1つ積む<code>TRUE</code> <code>FALSE</code> <code>NIL</code>でさえ、英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあり、名前で呼び出されます。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
-<thead><tr><th>他の言語での例</th><th>Ajisai</th></tr></thead>
+<thead><tr><th>役割</th><th>ワード</th></tr></thead>
 <tbody>
-<tr><td><span class="notation">+ - * /</span></td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
-<tr><td><span class="notation">== &lt; &gt;</span></td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
-<tr><td><span class="notation">&amp;&amp; !</span></td><td><code>AND</code> <code>NOT</code></td></tr>
-<tr><td><span class="notation">true false null</span></td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
-<tr><td><span class="notation">if</span>、三項演算子</td><td><code>SELECT</code></td></tr>
-<tr><td><span class="notation">for</span>、<span class="notation">map</span>、<span class="notation">reduce</span></td><td><code>MAP</code> <code>FOLD</code></td></tr>
-<tr><td><span class="notation">function</span>、<span class="notation">def</span></td><td><code>DEF</code></td></tr>
-<tr><td><span class="notation">let</span>、<span class="notation">=</span></td><td><code>BIND</code></td></tr>
+<tr><td class="notes">算術</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
+<tr><td class="notes">比較</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
+<tr><td class="notes">論理</td><td><code>AND</code> <code>NOT</code></td></tr>
+<tr><td class="notes">真偽値と不在</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
+<tr><td class="notes">選択</td><td><code>SELECT</code></td></tr>
+<tr><td class="notes">反復</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
+<tr><td class="notes">定義と束縛</td><td><code>DEF</code> <code>BIND</code></td></tr>
 </tbody>
 </table>
 </div>
-<p><code>TRUE</code>や<code>NIL</code>でさえ予約されたリテラルではなく、値を1つ積むワードです。ですから<a href="#word-index">組み込みワード</a>の一覧が、他の言語でいう「キーワードと演算子の一覧」の役目を果たします。</p>
+<p>すべてのワードの一覧は<a href="#word-index">組み込みワード</a>にあります。</p>
 <h3>記号とトークン判定</h3>
                     <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ワードはどれも英語名1つだけで呼ばれ、記号の綴りを持つワードはありません。<code>+</code>や<code>&lt;</code>も通常の名前で、定義しなければ未定義ワードです。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>はただの名前としてパースされます。</p>
                     <h3>数値リテラル</h3>
@@ -321,7 +320,7 @@ exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
 <pre class="ebnf">program = { element } ;
 element = number | string | name | vector ;
 vector  = "[" , { element } , "]" ;</pre>
-<p>式・文・宣言といった区別はありません。条件分岐も反復も定義も、構文ではなくワードです。<code>[ 2 MUL ] 'DOUBLE' DEF</code>は「ベクトル、文字列、名前」の3要素からなるプログラムであって、関数を宣言する文ではありません。要素は左から右へ1つずつ評価されます(<a href="#stack">評価とスタック</a>)。</p>
+<p>プログラムは要素の並びです。条件分岐・反復・定義もワードであり、ほかの要素と同じく並びの中に書きます。<code>[ 2 MUL ] 'DOUBLE' DEF</code>は、ベクトル・文字列・名前の3要素からなるプログラムです。要素は左から右へ1つずつ評価されます(<a href="#stack">評価とスタック</a>)。</p>
 <h3 id="vectors">ベクトル(<code>[ ]</code>)</h3>
                     <p>ベクトルは、要素となる値を角括弧<code>[ ]</code>で囲み、空白で区切って記述します。ベクトルリテラルは評価されるとそのままベクトル値になり、自由に入れ子にできます。</p>
                     <div class="sample">
@@ -353,7 +352,7 @@ vector  = "[" , { element } , "]" ;</pre>
                                 <tr>
                                     <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
                                     <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
-                                    <td class="notes">入れ子はそのまま保持され、グループ化されたデータや不揃い(ジャグ配列的)なデータを表現する手段になる。</td>
+                                    <td class="notes">入れ子はそのまま保持され、グループ化されたデータや不揃いなデータを表現する手段になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -462,7 +461,7 @@ FILTER</code></td>
                     <h3 id="numbers">厳密な数</h3>
                     <p>Ajisaiにおけるすべての数値は<strong>厳密数</strong>として扱われます。</p>
                     <h3>数値の表現と定義域</h3>
-                    <p>整数、分数、小数、指数表記など各リテラルは、同一の厳密な値を表す異なる表記形式にすぎません。<code>0.5</code>は2進浮動小数点による近似値ではなく、厳密な<code>1/2</code>そのものです。</p>
+                    <p>整数、分数、小数、指数表記など各リテラルは、同一の厳密な値を表す異なる表記形式にすぎません。<code>0.5</code>は厳密な<code>1/2</code>そのものです。</p>
                     <p>数の定義域は、厳密な有理数と、それらを<code>SQRT</code>で閉じたときに生じる代数的無理数、すなわち多重二次正規形で構成されます。組み立てられるすべての数はそのどちらかです。</p>
                     <p class="ref-note">無理数のスタック表示(<code>sqrt(2)</code>、<code>1/1+sqrt(2)</code>)は正規形を一つのトークンとして書いた表示です。Playgroundのスタック領域も同じトークンを表示します。詳しくは<a href="#numbers">無理数の表示形式と構文規則</a>を参照してください。</p>
                     <div class="sample">
@@ -494,7 +493,7 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>1 3 DIV</code></td>
                                     <td><code>1/3</code></td>
-                                    <td class="notes">除算は厳密な有理数を返し、丸められた浮動小数点になることはない。</td>
+                                    <td class="notes">除算は厳密な有理数を返す。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -532,7 +531,7 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>1000000000000 1000000000000 MUL</code></td>
                                     <td><code>1000000000000000000000000/1</code></td>
-                                    <td class="notes">任意精度整数は、桁数が大きくなっても浮動小数点にフォールバックしない。</td>
+                                    <td class="notes">任意精度整数は、桁数がいくら大きくなっても厳密なまま保たれる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -622,8 +621,7 @@ FILTER</code></td>
 
                     <p>Ajisaiのワードは、スタックからオペランドを取り出し、結果をスタックへ積み戻します。読み込んだ値は、その場で<strong>必ず消費</strong>されてスタックから取り除かれます。この挙動を変える修飾子はありません。<code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではなく、オペランドを消費します。</p>
                     <h3>同じ値を2回使うには<code>BIND</code></h3>
-                    <p>1つの値を2回以上使いたいときは、<code>BIND</code>で名前を付け、その名前を必要な回数だけ書きます。名前を書くたびに、その値がスタックに積まれます。<code>5 'N' BIND N N 1 ADD</code>は<code>5/1 6/1</code>になります。Ajisaiには、値の複製や入れ替え、破棄のためだけに用意された専用のワード群はありません。</p>
-                    <p class="ref-note">補足: Forthのような古典的なスタック指向言語には、値の複製・入れ替え・破棄を担う専用のワード群、いわゆる「スタックシャッフラー」が用意されていることがあります。Ajisaiではその役割を<code>BIND</code>が担います。値が名前で読まれるので、どの値がどこで使われるかが字面から分かります。</p>
+                    <p>1つの値を2回以上使いたいときは、<code>BIND</code>で名前を付け、その名前を必要な回数だけ書きます。名前を書くたびに、その値がスタックに積まれます。<code>5 'N' BIND N N 1 ADD</code>は<code>5/1 6/1</code>になります。値は名前で読まれるので、どの値がどこで使われるかが字面から分かります。</p>
                     <h3>ワードは本体に置き換えられる</h3>
                     <p>どの呼び出しも読んだオペランドをちょうど消費するので、自分で定義したワードを、その本体で置き換えて書いても、消費されるオペランドは変わりません。<code>[ 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 DOUBLE</code>と<code>5 2 MUL</code>はどちらも<code>10/1</code>です。ユーザー語を使ったプログラムを、Core語だけの形に展開して確かめられるのは、この性質があるからです。</p>
                     <div class="sample">
@@ -1160,8 +1158,8 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3>閉じた形はループに勝る</h3>
-                    <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。そしてAjisaiは、係数を最も近い表現可能な浮動小数点数としてではなく、まさにその有理数として返します。<code>529/532</code>として返ってくる<code>R²</code>は言語の不備によるものではなく、それが答えなのです。</p>
-                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しません。Ajisaiはそれらを丸めた有理数で偽らず、そもそも扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
+                    <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。Ajisaiは係数をまさにその有理数として返します。<code>R²</code>が<code>529/532</code>として返ってくるなら、それが厳密な答えです。</p>
+                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しないので、Ajisaiはそれらを扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
 
                     <h3>もう一つのコスト: ホストの安全制御</h3>
                     <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、1つの値そのものの生成が上限を超えれば理由付きの<strong><code>NIL</code></strong>に、実行そのものが続けられないほど超えれば<strong>エラー</strong>になり評価が停止します。</p>
@@ -1710,7 +1708,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DIV">
 <h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は<code>1/3</code>で、小数の近似には決してならない。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除数が0のレーンはNIL(divisionByZero)を投影する。数でないものは<code>nonNumeric</code>。</p>
+<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は厳密に<code>1/3</code>。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除数が0のレーンはNIL(divisionByZero)を投影する。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>10 2 DIV</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>
@@ -2632,7 +2630,7 @@ FILTER</code></td>
 <h3 id="family-record">契約: Record</h3>
 <div class="word-entry" id="word-TALLY">
 <h4><code>TALLY</code> <span class="word-tier">Standard · operational</span></h4>
-<p>重複のない各要素が何回現れるかを、要素から件数へのRecordで答える。<code>[ 'b' 'a' 'b' ] TALLY</code>は<code>[ 'b' 'a' ] [ 2/1 1/1 ] RECORD</code>で、キーは最初の出現順。<code>KEYS</code>はまさに<code>UNIQUE</code>の答えであり、<code>VALUES</code>は位置の揃った件数のベクトルなので、以前の件数ベクトルの形でできたことは何も失われず、各件数が何を数えているかを知るために呼び出し側が<code>UNIQUE</code>を別に呼ぶ必要もない。数に限らずどの値にも働く。ベクトルでないオペランドはERROR。</p>
+<p>重複のない各要素が何回現れるかを、要素から件数へのRecordで答える。<code>[ 'b' 'a' 'b' ] TALLY</code>は<code>[ 'b' 'a' ] [ 2/1 1/1 ] RECORD</code>で、キーは最初の出現順。<code>KEYS</code>はまさに<code>UNIQUE</code>の答えであり、<code>VALUES</code>は位置の揃った件数のベクトルなので、各件数が何を数えているかを知るために<code>UNIQUE</code>を別に呼ぶ必要はない。数に限らずどの値にも働く。ベクトルでないオペランドはERROR。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] TALLY</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ record ]</span></dd>
@@ -2648,7 +2646,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GROUP">
 <h4><code>GROUP</code> <span class="word-tier">Standard · operational</span></h4>
-<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。以前のベクトルのベクトルの形では1つのグループを探すのに<code>UNIQUE</code>と<code>INDEX-OF</code>が要ったが、今は<code>R 'a' GET</code>で名前によって読める。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
+<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは<code>R 'a' GET</code>で名前によって読めるので、<code>UNIQUE</code>や<code>INDEX-OF</code>で探す必要はない。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>
@@ -2986,7 +2984,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3 id="json">JSONとの相互変換: <code>JSON-DECODE</code>と<code>JSON-ENCODE</code></h3>
-                    <p>ホストから届く構造化データはJSONで来ます。<code>JSON-DECODE</code>はJSONテキストを値にします。オブジェクトはメンバー名をその順に鍵とするRecord、配列はベクトル、文字列は文字列、数はそれが綴る<strong>厳密な有理数</strong>（<code>0.1</code>は<code>1/10</code>であって、最も近い浮動小数点数ではない）、<code>true</code>/<code>false</code>は真偽値、<code>null</code>は<code>NIL</code>です。ひとつのJSON値になっていないテキスト（壊れている、空、末尾に余分がある、同じ名前のメンバーが二度ある）は<code>invalidEncoding</code>の<code>NIL</code>を投影します。入れ子の深さはテキストだけが決めるので、この語はユーザー定義では書けません——言語の反復は、すでにあるベクトルの上でしか回らないからです。</p>
+                    <p>ホストから届く構造化データはJSONで来ます。<code>JSON-DECODE</code>はJSONテキストを値にします。オブジェクトはメンバー名をその順に鍵とするRecord、配列はベクトル、文字列は文字列、数はそれが綴る<strong>厳密な有理数</strong>（<code>0.1</code>は厳密に<code>1/10</code>）、<code>true</code>/<code>false</code>は真偽値、<code>null</code>は<code>NIL</code>です。ひとつのJSON値になっていないテキスト（壊れている、空、末尾に余分がある、同じ名前のメンバーが二度ある）は<code>invalidEncoding</code>の<code>NIL</code>を投影します。入れ子の深さはテキストだけが決めるので、この語はユーザー定義では書けません——言語の反復は、すでにあるベクトルの上でしか回らないからです。</p>
                     <p><code>JSON-ENCODE</code>はその逆です。文字列を鍵とするRecordはオブジェクト、ベクトルは配列、<code>NIL</code>は<code>null</code>になります。有限の十進表記を持つ数（分母が2と5の積）だけがJSONの数として書かれ、それ以外の有理数は<code>"1/3"</code>のようにAjisaiの字句を文字列に入れて書きます。<code>1/3</code>を<code>0.333</code>と書けば、それは別の数だからです。Symbolや無理数、文字列でない鍵を持つRecordのようにJSONに像を持たない値は<code>domainMiss</code>の<code>NIL</code>を投影します。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -3211,7 +3209,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-DECODE">
 <h4><code>JSON-DECODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>JSONテキストを値として読む。<code>'[1, 2]' JSON-DECODE</code>は<code>[ 1 2 ]</code>。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(<code>'0.1' JSON-DECODE</code>は<code>1/10</code>で、浮動小数点にはならない)、<code>true</code>/<code>false</code>は真偽値、<code>null</code>はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は<code>invalidEncoding</code>を投影する。これは<code>NUM</code>が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値や、数値リテラルの上限より多くの桁の数は<code>spaceExhausted</code>を投影する。上限を超えるあらゆる具体化の結末である(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(<code>nonText</code>)。</p>
+<p>JSONテキストを値として読む。<code>'[1, 2]' JSON-DECODE</code>は<code>[ 1 2 ]</code>。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(<code>'0.1' JSON-DECODE</code>は厳密に<code>1/10</code>)、<code>true</code>/<code>false</code>は真偽値、<code>null</code>はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は<code>invalidEncoding</code>を投影する。これは<code>NUM</code>が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値や、数値リテラルの上限より多くの桁の数は<code>spaceExhausted</code>を投影する。上限を超えるあらゆる具体化の結末である(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(<code>nonText</code>)。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'{&quot;a&quot;: 1, &quot;b&quot;: [true, null]}' JSON-DECODE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ value ]</span></dd>
@@ -3506,7 +3504,7 @@ SELECT</code></td>
                     <p class="ref-note"><code>EXEC</code>はスタックから取ったコードブロックを実行する。</p>
 
                     <h3 id="two-arguments">2つの引数を取るワードを書く</h3>
-                    <p>Ajisaiには<code>DUP</code>、<code>SWAP</code>、<code>DROP</code>、<code>ROT</code>がありません。これは欠落ではなく意図的な設計です。<strong>複数の値はスタック上ではなくベクトルの中を運ばれます</strong>。2つの引数を必要とするワードは、要素数2のベクトルを1つ取ります。呼び出す側は、<code>[ 3 4 ]</code>のように直接書くか、計算済みの値から<code>COLLECT</code>で組み立てます。</p>
+                    <p><strong>複数の値はスタック上ではなくベクトルの中を運ばれます</strong>。2つの引数を必要とするワードは、要素数2のベクトルを1つ取ります。呼び出す側は、<code>[ 3 4 ]</code>のように直接書くか、計算済みの値から<code>COLLECT</code>で組み立てます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3547,7 +3545,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>0 GET</code>は最初の要素、<code>-1 GET</code>は最後の要素です。したがって<code>[ SORT -1 GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
+                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>0 GET</code>は最初の要素、<code>-1 GET</code>は最後の要素です。したがって<code>[ SORT -1 GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>は2要素の組の順序を入れ替え、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
                     <p class="ref-note">複製のための道具は<a href="#bindings"><code>BIND</code></a>です。値に名前を付ければ、名前を書くたびにその値が積まれるので、どんな種類の値でも必要な回数だけ使えます。</p>
 
                     <!-- BEGIN generated word contracts: control -->
@@ -3976,7 +3974,7 @@ SELECT</code></td>
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
 
-                    <p>Ajisaiの語彙は78個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は78個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのような処理は、短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

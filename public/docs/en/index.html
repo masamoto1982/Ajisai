@@ -249,24 +249,23 @@
 </tbody>
 </table>
 </div>
-<h3 id="no-keywords">No keywords, no operators</h3>
-<p>Many languages tell reserved words (keywords), operators and punctuation apart during lexing. Ajisai tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Everything that would be a keyword or an operator elsewhere is an ordinary <strong>Word</strong> with one English name, held in the dictionary.</p>
+<h3 id="all-words">Every operation is a Word</h3>
+<p>Ajisai's lexical structure tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Arithmetic and comparison, branching, iteration, definition and binding — even <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, which push one value — are ordinary <strong>Words</strong>, each with one English name, held in the dictionary and called by name.</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
-<thead><tr><th>In other languages</th><th>Ajisai</th></tr></thead>
+<thead><tr><th>Role</th><th>Words</th></tr></thead>
 <tbody>
-<tr><td><span class="notation">+ - * /</span></td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
-<tr><td><span class="notation">== &lt; &gt;</span></td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
-<tr><td><span class="notation">&amp;&amp; !</span></td><td><code>AND</code> <code>NOT</code></td></tr>
-<tr><td><span class="notation">true false null</span></td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
-<tr><td><span class="notation">if</span>, the ternary operator</td><td><code>SELECT</code></td></tr>
-<tr><td><span class="notation">for</span>, <span class="notation">map</span>, <span class="notation">reduce</span></td><td><code>MAP</code> <code>FOLD</code></td></tr>
-<tr><td><span class="notation">function</span>, <span class="notation">def</span></td><td><code>DEF</code></td></tr>
-<tr><td><span class="notation">let</span>, <span class="notation">=</span></td><td><code>BIND</code></td></tr>
+<tr><td class="notes">Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
+<tr><td class="notes">Comparison</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
+<tr><td class="notes">Logic</td><td><code>AND</code> <code>NOT</code></td></tr>
+<tr><td class="notes">Truth values and absence</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
+<tr><td class="notes">Choice</td><td><code>SELECT</code></td></tr>
+<tr><td class="notes">Iteration</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
+<tr><td class="notes">Definition and binding</td><td><code>DEF</code> <code>BIND</code></td></tr>
 </tbody>
 </table>
 </div>
-<p>Even <code>TRUE</code> and <code>NIL</code> are not reserved literals but Words that push one value. So the list of <a href="#word-index">built-in Words</a> is what a list of keywords and operators would be in another language.</p>
+<p>Every Word is listed under <a href="#word-index">Built-in Words</a>.</p>
 <h3>Symbols and how tokens are recognized</h3>
                     <p>A symbol in Ajisai is simply a name spelled with symbol characters. Every Word is called by its one English name, and no Word has a symbol spelling. <code>+</code> and <code>&lt;</code> are ordinary names too, undefined unless you define them. Because a symbol is just one way of spelling a name, even a multi-character symbol does not complicate the rule above: a token ends only at whitespace, never partway through. A token's meaning is decided by the lexeme of the whole token, not by its first character. For example, <code>1/2</code> is parsed as a whole fraction literal, while a lone <code>/</code> is parsed as a plain name.</p>
                     <h3>Number literals</h3>
@@ -323,7 +322,7 @@ exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
 <pre class="ebnf">program = { element } ;
 element = number | string | name | vector ;
 vector  = "[" , { element } , "]" ;</pre>
-<p>There is no distinction between expressions, statements and declarations. Branching, iteration and definition are Words, not syntax. <code>[ 2 MUL ] 'DOUBLE' DEF</code> is a program of three elements — a Vector, a string and a name — not a statement declaring a function. The elements are evaluated one at a time, left to right (<a href="#stack">Evaluation and the stack</a>).</p>
+<p>A program is a sequence of elements. Branching, iteration and definition are Words, written in the sequence like any other element. <code>[ 2 MUL ] 'DOUBLE' DEF</code> is a program of three elements: a Vector, a string and a name. The elements are evaluated one at a time, left to right (<a href="#stack">Evaluation and the stack</a>).</p>
 <h3 id="vectors">Vectors (<code>[ ]</code>)</h3>
                     <p>A Vector is written by enclosing its element values in square brackets <code>[ ]</code>, separated by whitespace. A Vector literal evaluates to that Vector value as it is, and literals nest freely.</p>
                     <div class="sample">
@@ -355,7 +354,7 @@ vector  = "[" , { element } , "]" ;</pre>
                                 <tr>
                                     <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
                                     <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
-                                    <td class="notes">Nesting is kept as it is, which is how grouped data and ragged (jagged-array-like) data are expressed.</td>
+                                    <td class="notes">Nesting is kept as it is, which is how grouped data and ragged data are expressed.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -464,7 +463,7 @@ FILTER</code></td>
                     <h3 id="numbers">Exact numbers</h3>
                     <p>Every number in Ajisai is an <strong>exact number</strong>.</p>
                     <h3>How numbers are written, and their domain</h3>
-                    <p>Integer, fraction, decimal and exponent literals are only different notations for the same exact value. <code>0.5</code> is not a binary floating-point approximation; it is exactly <code>1/2</code>.</p>
+                    <p>Integer, fraction, decimal and exponent literals are only different notations for the same exact value. <code>0.5</code> is exactly <code>1/2</code>.</p>
                     <p>The number domain consists of the exact rationals and the algebraic irrationals that arise when those are closed under <code>SQRT</code> — the multi-quadratic normal form. Every number you can build is one or the other.</p>
                     <p class="ref-note">The stack display of an irrational (<code>sqrt(2)</code>, <code>1/1+sqrt(2)</code>) writes its normal form as a single token. The Playground's Stack area shows the same token. See <a href="#numbers">How irrationals are displayed, and the syntax rule</a> for more.</p>
                     <div class="sample">
@@ -496,7 +495,7 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>1 3 DIV</code></td>
                                     <td><code>1/3</code></td>
-                                    <td class="notes">Division returns an exact rational, never a rounded float.</td>
+                                    <td class="notes">Division returns an exact rational.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -534,7 +533,7 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>1000000000000 1000000000000 MUL</code></td>
                                     <td><code>1000000000000000000000000/1</code></td>
-                                    <td class="notes">Arbitrary-precision integers never fall back to floating point, however many digits they grow.</td>
+                                    <td class="notes">Arbitrary-precision integers stay exact, however many digits they grow.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -624,8 +623,7 @@ FILTER</code></td>
 
                     <p>An Ajisai Word takes its operands from the stack and pushes its results back. A value that is read is <strong>always consumed</strong> on the spot and removed from the stack. No modifier changes this. Words that push no result, such as <code>BIND</code>, <code>DEF</code> and <code>DEL</code>, are no exception: they consume their operands too.</p>
                     <h3>Using the same value twice: <code>BIND</code></h3>
-                    <p>To use one value more than once, name it with <code>BIND</code> and write the name as many times as you need. Each time the name is written, its value is pushed onto the stack. <code>5 'N' BIND N N 1 ADD</code> is <code>5/1 6/1</code>. Ajisai has no set of Words that exist only to duplicate, swap or discard values.</p>
-                    <p class="ref-note">Aside: classic stack-oriented languages such as Forth often provide a dedicated set of Words for duplicating, swapping and discarding values — the so-called "stack shufflers". In Ajisai, <code>BIND</code> plays that role. Because values are read by name, you can see from the text alone which value is used where.</p>
+                    <p>To use one value more than once, name it with <code>BIND</code> and write the name as many times as you need. Each time the name is written, its value is pushed onto the stack. <code>5 'N' BIND N N 1 ADD</code> is <code>5/1 6/1</code>. Because values are read by name, you can see from the text alone which value is used where.</p>
                     <h3>A Word can be replaced by its body</h3>
                     <p>Every call consumes exactly the operands it reads, so writing a Word you defined as its body instead does not change which operands are consumed. Given <code>[ 2 MUL ] 'DOUBLE' DEF</code>, both <code>5 DOUBLE</code> and <code>5 2 MUL</code> are <code>10/1</code>. This property is what lets you check a program that uses User Words by expanding it into Core Words alone.</p>
                     <div class="sample">
@@ -1162,8 +1160,8 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3>A closed form beats a loop</h3>
-                    <p>Before reaching for an iterative method, check whether the problem has a closed form. In exact arithmetic a closed form is not only faster; it is a different kind of answer. Least squares, ridge regression with a rational penalty, k-nearest neighbours, naive Bayes over rational probabilities, decision trees with Gini splits, the perceptron and the simplex method all have exact solutions without iteration. And Ajisai returns the coefficients as exactly those rationals, not as the nearest representable floating-point numbers. An <code>R²</code> that comes back as <code>529/532</code> is not a shortcoming of the language; it is the answer.</p>
-                    <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer. Ajisai does not fake them with rounded rationals; it does not handle them at all. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
+                    <p>Before reaching for an iterative method, check whether the problem has a closed form. In exact arithmetic a closed form is not only faster; it is a different kind of answer. Least squares, ridge regression with a rational penalty, k-nearest neighbours, naive Bayes over rational probabilities, decision trees with Gini splits, the perceptron and the simplex method all have exact solutions without iteration. Ajisai returns the coefficients as exactly those rationals: an <code>R²</code> that comes back as <code>529/532</code> is the exact answer.</p>
+                    <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer, and Ajisai does not handle them. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
 
                     <h3>The other cost: the host's safety controls</h3>
                     <p>The costs so far accumulate naturally from exact arithmetic itself, even in a correctly written program. Separately, the host sets several limits to protect its computing resources. Each is a safety control on the host side, not language semantics, and the concrete numbers are set by the implementation. The same source may pass on a host that declares larger limits. What happens on overrun is fixed, however: if producing a single value exceeds a limit, the result is a reasoned <strong><code>NIL</code></strong>; if the run itself exceeds a limit so far that it cannot continue, it is an <strong>error</strong> and evaluation stops.</p>
@@ -2988,7 +2986,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3 id="json">Converting to and from JSON: <code>JSON-DECODE</code> and <code>JSON-ENCODE</code></h3>
-                    <p>Structured data from the host arrives as JSON. <code>JSON-DECODE</code> turns JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a string, a number the <strong>exact rational</strong> it spells (<code>0.1</code> is <code>1/10</code>, not the nearest floating-point number), <code>true</code>/<code>false</code> a Boolean, and <code>null</code> <code>NIL</code>. Text that is not a single JSON value (broken, empty, trailing garbage, a member name given twice) projects a <code>NIL</code> with <code>invalidEncoding</code>. The nesting depth is decided by the text alone, so this Word cannot be written as a user definition — the language's iteration runs only over a Vector that already exists.</p>
+                    <p>Structured data from the host arrives as JSON. <code>JSON-DECODE</code> turns JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a string, a number the <strong>exact rational</strong> it spells (<code>0.1</code> is exactly <code>1/10</code>), <code>true</code>/<code>false</code> a Boolean, and <code>null</code> <code>NIL</code>. Text that is not a single JSON value (broken, empty, trailing garbage, a member name given twice) projects a <code>NIL</code> with <code>invalidEncoding</code>. The nesting depth is decided by the text alone, so this Word cannot be written as a user definition — the language's iteration runs only over a Vector that already exists.</p>
                     <p><code>JSON-ENCODE</code> is the reverse. A Record keyed by strings becomes an object, a Vector an array, and <code>NIL</code> <code>null</code>. Only a number with a finite decimal expansion (a denominator made of 2s and 5s) is written as a JSON number; any other rational is written as its Ajisai lexeme inside a string, such as <code>"1/3"</code>, because writing <code>1/3</code> as <code>0.333</code> would be a different number. A value with no image in JSON — a Symbol, an irrational, a Record with a non-string key — projects a <code>NIL</code> with <code>domainMiss</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -3508,7 +3506,7 @@ SELECT</code></td>
                     <p class="ref-note"><code>EXEC</code> runs a code block taken from the stack.</p>
 
                     <h3 id="two-arguments">Writing a Word that takes two arguments</h3>
-                    <p>Ajisai has no <code>DUP</code>, <code>SWAP</code>, <code>DROP</code> or <code>ROT</code>. That is not an omission but a deliberate design: <strong>several values travel inside a Vector, not on the stack</strong>. A Word that needs two arguments takes one two-element Vector. The caller writes it directly, as in <code>[ 3 4 ]</code>, or builds it from computed values with <code>COLLECT</code>.</p>
+                    <p><strong>Several values travel inside a Vector, not on the stack</strong>. A Word that needs two arguments takes one two-element Vector. The caller writes it directly, as in <code>[ 3 4 ]</code>, or builds it from computed values with <code>COLLECT</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3549,7 +3547,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p>When you need one position rather than a fold, read it with <code>GET</code>: <code>0 GET</code> is the first element and <code>-1 GET</code> the last. So <code>[ SORT -1 GET ] 'PMAX' DEF</code> answers the larger of two values. <code>REVERSE</code> is the Vector version of swap, and <code>TAKE</code> combined with <code>CONCAT</code> rebuilds one Vector from parts of another.</p>
+                    <p>When you need one position rather than a fold, read it with <code>GET</code>: <code>0 GET</code> is the first element and <code>-1 GET</code> the last. So <code>[ SORT -1 GET ] 'PMAX' DEF</code> answers the larger of two values. <code>REVERSE</code> exchanges the two elements of a pair, and <code>TAKE</code> combined with <code>CONCAT</code> rebuilds one Vector from parts of another.</p>
                     <p class="ref-note">The tool for duplication is <a href="#bindings"><code>BIND</code></a>. Name a value and it is pushed every time the name is written, so a value of any kind can be used as many times as needed.</p>
 
                     <!-- BEGIN generated word contracts: control -->
@@ -3978,7 +3976,7 @@ SELECT</code></td>
                 <section id="patterns" class="ref-page">
                     <h2>Common patterns</h2>
 
-                    <p>Ajisai's vocabulary is 78 Words, deliberately kept small. A Word that a user definition can express <em>at the same cost</em> does not belong in Core. So operations that other languages tend to provide as dedicated Words — argmin, the position of the smallest value, or a relaxation loop — are written here as combinations of short phrases. The common ones are collected below. Each is verified, and if you use one more than once it makes a fine body for your own <code>DEF</code>.</p>
+                    <p>Ajisai's vocabulary is 78 Words, deliberately kept small. A Word that a user definition can express <em>at the same cost</em> does not belong in Core. So operations such as argmin — the position of the smallest value — or a relaxation loop are written as combinations of short phrases. The common ones are collected below. Each is verified, and if you use one more than once it makes a fine body for your own <code>DEF</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
