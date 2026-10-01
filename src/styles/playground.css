@@ -888,18 +888,19 @@ footer {
 
 /* A key — or, on mobile, a touch control — drawn as a keycap: an outlined,
    lettered tile, so a shortcut reads as the thing to press rather than as
-   prose. No fill: the outline is enough, and a filled tile outweighs the
-   faint sheet it sits in. */
+   prose. No fill, and outline and letters in the placeholder ink: the shape
+   alone marks a key, and anything darker outweighs the faint sheet it sits
+   in. */
 .editor-hint kbd {
     display: inline-block;
     min-width: 1.8em;
     margin: 0 0.15em;
     padding: 0 0.4em;
-    border: var(--border-main);
+    border: 1px solid var(--input-placeholder);
     border-bottom-width: 2px;
     border-radius: var(--radius-word-button);
     background-color: transparent;
-    color: var(--color-text-light);
+    color: var(--input-placeholder);
     font-family: var(--font-stack-mono);
     font-size: var(--text-xs);
     line-height: 1.6;
