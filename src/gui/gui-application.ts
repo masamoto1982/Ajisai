@@ -24,6 +24,7 @@ import {
     type ViewMode
 } from './gui-layout-state';
 import { trimSource } from './source-text';
+import { syncEditorHintScroll } from './editor-hint';
 
 // ── The page's elements ─────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ function requireElement<T extends HTMLElement>(selector: string, expectedConstru
 
 const cacheElements = (): GUIElements => ({
     codeInput: requireElement('#code-input', HTMLTextAreaElement),
+    editorHint: requireElement('#editor-hint', HTMLElement),
     editorClearBtn: requireElement('#editor-clear-btn', HTMLButtonElement),
     stackClearBtn: requireElement('#stack-clear-btn', HTMLButtonElement),
     editorFormatBtn: requireElement('#editor-format-btn', HTMLButtonElement),
@@ -413,6 +415,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             onModeChange: (mode) => layoutController.setArea(mode)
         });
         updateEditorPlaceholder(elements, mobile);
+        syncEditorHintScroll(elements.codeInput, elements.editorHint);
 
         const layoutDeps: ApplyAreaStateDeps = { elements, state: layoutState, mobile, showDictionarySheet };
         const layoutController = createLayoutController(layoutDeps);
