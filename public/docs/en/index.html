@@ -1293,7 +1293,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DEL">
 <h4><code>DEL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Delete a User Word from the dictionary: <code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code> is <code>TRUE</code>, since the name no longer names a Word. A Core Word is refused (<code>protectedWord</code>), a name no User Word holds is <code>wordNotFound</code>, and a Word other User Words still call is <code>definitionConflict</code> until they are deleted first.</p>
+<p>Delete a User Word from the dictionary: <code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code> is <code>TRUE</code>, since the name then names no Word. A Core Word is refused (<code>protectedWord</code>), a name no User Word holds is <code>wordNotFound</code>, and a Word other User Words still call is <code>definitionConflict</code> until they are deleted first.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 1 ] 'W' DEF 'W' DEL</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ name ] -&gt; [ ]</span></dd>
@@ -1829,7 +1829,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DIV">
 <h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The exact quotient, left over right: <code>1 3 DIV</code> is <code>1/3</code> — never a decimal approximation — and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 2 4 ] 2 DIV</code> is <code>[ 1 2 ]</code>. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is <code>nonNumeric</code>.</p>
+<p>The exact quotient, left over right: <code>1 3 DIV</code> is exactly <code>1/3</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 2 4 ] 2 DIV</code> is <code>[ 1 2 ]</code>. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>10 2 DIV</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>
@@ -2755,7 +2755,7 @@ FILTER</code></td>
 <h3 id="family-record">Contracts: Records</h3>
 <div class="word-entry" id="word-TALLY">
 <h4><code>TALLY</code> <span class="word-tier">Standard · operational</span></h4>
-<p>How many times each distinct element occurs, as a Record from element to count: <code>[ 'b' 'a' 'b' ] TALLY</code> is <code>[ 'b' 'a' ] [ 2/1 1/1 ] RECORD</code>, keys in order of first appearance. <code>KEYS</code> is exactly what <code>UNIQUE</code> answers and <code>VALUES</code> is the aligned count Vector, so nothing the earlier Vector-of-counts form could do is lost, and the caller no longer has to call <code>UNIQUE</code> separately to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.</p>
+<p>How many times each distinct element occurs, as a Record from element to count: <code>[ 'b' 'a' 'b' ] TALLY</code> is <code>[ 'b' 'a' ] [ 2/1 1/1 ] RECORD</code>, keys in order of first appearance. <code>KEYS</code> is exactly what <code>UNIQUE</code> answers and <code>VALUES</code> is the aligned count Vector, so no separate <code>UNIQUE</code> call is needed to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'a' 'b' 'a' ] TALLY</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ vec ] -&gt; [ record ]</span></dd>
@@ -2771,7 +2771,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GROUP">
 <h4><code>GROUP</code> <span class="word-tier">Standard · operational</span></h4>
-<p>Bundle values by the key at the same position, as a Record from key to the Vector of its values: <code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code> is <code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; <code>R 'a' GET</code> then reads one group by name where the earlier Vector-of-Vectors form needed <code>UNIQUE</code> and <code>INDEX-OF</code> to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.</p>
+<p>Bundle values by the key at the same position, as a Record from key to the Vector of its values: <code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code> is <code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; <code>R 'a' GET</code> reads one group by name, with no <code>UNIQUE</code> or <code>INDEX-OF</code> to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>
@@ -3336,7 +3336,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-DECODE">
 <h4><code>JSON-DECODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>Read JSON text into a value: <code>'[1, 2]' JSON-DECODE</code> is <code>[ 1 2 ]</code>. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (<code>'0.1' JSON-DECODE</code> is <code>1/10</code>, never a float), <code>true</code>/<code>false</code> Booleans and <code>null</code> a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects <code>invalidEncoding</code>, the reason <code>NUM</code> projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects <code>spaceExhausted</code>, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (<code>nonText</code>).</p>
+<p>Read JSON text into a value: <code>'[1, 2]' JSON-DECODE</code> is <code>[ 1 2 ]</code>. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (<code>'0.1' JSON-DECODE</code> is exactly <code>1/10</code>), <code>true</code>/<code>false</code> Booleans and <code>null</code> a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects <code>invalidEncoding</code>, the reason <code>NUM</code> projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects <code>spaceExhausted</code>, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (<code>nonText</code>).</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>'{&quot;a&quot;: 1, &quot;b&quot;: [true, null]}' JSON-DECODE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ text ] -&gt; [ value ]</span></dd>

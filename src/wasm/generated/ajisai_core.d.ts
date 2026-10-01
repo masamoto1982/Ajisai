@@ -178,8 +178,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
     readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number];
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h0896cde0637cafae: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___wasm_bindgen_413a9fa07f7179f1___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_413a9fa07f7179f1___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___js_sys_402f77b0a9aba5cd___Function_fn_wasm_bindgen_413a9fa07f7179f1___JsValue_____wasm_bindgen_413a9fa07f7179f1___sys__Undefined___js_sys_402f77b0a9aba5cd___Function_fn_wasm_bindgen_413a9fa07f7179f1___JsValue_____wasm_bindgen_413a9fa07f7179f1___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
