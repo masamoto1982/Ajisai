@@ -8,16 +8,22 @@
     <title>Ajisai リファレンス</title>
 
     <!--
-      このファイルは public/docs/index.html（英語版・正典）の日本語訳であり、
-      public/docs/ja/ 配下の静的ファイルとして配信される。構成・id・サンプル
-      コードは英語版と1対1で対応させ、地の文（見出し・段落・表の見出し・注記）
-      だけを翻訳する。<code> 内のAjisaiコードと期待値は言語に依存しないため
-      翻訳しない。
+      Ajisai リファレンス（日本語版）。英語版 public/docs/en/index.html と
+      構成・id・サンプルコードを1対1で対応させ、地の文（見出し・段落・表の
+      見出し・注記）だけが言語ごとに異なる。<code> 内のAjisaiコードと期待値は
+      言語に依存しないので両版で同一に保つ（check:reference-samples が両版の
+      サンプルを実行して確かめる）。見た目と振る舞いは両版共通の
+      ../reference.css と ../reference.js にある。
 
-      英語版と内容が食い違った場合は英語版が正典（docs/dev/three-layer-
-      documentation-model.md §2.2: "The English text remains canonical when
-      translations disagree."）。構造・スタイルを変更したときは英語版にも
-      反映すること。
+      「ワード一覧」頁 (#word-index) は scripts/generate-word-reference.mjs が
+      spec/words.json から生成して下の BEGIN/END 印の間に書き込む。手で編集
+      しない（npm run word:reference）。各ワードの日本語の説明は
+      docs/i18n/word-summaries.ja.json にある。
+
+      言語意味論の正典は SPECIFICATION.html であり、本書はそこから派生する
+      読み物である。英語版と日本語版の内容が食い違った場合は英語版を正とする
+      （docs/dev/three-layer-documentation-model.md §2.2）。内容を変えたときは
+      両版に反映すること。
 
       執筆規約: docs/dev/ajisai-authoring-style.md / docs/dev/reference-writing-style.md。
       - Ajisai のトークンは必ず <code> で囲む（灰色背景 = Ajisai チャネル）。
@@ -30,458 +36,13 @@
       - 用語対訳: word=ワード, stack=スタック, vector=ベクトル, block=ブロック,
         frame=フレーム, bind=束縛, dictionary=辞書。
     -->
-    <style>
-        :root {
-            --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-            --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
-
-            --radius-button: 6px;
-
-            --color-primary:   oklch(51.1% 0.091 295.7);
-            --color-secondary: oklch(73.9% 0.012 297.5);
-
-            --color-text:       oklch(24.7% 0.002 247.9);
-            --color-text-light: oklch(46.1% 0.009 241.8);
-
-            --color-border: oklch(73.2% 0.014 251.6);
-            --border-main: solid 1px var(--color-border);
-
-            --color-light:  oklch(98.2% 0.002 247.8);
-            --color-medium: oklch(94.3% 0.006 264.5);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
-            min-height: 100%;
-            overflow-x: hidden;
-        }
-
-        body {
-            font-family: var(--font-stack-primary);
-            background: oklch(100% 0 0);
-            color: var(--color-text);
-            line-height: 1.7;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        a {
-            color: var(--color-primary);
-            text-decoration: none;
-
-            &:hover { color: var(--color-secondary); }
-        }
-
-        /* 移ろい: 青紫・赤紫・淡水色・淡緑の四色が巡るグラデーション。
-           0% と 100% を同一にしてループ時の急な色変化を避ける。 */
-        @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
-        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 300; }
-        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
-        @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
-        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.085; }
-
-        @keyframes mv-hydrangea-hues {
-            0%,  100% { --mv-h-a: 265; --mv-h-b: 300; }
-            25%       { --mv-h-a: 305; --mv-h-b: 325; }
-            50%       { --mv-h-a: 195; --mv-h-b: 225; }
-            75%       { --mv-h-a: 150; --mv-h-b: 178; }
-        }
-        @keyframes mv-chroma {
-            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.085; }
-            40%      { --mv-c-a: 0.095; --mv-c-b: 0.095; }
-            65%      { --mv-c-a: 0.065; --mv-c-b: 0.065; }
-        }
-        @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
-
-        .ref-header,
-        .ref-footer {
-            background: linear-gradient(
-                to right in oklch,
-                oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
-                oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
-            );
-            animation:
-                mv-hydrangea-hues 260s ease-in-out infinite,
-                mv-chroma 210s ease-in-out infinite,
-                mv-light 170s ease-in-out infinite;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .ref-header, .ref-footer { animation: none; }
-        }
-
-        .ref-header {
-            border-bottom: var(--border-main);
-            padding: 1rem 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 0.5rem;
-            color: var(--color-text);
-        }
-
-        .app-header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            width: 100%;
-        }
-
-        .app-brand-meta {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .app-brand-block {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            color: inherit;
-        }
-
-        .logo {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .ref-header h1 {
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: var(--color-text);
-        }
-
-        .ref-tagline {
-            display: inline-block;
-            font-size: 0.75rem;
-            color: oklch(100% 0 0);
-            background: oklch(51.1% 0.091 295.7);
-            border: 1px solid oklch(51.1% 0.091 295.7);
-            border-radius: 6px;
-            padding: 0.125rem 0.5rem;
-            line-height: 1.5;
-        }
-
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* 言語切替: ブランド行の Reference タグの右隣に置く。リンクだと
-           「切り替えられる部品」だと気付かれず、現在表示中の言語もラベルに
-           出せない (英語版を見ているのに JA と出るなど) ため、プレイグラウンド
-           のエリアセレクタ (area-selector select、components.css) と同じ
-           <select> ベースの部品にして、選択中の項目＝表示中の言語とする。
-           言語が増えても <option> を足すだけで済む。
-           見た目も area-selector select と揃える (font-size/line-height/
-           padding/border-radius は components.css の値をそのまま踏襲。
-           このファイルは components.css を読み込めないため値を複製している)。 */
-        .lang-select {
-            display: inline-block;
-            font-family: var(--font-stack-mono);
-            font-size: 0.8rem;
-            line-height: 1.2;
-            padding: 0.3125rem 0.5rem 0.1875rem;
-            color: var(--color-text);
-            background: oklch(100% 0 0);
-            border: var(--border-main);
-            border-radius: 2px;
-            cursor: pointer;
-            transition: background-color 0.15s ease;
-
-            &:focus {
-                outline: none;
-                background: var(--color-light);
-            }
-        }
-
-        .header-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            min-height: 2.125rem;
-            padding: 0.5rem 1rem;
-            font-family: var(--font-stack-primary);
-            font-size: 0.875rem;
-            font-weight: 500;
-            line-height: 1.2;
-            border: var(--border-main);
-            border-radius: var(--radius-button);
-            cursor: pointer;
-            color: var(--color-text);
-            background: #fff;
-
-            &:hover {
-                background: var(--color-light);
-                color: var(--color-text);
-            }
-        }
-
-        /* コンテンツ: 横軸 3:7。左 30% が navigation、右 70% が article。
-           モバイルでは縦積みで article → navigation の順に並ぶよう、DOM は
-           article を先に置き、デスクトップでは order で nav を左へ移す。 */
-        .ref-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .ref-article {
-            padding: 1.5rem 2rem 3rem;
-            min-width: 0;
-        }
-
-        .ref-nav {
-            padding: 1.5rem 2rem;
-            border-top: var(--border-main);
-            background: var(--color-light);
-
-            & h2 {
-                font-size: 0.95rem;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-                color: var(--color-text-light);
-                margin-bottom: 0.75rem;
-            }
-
-            /* navigation is a plain list of links. Leave link colors (unvisited /
-               visited), underline, and hover to the user-agent default — minimal,
-               unadorned styling. */
-            & a,
-            & a:hover {
-                color: revert;
-                text-decoration: revert;
-            }
-        }
-
-        /* Each .ref-page is one page. Visibility is declarative: the URL fragment
-           selects the visible page through :target, so no JS show/hide is needed
-           (and there is no first-paint flash of every page at once). The fragment
-           may also name a heading *inside* a page — the ids of the pages that
-           were merged away are kept as <h3 id> so their links stay alive — so a
-           page whose descendant is targeted opens too. When nothing at all is
-           targeted — a bare URL — :has() falls back to showing the first page. */
-        .ref-page {
-            display: none;
-        }
-
-        .ref-page:target,
-        .ref-page:has(:target) {
-            display: block;
-        }
-
-        .ref-main:not(:has(:target)) #intro {
-            display: block;
-        }
-
-        .ref-article {
-            & h2 {
-                font-size: 1.4rem;
-                font-weight: 600;
-                margin-bottom: 0.5rem;
-                padding-bottom: 0.3rem;
-                border-bottom: var(--border-main);
-            }
-
-            & h3 {
-                font-size: 1.05rem;
-                font-weight: 600;
-                margin: 1.25rem 0 0.4rem;
-            }
-
-            & p { margin: 0.5rem 0; }
-
-            & ol.ref-list,
-            & ul.ref-list {
-                margin: 0.5rem 0;
-                padding-left: 1.5rem;
-
-                & li { margin: 0.25rem 0; }
-            }
-
-            & code {
-                font-family: var(--font-stack-mono);
-                font-size: 0.9em;
-                background: var(--color-medium);
-                padding: 0.1rem 0.3rem;
-                border-radius: 3px;
-            }
-        }
-
-        /* The "Open in Playground" button sits on its own line at the bottom
-           right of each section. */
-        /* Each sample is a self-contained unit: a one-row table (sample code,
-           expected value, notes) followed by its own "Open in Playground"
-           button at the bottom right. */
-        .sample {
-            margin: 1.25rem 0;
-
-            & .sample-actions {
-                display: flex;
-                justify-content: flex-end;
-                margin-top: 0.5rem;
-            }
-        }
-
-        /* The table is wrapped in a horizontally scrollable container so long
-           code rows can be scrolled (and copied) on narrow viewports instead of
-           being clipped by the page's hidden horizontal overflow. */
-        .ref-table-wrap {
-            overflow-x: auto;
-        }
-
-        .ref-table {
-            width: 100%;
-            border-collapse: collapse;
-
-            & th,
-            & td {
-                border: var(--border-main);
-                padding: 0.5rem 0.75rem;
-                text-align: left;
-                vertical-align: top;
-            }
-
-            & th {
-                background: var(--color-light);
-                font-weight: 600;
-                font-size: 0.8rem;
-                color: var(--color-text-light);
-            }
-
-            & td code {
-                background: none;
-                padding: 0;
-                font-family: var(--font-stack-mono);
-                font-size: 0.85rem;
-                color: var(--color-text);
-                white-space: pre;
-            }
-
-            & td.notes {
-                font-size: 0.85rem;
-                color: var(--color-text-light);
-            }
-        }
-
-        /* Word/sugar summary tables (not samples): same look, slightly tighter. */
-        .word-table {
-            margin: 0.75rem 0 1.25rem;
-        }
-
-        .ref-note {
-            font-size: 0.85rem;
-            color: var(--color-text-light);
-        }
-
-        .ref-footer {
-            border-top: var(--border-main);
-            padding: 0.75rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2rem;
-            color: var(--color-text);
-            font-size: 0.875rem;
-            text-align: center;
-        }
-
-        .ref-footer a {
-            color: var(--color-text-light);
-
-            &:hover { color: var(--color-text); }
-        }
-
-        /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。
-           align-items: stretch（既定)により両カラムが同じ高さに伸び、nav の
-           背景色と分割線がコンテンツ領域の縦 100% を覆う。 */
-        @media (min-width: 769px) {
-            .ref-main {
-                flex-direction: row;
-                align-items: stretch;
-            }
-
-            .ref-nav {
-                order: -1;
-                flex: 0 0 30%;
-                max-width: 30%;
-                border-top: none;
-                border-right: var(--border-main);
-            }
-
-            .ref-article {
-                flex: 1 1 70%;
-            }
-        }
-
-        /* モバイル: header（固定表示）→ article → navigation → footer（固定表示）。
-           ビューポートを固定し、間のコンテンツ領域（.ref-main）だけを縦スクロール
-           させる。これで header / footer は sticky に頼らず確実に固定され、一つの
-           section を読み終えると自然と navigation に到達する。 */
-        @media (max-width: 768px) {
-            html, body {
-                height: 100%;
-                overflow: hidden;
-            }
-
-            body {
-                height: 100vh;
-                height: 100dvh;
-                min-height: 0;
-            }
-
-            .ref-header,
-            .ref-footer {
-                flex: 0 0 auto;
-            }
-
-            .ref-main {
-                flex: 1 1 auto;
-                min-height: 0;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .ref-header { padding: 1rem 2rem; }
-            .ref-article { padding: 1.25rem 1rem 2rem; }
-            .ref-nav { padding: 1.25rem 1rem; }
-        }
-    </style>
+    <link rel="stylesheet" href="../reference.css">
 
     <!-- KaTeX (self-hosted, see docs/dev/ajisai-authoring-style.md Section 4). -->
     <link rel="stylesheet" href="../../vendor/katex/katex.min.css">
     <script defer src="../../vendor/katex/katex.min.js"></script>
-    <script defer src="../../vendor/katex/contrib/auto-render.min.js"
-            onload="renderMathInElement(document.body, [
-                delimiters: [
-                    [ left: '\\(', right: '\\)', display: false ],
-                    [ left: '\\[', right: '\\]', display: true ]
-                ],
-                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-                throwOnError: false
-            ]);"></script>
+    <script defer src="../../vendor/katex/contrib/auto-render.min.js"></script>
+    <script defer src="../reference.js"></script>
 </head>
 <body>
     <header class="ref-header">
@@ -2801,7 +2362,7 @@ FILTER</code></td>
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
                     <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は78個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この78個のワードは、<strong>48語のSemantic Kernel</strong>と<strong>30語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。86個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>この78個のワードは、<strong>48語のSemantic Kernel</strong>と<strong>30語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="#word-index">ワード一覧</a>にあり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -3040,6 +2601,1285 @@ FILTER</code></td>
                     </div>
                     <p>比較ワードは最上位の層でのみ働きます。あらゆるAjisaiの値にわたって厳密かつ全域的であり、数学的な問いに答えます。それより下の層は値のモデルには関与しないので、表現や表示が比較の結果に影響することは決してありません。</p>
                 </section>
+
+<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
+<section id="word-index" class="ref-page">
+<h2>ワード一覧</h2>
+<p>正準な語彙のすべてのワードを、その契約とともに<code>spec/words.json</code>から生成した一覧です。全78語のうち48語がSemantic Kernel、30語がStandardワードです。どれも平易な名前で参照できる普通のCoreワードで、階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>を参照)。下の表は族ごとにまとめたもので、各族からはサンプル付きで解説している本書の頁へ移れます。</p>
+<div class="ref-table-wrap word-jump">
+<table class="ref-table">
+<thead><tr><th>族</th><th>ワード</th></tr></thead>
+<tbody>
+<tr><th scope="row"><a href="#family-booleanLogic">論理</a></th><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td></tr>
+<tr><th scope="row"><a href="#family-comparison">比較</a></th><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td></tr>
+<tr><th scope="row"><a href="#family-exactArithmetic">厳密な算術</a></th><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td></tr>
+<tr><th scope="row"><a href="#family-collection">ベクトル</a></th><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td></tr>
+<tr><th scope="row"><a href="#family-record">Record</a></th><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td></tr>
+<tr><th scope="row"><a href="#family-higherOrder">反復</a></th><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td></tr>
+<tr><th scope="row"><a href="#family-text">文字列</a></th><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td></tr>
+<tr><th scope="row"><a href="#family-control">制御</a></th><td><a href="#word-EXEC"><code>EXEC</code></a> <a href="#word-FAIL"><code>FAIL</code></a></td></tr>
+<tr><th scope="row"><a href="#family-dictionary">辞書と名前</a></th><td><a href="#word-CONTRACT"><code>CONTRACT</code></a> <a href="#word-BIND"><code>BIND</code></a> <a href="#word-DEF"><code>DEF</code></a> <a href="#word-DEL"><code>DEL</code></a> <a href="#word-DIGEST"><code>DIGEST</code></a></td></tr>
+<tr><th scope="row"><a href="#family-absence">不在(NIL)</a></th><td><a href="#word-NIL"><code>NIL</code></a> <a href="#word-NIL_3f"><code>NIL?</code></a> <a href="#word-NIL-REASON"><code>NIL-REASON</code></a> <a href="#word-ABSENT"><code>ABSENT</code></a></td></tr>
+<tr><th scope="row"><a href="#family-output">出力</a></th><td><a href="#word-PRINT"><code>PRINT</code></a></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="family-booleanLogic">論理</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#logic">論理</a></p>
+<div class="word-entry" id="word-TRUE">
+<h4><code>TRUE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>真偽値のTRUE。<code>TRUE</code>は<code>1 1 EQ</code>である。これは真偽値であって数の1ではない(LANG.VALUES.DISJOINT)ので、<code>TRUE 1 EQ</code>は<code>FALSE</code>になる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>TRUE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">-&gt; [ TRUE ]</span></dd>
+<dt>スタック</dt><dd>入力 0 → 出力 1</dd>
+<dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FALSE">
+<h4><code>FALSE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>真偽値のFALSE。<code>FALSE</code>は<code>1 2 EQ</code>である。これは真偽値であって数の0ではない(LANG.VALUES.DISJOINT)ので、<code>FALSE 0 EQ</code>は<code>FALSE</code>になる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>FALSE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">-&gt; [ FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 0 → 出力 1</dd>
+<dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-AND">
+<h4><code>AND</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>強いクリーネの真理値表による論理積(LANG.VALUES.TRUTH)。<code>TRUE FALSE AND</code>は<code>FALSE</code>で、ベクトルには要素ごとに働き、<code>[ TRUE TRUE ] [ TRUE FALSE ] AND</code>は<code>[ TRUE FALSE ]</code>になる。ここで読まれたNILはUNKNOWNである。FALSEがあれば答えはFALSEに決まり(<code>NIL FALSE AND</code>は<code>FALSE</code>)、それ以外はUNKNOWNのまま理由を保つ。論理和は<code>a NOT b NOT AND NOT</code>と書く。真偽値でもNILでもないオペランドは<code>nonTruthValue</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>TRUE FALSE AND</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a AND b ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>truth</code>, <code>truth</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>kleeneAbsorbing</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonTruthValue</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-NOT">
+<h4><code>NOT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>強いクリーネの真理値表による否定(LANG.VALUES.TRUTH)。<code>TRUE NOT</code>は<code>FALSE</code>で、ベクトルには要素ごとに働き、<code>[ TRUE FALSE ] NOT</code>は<code>[ FALSE TRUE ]</code>になる。UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは<code>nonTruthValue</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>TRUE NOT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] -&gt; [ NOT a ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>truth</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>kleeneAbsorbing</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonTruthValue</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SELECT">
+<h4><code>SELECT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>すでに計算済みの2つの値から、真偽値で一方を選ぶ。<code>'yes' 'no' TRUE SELECT</code>は<code>'yes'</code>、<code>'yes' 'no' FALSE SELECT</code>は<code>'no'</code>。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'yes' ] [ 'no' ] TRUE SELECT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ whenTrue ] [ whenFalse ] [ mask ] -&gt; [ chosen ]</span></dd>
+<dt>スタック</dt><dd>入力 3 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code>, <code>element</code>, <code>truth</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>kleeneAbsorbing</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonTruthValue</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<h3 id="family-comparison">比較</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#comparison">比較と真偽値</a></p>
+<div class="word-entry" id="word-EQ">
+<h4><code>EQ</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。<code>1 1/1 EQ</code>は<code>TRUE</code>、<code>2 SQRT 2 SQRT MUL 2 EQ</code>は<code>TRUE</code>、<code>[ 1 2 ] [ 1 2 ] EQ</code>は<code>TRUE</code>。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。<code>1 0 DIV 1 EQ</code>は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、<code>[ NIL ] [ NIL ] EQ</code>は<code>TRUE</code>。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に<code>1 COLLECT</code>で包む。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 1 EQ</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DENOTATION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-LT">
+<h4><code>LT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>左の数が右より小さいかどうか。<code>1 2 LT</code>は<code>TRUE</code>で、ベクトルには要素ごとに働き、<code>[ 1 5 ] 3 LT</code>は<code>[ TRUE FALSE ]</code>。厳密な体の上の順序は、無理数を含めて常に決定する(LANG.VALUES.EXACT)。<code>2 SQRT 3/2 LT</code>は<code>TRUE</code>。順序があるのは数だけで、それ以外は<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 2 LT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-GT">
+<h4><code>GT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>左の数が右より大きいかどうか。<code>2 1 GT</code>は<code>TRUE</code>で、ベクトルには要素ごとに働き、<code>[ 1 5 ] 3 GT</code>は<code>[ FALSE TRUE ]</code>。厳密な体の上の順序は常に決定する(LANG.VALUES.EXACT)。順序があるのは数だけで、それ以外は<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>2 1 GT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<h3 id="family-exactArithmetic">厳密な算術</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#arithmetic">算術</a></p>
+<div class="word-entry" id="word-ADD">
+<h4><code>ADD</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>厳密な和。<code>1/3 1/6 ADD</code>は<code>1/2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 1 2 ] 10 ADD</code>は<code>[ 11 12 ]</code>。何も丸められない。<code>2 SQRT 2 SQRT ADD</code>は<code>8 SQRT</code>。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 2 ADD</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a + b ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SUB">
+<h4><code>SUB</code> <span class="word-tier">Standard · shorthand</span></h4>
+<p>厳密な差(左から右を引く)。<code>5 3 SUB</code>は<code>2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>2 [ 1 2 3 ] SUB</code>は<code>[ 1 0 -1 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>5 3 SUB</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a - b ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-MUL">
+<h4><code>MUL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>厳密な積。<code>2/3 3/4 MUL</code>は<code>1/2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 1 2 3 ] [ 10 ] MUL</code>は<code>[ 10 20 30 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>2 4 MUL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a * b ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DIV">
+<h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は<code>1/3</code>で、小数の近似には決してならない。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除数が0のレーンはNIL(divisionByZero)を投影する。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>10 2 DIV</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>divisorEqualsZero</code> → <code>divisionByZero</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FLOOR">
+<h4><code>FLOOR</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>その数を超えない最大の整数。<code>7/3 FLOOR</code>は<code>2</code>、<code>-7/3 FLOOR</code>は<code>-3</code>で、ベクトルには要素ごとに働く。無理数も厳密に切り捨てられる。<code>2 SQRT FLOOR</code>は<code>1</code>。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>7/3 FLOOR</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ floor x ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-ROUND">
+<h4><code>ROUND</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>最も近い整数。ちょうど半分は0から遠い側へ。<code>5/2 ROUND</code>は<code>3</code>、<code>-5/2 ROUND</code>は<code>-3</code>で、ベクトルには要素ごとに働く。FORMATも最終桁を同じ規則で丸める。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>5/2 ROUND</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ round x ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-MIN">
+<h4><code>MIN</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>2つの数の小さい方。<code>1 2 MIN</code>は<code>1</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き、<code>[ 3 1 ] 2 MIN</code>は<code>[ 2 1 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 2 MIN</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ min ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-MAX">
+<h4><code>MAX</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>2つの数の大きい方。<code>1 2 MAX</code>は<code>2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き、<code>[ -1 2 -3 ] 0 MAX</code>は<code>[ 0 2 0 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 2 MAX</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ max ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SQRT">
+<h4><code>SQRT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>非負の数の厳密な平方根。<code>4 SQRT</code>は<code>2</code>、<code>2 SQRT</code>は無理数そのもので、多重二次正規形で保持され丸めなしに比較される(LANG.VALUES.EXACT)ので、<code>2 SQRT 2 SQRT MUL</code>は<code>2</code>。根号の中は平方因子を含まない形に簡約されるので、1つの数は組み立て方によらず1つの形を持つ。<code>8 SQRT</code>は<code>2 SQRT 2 MUL</code>である。この簡約は根号の中を素因数分解し、実行の数値作業量に計上される。残りの作業量で分解できない根号の中身は<code>resourceLimitExceeded</code>。ベクトルには要素ごとに働き、負の数はNIL(domainMiss)を投影する。<code>[ 4 -1 ] SQRT</code>は<code>[ 2 NIL ]</code>で、2番目のレーンはその理由で不在になる。数でないものは<code>nonNumeric</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>2 SQRT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ sqrt(x) ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>negativeScalar</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-POW">
+<h4><code>POW</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>厳密なべき乗<code>x y POW</code>。ベクトルには要素ごとに働き、厳密な体の中で答える。整数の指数なら結果は底と同じ層に留まる。<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>、<code>2 -1 POW</code>は<code>1/2</code>。非負の有理数の底に対する指数<code>p/2</code>も体の中に留まる。<code>2 1/2 POW</code>は<code>2 SQRT</code>の答えとまったく同じで、<code>2 3/2 POW</code>は<code>2 2 SQRT MUL</code>。負の<code>y</code>による<code>0 y POW</code>は<code>divisionByZero</code>を投影する。<code>p/2</code>乗の負の底は実数の値を持たず<code>domainMiss</code>を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する<code>p/2</code>、無理数の指数)も体の外に出るので<code>domainMiss</code>を投影する(<code>8 1/3 POW</code>、<code>2 2 SQRT POW</code>)。機械が具体化できる範囲を超える指数は<code>spaceExhausted</code>を投影する。体を組み立てるワードは今も<code>SQRT</code>であり、<code>POW</code>はその糖衣ではない。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>2 10 POW</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] [ y ] -&gt; [ x^y ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>divisionByZero</code>, <code>domainMiss</code>, <code>spaceExhausted</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-GCD">
+<h4><code>GCD</code> <span class="word-tier">Standard · operational</span></h4>
+<p>2つの整数の非負の最大公約数。ベクトルには要素ごとに働く。<code>12 18 GCD</code>は<code>6</code>、<code>0 0 GCD</code>は<code>0</code>。ユークリッドの互除法は入力に依存する反復で、すでにあるベクトルの上でしか反復しない言語では定義として書けない。機械はすべての有理数を既約に保つためにこれをすでに実行しており、このワードはそれを見えるようにするだけである。整数でないオペランド(分数や無理数)は<code>domainMiss</code>を投影する。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>12 18 GCD</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ gcd ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>nonIntegerOperand</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-RATIO">
+<h4><code>RATIO</code> <span class="word-tier">Standard · operational</span></h4>
+<p>有理数を既約の分子と分母に開き、分母を正とする2要素のベクトルで答える。<code>6/4 RATIO</code>は<code>[ 3 2 ]</code>、<code>-3 RATIO</code>は<code>[ -3 1 ]</code>で、ベクトルには要素ごとに働く。この言語は厳密な有理数を掲げており、これがその2つの部分を読み戻すワードである。答えはベクトルなので、算術は他のベクトルと同じようにその上へ持ち上がる。無理数(<code>2 SQRT</code>)には分子がなく<code>domainMiss</code>を投影する。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>6/4 RATIO</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ q ] -&gt; [ [ numerator denominator ] ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>irrationalOperand</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<h3 id="family-collection">ベクトル</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#vector-ops">ベクトル操作(<code>GET</code>, <code>LENGTH</code>)</a></p>
+<div class="word-entry" id="word-GET">
+<h4><code>GET</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。<code>[ 10 20 30 ] 1 GET</code>は<code>20</code>、<code>R 'x' GET</code>はRが<code>'x'</code>の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。<code>[ 10 20 30 ] [ 2 0 ] GET</code>は<code>[ 30 10 ]</code>で、並べ替えや収集が1回の呼び出しで済む。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、<code>[ 10 20 30 ] [ 0 9 ] GET</code>は<code>[ 10/1 NIL ]</code>。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(<code>nonContainer</code>)、整数でないインデックスは<code>invalidInteger</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 10 20 30 ] 1 GET</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ container ] [ key ] -&gt; [ value ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds,notFound</code> → <code>indexOutOfBounds</code>, <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonContainer</code>, <code>invalidInteger</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-LENGTH">
+<h4><code>LENGTH</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ベクトルが持つ要素の数。<code>[ 1 2 3 ] LENGTH</code>は<code>3</code>、<code>[ ] LENGTH</code>は<code>0</code>。数えるのは最も外側の軸だけで、<code>[ [ 1 2 ] [ 3 ] ] LENGTH</code>は<code>2</code>。すべての軸はSHAPEが答える。ベクトルでないものは<code>nonVector</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] LENGTH</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ count ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-TAKE">
+<h4><code>TAKE</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>ベクトルの先頭N個、または末尾の-N個を取る。<code>[ 1 2 3 ] 2 TAKE</code>は<code>[ 1 2 ]</code>、<code>[ 1 2 3 ] -2 TAKE</code>は<code>[ 2 3 ]</code>。ベクトルより大きい個数はNIL(indexOutOfBounds)を投影する。あるより多くを求めるのは末尾を越えた位置を名指すことで、それは<code>GET</code>が末尾を越えて答える問いと同じであり、同じように答えられる。うまくいかなかった整ったデータであって、誤ったプログラムではない(LANG.FAILURE.PROJECT)。したがって<code>[ 1 2 3 ] 9 TAKE</code>はNILで、別の答えが欲しい呼び出し側はそれを書く。<code>[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT</code>は代わりにベクトル全体を答える。そもそも整数でない個数は今も<code>invalidInteger</code>。それはプログラムの誤りだからである。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 4 5 ] 3 TAKE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ n ] -&gt; [ prefix ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds</code> → <code>indexOutOfBounds</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidInteger</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DROP">
+<h4><code>DROP</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>ベクトルの先頭N個、または末尾の-N個を落として残りを答える。TAKEの対になるワードで、<code>[ 1 2 3 4 5 ] 2 DROP</code>は<code>[ 3 4 5 ]</code>、<code>[ 1 2 3 4 5 ] -2 DROP</code>は<code>[ 1 2 3 ]</code>。したがって<code>[ n ] TAKE</code>と<code>[ n ] DROP</code>は1つのベクトルを2つに分け、<code>CONCAT</code>で元に戻せる。ベクトルより大きい個数はTAKEと同じくNIL(indexOutOfBounds)を投影する。末尾を越えた位置を名指しており、うまくいかなかった整ったデータだからである(LANG.FAILURE.PROJECT)。そもそも整数でない個数は今も<code>invalidInteger</code>。それはプログラムの誤りだからである。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 4 5 ] 2 DROP</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ n ] -&gt; [ rest ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds</code> → <code>indexOutOfBounds</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidInteger</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-CONCAT">
+<h4><code>CONCAT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>2つのベクトルを端と端でつなぐ。<code>[ 1 2 ] [ 3 ] CONCAT</code>は<code>[ 1 2 3 ]</code>。要素はそのまま保たれ、入れ子のベクトルは入れ子のまま。どちらのオペランドもベクトルでなければならない(<code>nonVector</code>)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 ] [ 3 4 ] CONCAT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a ++ b ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-REVERSE">
+<h4><code>REVERSE</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>ベクトルの要素を逆の順序にしたもの。<code>[ 1 2 3 ] REVERSE</code>は<code>[ 3 2 1 ]</code>。逆にするのは最も外側の軸だけで、<code>[ [ 1 2 ] 3 ] REVERSE</code>は<code>[ 3 [ 1 2 ] ]</code>。ベクトルでないものは<code>nonVector</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] REVERSE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ reversed ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-COLLECT">
+<h4><code>COLLECT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>スタックからN個の値を取り、先に積まれたものを先にして1つのベクトルで答える。<code>1 2 3 3 COLLECT</code>は<code>[ 1 2 3 ]</code>。Nは非負の整数でなければならず(<code>invalidInteger</code>)、スタックの値がNより少なければ<code>stackUnderflow</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 2 3 3 COLLECT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ v1 ] ... [ vn ] [ n ] -&gt; [ [ v1 ... vn ] ]</span></dd>
+<dt>スタック</dt><dd>入力 variable → 出力 1</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>invalidInteger</code>, <code>stackUnderflow</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-RANGE">
+<h4><code>RANGE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>始点から終点までのすべての整数(両端を含む)。<code>0 3 RANGE</code>は<code>[ 0 1 2 3 ]</code>、<code>3 0 RANGE</code>は降順の<code>[ 3 2 1 0 ]</code>。刻み幅のオペランドはない。刻みは数列の掛け算で、<code>0 3 RANGE 3 MUL</code>は<code>[ 0 3 6 9 ]</code>。だから方向は両端だけで決まり、どんな両端の組も無限の数列を表さない。整数でない端はERROR(<code>invalidInteger</code>)、機械が具体化できるより長い数列はNIL(spaceExhausted)を投影する。両端は葉なので、端のベクトルはレーンごとに1つの数列へ持ち上がる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>0 5 RANGE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ start ] [ end ] -&gt; [ seq ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>invalidInteger</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FILL">
+<h4><code>FILL</code> <span class="word-tier">Standard · operational</span></h4>
+<p>与えた形の、すべての葉が1つの値であるベクトル。<code>[ 2 3 ] 0 FILL</code>は<code>[ [ 0 0 0 ] [ 0 0 0 ] ]</code>、<code>[ 2 ] 'a' FILL</code>は<code>[ 'a' 'a' ]</code>。RESHAPEと同じく形が先に来る。形はSHAPEが答えるもの、つまり非負の整数のベクトルで、<code>[ 0 ] 0 FILL</code>は<code>[ ]</code>、空の形<code>[ ]</code>は値そのもの(ランク0)を答える。それ以外は<code>invalidShape</code>。値はどの領域の葉でもよく、値のベクトルはそれぞれ1つの埋められたベクトルへ持ち上がる。具体化するには大きすぎる形(要素が多すぎる、または軸が入れ子の上限を超える)はNIL(spaceExhausted)を投影する。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 2 2 ] 0 FILL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ shape ] [ value ] -&gt; [ filled ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>invalidShape</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SHAPE">
+<h4><code>SHAPE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>矩形のベクトルの各軸の長さ(外側から順に)。<code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code>は<code>[ 2 2 ]</code>、<code>[ 1 2 3 ] SHAPE</code>は<code>[ 3 ]</code>。ベクトルでない値は空の形を持つ。<code>5 DEPTH</code>が0であるのと同じく、<code>5 SHAPE</code>は<code>[ ]</code>(ランク0)。これはLANG.COLLECTIONS.LIFTがすでにオペランドを揃えるのに使っている形を、観測できるようにしたものである。不揃いなベクトルには形がないのでNIL(domainMiss)を投影する。<code>[ [ 1 2 ] [ 3 ] ] SHAPE</code>はエラーではなく理由付きの不在である。そのベクトルは問いが当てはまらない整ったデータだからである。最も外側の軸だけならLENGTHが答える。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ shape ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>raggedNesting</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-RESHAPE">
+<h4><code>RESHAPE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ベクトルの葉を順に、新しい形のもとへ組み直す。<code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code>は<code>[ [ 1 2 3 ] [ 4 5 6 ] ]</code>で、矩形のベクトルに<code>SHAPE RESHAPE</code>を施せば元に戻る。葉とは、どれだけ深く入れ子になっていても、FLATTENが答えるものすべてである。形はSHAPEが答えるもの、つまり空のものを含む非負の整数のベクトルで、その積は葉の数と等しくなければならない。<code>[ 5 ] [ ] RESHAPE</code>は<code>5</code>、<code>[ ] [ 2 0 ] RESHAPE</code>は<code>[ [ ] [ ] ]</code>。それ以外の形はERROR(invalidShape)。合わせるために何かを詰めたり繰り返したりはしないからである。具体化するには大きすぎる整った形(要素が多すぎる、または軸が入れ子の上限を超える)は、RANGEやFILLと同じくNIL(spaceExhausted)を投影する(LANG.COLLECTIONS.BUDGET)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ shape ] -&gt; [ reshaped ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidShape</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.BUDGET</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FLATTEN">
+<h4><code>FLATTEN</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>すべての軸を1本に畳む。<code>[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</code>は<code>[ 1 2 3 4 ]</code>で、どれだけ深く入れ子になっていても葉をインデックス順に並べる。CONCATは2つのベクトルをつないで1段だけ平らにし、FLATTENは1つのベクトルを受けてすべての段を平らにする。これはユーザー定義では書けない。深さは前もって分からず、再帰も際限のないループもない言語は深さの分からない構造を辿れないからである(LANG.DICTIONARY.ACYCLIC)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ flat ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEPTH">
+<h4><code>DEPTH</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ベクトルの入れ子の深さ。ベクトルでないもの(数、テキスト、真偽値、Symbol、Record)は0、平らなベクトルは1、ベクトルは最も深い要素より1つ深い。<code>[ 1 [ 2 [ 3 ] ] ] DEPTH</code>は<code>3</code>、<code>[ ] DEPTH</code>は<code>1</code>。FLATTENと同じくユーザー定義では書けない。測る対象そのものが、再帰しないプログラムには辿れないものだからである。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 [ 2 [ 3 ] ] ] DEPTH</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ n ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SORT">
+<h4><code>SORT</code> <span class="word-tier">Standard · operational</span></h4>
+<p>数のベクトルを昇順に並べた複製。<code>[ 3 1 2 ] SORT</code>は<code>[ 1 2 3 ]</code>。順序は無理数を含めて厳密。順序があるのは数だけで(<code>nonNumeric</code>)、ベクトルでないものは<code>nonVector</code>。並べ替えの置換を答えるのはORDER。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 3 1 2 ] SORT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ sorted ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-ORDER">
+<h4><code>ORDER</code> <span class="word-tier">Standard · operational</span></h4>
+<p>数のベクトルを昇順に並べるインデックス。<code>[ 30 10 20 ] ORDER</code>は<code>[ 1 2 0 ]</code>なので、それで収集すれば並べ替えになる。<code>[ 30 10 20 ] 'V' BIND V V ORDER GET</code>は<code>[ 10 20 30 ]</code>。同点は元の順序を保つ。<code>[ 2 1 2 1 ] ORDER</code>は<code>[ 1 3 0 2 ]</code>。順序があるのは数だけで(<code>nonNumeric</code>)、ベクトルでないものは<code>nonVector</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 30 10 20 ] ORDER</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ permutation ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-UNIQUE">
+<h4><code>UNIQUE</code> <span class="word-tier">Standard · operational</span></h4>
+<p>ベクトルの重複のない要素。それぞれ最初に現れた位置に置く。<code>[ 3 1 3 ] UNIQUE</code>は<code>[ 3 1 ]</code>。重複しないとは1つの値でないことなので(LANG.VALUES.DENOTATION)、テキスト、入れ子のベクトル、NILにも同じように働き、<code>[ 2 4/2 ] UNIQUE</code>は<code>[ 2 ]</code>。ベクトルでないものは<code>nonVector</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] UNIQUE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ distinct ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-ZIP">
+<h4><code>ZIP</code> <span class="word-tier">Standard · operational</span></h4>
+<p>同じ長さのベクトルを位置ごとに束ねる。<code>[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] ZIP</code>は<code>[ [ 1 3 5 ] [ 2 4 6 ] ]</code>なので、行列は転置され、<code>ZIP ZIP</code>で元に戻る。長さの違う行は<code>shapeMismatch</code>、ベクトルのベクトルでないオペランドは<code>nonVector</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ [ 1 2 ] [ 3 4 ] ] ZIP</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ [ vec... ] ] -&gt; [ [ tuple... ] ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-PUT">
+<h4><code>PUT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>コンテナに書く。ベクトルならインデックスの要素を置き換えた複製、Recordならキーを設定した複製。<code>[ 1 2 3 ] 1 9 PUT</code>は<code>[ 1 9 3 ]</code>、<code>R 'z' 3 PUT</code>は<code>'z'</code>を3にしたR。Recordにすでにあるキーは位置を保って新しい値を取り、ないキーは末尾に足されるので、キーの順序はキーが加わった順を記録する。ベクトルの位置はその長さで決まっているので、両端を越えたインデックスはどの枠も名指さず、GETと同じくNIL(indexOutOfBounds)を投影する。呼び出し側が保ちたかったベクトルは、自分で書いたそのベクトルである。値は運ばれるだけなのでNIL(格納された不在)を含め何でもよい。どちらのオペランドも変更されない。コンテナは値だからである。読み取り側はGET。第1オペランドがベクトルでもRecordでもなければERROR(<code>nonContainer</code>)、整数でないインデックスは<code>invalidInteger</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] 1 9 PUT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ container ] [ key ] [ value ] -&gt; [ container ]</span></dd>
+<dt>スタック</dt><dd>入力 3 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds</code> → <code>indexOutOfBounds</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonContainer</code>, <code>invalidInteger</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-INDEX-OF">
+<h4><code>INDEX-OF</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>値と等しい最初の要素のインデックス。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1</code>。値は1つの要素として丸ごと比較されるので、ベクトルを探せば等しいベクトルを探す。ベクトルが含まない値はNIL(notFound)を投影する。同じ問いを真偽値で問うのはMEMBER?。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 ] 2 INDEX-OF</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ x ] -&gt; [ idx ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-MEMBER_3f">
+<h4><code>MEMBER?</code> <span class="word-tier">Standard · namedPattern</span></h4>
+<p>値がベクトルの中に現れるかどうか。<code>[ 1 2 3 ] 2 MEMBER?</code>は<code>TRUE</code>。所属は値の等価性、つまりUNIQUEやINDEX-OFが使う等価性なので、数だけでなくテキスト、入れ子のベクトル、NILにも働く。探す値は1つの値で、読まれるのではなく比較されるので、ベクトルを探せば1つの要素として探す。<code>[ [ 1 ] 2 ] [ 1 ] MEMBER?</code>は<code>TRUE</code>。これは<code>INDEX-OF NIL? NOT</code>である。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] 2 MEMBER?</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ x ] -&gt; [ TRUE | FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-BSEARCH">
+<h4><code>BSEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2 ]</code>で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ<code>unsortedInput</code>を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ sorted ] [ keys ] -&gt; [ indices ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>unsortedInput</code>, <code>nonNumeric</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<h3 id="family-record">Record</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#records">キーによる対応(<code>RECORD</code>, <code>GET</code>)</a></p>
+<div class="word-entry" id="word-TALLY">
+<h4><code>TALLY</code> <span class="word-tier">Standard · operational</span></h4>
+<p>重複のない各要素が何回現れるかを、要素から件数へのRecordで答える。<code>[ 'b' 'a' 'b' ] TALLY</code>は<code>[ 'b' 'a' ] [ 2/1 1/1 ] RECORD</code>で、キーは最初の出現順。<code>KEYS</code>はまさに<code>UNIQUE</code>の答えであり、<code>VALUES</code>は位置の揃った件数のベクトルなので、以前の件数ベクトルの形でできたことは何も失われず、各件数が何を数えているかを知るために呼び出し側が<code>UNIQUE</code>を別に呼ぶ必要もない。数に限らずどの値にも働く。ベクトルでないオペランドはERROR。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] TALLY</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-GROUP">
+<h4><code>GROUP</code> <span class="word-tier">Standard · operational</span></h4>
+<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。以前のベクトルのベクトルの形では1つのグループを探すのに<code>UNIQUE</code>と<code>INDEX-OF</code>が要ったが、今は<code>R 'a' GET</code>で名前によって読める。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-RECORD">
+<h4><code>RECORD</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>キーのベクトルと値のベクトルを位置ごとに対応付けて、Record(キーによる対応。第7の値領域)を組み立てる。<code>[ 'x' 'y' ] [ 1 2 ] RECORD 'y' GET</code>は<code>2</code>。キーは与えられた順序を保ち、KEYSとVALUESがそれを読み戻す。長さが違う、あるいは同じキーが2回現れるのはプログラムの誤りなので、どちらも黙って後勝ちにするのではなくERRORになる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>shapeMismatch</code>, <code>duplicateKey</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.VALUES.VECTOR</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-KEYS">
+<h4><code>KEYS</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Recordのキーを、そのRecord自身の順序でベクトルとして答える。だから<code>KEYS</code>と<code>VALUES</code>は位置ごとに揃う。<code>[ 'x' 'y' ] [ 1 2 ] RECORD KEYS</code>は<code>[ 'x' 'y' ]</code>。キーの順序はRecordの観測できる構造の一部なので、このベクトルは任意の順の集合ではなく厳密に1つのものである。ベクトルやその他RecordでないオペランドはERROR。Recordはベクトルではなく、両者の間に暗黙の変換はない。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'x' 'y' ] [ 1 2 ] RECORD KEYS</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ record ] -&gt; [ keys ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.DISJOINT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-VALUES">
+<h4><code>VALUES</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Recordの値を、<code>KEYS</code>と揃ったベクトルとして答える。<code>[ 'x' 'y' ] [ 1 2 ] RECORD VALUES</code>は<code>[ 1/1 2/1 ]</code>。これはRecordの領域からベクトルの領域へ戻る橋で、ここから先はどのベクトルのワードも使える。逆向きの橋は<code>RECORD</code>なので、<code>R KEYS R VALUES RECORD</code>は<code>R</code>を組み立て直す。RecordでないオペランドはERROR。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'x' 'y' ] [ 1 2 ] RECORD VALUES</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ record ] -&gt; [ values ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.DISJOINT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-WITHOUT">
+<h4><code>WITHOUT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Recordから1つのキーを除いた複製。<code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT KEYS</code>は<code>[ 'y' ]</code>。Recordが持たないキーを除こうとすると、何もしないのではなく不在<code>notFound</code>になる。<code>GET</code>・<code>TAKE</code>・<code>PUT</code>がベクトルの外の位置に対して守るのと同じ規律で、綴り間違いのキーが黙って通ることはない。他のキーは順序を保つ。第1オペランドがRecordでなければERROR。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ record ] [ key ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-HAS_3f">
+<h4><code>HAS?</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>Recordがキーを持つかどうか。<code>[ 'x' ] [ 1 ] RECORD 'x' HAS?</code>は<code>TRUE</code>、<code>[ 'x' ] [ 1 ] RECORD 'y' HAS?</code>は<code>FALSE</code>。値に触れずに存在を問うので、ないキーと、格納された値がNILであるキーとを区別できる。<code>GET</code>だけではどちらもNILと答える。<code>NIL?</code>と同じく述語なので<code>?</code>で終わる。第1オペランドがRecordでなければERROR。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'x' ] [ 1 ] RECORD 'x' HAS?</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ record ] [ key ] -&gt; [ TRUE | FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-MERGE">
+<h4><code>MERGE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>2つのRecordの合併で、右が勝つ。<code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE VALUES</code>は<code>[ 1 9 3 ]</code>。左のRecordのキーは順序を保ち、両方が持つキーでは右の値を取る。右だけが持つキーは右の順序で末尾に足される。既定値に上書きを重ねるのがこのワードの用途である。左を勝たせたいならオペランドを入れ替える。どちらかがRecordでなければERROR。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ record ] [ record ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
+<dt>条項</dt><dd><code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.DISJOINT</code></dd>
+</dl>
+</div>
+<h3 id="family-higherOrder">反復</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>SCAN</code>)</a></p>
+<div class="word-entry" id="word-MAP">
+<h4><code>MAP</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。<code>[ 1 2 3 ] [ 2 MUL ] MAP</code>は<code>[ 2 4 6 ]</code>。ブロックの結果は、ベクトルを含め、最上位に残したもの(LANG.COLLECTIONS.HIGHER)。<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1 ] [ 2 ] ]</code>。不在のベクトルはその不在を答える。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、何も残さないブロックは<code>blockContractViolation</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] [ 2 MUL ] MAP</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ body ] -&gt; [ mapped ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code></dd>
+<dt>条項</dt><dd><code>LANG.COLLECTIONS.HIGHER</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FILTER">
+<h4><code>FILTER</code> <span class="word-tier">Standard · operational</span></h4>
+<p>述語ブロックがTRUEと答えるベクトルの要素を、順に答える。<code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code>は<code>[ 3 4 ]</code>。ブロックの答えは真偽値として読まれ、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、何も残さないブロックは<code>blockContractViolation</code>、真偽値でない答えは<code>nonTruthValue</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] [ 2 EQ ] FILTER</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ pred ] -&gt; [ kept ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code>, <code>nonTruthValue</code></dd>
+<dt>条項</dt><dd><code>LANG.COLLECTIONS.HIGHER</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FOLD">
+<h4><code>FOLD</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>種から始め、累積値と各要素を順に組み合わせるブロックで、ベクトルを1つの値に畳む。<code>[ 1 2 3 ] 0 [ ADD ] FOLD</code>は<code>6</code>、<code>[ 1 2 3 ] 10 [ SUB ] FOLD</code>は<code>4</code>。空のベクトルは種を答える。<code>[ ] 0 [ ADD ] FOLD</code>は<code>0</code>。最後の累積値ではなくすべての累積値を答えるのはSCAN。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、何も残さないブロックは<code>blockContractViolation</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] 0 [ ADD ] FOLD</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ init ] [ combine ] -&gt; [ result ]</span></dd>
+<dt>スタック</dt><dd>入力 3 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code></dd>
+<dt>条項</dt><dd><code>LANG.COLLECTIONS.HIGHER</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SCAN">
+<h4><code>SCAN</code> <span class="word-tier">Standard · operational</span></h4>
+<p>ベクトルを一歩ずつ畳み、最後の累積値だけでなく各要素の後の累積値を答える。<code>[ 1 2 3 4 ] 0 [ ADD ] SCAN</code>は<code>[ 1/1 3/1 6/1 10/1 ]</code>。答えは入力のレーン1本につき1本のレーンを持つ。初期累積値は種であってレーンではないので含まれない。これがあるから、SCANの結果を元のベクトルと組にできる。ブロックが見るのはFOLDと同じく累積値と現在の要素で、残したものが次の累積値であり、そのレーンの答えでもある。空のベクトルは空のベクトルを、不在のベクトルはその同じ不在を答える。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 4 ] 0 [ ADD ] SCAN</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ init ] [ combine ] -&gt; [ steps ]</span></dd>
+<dt>スタック</dt><dd>入力 3 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code>, <code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code></dd>
+<dt>条項</dt><dd><code>LANG.COLLECTIONS.HIGHER</code></dd>
+</dl>
+</div>
+<h3 id="family-text">文字列</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#strings-ops">文字列操作(<code>CHARS</code>, <code>JOIN</code>)</a></p>
+<div class="word-entry" id="word-CHARS">
+<h4><code>CHARS</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>テキストを1文字ずつのテキストに分割する。<code>'héllo' CHARS</code>は<code>[ 'h' 'é' 'l' 'l' 'o' ]</code>、<code>'' CHARS</code>は<code>[ ]</code>。元に戻すのはJOIN。テキストのベクトルは持ち上がり、テキストでないものは<code>nonText</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'hi' CHARS</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ chars ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-JOIN">
+<h4><code>JOIN</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>テキストのベクトルを端と端でつないで1つのテキストにする。<code>[ 'h' 'i' ] JOIN</code>は<code>'hi'</code>、<code>[ ] JOIN</code>は<code>''</code>なので、<code>CHARS JOIN</code>でテキストが元に戻る。すべての要素はテキストでなければならず(<code>nonText</code>)、ベクトルでないものは<code>nonVector</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'h' 'i' ] JOIN</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ texts ] -&gt; [ text ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-TRIM">
+<h4><code>TRIM</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>テキストの両端の空白を取り除く。<code>'  a b  ' TRIM</code>は<code>'a b'</code>で、内側の空白は残る。テキストのベクトルは持ち上がり、テキストでないものは<code>nonText</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'  hi  ' TRIM</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ text' ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-UPPER">
+<h4><code>UPPER</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>Unicodeの既定の(ロケールに依存しない)大小文字対応で、すべての文字を大文字に写したString。<code>'Ajisai' UPPER</code>は<code>'AJISAI'</code>、<code>'straße' UPPER</code>は<code>'STRASSE'</code>。大文字の形を持たない文字はそのまま残るので、答えはオペランドより長くなることはあっても短くなることはない。StringでないオペランドはERROR(<code>nonText</code>)。対応表はUnicodeのもので、<code>CHARS</code>と<code>JOIN</code>の上の定義では運べないので、このワードはネイティブである。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'Ajisai' UPPER</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ text' ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-LOWER">
+<h4><code>LOWER</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>Unicodeの既定の(ロケールに依存しない)大小文字対応で、すべての文字を小文字に写したString。<code>'Ajisai' LOWER</code>は<code>'ajisai'</code>、<code>'ΣΑΣ' LOWER</code>は<code>'σασ'</code>。語末シグマの規則をはじめ、言語固有の規則は適用しない。同じテキストはどこで実行しても同じように小文字になる。StringでないオペランドはERROR(<code>nonText</code>)。対応表はUnicodeのもので、<code>CHARS</code>と<code>JOIN</code>の上の定義では運べないので、このワードはネイティブである。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'Ajisai' LOWER</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ text' ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-TOKENIZE">
+<h4><code>TOKENIZE</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>区切り文字が現れるたびに文字列を分け、部分文字列のベクトルにする。<code>'a,b,c' ',' TOKENIZE</code>は<code>[ 'a' 'b' 'c' ]</code>。空の区切り文字はCHARSと同じくすべての文字の間で分ける。空の区切り文字に対する逆はJOIN。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'a,b,c' ',' TOKENIZE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] [ sep ] -&gt; [ parts ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-SEARCH">
+<h4><code>SEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>あるテキストが別のテキストの中に最初に現れる位置(文字単位)。<code>'hello world' 'world' SEARCH</code>は<code>6</code>で、CHARSと同じ数え方をする。<code>'hello' 'z' SEARCH</code>はNIL(notFound)。空の探すテキストは0で見つかる。これはテキスト版のINDEX-OFで、CHARSの上で書けば位置ごとに窓を比較することになるが、このワードは1回の走査で行う。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'hello world' 'world' SEARCH</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] [ needle ] -&gt; [ index ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-REPLACE">
+<h4><code>REPLACE</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>あるテキストのすべての出現を別のテキストで置き換える。<code>'a-b-c' '-' '+' REPLACE</code>は<code>'a+b+c'</code>。出現は左から順に、重ならずに見つける。空の<code>from</code>は何にも一致しないので、テキストは際限なく伸びるのではなく変わらずに戻る。CHARSとJOINの上で書けば位置ごとの窓による走査になるが、このワードはそれを1回の走査で行う。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'a-b-c' '-' '+' REPLACE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] [ from ] [ to ] -&gt; [ text' ]</span></dd>
+<dt>スタック</dt><dd>入力 3 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-NUM">
+<h4><code>NUM</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。<code>'3/4' NUM</code>は<code>3/4</code>、<code>'0.25' NUM</code>は<code>1/4</code>。数を綴らないテキスト(<code>'abc'</code>、<code>'.5'</code>、<code>'1_000'</code>、<code>'1/0'</code>)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(<code>'1e99999999'</code>)はNIL(spaceExhausted)を投影する。StringでないオペランドはERROR(<code>nonText</code>)。Stringのベクトルは持ち上がる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'42' NUM</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ n ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>parseFailure,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-STR">
+<h4><code>STR</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。<code>42 STR</code>は<code>'42'</code>、<code>1/3 STR</code>は<code>'1/3'</code>、<code>TRUE STR</code>は<code>'TRUE'</code>。オペランドは葉なので、ベクトルやRecordは持ち上がる。<code>[ 1 2 ] STR</code>は<code>[ '1' '2' ]</code>。STRは要素ごとにNUMの逆であり、<code>1/3 STR NUM</code>は<code>1/3</code>、<code>x STR NUM</code>は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>42 STR</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>noExactLexemeForValue</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FORMAT">
+<h4><code>FORMAT</code> <span class="word-tier">Standard · operational</span></h4>
+<p>厳密なスカラーを、小数点以下の桁数を指定した十進テキストとして描く。ちょうど半分は<code>ROUND</code>とまったく同じく0から遠い側へ丸める。<code>1/3 5 FORMAT</code>は<code>'0.33333'</code>、<code>5/2 0 FORMAT</code>は<code>'3'</code>、<code>2 SQRT 3 FORMAT</code>は<code>'1.414'</code>。値が丸められる唯一の場所であり、そこから出ていくのはテキストであって決して数ではない。算術は丸めを行わず、<code>STR</code>は厳密な字句を持たない数を断るので、十進の近似が欲しいプログラムは表示の境界であるここで精度を名指す。桁数は非負の整数(そうでなければ<code>invalidInteger</code>)、値はスカラー(そうでなければ<code>nonNumeric</code>)。体の順序は決して同点にならないので、無理数を含めすべての桁が厳密に決まる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1/3 5 FORMAT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] [ digits ] -&gt; [ text ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>invalidInteger</code>, <code>shapeMismatch</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-JSON-DECODE">
+<h4><code>JSON-DECODE</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>JSONテキストを値として読む。<code>'[1, 2]' JSON-DECODE</code>は<code>[ 1 2 ]</code>。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(<code>'0.1' JSON-DECODE</code>は<code>1/10</code>で、浮動小数点にはならない)、<code>true</code>/<code>false</code>は真偽値、<code>null</code>はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は<code>invalidEncoding</code>を投影する。これは<code>NUM</code>が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値や、数値リテラルの上限より多くの桁の数は<code>spaceExhausted</code>を投影する。上限を超えるあらゆる具体化の結末である(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(<code>nonText</code>)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'{&quot;a&quot;: 1, &quot;b&quot;: [true, null]}' JSON-DECODE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ value ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>textIsNotJson,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-JSON-ENCODE">
+<h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
+<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外の有理数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。このワードが書いたものを解読すると与えた値が戻り、字句として書かれた有理数はそのStringとして戻るので、<code>NUM</code>で数を取り戻せる。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>valueHasNoJsonImage</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<h3 id="family-control">制御</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#control">制御構文(<code>SELECT</code>, <code>MAP</code>)</a></p>
+<div class="word-entry" id="word-EXEC">
+<h4><code>EXEC</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ブロックをその場で実行し、結果をスタックに残す。<code>[ 1 2 ADD ] EXEC</code>は<code>3</code>。他のコードと同じくスタックを読み書きするので、<code>2 [ 3 MUL ] EXEC</code>は<code>6</code>。ブロックでないものは<code>notExecutable</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 ADD ] EXEC</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ code ] -&gt; [ result... ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 variable</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>notExecutable</code></dd>
+<dt>条項</dt><dd><code>LANG.MACHINE.TRANSFORMERS</code>, <code>LANG.SOURCE.CODE</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-FAIL">
+<h4><code>FAIL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>プログラムが述べるERRORを起こす。<code>'width must be positive' FAIL</code>は分類<code>declaredFailure</code>、そのテキストをメッセージとして評価を止める。これはABSENTがユーザーワードに与えるものの残り半分で、三分法の3つ目の結末、つまりうまくいかなかったデータではなく誤った呼び出しのためのものである。他のERRORと同じく伝播し、捕まえられない。回復できる値が欲しい呼び出し側はABSENTを求める。テキストでないオペランドは<code>nonText</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'width must be positive' FAIL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ message ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code>, <code>declaredFailure</code></dd>
+<dt>条項</dt><dd><code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.ERROR</code></dd>
+</dl>
+</div>
+<h3 id="family-dictionary">辞書と名前</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#words">ワードと名前(<code>DEF</code>, <code>BIND</code>)</a></p>
+<div class="word-entry" id="word-CONTRACT">
+<h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ワードまたはブロックの契約をRecordで答える。<code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>symbolNamesNoWord</code> → <code>notFound</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>notASymbol</code></dd>
+<dt>条項</dt><dd><code>LANG.CONTRACT.REGISTRY</code>, <code>LANG.CONTRACT.CHECK</code>, <code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.SOURCE.CODE</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-BIND">
+<h4><code>BIND</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>値に名前を付け、それを作ったフレームの残りで使えるようにする。<code>5 'N' BIND N N ADD</code>は<code>10</code>、<code>[ 1 2 ] [ 'A' 'B' ] BIND B A SUB</code>は<code>1</code>。名前が1つなら値全体を受け取り、複数なら同じ長さのベクトルを位置ごとに分解する。両オペランドとも消費され、その後名前を書くたびに、何回でもその値が積まれる。束縛はそのフレームの中に書かれたブロックには届き、そこから呼ばれたワードには決して届かず、フレームが終わると終わる。CoreワードかUserワードがすでに持つ名前は拒否されるので、名前はワードか束縛のどちらかであって、両方にはならない。直接または他の束縛を通して自分自身の束縛を名指す値は、DEFと同じ規則で<code>selfReferentialDefinition</code>として拒否される(LANG.DICTIONARY.ACYCLIC)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 2 3 ] 'XS' BIND</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] [ name... ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code>, <code>nameConflict</code>, <code>shapeMismatch</code>, <code>invalidName</code>, <code>selfReferentialDefinition</code></dd>
+<dt>条項</dt><dd><code>LANG.SOURCE.FRAME</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEF">
+<h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義は、他がまだそれを呼んでいなければそれを置き換える(<code>definitionConflict</code>)。Coreワードの名前は<code>protectedWord</code>、束縛が持つ名前は<code>nameConflict</code>、1つのトークンとして書けない名前は<code>invalidName</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>control</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd><code>dictionaryWrite</code></dd>
+<dt>ERROR条件</dt><dd><code>invalidName</code>, <code>protectedWord</code>, <code>nameConflict</code>, <code>definitionConflict</code>, <code>selfReferentialDefinition</code>, <code>nonText</code>, <code>invalidDefinitionBody</code></dd>
+<dt>条項</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DEL">
+<h4><code>DEL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>辞書からUserワードを削除する。<code>[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?</code>は<code>TRUE</code>。名前がもうワードを名指さないからである。Coreワードは拒否され(<code>protectedWord</code>)、どのUserワードも持たない名前は<code>wordNotFound</code>、他のUserワードがまだ呼んでいるワードは、それらを先に削除するまで<code>definitionConflict</code>。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ 1 ] 'W' DEF 'W' DEL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ name ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>partial</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd><code>dictionaryDelete</code></dd>
+<dt>ERROR条件</dt><dd><code>wordNotFound</code>, <code>protectedWord</code>, <code>nonText</code>, <code>definitionConflict</code></dd>
+<dt>条項</dt><dd><code>LANG.DICTIONARY.RESOLUTION</code>, <code>LANG.DICTIONARY.MUTATION</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-DIGEST">
+<h4><code>DIGEST</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>ワードのコンテンツ同一性、または値の意味内容のダイジェストをテキストで答える。<code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code>は<code>TRUE</code>。UserワードをSymbolで名指せばそのワードのコンテンツ同一性(正規化された定義と、それが呼ぶワードたちの同一性にわたるダイジェストで、辞書がすでに保持しているもの。LANG.DICTIONARY.MUTATION)を、CoreワードをSymbolで名指せばその封印されたワードの固定の同一性を答える。それ以外の値は、何も名指さないSymbolを含め、その意味内容のダイジェストを答える。<code>EQ</code>が1つの値とみなす2つの値は、組み立て方によらず同じダイジェストになるので、<code>8 SQRT DIGEST</code>は<code>2 SQRT 2 SQRT ADD DIGEST</code>と等しく、NILは理由によってダイジェストされる。等しいダイジェストは1つのものを意味し、等しくないダイジェストは何も意味しない。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>[ ADD ] 0 GET DIGEST</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ digest ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
+</dl>
+</div>
+<h3 id="family-absence">不在(NIL)</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#nil">NILの規則</a></p>
+<div class="word-entry" id="word-NIL">
+<h4><code>NIL</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>プログラムに書かれた不在。<code>NIL NIL?</code>は<code>TRUE</code>で、理由は<code>literal</code>。<code>NIL NIL-REASON</code>は<code>'literal'</code>(LANG.VALUES.NIL)。プログラム自身の理由を持つ不在はABSENTで書く。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>NIL</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">-&gt; [ NIL ]</span></dd>
+<dt>スタック</dt><dd>入力 0 → 出力 1</dd>
+<dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-NIL_3f">
+<h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>値が不在かどうか。<code>1 0 DIV NIL?</code>は<code>TRUE</code>、<code>5 NIL?</code>は<code>FALSE</code>。値全体について問うので、NILを持つベクトルは存在している。<code>[ 1 NIL ] NIL?</code>は<code>FALSE</code>。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 0 DIV NIL?</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-NIL-REASON">
+<h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>不在が持つ理由をテキストで答える。<code>1 0 DIV NIL-REASON</code>は<code>'divisionByZero'</code>で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>valueIsNotNil</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<div class="word-entry" id="word-ABSENT">
+<h4><code>ABSENT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>プログラムが理由を述べるNIL。<code>'rate not quoted' ABSENT NIL?</code>は<code>TRUE</code>、<code>'rate not quoted' ABSENT NIL-REASON</code>は<code>'rate not quoted'</code>を答える。登録された理由は<code>userDeclared</code>で、テキストがNIL-REASONの答える理由になる。だからユーザーワードも、Coreワードの契約とまったく同じように答えがない理由を言え、呼び出し側も同じ書き方<code>subject 'S' BIND fallback S S NIL? SELECT</code>で回復できる。テキストは値の一部なので(LANG.VALUES.NIL)、テキストの違う2つの不在は2つの値である。テキストでないオペランドはプログラムの誤り。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>'rate not quoted' ABSENT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ reason ] -&gt; [ NIL ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>always</code> → <code>userDeclared</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>ERROR条件</dt><dd><code>nonText</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
+<h3 id="family-output">出力</h3>
+<p class="word-family-lead">サンプル付きの解説: <a href="#output">出力(<code>PRINT</code>)</a></p>
+<div class="word-entry" id="word-PRINT">
+<h4><code>PRINT</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>値を消費して出力に書く。<code>42 PRINT</code>は<code>42/1</code>を書き、何も残さない。テキスト以外の値はスタックの表示どおりに書かれる。テキストはスタックが示す引用符なしに生の文字として書かれ('TEST'はTESTとして出力される)、ベクトルの中に入れ子になったテキストは引用符を保つ。出力は機械の外へ出る唯一の作用である(LANG.EFFECTS.OUTPUT)。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>42 PRINT</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ ]</span></dd>
+<dt>スタック</dt><dd>入力 1 → 出力 0</dd>
+<dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>hostRelative</code></dd>
+<dt>作用</dt><dd><code>consoleWrite</code></dd>
+<dt>条項</dt><dd><code>LANG.EFFECTS.OUTPUT</code>, <code>LANG.MACHINE.ORDER</code></dd>
+</dl>
+</div>
+</section>
+<!-- END generated word index -->
             </article>
 
             <nav class="ref-nav" aria-label="Index">
@@ -3057,6 +3897,7 @@ FILTER</code></td>
                     <li><a href="#words">ワードと名前</a></li>
                     <li><a href="#output">出力</a></li>
                     <li><a href="#patterns">よくあるパターン</a></li>
+                    <li><a href="#word-index">ワード一覧</a></li>
                 </ul>
             </nav>
         </main>
@@ -3065,139 +3906,5 @@ FILTER</code></td>
             <span>&copy; <span id="footer-year"></span> <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">masamoto yamashiro</a></span>
     </footer>
 
-    <script>
-        document.getElementById('footer-year').textContent = new Date().getFullYear();
-
-        // 言語セレクタ: このページでは常に「日本語」が選択値。「English」を
-        // 選ぶと英語版の同じ #section へ遷移する。遷移先の URL は現在表示中の
-        // 頁 (#hash) を引き継ぐ必要があるので、読み込み時だけでなく
-        // hashchange でも追従させる。
-        (function () {
-            var langSelect = document.getElementById('lang-select');
-            if (!langSelect) return;
-            function syncLangSelect() {
-                langSelect.value = 'ja';
-            }
-            langSelect.addEventListener('change', function () {
-                if (langSelect.value === 'en') {
-                    window.location.href = '../index.html' + window.location.hash;
-                }
-            });
-            window.addEventListener('hashchange', syncLangSelect);
-            syncLangSelect();
-        })();
-
-        // 各サンプルの「Playground で開く」リンクに、そのサンプルの表(先頭行・
-        // サンプルコード列)の本文を埋め込んだ URL を設定する。アプリ本体は
-        // #code=<encodeURIComponent> を読み取ってエディタへ流し込む
-        // (gui-application.ts: applyPlaygroundCodeFromUrl)。
-        document.querySelectorAll('.js-open-playground').forEach(function (link) {
-            var sample = link.closest('.sample');
-            var codeEl = sample && sample.querySelector('.ref-table tbody tr td:first-child code');
-            if (!codeEl) return;
-            var code = codeEl.textContent.replace(/\s+$/, '');
-            link.setAttribute('href', '../../index.html#code=' + encodeURIComponent(code));
-        });
-
-        // navigation の各項目は、それぞれ一枚の頁(article 内の section)に対応する。
-        // 選択された頁だけを表示し、残りは隠す素朴なページ切り替え。URL ハッシュ
-        // (例: #vectors)が現在の頁を表すので、戻る/進むやブックマークも効く。
-        (function () {
-            var pages = Array.prototype.slice.call(document.querySelectorAll('.ref-page'));
-            var navLinks = Array.prototype.slice.call(
-                document.querySelectorAll('.ref-nav a[href^="#"]')
-            );
-            if (pages.length === 0) return;
-
-            var mobileQuery = window.matchMedia('(max-width: 768px)');
-            // モバイルではこのコンテンツ領域だけがスクロールする(body は固定)。
-            var contentArea = document.querySelector('.ref-main');
-
-            function pageIdFromLink(link) {
-                return (link.getAttribute('href') || '').replace(/^#/, '');
-            }
-
-            // ハッシュが指す頁。頁 id そのものだけでなく、頁内の見出し id
-            // (統合で消えた旧頁の id は <h3 id> として温存してある)を指す
-            // ハッシュも、それを含む頁として解決する。
-            function pageFromHash() {
-                var id = window.location.hash.replace(/^#/, '');
-                if (!id) return null;
-                for (var i = 0; i < pages.length; i++) {
-                    if (pages[i].id === id) return pages[i];
-                }
-                var target = document.getElementById(id);
-                return target ? target.closest('.ref-page') : null;
-            }
-
-            function currentPageIndex() {
-                var page = pageFromHash();
-                return page ? pages.indexOf(page) : 0;
-            }
-
-            // 前後の頁へ移動する(端では何もしない)。hash を書き換えると
-            // hashchange 経由で syncFromHash が走り、頁切り替えと先頭スクロールを行う。
-            function goToPageDelta(delta) {
-                var next = currentPageIndex() + delta;
-                if (next < 0 || next >= pages.length) return;
-                window.location.hash = '#' + pages[next].id;
-            }
-
-            // Page visibility itself is handled in CSS via :target / :has(); JS only
-            // mirrors the current page into aria-current (accessibility; CSS cannot
-            // set it), falling back to the first page when nothing is targeted.
-            function markCurrentPage() {
-                var target = pageFromHash() || pages[0];
-
-                navLinks.forEach(function (link) {
-                    if (pageIdFromLink(link) === target.id) {
-                        link.setAttribute('aria-current', 'page');
-                    } else {
-                        link.removeAttribute('aria-current');
-                    }
-                });
-            }
-
-            function syncFromHash(userInitiated) {
-                markCurrentPage();
-                // モバイルでは頁を切り替えたら先頭へ戻し、新しい頁を頭から読めるように。
-                if (userInitiated && mobileQuery.matches && contentArea) {
-                    contentArea.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            }
-
-            window.addEventListener('hashchange', function () { syncFromHash(true); });
-            syncFromHash(false);
-
-            // モバイル: 横スワイプでも頁を行き来できるようにする。左スワイプで次、
-            // 右スワイプで前の頁へ。横スクロール可能な表の上で始まったスワイプは
-            // 表のスクロールに譲る。
-            (function () {
-                if (!contentArea) return;
-                var SWIPE_MIN_X = 60;   // この距離以上の水平移動でスワイプとみなす
-                var startX = 0, startY = 0, tracking = false;
-
-                contentArea.addEventListener('touchstart', function (e) {
-                    if (e.touches.length !== 1 || e.target.closest('.ref-table-wrap')) {
-                        tracking = false;
-                        return;
-                    }
-                    startX = e.touches[0].clientX;
-                    startY = e.touches[0].clientY;
-                    tracking = true;
-                }, { passive: true });
-
-                contentArea.addEventListener('touchend', function (e) {
-                    if (!tracking) return;
-                    tracking = false;
-                    var dx = e.changedTouches[0].clientX - startX;
-                    var dy = e.changedTouches[0].clientY - startY;
-                    // 水平移動が十分大きく、かつ縦より明確に大きいときだけ反応する。
-                    if (Math.abs(dx) < SWIPE_MIN_X || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-                    goToPageDelta(dx < 0 ? 1 : -1);
-                }, { passive: true });
-            })();
-        })();
-    </script>
 </body>
 </html>

@@ -1,8 +1,9 @@
 // LANG.AUTHORITY.PRESENT — the worked-example half of the clause.
 //
-// The Reference (public/docs/ja/index.html) shows 80-odd sample blocks, each a
-// program next to the value it is said to produce, each with a "Playgroundで開く"
-// button that loads it ready to run. A reader learns the language by running
+// The Reference (public/docs/en/index.html and its Japanese version,
+// public/docs/ja/index.html) shows 80-odd sample blocks, each a program next to
+// the value it is said to produce, each with an "Open in Playground" button that
+// loads it ready to run. A reader learns the language by running
 // them, so an example that does not produce its stated value is not a cosmetic
 // defect: the diagnostic is precise, the Reference is confident, and the reader
 // concludes they mistyped it.
@@ -22,11 +23,14 @@
 // result against the expectation printed beside it, so the Reference cannot
 // drift from the language again without CI saying so.
 //
+// Both language versions are run: they share their sample code by design, but
+// each is a page a reader runs, so each is checked rather than assumed equal.
+//
 // The three expectation notations are distinguished by their own markup,
 // not by guessing at the text:
 //
-//   <td><code>VALUE</code></td>   under <th>期待値</th>         → final stack
-//   <td><code>TEXT</code></td>    under <th>期待される出力</th>  → standard output
+//   <td><code>VALUE</code></td>   under Expected value / 期待値          → final stack
+//   <td><code>TEXT</code></td>    under Expected output / 期待される出力  → standard output
 //   <td>error</td>                (bare, no <code>)            → any error
 //   <td>—</td>                    (bare em dash)                → empty stack
 //
@@ -38,15 +42,14 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const SURFACE = 'public/docs/ja/index.html';
+const SURFACES = [
+  { path: 'public/docs/en/index.html', stackHeader: 'Expected value', outputHeader: 'Expected output' },
+  { path: 'public/docs/ja/index.html', stackHeader: '期待値', outputHeader: '期待される出力' },
+];
 const BINARY = 'rust/target/debug/ajisai';
 
-const STACK_HEADER = '期待値';
-const OUTPUT_HEADER = '期待される出力';
 const ANY_ERROR = 'error';
 const EMPTY_STACK = '—';
-
-const html = readFileSync(SURFACE, 'utf8');
 
 // `<br>` is a line break in the sample source, and a line break ends a `#`
 // comment, so it has to become a newline rather than be stripped with the rest
@@ -73,35 +76,54 @@ const blockPattern = /<div class="sample">([\s\S]*?)<div class="sample-actions">
 const rowPattern =
   /<tr>\s*<td><code>([\s\S]*?)<\/code><\/td>\s*<td>([\s\S]*?)<\/td>\s*<td class="notes">[\s\S]*?<\/td>\s*<\/tr>/g;
 
-for (const block of html.matchAll(blockPattern)) {
-  const body = block[1];
-  const line = html.slice(0, block.index).split('\n').length;
-  const header = /<thead>\s*<tr>([\s\S]*?)<\/tr>/.exec(body);
-  const headings = header ? [...header[1].matchAll(/<th>([\s\S]*?)<\/th>/g)].map((m) => cellText(m[1]).trim()) : [];
-  const checksOutput = headings.includes(OUTPUT_HEADER);
-  if (!checksOutput && !headings.includes(STACK_HEADER)) {
-    errors.push(`line ${line}: sample block heads its expectation column "${headings[1] ?? '(none)'}", which is neither "${STACK_HEADER}" nor "${OUTPUT_HEADER}"`);
-    continue;
-  }
-  for (const row of body.matchAll(rowPattern)) {
-    const rawExpectation = row[2].trim();
-    const expectation = cellText(rawExpectation).trim();
-    // A `<code>`-wrapped expectation is a value; a bare one is a notation.
-    const quoted = /^<code>[\s\S]*<\/code>$/.test(rawExpectation);
-    let kind;
-    if (quoted) kind = checksOutput ? 'output' : 'stack';
-    else if (expectation === ANY_ERROR) kind = 'error';
-    else if (expectation === EMPTY_STACK) kind = 'empty';
-    else {
-      errors.push(`line ${line}: sample expects "${expectation}", which is not a value, "${ANY_ERROR}" or "${EMPTY_STACK}"`);
+for (const { path, stackHeader, outputHeader } of SURFACES) {
+  const html = readFileSync(path, 'utf8');
+  const before = samples.length;
+  for (const block of html.matchAll(blockPattern)) {
+    const body = block[1];
+    const line = html.slice(0, block.index).split('\n').length;
+    const header = /<thead>\s*<tr>([\s\S]*?)<\/tr>/.exec(body);
+    const headings = header ? [...header[1].matchAll(/<th>([\s\S]*?)<\/th>/g)].map((m) => cellText(m[1]).trim()) : [];
+    const checksOutput = headings.includes(outputHeader);
+    if (!checksOutput && !headings.includes(stackHeader)) {
+      errors.push(`${path}:${line}: sample block heads its expectation column "${headings[1] ?? '(none)'}", which is neither "${stackHeader}" nor "${outputHeader}"`);
       continue;
     }
-    samples.push({ line, code: cellText(row[1]), expectation, kind });
+    for (const row of body.matchAll(rowPattern)) {
+      const rawExpectation = row[2].trim();
+      const expectation = cellText(rawExpectation).trim();
+      // A `<code>`-wrapped expectation is a value; a bare one is a notation.
+      const quoted = /^<code>[\s\S]*<\/code>$/.test(rawExpectation);
+      let kind;
+      if (quoted) kind = checksOutput ? 'output' : 'stack';
+      else if (expectation === ANY_ERROR) kind = 'error';
+      else if (expectation === EMPTY_STACK) kind = 'empty';
+      else {
+        errors.push(`${path}:${line}: sample expects "${expectation}", which is not a value, "${ANY_ERROR}" or "${EMPTY_STACK}"`);
+        continue;
+      }
+      samples.push({ path, line, code: cellText(row[1]), expectation, kind });
+    }
+  }
+  if (samples.length === before) errors.push(`${path}: found no samples — the extraction pattern no longer matches the page.`);
+}
+
+// The language versions differ in prose only: the same samples, in the same
+// order, with the same expectations. A sample changed in one version and not
+// the other is reported here, before anything runs.
+const programsOf = (path) => samples.filter((sample) => sample.path === path).map((sample) => `${sample.code} ⇒ ${sample.expectation}`);
+const [reference, ...translations] = SURFACES.map(({ path }) => ({ path, programs: programsOf(path) }));
+for (const translation of translations) {
+  const length = Math.max(reference.programs.length, translation.programs.length);
+  for (let i = 0; i < length; i += 1) {
+    if (reference.programs[i] === translation.programs[i]) continue;
+    errors.push(`sample ${i + 1} differs between the language versions:\n  ${reference.path}: ${reference.programs[i] ?? '(none)'}\n  ${translation.path}: ${translation.programs[i] ?? '(none)'}`);
+    break;
   }
 }
 
-if (samples.length === 0) {
-  console.error(`[reference-samples] found no samples in ${SURFACE} — the extraction pattern no longer matches the page.`);
+if (errors.length) {
+  for (const error of errors) console.error(`[reference-samples] ${error}`);
   process.exit(1);
 }
 
@@ -125,7 +147,7 @@ try {
     // report the CLI appends.
     const output = lines.slice(0, stackLine ? lines.indexOf(stackLine) : lines.length).join('\n').trim();
     const failed = stack === null;
-    const at = `line ${sample.line}: ${sample.code.replace(/\n/g, ' ⏎ ')}`;
+    const at = `${sample.path}:${sample.line}: ${sample.code.replace(/\n/g, ' ⏎ ')}`;
 
     if (sample.kind === 'error') {
       if (!failed) errors.push(`${at}\n  expected an error, got stack ${stack}`);
@@ -151,8 +173,8 @@ try {
 if (errors.length) {
   for (const error of errors) console.error(`[reference-samples] ${error}`);
   console.error(`[reference-samples] ${errors.length} of ${samples.length} Reference samples do not produce the value printed beside them.`);
-  console.error('[reference-samples] A sample carries a "Playgroundで開く" button, so a reader runs it: fix the sample, or fix the expectation.');
+  console.error('[reference-samples] A sample carries an "Open in Playground" button, so a reader runs it: fix the sample, or fix the expectation.');
   process.exitCode = 1;
 } else {
-  console.log(`[reference-samples] all ${samples.length} samples in ${SURFACE} produce the value printed beside them.`);
+  console.log(`[reference-samples] all ${samples.length} samples in ${SURFACES.map((s) => s.path).join(' and ')} produce the value printed beside them.`);
 }

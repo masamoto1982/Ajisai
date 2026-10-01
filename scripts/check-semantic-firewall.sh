@@ -88,12 +88,28 @@ check_user_visible_absent 'memoization vocabulary' '[Mm]emoiz'
 # describe Ajisai as it currently is. History and superseded designs live in
 # docs/dev/, which defines nothing. This catches the framing half of the
 # clause; check-reading-surfaces.mjs catches the vocabulary half.
-READING_SURFACES=(README.md public/docs/index.html public/docs/ja/index.html SPECIFICATION.html spec/language-semantics.md spec/gui-semantics.md)
+READING_SURFACES=(README.md public/docs/index.html public/docs/en/index.html public/docs/ja/index.html SPECIFICATION.html spec/language-semantics.md spec/gui-semantics.md)
 
+# The Reference's Word list is spec/words.json's own per-Word documentation,
+# rendered by scripts/generate-word-reference.mjs between two markers. Its
+# wording belongs to the registry, where a Word's effect is described ("the
+# name no longer names a Word" after DEL), so the rendered copy is left out of
+# this prose check; the hand-written pages around it are checked in full.
+HISTORY_FRAMING='\b([Nn]o longer|[Uu]sed to be|[Ff]ormerly|[Pp]reviously|[Dd]eprecated|[Ll]egacy|[Ee]arlier versions?|[Oo]nce (had|carried|supported)|has been removed|was removed|reserved for future)\b'
+history_scratch="$(mktemp -d)"
+history_surfaces=()
+for surface in "${READING_SURFACES[@]}"; do
+  mkdir -p "$history_scratch/$(dirname "$surface")"
+  sed '/<!-- BEGIN generated word index/,/<!-- END generated word index -->/d' "$surface" > "$history_scratch/$surface"
+  history_surfaces+=("$surface")
+done
+pushd "$history_scratch" > /dev/null
 check_absent \
   'history framing on a reading surface (LANG.AUTHORITY.PRESENT)' \
-  '\b([Nn]o longer|[Uu]sed to be|[Ff]ormerly|[Pp]reviously|[Dd]eprecated|[Ll]egacy|[Ee]arlier versions?|[Oo]nce (had|carried|supported)|has been removed|was removed|reserved for future)\b' \
-  "${READING_SURFACES[@]}"
+  "$HISTORY_FRAMING" \
+  "${history_surfaces[@]}"
+popd > /dev/null
+rm -rf "$history_scratch"
 
 if [[ "$failed" -ne 0 ]]; then
   echo "[semantic-firewall] residue checks failed" >&2

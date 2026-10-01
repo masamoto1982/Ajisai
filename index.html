@@ -55,14 +55,15 @@
                     </svg>
                     MCP
                 </a>
-                <!-- The English Word Reference, generated from spec/words.json
-                     (scripts/generate-word-reference.mjs). The full Japanese
-                     Reference is one link away, on docs/index.html. -->
-                <a id="reference-link" href="docs/en/words.html" class="btn" target="_blank" rel="noopener noreferrer">
+                <!-- The Reference: the guide with runnable samples, and the Word
+                     list generated from spec/words.json. It opens in the
+                     reader's language when there is a version for it (Japanese
+                     or English); the page's own selector switches between them. -->
+                <a id="reference-link" href="docs/en/index.html" class="btn" target="_blank" rel="noopener noreferrer">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
                     </svg>
-                    Word Reference
+                    Reference
                 </a>
             </div>
         </header>
@@ -156,6 +157,11 @@
             <span>&copy; <span id="footer-year"></span> <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">masamoto yamashiro</a></span>
         </footer>
         <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
+        <script>
+            if ((navigator.language || '').toLowerCase().startsWith('ja')) {
+                document.getElementById('reference-link').href = 'docs/ja/index.html';
+            }
+        </script>
     </div>
 
     <script type="module">

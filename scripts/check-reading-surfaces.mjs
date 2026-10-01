@@ -82,7 +82,7 @@ const EXAMPLE_NAMES = new Set([
 // ordinary word, not a reserved one.
 const HOST_COMMANDS = new Set(['RESET', 'STACK-CLEAR', 'EDITOR-CLEAR', 'LOOKUP']);
 
-const SURFACES = ['README.md', 'public/docs/index.html', 'public/docs/ja/index.html', 'SPECIFICATION.html'];
+const SURFACES = ['README.md', 'public/docs/index.html', 'public/docs/en/index.html', 'public/docs/ja/index.html', 'SPECIFICATION.html'];
 
 // Word-shaped: upper-case initial, then the characters an Ajisai name may use.
 // Anything else inside <code> is a literal, a fragment, or punctuation.
@@ -131,6 +131,10 @@ const UNALLOCATED_MENTIONS = new Set([
   // language allocates them nothing, and `{ }` also appears as the Record's
   // display, which is not source.
   '(', ')', '{', '}',
+  // the predicate naming convention: HAS?'s entry in the Reference's Word list
+  // says a predicate "ends in `?`". That names a character of a name, not a
+  // Word, the way `.` above does.
+  '?',
 ]);
 
 const report = reporter('reading-surfaces');

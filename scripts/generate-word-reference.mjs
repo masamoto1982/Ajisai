@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { fatal, words as wordsDocument, writeOrCheck } from './lib/common.mjs';
+import { createHash } from 'node:crypto';
+import { families, fatal, readJson, readText, words as wordsDocument, writeOrCheck } from './lib/common.mjs';
 
 const words = wordsDocument();
 const fail = (message) => fatal('word-reference', message);
@@ -70,10 +71,23 @@ for (const entry of words.entries) {
 
 const output = `${lines.join('\n').trimEnd()}\n`;
 
-// The same inventory as a static English page for the Playground's Reference
-// button (public/docs/en/words.html). It carries the fields the Markdown does
-// plus the stack effect and partiality, and loads nothing from outside the
-// file, so it reads the same wherever the page is served from.
+// The same inventory, as the Word list page (#word-index) of the Reference, in
+// both languages: public/docs/en/index.html and public/docs/ja/index.html. The
+// narrative guide explains the language; this page lists every Word with its
+// contract, so a reader can see the whole vocabulary at a glance and jump from
+// a Word to the guide page that explains its family. The page is written
+// between two markers of each Reference file and nowhere else, and it loads
+// nothing new: the Reference's own stylesheet (public/docs/reference.css)
+// styles it.
+//
+// Every field except the summary is an identifier from spec/words.json and is
+// the same in both languages; only the labels around it are translated. The
+// Japanese summary comes from docs/i18n/word-summaries.ja.json, which records a
+// digest of the English summary it translates, so a changed English summary
+// fails this script until its translation is revisited.
+
+const BEGIN = '<!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->';
+const END = '<!-- END generated word index -->';
 
 const escapeHtml = (text) => String(text)
   .replace(/&/g, '&amp;')
@@ -83,118 +97,209 @@ const escapeHtml = (text) => String(text)
 
 // A summary marks Ajisai text with backticks, as the Markdown does.
 const inlineHtml = (text) => escapeHtml(text).replace(/`([^`]+)`/g, '<code>$1</code>');
-const codeList = (items) => (items.length ? items.map((item) => `<code>${escapeHtml(item)}</code>`).join(', ') : 'none');
 const anchorOf = (name) => `word-${Array.from(name, (ch) => (/[A-Za-z0-9-]/.test(ch) ? ch : `_${ch.codePointAt(0).toString(16)}`)).join('')}`;
+const backticked = (text) => [...text.matchAll(/`([^`]+)`/g)].map((m) => m[1]).sort();
+const digestOf = (text) => createHash('sha256').update(text).digest('hex').slice(0, 16);
 
-function htmlTier(entry) {
-  if (entry.vocabularyTier === 'kernel') return 'Semantic Kernel';
-  return `Standard (<code>${escapeHtml(entry.standardKind)}</code>)`;
+// Each family's label, and the guide section that explains it.
+const FAMILIES = {
+  booleanLogic: { en: 'Logic', ja: '論理', guide: 'logic' },
+  comparison: { en: 'Comparison', ja: '比較', guide: 'comparison' },
+  exactArithmetic: { en: 'Exact arithmetic', ja: '厳密な算術', guide: 'arithmetic' },
+  collection: { en: 'Vectors', ja: 'ベクトル', guide: 'vector-ops' },
+  record: { en: 'Records', ja: 'Record', guide: 'records' },
+  higherOrder: { en: 'Iteration', ja: '反復', guide: 'higher-order' },
+  text: { en: 'Text', ja: '文字列', guide: 'strings-ops' },
+  control: { en: 'Control', ja: '制御', guide: 'control' },
+  dictionary: { en: 'Dictionary and names', ja: '辞書と名前', guide: 'words' },
+  absence: { en: 'Absence (NIL)', ja: '不在(NIL)', guide: 'nil' },
+  output: { en: 'Output', ja: '出力', guide: 'output' },
+};
+
+const LANGUAGES = {
+  en: {
+    path: 'public/docs/en/index.html',
+    title: 'Word list',
+    intro: (total, kernel, standard) => `Every Word of the canonical vocabulary with its contract, generated from <code>spec/words.json</code>: ${total} Words, of which ${kernel} form the Semantic Kernel and ${standard} are Standard Words. Every one is an ordinary Core Word reached by its plain name; the tier only says where it sits in the design (see <a href="#dictionaries">Dictionaries and Word identity</a>). The table below lists them by family; each family links to the page of this Reference that explains it with samples.`,
+    familyHeading: 'Family',
+    wordsHeading: 'Words',
+    explained: 'Explained with samples in',
+    kernel: 'Semantic Kernel',
+    standard: 'Standard',
+    none: 'none',
+    stack: (inputs, outputs) => `${inputs} input(s) → ${outputs} output(s)`,
+    labels: {
+      syntax: 'Syntax',
+      stackEffect: 'Stack effect',
+      stack: 'Stack',
+      operands: 'Operands',
+      nilPolicy: 'NIL policy',
+      projection: 'projection',
+      partiality: 'Partiality',
+      purity: 'Purity / determinism',
+      effects: 'Effects',
+      errors: 'ERROR conditions',
+      clauses: 'Clauses',
+    },
+    summary: (entry) => entry.documentation.summary,
+  },
+  ja: {
+    path: 'public/docs/ja/index.html',
+    title: 'ワード一覧',
+    intro: (total, kernel, standard) => `正準な語彙のすべてのワードを、その契約とともに<code>spec/words.json</code>から生成した一覧です。全${total}語のうち${kernel}語がSemantic Kernel、${standard}語がStandardワードです。どれも平易な名前で参照できる普通のCoreワードで、階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>を参照)。下の表は族ごとにまとめたもので、各族からはサンプル付きで解説している本書の頁へ移れます。`,
+    familyHeading: '族',
+    wordsHeading: 'ワード',
+    explained: 'サンプル付きの解説',
+    kernel: 'Semantic Kernel',
+    standard: 'Standard',
+    none: 'なし',
+    stack: (inputs, outputs) => `入力 ${inputs} → 出力 ${outputs}`,
+    labels: {
+      syntax: '構文',
+      stackEffect: 'スタック効果',
+      stack: 'スタック',
+      operands: 'オペランド',
+      nilPolicy: 'NIL方針',
+      projection: '投影',
+      partiality: '部分性',
+      purity: '純粋性 / 決定性',
+      effects: '作用',
+      errors: 'ERROR条件',
+      clauses: '条項',
+    },
+    summary: (entry) => japaneseSummary(entry),
+  },
+};
+
+const japanese = readJson('docs/i18n/word-summaries.ja.json').entries;
+for (const name of Object.keys(japanese)) {
+  if (!names.has(name)) fail(`docs/i18n/word-summaries.ja.json translates ${name}, which is not a canonical Word`);
 }
 
-function htmlEntry(entry) {
+function japaneseSummary(entry) {
+  const translation = japanese[entry.name];
+  const english = entry.documentation.summary;
+  if (!translation) fail(`docs/i18n/word-summaries.ja.json has no Japanese summary for ${entry.name}`);
+  if (translation.source !== digestOf(english)) {
+    fail(`the English summary of ${entry.name} changed; revisit its Japanese summary in docs/i18n/word-summaries.ja.json and set its source to ${digestOf(english)}`);
+  }
+  if (JSON.stringify(backticked(translation.summary)) !== JSON.stringify(backticked(english))) {
+    fail(`the Japanese summary of ${entry.name} does not carry exactly the English summary's backticked Ajisai spans`);
+  }
+  return translation.summary;
+}
+
+const codeList = (items, lang) => (items.length ? items.map((item) => `<code>${escapeHtml(item)}</code>`).join(', ') : lang.none);
+
+function htmlTier(entry, lang) {
+  if (entry.vocabularyTier === 'kernel') return lang.kernel;
+  return `${lang.standard} · ${escapeHtml(entry.standardKind)}`;
+}
+
+function htmlProjection(entry, lang) {
+  if (entry.projection.when === 'never') return lang.none;
+  const reasons = Array.isArray(entry.projection.reason) ? entry.projection.reason : [entry.projection.reason ?? 'literal'];
+  return `<code>${escapeHtml(entry.projection.when)}</code> → ${codeList(reasons, lang)}`;
+}
+
+function htmlEntry(entry, lang) {
+  const { labels } = lang;
   const rows = [
-    ['Syntax', `<code>${escapeHtml(entry.documentation.syntax)}</code>`],
-    ['Stack effect', `<code>${escapeHtml(entry.documentation.stackEffect)}</code>`],
-    ['Stack', `${escapeHtml(stackArity(entry.stack.inputs))} input(s) → ${escapeHtml(stackArity(entry.stack.outputs))} output(s)`],
+    [labels.syntax, `<code>${escapeHtml(entry.documentation.syntax)}</code>`],
+    // A stack effect is notation about the stack, not an Ajisai program, so it
+    // is set apart from the gray Ajisai channel (docs/dev/ajisai-authoring-style.md).
+    [labels.stackEffect, `<span class="notation">${escapeHtml(entry.documentation.stackEffect)}</span>`],
+    [labels.stack, escapeHtml(lang.stack(stackArity(entry.stack.inputs), stackArity(entry.stack.outputs)))],
   ];
   if (Array.isArray(entry.stack.operands) && entry.stack.operands.length > 0) {
-    rows.push(['Operands', `${codeList(entry.stack.operands)} (LANG.FAILURE.PASSTHROUGH)`]);
+    rows.push([labels.operands, `${codeList(entry.stack.operands, lang)} (LANG.FAILURE.PASSTHROUGH)`]);
   }
   rows.push(
-    ['Family', `<code>${escapeHtml(entry.family)}</code>`],
-    ['Vocabulary tier', htmlTier(entry)],
-    ['NIL policy', `<code>${escapeHtml(entry.nilPolicy)}</code>; projection: ${escapeHtml(projection(entry))}`],
-    ['Partiality', `<code>${escapeHtml(entry.partiality)}</code>`],
-    ['Purity / determinism', `<code>${escapeHtml(entry.purity)}</code> / <code>${escapeHtml(entry.determinism)}</code>`],
-    ['Effects', codeList(entry.effects)],
+    [labels.nilPolicy, `<code>${escapeHtml(entry.nilPolicy)}</code>; ${labels.projection}: ${htmlProjection(entry, lang)}`],
+    [labels.partiality, `<code>${escapeHtml(entry.partiality)}</code>`],
+    [labels.purity, `<code>${escapeHtml(entry.purity)}</code> / <code>${escapeHtml(entry.determinism)}</code>`],
+    [labels.effects, codeList(entry.effects, lang)],
   );
-  if (entry.errorWhen.length) rows.push(['ERROR conditions', codeList(entry.errorWhen)]);
-  rows.push(['Clauses', codeList(entry.clauses)]);
+  if (entry.errorWhen.length) rows.push([labels.errors, codeList(entry.errorWhen, lang)]);
+  rows.push([labels.clauses, codeList(entry.clauses, lang)]);
   return [
-    `<section id="${anchorOf(entry.name)}" aria-labelledby="${anchorOf(entry.name)}-name">`,
-    `<h2 id="${anchorOf(entry.name)}-name"><code>${escapeHtml(entry.name)}</code></h2>`,
-    `<p>${inlineHtml(entry.documentation.summary)}</p>`,
-    '<dl>',
+    `<div class="word-entry" id="${anchorOf(entry.name)}">`,
+    `<h4><code>${escapeHtml(entry.name)}</code> <span class="word-tier">${htmlTier(entry, lang)}</span></h4>`,
+    `<p>${inlineHtml(lang.summary(entry))}</p>`,
+    '<dl class="word-contract">',
     ...rows.map(([term, value]) => `<dt>${term}</dt><dd>${value}</dd>`),
     '</dl>',
-    '</section>',
+    '</div>',
   ].join('\n');
 }
 
-const htmlOutput = `<!DOCTYPE html>
-<!-- Generated by scripts/generate-word-reference.mjs from spec/words.json; do not edit. -->
+function wordIndex(lang) {
+  const groups = families().map(({ id }) => {
+    const family = FAMILIES[id];
+    if (!family) fail(`family ${id} has no label in scripts/generate-word-reference.mjs FAMILIES`);
+    return { id, family, members: words.entries.filter((entry) => entry.family === id) };
+  });
+  const jump = groups.map(({ id, family, members }) => [
+    `<tr><th scope="row"><a href="#family-${id}">${family[lang.code]}</a></th>`,
+    `<td>${members.map((entry) => `<a href="#${anchorOf(entry.name)}"><code>${escapeHtml(entry.name)}</code></a>`).join(' ')}</td></tr>`,
+  ].join(''));
+  const sections = groups.map(({ id, family, members }) => [
+    `<h3 id="family-${id}">${family[lang.code]}</h3>`,
+    `<p class="word-family-lead">${lang.explained}: <a href="#${family.guide}">${guideTitle(lang, family.guide)}</a></p>`,
+    ...members.map((entry) => htmlEntry(entry, lang)),
+  ].join('\n'));
+  return [
+    BEGIN,
+    '<section id="word-index" class="ref-page">',
+    `<h2>${lang.title}</h2>`,
+    `<p>${lang.intro(words.entries.length, tierCount('kernel'), tierCount('standard'))}</p>`,
+    '<div class="ref-table-wrap word-jump">',
+    '<table class="ref-table">',
+    `<thead><tr><th>${lang.familyHeading}</th><th>${lang.wordsHeading}</th></tr></thead>`,
+    '<tbody>',
+    ...jump,
+    '</tbody>',
+    '</table>',
+    '</div>',
+    ...sections,
+    '</section>',
+    END,
+  ].join('\n');
+}
+
+// A family's guide link reads as the heading of the section it points at, taken
+// from the page itself, so a renamed heading cannot leave a stale label here.
+function guideTitle(lang, id) {
+  const match = new RegExp(`<(?:section|h[2-4])[^>]*\\bid="${id}"[^>]*>(?:\\s*<h2>)?([\\s\\S]*?)</h[2-4]>`).exec(lang.source);
+  if (!match) fail(`${lang.path} has no section or heading with id "${id}" for the Word list to link to`);
+  return match[1].trim();
+}
+
+const pages = Object.entries(LANGUAGES).map(([code, lang]) => {
+  lang.code = code;
+  lang.source = readText(lang.path);
+  const begin = lang.source.indexOf(BEGIN);
+  const end = lang.source.indexOf(END);
+  if (begin < 0 || end < begin) fail(`${lang.path} lacks the generated word index markers`);
+  const content = lang.source.slice(0, begin) + wordIndex(lang) + lang.source.slice(end + END.length);
+  return { path: lang.path, content, stale: `${lang.path} is stale; run npm run word:reference` };
+});
+
+// The English Word Reference used to be its own page; it is the Word list of
+// the Reference now. The old address forwards there, keeping a #word-… anchor.
+const redirect = `<!DOCTYPE html>
+<!-- Generated by scripts/generate-word-reference.mjs; do not edit. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ajisai Word Reference</title>
-<style>
-:root {
-  color-scheme: light dark;
-  --ink: #26272a;
-  --ink-light: #5b6068;
-  --page: #ffffff;
-  --well: #eef0f4;
-  --rule: #b3b8c2;
-  --accent: #6b5b95;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #e6e6e9;
-    --ink-light: #a9adb5;
-    --page: #17181b;
-    --well: #26282d;
-    --rule: #464a52;
-    --accent: #b9a8e6;
-  }
-}
-body {
-  margin: 0 auto;
-  max-width: 52rem;
-  padding: 1.5rem 1rem 3rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.6;
-  color: var(--ink);
-  background: var(--page);
-}
-a { color: var(--accent); }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-code {
-  font-family: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
-  font-size: 0.9em;
-  padding: 0 0.2em;
-  border-radius: 3px;
-  background: var(--well);
-  overflow-wrap: anywhere;
-}
-.index { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; padding: 0; list-style: none; }
-section { border-top: 1px solid var(--rule); margin-top: 1.5rem; }
-h2 { font-size: 1.15rem; margin: 1rem 0 0.5rem; }
-dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
-dt { color: var(--ink-light); }
-dd { margin: 0; min-width: 0; }
-@media (max-width: 36rem) {
-  dl { grid-template-columns: 1fr; }
-  dd { margin-bottom: 0.5rem; }
-}
-</style>
+<title>Ajisai Word list</title>
+<meta http-equiv="refresh" content="0; url=index.html#word-index">
+<link rel="canonical" href="index.html#word-index">
+<script>location.replace('index.html' + (location.hash || '#word-index'));</script>
 </head>
 <body>
-<header>
-<p><a href="../index.html">Ajisai documentation</a></p>
-<h1>Ajisai Word Reference</h1>
-<p>Every Word of the canonical vocabulary, generated from <code>spec/words.json</code>:
-${words.entries.length} Words, of which ${tierCount('kernel')} form the Semantic Kernel and ${tierCount('standard')} are Standard Words.
-Every one is an ordinary Core Word reached by its plain name.</p>
-</header>
-<nav aria-label="Words">
-<ul class="index">
-${words.entries.map((entry) => `<li><a href="#${anchorOf(entry.name)}"><code>${escapeHtml(entry.name)}</code></a></li>`).join('\n')}
-</ul>
-</nav>
-<main>
-${words.entries.map(htmlEntry).join('\n')}
-</main>
+<p>The Word list is part of the <a href="index.html#word-index">Ajisai Reference</a>.</p>
 </body>
 </html>
 `;
@@ -203,10 +308,11 @@ writeOrCheck(
   'word-reference',
   [
     { path: 'docs/word-reference.md', content: output, stale: 'docs/word-reference.md is stale; run npm run word:reference' },
-    { path: 'public/docs/en/words.html', content: htmlOutput, stale: 'public/docs/en/words.html is stale; run npm run word:reference' },
+    ...pages,
+    { path: 'public/docs/en/words.html', content: redirect, stale: 'public/docs/en/words.html is stale; run npm run word:reference' },
   ],
   {
     current: `${words.entries.length} canonical Word entries are up to date.`,
-    wrote: `wrote ${words.entries.length} entries to docs/word-reference.md and public/docs/en/words.html`,
+    wrote: `wrote ${words.entries.length} entries to docs/word-reference.md and the Word list of public/docs/en/index.html and public/docs/ja/index.html`,
   },
 );
