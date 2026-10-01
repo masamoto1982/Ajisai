@@ -167,7 +167,7 @@ The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with br
 
 ## `DIV`
 
-The exact quotient, left over right: `1 3 DIV` is `1/3` — never a decimal approximation — and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is `nonNumeric`.
+The exact quotient, left over right: `1 3 DIV` is exactly `1/3`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -539,7 +539,7 @@ The distinct elements of a Vector, each at its first occurrence: `[ 3 1 3 ] UNIQ
 
 ## `TALLY`
 
-How many times each distinct element occurs, as a Record from element to count: `[ 'b' 'a' 'b' ] TALLY` is `[ 'b' 'a' ] [ 2/1 1/1 ] RECORD`, keys in order of first appearance. `KEYS` is exactly what `UNIQUE` answers and `VALUES` is the aligned count Vector, so nothing the earlier Vector-of-counts form could do is lost, and the caller no longer has to call `UNIQUE` separately to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.
+How many times each distinct element occurs, as a Record from element to count: `[ 'b' 'a' 'b' ] TALLY` is `[ 'b' 'a' ] [ 2/1 1/1 ] RECORD`, keys in order of first appearance. `KEYS` is exactly what `UNIQUE` answers and `VALUES` is the aligned count Vector, so no separate `UNIQUE` call is needed to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
@@ -584,7 +584,7 @@ Write a container: a copy of a Vector with the element at an index replaced, or 
 
 ## `GROUP`
 
-Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` reads one group by name, with no `UNIQUE` or `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
@@ -958,7 +958,7 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 
 ## `JSON-DECODE`
 
-Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).
+Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is exactly `1/10`), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
@@ -1118,7 +1118,7 @@ A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is
 
 ## `DEL`
 
-Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.
+Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name then names no Word. A Core Word is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
