@@ -533,19 +533,6 @@ a {
     margin-right: 0.25rem;
 }
 
-/* Grammar in EBNF: notation, not Ajisai code, so it sits outside the gray
-   Ajisai channel. */
-.ref-article pre.ebnf {
-    font-family: var(--font-stack-mono);
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin: 0.75rem 0;
-    padding: 0.75rem 1rem;
-    border: var(--border-main);
-    border-radius: 3px;
-    overflow-x: auto;
-}
-
 /* The lexer diagram (#lexer). It scrolls sideways on a narrow screen rather
    than shrinking its labels past reading. */
 .lexer-diagram {

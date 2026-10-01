@@ -142,7 +142,7 @@
                 <section id="program" class="ref-page">
                     <h2><span class="secnum">1</span> プログラム</h2>
 <p>Ajisaiのプログラムは<strong>要素の並び</strong>です。</p>
-<pre class="ebnf">program = { element } ;</pre>
+<p>要素を0個以上、空白で区切って並べたものがプログラムです。</p>
 <p>要素は空白で区切って書き、左から右へ1つずつ評価されます。条件分岐・反復・定義もワードであり、ほかの要素と同じく並びの中に書きます。<code>[ 2 MUL ] 'DOUBLE' DEF</code>は、ベクトル・文字列・名前の3要素からなるプログラムです。</p>
 <p>プログラムについて述べることは2つあります。テキストがどう要素に区切られるか(<a href="#tokens">1.1 要素の区切り</a>)と、並んだ要素がどう評価されるか(<a href="#stack">1.2 評価</a>)です。要素そのものは<a href="#elements">2 要素</a>で述べます。</p>
 
@@ -578,8 +578,7 @@
                 <section id="elements" class="ref-page">
                     <h2><span class="secnum">2</span> 要素</h2>
 <p>要素は次の4種類です。</p>
-<pre class="ebnf">element = number | string | name | vector ;
-vector  = "[" , { element } , "]" ;</pre>
+<p>要素は、数・文字列・名前・ベクトルのどれか1つです。ベクトルは<code>[</code>と<code>]</code>のあいだに要素を0個以上並べたもので、要素の中に要素が入る唯一の形です。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>要素</th><th>例</th><th>評価すると</th></tr></thead>
@@ -601,14 +600,19 @@ vector  = "[" , { element } , "]" ;</pre>
                     <h2><span class="secnum">2.1</span> 数</h2>
 <h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
-<p>数の文法は次のとおりです。</p>
-<pre class="ebnf">number   = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;
-sign     = "-" | "+" ;
-digits   = ascii digit , { ascii digit } ;
-rational = "/" , digits ;
-fraction = "." , digits ;
-exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
-<p>この文法は語の<strong>全体</strong>に当てはめます。途中まで数に見えても最後まで一致しなければ、壊れた数ではなく名前です。数字はASCIIの<code>0</code>〜<code>9</code>だけで、全角数字は名前の文字です。</p>
+<p>数の書き方は次の4つの形です。「数字の並び」はASCIIの<code>0</code>〜<code>9</code>を1桁以上並べたものです。</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>形</th><th>書き方</th><th>例</th></tr></thead>
+<tbody>
+<tr><td class="notes">整数</td><td class="notes">数字の並び。先頭に<code>-</code>か<code>+</code>を付けてよい</td><td><code>5</code> <code>-5</code> <code>+5</code> <code>007</code></td></tr>
+<tr><td class="notes">分数</td><td class="notes">整数、<code>/</code>、数字の並び</td><td><code>1/2</code> <code>-1/2</code></td></tr>
+<tr><td class="notes">小数</td><td class="notes">整数、<code>.</code>、数字の並び</td><td><code>0.5</code> <code>5.0</code></td></tr>
+<tr><td class="notes">指数付き</td><td class="notes">整数か小数のあとに<span class="notation">e</span>か<span class="notation">E</span>、符号(省略可)、数字の並び</td><td><code>1e5</code> <code>1E5</code> <code>1e-5</code> <code>1.5e+3</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>分数には小数部も指数も付きません(<code>1/2.5</code>や<code>1/2e3</code>は名前です)。この書き方は語の<strong>全体</strong>に当てはめます。途中まで数に見えても最後まで一致しなければ、壊れた数ではなく名前です。全角数字は名前の文字です。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>数になる</th><th>名前になる</th></tr></thead>

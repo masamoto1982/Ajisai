@@ -145,7 +145,7 @@
                 <section id="program" class="ref-page">
                     <h2><span class="secnum">1</span> Program</h2>
 <p>An Ajisai program is a <strong>sequence of elements</strong>.</p>
-<pre class="ebnf">program = { element } ;</pre>
+<p>A program is zero or more elements, written one after another and separated by whitespace.</p>
 <p>Elements are written separated by whitespace and evaluated one at a time, left to right. Branching, iteration and definition are Words, written in the sequence like any other element. <code>[ 2 MUL ] 'DOUBLE' DEF</code> is a program of three elements: a Vector, a string and a name.</p>
 <p>Two things are said about a program: how its text is divided into elements (<a href="#tokens">1.1 Separating elements</a>), and how the elements in sequence are evaluated (<a href="#stack">1.2 Evaluation</a>). The elements themselves are the subject of <a href="#elements">2 Elements</a>.</p>
 
@@ -581,8 +581,7 @@
                 <section id="elements" class="ref-page">
                     <h2><span class="secnum">2</span> Elements</h2>
 <p>There are four kinds of element.</p>
-<pre class="ebnf">element = number | string | name | vector ;
-vector  = "[" , { element } , "]" ;</pre>
+<p>An element is one of four things: a number, a string, a name or a Vector. A Vector is zero or more elements between <code>[</code> and <code>]</code>, and it is the only element that contains elements.</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>Element</th><th>Examples</th><th>Evaluated, it</th></tr></thead>
@@ -604,14 +603,19 @@ vector  = "[" , { element } , "]" ;</pre>
                     <h2><span class="secnum">2.1</span> Numbers</h2>
 <h3>Number literals</h3>
                     <p>A decimal literal needs at least one digit on <strong>both sides</strong> of the point. <code>0.5</code> and <code>5.0</code> are numbers; <code>.5</code> and <code>5.</code> are not. Because of this rule the point is never the first or last character of a number, so a lone <code>.</code> can safely be an ordinary name rather than an incomplete literal.</p>
-<p>The number grammar is:</p>
-<pre class="ebnf">number   = [ sign ] , digits , [ rational | [ fraction ] , [ exponent ] ] ;
-sign     = "-" | "+" ;
-digits   = ascii digit , { ascii digit } ;
-rational = "/" , digits ;
-fraction = "." , digits ;
-exponent = ( "e" | "E" ) , [ sign ] , digits ;</pre>
-<p>The grammar applies to the <strong>whole</strong> word. A word that starts like a number but does not end as one is a name, not a malformed number. Digits are ASCII <code>0</code> to <code>9</code> only; a full-width digit is a name character.</p>
+<p>A number is written in one of four forms. A "run of digits" is one or more of the ASCII digits <code>0</code> to <code>9</code>.</p>
+<div class="ref-table-wrap word-table">
+<table class="ref-table">
+<thead><tr><th>Form</th><th>Written as</th><th>Examples</th></tr></thead>
+<tbody>
+<tr><td class="notes">Integer</td><td class="notes">a run of digits, optionally preceded by <code>-</code> or <code>+</code></td><td><code>5</code> <code>-5</code> <code>+5</code> <code>007</code></td></tr>
+<tr><td class="notes">Fraction</td><td class="notes">an integer, <code>/</code>, a run of digits</td><td><code>1/2</code> <code>-1/2</code></td></tr>
+<tr><td class="notes">Decimal</td><td class="notes">an integer, <code>.</code>, a run of digits</td><td><code>0.5</code> <code>5.0</code></td></tr>
+<tr><td class="notes">With exponent</td><td class="notes">an integer or decimal, then <span class="notation">e</span> or <span class="notation">E</span>, an optional sign, a run of digits</td><td><code>1e5</code> <code>1E5</code> <code>1e-5</code> <code>1.5e+3</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>A fraction takes neither a decimal part nor an exponent (<code>1/2.5</code> and <code>1/2e3</code> are names). These forms apply to the <strong>whole</strong> word. A word that starts like a number but does not end as one is a name, not a malformed number. A full-width digit is a name character.</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>A number</th><th>A name</th></tr></thead>
