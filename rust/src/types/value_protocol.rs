@@ -20,9 +20,10 @@ use num_bigint::BigInt;
 pub(crate) struct ProtocolNode {
     pub(crate) type_str: &'static str,
     pub(crate) value: ProtocolValue,
-    /// Source value for the `semantics` block, or `None` for the interior
-    /// nodes of a multi-dimensional tensor, which carry no `semantics`.
-    pub(crate) semantics: Option<Value>,
+    /// Source value for the `semantics` block, which every node carries:
+    /// whether a nested Vector is stored densely is not part of the value
+    /// (LANG.AUTHORITY.FREEDOM), so it cannot decide what the node says.
+    pub(crate) semantics: Value,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -118,8 +119,8 @@ fn number_protocol_value(f: &Fraction) -> ProtocolValue {
 
 /// Flatten a dense tensor into protocol leaves. A dense tensor holds numbers
 /// only (Booleans never densify), so every present lane is a `number` and an
-/// absent lane is a `nil` carrying its reason. Interior nodes of rank >= 2
-/// carry no `semantics`.
+/// absent lane is a `nil` carrying its reason. An interior node of rank >= 2
+/// is a Vector of Vectors, whose `semantics` is empty like any Vector's.
 fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec<ProtocolNode> {
     if shape.is_empty() || shape.len() == 1 {
         let len = shape.first().copied().unwrap_or_else(|| data.len());
@@ -138,7 +139,7 @@ fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec
                 ProtocolNode {
                     type_str,
                     value,
-                    semantics: Some(leaf),
+                    semantics: leaf,
                 }
             })
             .collect()
@@ -150,7 +151,9 @@ fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec
             .map(|i| ProtocolNode {
                 type_str: "vector",
                 value: ProtocolValue::Children(tensor_to_protocol(data, offset + i * stride, rest)),
-                semantics: None,
+                // A Vector's semantics block is empty whatever it holds, so
+                // the row need not be materialized to derive it.
+                semantics: Value::from_vector(Vec::new()),
             })
             .collect()
     }
@@ -204,7 +207,7 @@ pub(crate) fn value_to_protocol(value: &Value) -> ProtocolNode {
     ProtocolNode {
         type_str,
         value: protocol_value,
-        semantics: Some(value.clone()),
+        semantics: value.clone(),
     }
 }
 

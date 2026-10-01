@@ -94,10 +94,7 @@ fn exact_scalar_carries_exact_source_in_semantics() {
         "value is the rational approximation, got {:?}",
         node.value
     );
-    let semantics = node
-        .semantics
-        .as_ref()
-        .expect("ExactScalar node must carry a semantics source");
+    let semantics = &node.semantics;
     assert!(
         matches!(semantics.data, ValueData::ExactScalar(_)),
         "semantics must preserve the exact ExactScalar source, got {:?}",
@@ -267,9 +264,10 @@ fn tensor_2d_numbers_nest() {
     let rows = children_of(&node);
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0].type_str, "vector");
-    assert!(
-        rows[0].semantics.is_none(),
-        "interior tensor nodes carry no semantics"
+    assert_eq!(
+        rows[0].semantics,
+        Value::from_vector(Vec::new()),
+        "an interior tensor row derives its semantics as any Vector does"
     );
     let leaves = children_of(&rows[0]);
     assert_eq!(leaves[0].value, num("1", "1"));
@@ -286,11 +284,19 @@ fn a_dense_tensor_projects_as_a_vector() {
 
 // --- remaining ValueData kinds ---
 #[test]
-fn top_level_node_always_carries_semantics() {
-    assert!(value_to_protocol(&scalar(1)).semantics.is_some());
-    assert!(value_to_protocol(&tensor(&[1, 2], &[2]))
-        .semantics
-        .is_some());
+fn a_nested_vector_reads_the_same_dense_or_boxed() {
+    // Storage is unobservable (LANG.AUTHORITY.FREEDOM): a rank-2 tensor and
+    // the same rows held as boxed Vectors render one protocol node.
+    let dense = crate::agent::report::protocol_node_json(&value_to_protocol(&tensor(
+        &[1, 2, 3, 4],
+        &[2, 2],
+    )));
+    let boxed =
+        crate::agent::report::protocol_node_json(&value_to_protocol(&Value::from_children(vec![
+            Value::from_children(vec![scalar(1), scalar(2)]),
+            Value::from_children(vec![scalar(3), scalar(4)]),
+        ])));
+    assert_eq!(dense, boxed);
 }
 
 mod protocol_property_tests {

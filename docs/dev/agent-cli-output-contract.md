@@ -329,7 +329,7 @@ execute and so have nothing to receipt.
 ```json
 {
   "sourceDigest": "#0123...",
-  "engineVersion": "0.2.0-alpha.1",
+  "engineVersion": "1.0.0-beta.1",
   "registryDigest": "#4567...",
   "limitProfile": { "executionSteps": 23190000, "materializedElements": 100000, "...": "..." },
   "outcomeStatus": "ok",
@@ -566,7 +566,7 @@ Ajisai Words.
 `version --json` emits:
 
 ```json
-{ "schemaVersion": 3, "status": "ok", "version": "0.2.0-alpha.1" }
+{ "schemaVersion": 3, "status": "ok", "version": "1.0.0-beta.1" }
 ```
 
 ## `agent`

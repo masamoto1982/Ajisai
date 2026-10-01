@@ -11,6 +11,8 @@ import type {
     Value
 } from './wasm-interpreter-types';
 import { parseHostProfile } from './wasm-interpreter-types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const diagnosis: ProtocolDiagnosis = {
     when: 'executeWord',
@@ -127,5 +129,32 @@ describe('parseHostProfile', () => {
         expect(parseHostProfile('{"profile":"p","limits":{"a":"5"}}')).toBeNull();
         expect(parseHostProfile('{"profile":"p","limits":{"a":null}}')).toBeNull();
         expect(parseHostProfile('{"profile":"p","limits":{"a":1e999}}')).toBeNull();
+    });
+});
+
+// DUT: the diagnosis vocabularies this file's types mirror from
+// rust/src/interpreter/debug_diagnosis.rs. A type cannot be enumerated at run
+// time, so both sides are read as text: each `as_protocol_str` arm the engine
+// can emit must be a member of the matching union, and each member must be
+// one the engine emits or one the playground adds itself.
+describe('diagnosis vocabularies match the engine', () => {
+    const rust = readFileSync(resolve(__dirname, '../rust/src/interpreter/debug_diagnosis.rs'), 'utf8');
+    const ts = readFileSync(resolve(__dirname, 'wasm-interpreter-types.ts'), 'utf8');
+    const engine = (rustType: string): string[] => {
+        const block = rust.match(new RegExp(`impl ${rustType} \\{[\\s\\S]*?as_protocol_str[\\s\\S]*?\\n\\s{4}\\}`))?.[0] ?? '';
+        return [...block.matchAll(/=> "([^"]+)"/g)].map(m => m[1]!).sort();
+    };
+    const mirror = (tsType: string): string[] => {
+        const union = ts.match(new RegExp(`export type ${tsType} =([^;]+);`))?.[1] ?? '';
+        return [...union.matchAll(/'([^']+)'/g)].map(m => m[1]!).sort();
+    };
+    it.each([
+        ['ErrorPhase', 'DiagnosisPhase', ['hostGuard']],
+        ['ErrorLocusKind', 'DiagnosisLocusKind', ['hostEnvironment']],
+        ['CauseClass', 'DiagnosisCauseClass', []]
+    ])('%s ↔ %s', (rustType, tsType, playgroundOnly) => {
+        const emitted = engine(rustType);
+        expect(emitted.length).toBeGreaterThan(0);
+        expect(mirror(tsType)).toEqual([...emitted, ...playgroundOnly].sort());
     });
 });

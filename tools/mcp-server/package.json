@@ -1,9 +1,10 @@
 {
   "name": "ajisai-mcp-server",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": false,
   "type": "module",
   "description": "Bounded Ajisai computation and contract tools for MCP-compatible AI agents.",
+  "mcpName": "io.github.masamoto1982/ajisai",
   "license": "MIT",
   "homepage": "https://github.com/masamoto1982/Ajisai/tree/main/tools/mcp-server#readme",
   "repository": {

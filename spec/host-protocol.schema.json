@@ -47,7 +47,7 @@
       }
     },
     "semantics": {
-      "description": "Present on every node except an interior (rank >= 2) tensor node. Every field is optional. Both host surfaces emit the same set, because both render it with one function (rust/src/agent/report.rs::semantics_json).",
+      "description": "Present on every node, a Vector nested in a Vector included: how a value is stored does not decide what its node says (LANG.AUTHORITY.FREEDOM). Every field is optional. Both host surfaces emit the same set, because both render it with one function (rust/src/agent/report.rs::semantics_json).",
       "type": "object",
       "additionalProperties": false,
       "properties": {

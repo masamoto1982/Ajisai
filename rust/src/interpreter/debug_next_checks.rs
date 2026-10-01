@@ -194,16 +194,6 @@ pub(crate) fn build_next_checks(
                 ),
             ));
         }
-        CauseClass::Environment => {
-            out.push(check(
-                "checkEnvironment",
-                ("Check environment", "実行環境を確認する"),
-                (
-                    "Check the host environment's preconditions.",
-                    "実行環境の前提条件を確認する",
-                ),
-            ));
-        }
         CauseClass::ValueShape => {
             let word_label = word.unwrap_or("the word");
             out.push(check(
@@ -377,16 +367,6 @@ pub(crate) fn build_next_checks(
                 ));
             }
         }
-        CauseClass::Effect => {
-            out.push(check(
-                "checkEffectBookkeeping",
-                ("Check effect bookkeeping", "効果の収支を確認する"),
-                (
-                    "Check conservation of mass between consume and produce.",
-                    "consume / produce の質量保存を確認する",
-                ),
-            ));
-        }
         CauseClass::NilFlow => {
             out.push(check(
                 "checkNilPropagation",
@@ -394,26 +374,6 @@ pub(crate) fn build_next_checks(
                 (
                     "Check whether NIL flowed somewhere unintended.",
                     "NIL が想定外に流れていないか確認する",
-                ),
-            ));
-        }
-        CauseClass::OptimizerMismatch => {
-            out.push(check(
-                "checkOptimizerAssumptions",
-                ("Check optimizer assumptions", "最適化の前提を確認する"),
-                (
-                    "Check that meaning is preserved across the optimization.",
-                    "最適化前後の意味が一致しているか確認する",
-                ),
-            ));
-        }
-        CauseClass::InternalInvariant => {
-            out.push(check(
-                "checkInternalInvariant",
-                ("Check internal invariant", "内部不変条件を確認する"),
-                (
-                    "An internal invariant was violated. Save the reproduction steps and report it.",
-                    "内部不変条件違反が発生している。再現手順を保存し報告する",
                 ),
             ));
         }

@@ -86,6 +86,29 @@ const outputs = [...sources.map(([source, target]) => [readFileSync(source), tar
   [resultSchemaWithProtocol(), resultSchemaPath],
   [quickstart, join(assetsDir, "quickstart.md")],
   [Buffer.from(metadata), join(assetsDir, "metadata.json")]];
+/**
+ * `server.json` is the MCP Registry's entry for this package, and the registry
+ * proves ownership by reading `mcpName` back out of the published
+ * `package.json`. The two files state one release, so every field they share
+ * must agree — a registry entry naming a version npm does not hold points
+ * installers at nothing. Returns the disagreements, empty when there are none.
+ */
+export function serverJsonMismatches() {
+  const pkg = JSON.parse(readFileSync(join(here, "package.json"), "utf8"));
+  const server = JSON.parse(readFileSync(join(here, "server.json"), "utf8"));
+  const npm = (server.packages ?? []).filter((entry) => entry.registryType === "npm");
+  const facts = [
+    ["server.json name", server.name, "package.json mcpName", pkg.mcpName],
+    ["server.json version", server.version, "package.json version", pkg.version],
+    ["server.json npm packages", npm.length, "exactly", 1],
+    ["server.json package identifier", npm[0]?.identifier, "package.json name", pkg.name],
+    ["server.json package version", npm[0]?.version, "package.json version", pkg.version],
+  ];
+  return facts
+    .filter(([, left, , right]) => left !== right)
+    .map(([leftName, left, rightName, right]) => `${leftName} is ${JSON.stringify(left)}; ${rightName} is ${JSON.stringify(right)}`);
+}
+
 // Generating or checking is the entry-point behaviour; importing this module
 // for `SKILL_BOUNDARY` — which the self-test does, so the seam it slices on is
 // the one that was written — must not rewrite the working tree as a side
@@ -96,6 +119,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       !existsSync(target) || !content.equals(readFileSync(target)));
     if (stale.length) {
       console.error(`MCP packaged assets are stale: ${stale.map(([, path]) => path).join(", ")}`);
+      process.exit(1);
+    }
+    const mismatches = serverJsonMismatches();
+    if (mismatches.length) {
+      console.error(`server.json disagrees with package.json: ${mismatches.join("; ")}`);
       process.exit(1);
     }
     // npm includes prepack stdout before `npm pack --json`, which would corrupt

@@ -296,11 +296,9 @@ pub(crate) fn resource_usage_json(usage: &ResourceUsage) -> Json {
 
 /// JSON rendering of a `ProtocolNode` — the same shape `protocol_to_js`
 /// produces for the GUI: `{ type, value, semantics? }`.
-pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
+pub(crate) fn protocol_node_json(node: &ProtocolNode) -> Json {
     let mut obj = Map::new();
-    if let Some(source) = &node.semantics {
-        obj.insert("semantics".into(), semantics_json(source));
-    }
+    obj.insert("semantics".into(), semantics_json(&node.semantics));
     obj.insert("type".into(), json!(node.type_str));
     let value = match &node.value {
         ProtocolValue::Null => Json::Null,

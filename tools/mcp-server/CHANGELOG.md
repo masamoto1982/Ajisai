@@ -2,9 +2,23 @@
 
 This package is versioned separately from the Ajisai engine it speaks for
 (`mcp.serverVersion` and `mcp.engineVersion` on every result). The engine is
-still alpha and makes no compatibility promise; this file records changes to
+beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
+
+## 0.7.0
+
+The first published release, speaking for the Ajisai 1.0.0-beta.1 engine.
+
+### Added
+
+- **Published on npm and in the MCP Registry.** `npx -y ajisai-mcp-server` runs the server; `server.json` is its official MCP Registry entry, `io.github.masamoto1982/ajisai`, and `package.json` carries the matching `mcpName` the registry verifies ownership by. `sync-assets.js --check` (run by `prepack`) fails when the two files disagree on the name, the version or the npm package.
+
+### Changed
+
+- **Engine 1.0.0-beta.1.** `mcp.engineVersion` reads `1.0.0-beta.1`. The engine is beta: a breaking change to the vocabulary, to program meaning or to the host protocol now raises the specification version and is named in the release that ships it.
+- **Every stack node carries `semantics`.** A Vector nested in a Vector, when the engine stored it densely, rendered its rows without the bag, while the same rows stored otherwise carried an empty one. Storage no longer decides the shape; the result schema's `protocolSemantics` says the bag is present on every node.
+- **Engine: the diagnosis vocabulary is what the engine emits.** Phase, locus and cause values that no diagnosis could carry (`parseStructure`, `nilPropagation`, `optimizerMismatch` and the like) are gone from the engine, along with the next checks written for them.
 
 ## 0.6.1
 
