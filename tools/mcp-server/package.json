@@ -1,6 +1,6 @@
 {
   "name": "ajisai-mcp-server",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": false,
   "type": "module",
   "description": "Bounded Ajisai computation and contract tools for MCP-compatible AI agents.",

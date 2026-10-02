@@ -1234,6 +1234,13 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-str-writes-a-symbol-as-its-name" data-category="core">
+  <h3>STR writes a Symbol as its bare name, and the text is not the Symbol (LANG.VALUES.DISJOINT)</h3>
+  <pre class="ajisai-source">[ ADD ] 0 GET STR [ ADD ] 0 GET STR [ ADD ] 0 GET EQ</pre>
+  <pre class="ajisai-expect-result">'ADD' FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-str-is-the-inverse-of-num-per-element" data-category="core">
   <h3>STR is NUM's inverse element by element, and a NIL lane passes through</h3>
   <pre class="ajisai-source">[ 1/3 NIL ] STR [ 1/3 NIL ] STR NUM</pre>

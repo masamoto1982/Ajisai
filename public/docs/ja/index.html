@@ -3306,7 +3306,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-STR">
 <h4><code>STR</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。<code>42 STR</code>は<code>'42'</code>、<code>1/3 STR</code>は<code>'1/3'</code>、<code>TRUE STR</code>は<code>'TRUE'</code>。オペランドは葉なので、ベクトルやRecordは持ち上がる。<code>[ 1 2 ] STR</code>は<code>[ '1' '2' ]</code>。STRは要素ごとにNUMの逆であり、<code>1/3 STR NUM</code>は<code>1/3</code>、<code>x STR NUM</code>は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。</p>
+<p>スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。<code>42 STR</code>は<code>'42'</code>、<code>1/3 STR</code>は<code>'1/3'</code>、<code>TRUE STR</code>は<code>'TRUE'</code>。Symbolはその名前そのままで書かれる。<code>[ ADD ] 0 GET STR</code>は<code>'ADD'</code>。そのテキストはStringであってSymbolではない。それをSymbolに戻すWordはないので、テキストとして持った名前が呼び出されることはない（LANG.DICTIONARY.ACYCLIC）。オペランドは葉なので、ベクトルやRecordは持ち上がる。<code>[ 1 2 ] STR</code>は<code>[ '1' '2' ]</code>。STRは要素ごとにNUMの逆であり、<code>1/3 STR NUM</code>は<code>1/3</code>、<code>x STR NUM</code>は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>42 STR</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
