@@ -24,6 +24,21 @@ pub(crate) struct ExecutableCode {
     plan: crate::interpreter::CompiledPlan,
 }
 
+impl ExecutableCode {
+    /// The block lowered for a fused walk that starts it on `inputs` values,
+    /// when its plan is current and inside the fused subset.
+    pub(crate) fn fused(
+        &self,
+        interp: &Interpreter,
+        inputs: usize,
+    ) -> Option<crate::interpreter::fused_block::FusedBlock> {
+        if !crate::interpreter::is_plan_valid(&self.plan, interp) {
+            return None;
+        }
+        crate::interpreter::fused_block::FusedBlock::compile(&self.plan, inputs)
+    }
+}
+
 pub(crate) fn extract_executable_code(
     interp: &mut Interpreter,
     val: &Value,
@@ -245,6 +260,18 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let n_elements: usize = target_val.len();
     if n_elements == 0 {
         interp.stack.push(Value::from_vector(Vec::new()));
+        return Ok(());
+    }
+
+    if let Some(result) = executable.fused(interp, 1).and_then(|block| {
+        block.run(
+            interp,
+            crate::interpreter::fused_block::FusedWalk::Map,
+            &target_val,
+            None,
+        )
+    }) {
+        interp.stack.push(result);
         return Ok(());
     }
 

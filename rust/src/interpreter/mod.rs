@@ -21,6 +21,9 @@ pub mod execute_def;
 #[cfg(test)]
 mod format_json_tests;
 mod format_ops;
+pub(crate) mod fused_block;
+#[cfg(test)]
+mod fused_block_tests;
 pub mod higher_order;
 pub mod higher_order_fold;
 pub mod host;

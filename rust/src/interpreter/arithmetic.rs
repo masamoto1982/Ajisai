@@ -16,7 +16,7 @@ use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, SparseTensor, Value, ValueData};
 use std::sync::Arc;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum ExactArithmeticSchema {
     Add,
     Sub,
