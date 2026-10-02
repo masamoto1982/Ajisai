@@ -2279,7 +2279,7 @@ FILTER</code></td>
 <h3 id="family-collection">契約: ベクトル</h3>
 <div class="word-entry" id="word-GET">
 <h4><code>GET</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。<code>[ 10 20 30 ] 1 GET</code>は<code>20</code>、<code>R 'x' GET</code>はRが<code>'x'</code>の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。<code>[ 10 20 30 ] [ 2 0 ] GET</code>は<code>[ 30 10 ]</code>で、並べ替えや収集が1回の呼び出しで済む。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、<code>[ 10 20 30 ] [ 0 9 ] GET</code>は<code>[ 10/1 NIL ]</code>。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(<code>nonContainer</code>)、整数でないインデックスは<code>invalidInteger</code>。</p>
+<p>コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。<code>[ 10 20 30 ] 1 GET</code>は<code>20</code>、<code>R 'x' GET</code>はRが<code>'x'</code>の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。<code>[ 10 20 30 ] [ 2 0 ] GET</code>は<code>[ 30 10 ]</code>で、並べ替えや収集が1回の呼び出しで済む。同じ理由で、それ自体がベクトル・Record・NILであるRecordのキーはGETでは指せない。<code>R VALUES R KEYS k INDEX-OF GET</code>で読める。INDEX-OFは探す値を丸ごと比べるからである。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、<code>[ 10 20 30 ] [ 0 9 ] GET</code>は<code>[ 10/1 NIL ]</code>。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(<code>nonContainer</code>)、整数でないインデックスは<code>invalidInteger</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 10 20 30 ] 1 GET</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ container ] [ key ] -&gt; [ value ]</span></dd>
@@ -2772,7 +2772,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GROUP">
 <h4><code>GROUP</code> <span class="word-tier">Standard · operational</span></h4>
-<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは<code>R 'a' GET</code>で名前によって読めるので、<code>UNIQUE</code>や<code>INDEX-OF</code>で探す必要はない。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
+<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは<code>R 'a' GET</code>で名前によって読めるので、<code>UNIQUE</code>や<code>INDEX-OF</code>で探す必要はない。ただしそれはキーがScalar・String・Boolean・Symbolのときで、ベクトル・Record・NILをキーとするグループは<code>KEYS</code>と<code>VALUES</code>を通して読む。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>

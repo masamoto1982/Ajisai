@@ -302,7 +302,7 @@ A rational opened into its reduced numerator and denominator, as a two-element V
 
 ## `GET`
 
-Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
+Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. For the same reason a Record key that is itself a Vector, a Record or NIL is not addressed by GET: `R VALUES R KEYS k INDEX-OF GET` reads it, since INDEX-OF compares its needle whole. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -584,7 +584,7 @@ Write a container: a copy of a Vector with the element at an index replaced, or 
 
 ## `GROUP`
 
-Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` reads one group by name, with no `UNIQUE` or `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` reads one group by name, with no `UNIQUE` or `INDEX-OF` to find it — a key that is a Scalar, String, Boolean or Symbol; a group keyed by a Vector, a Record or NIL is read through `KEYS` and `VALUES` instead. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
