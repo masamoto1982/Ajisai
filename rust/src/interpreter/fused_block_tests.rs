@@ -98,7 +98,8 @@ fn hand_picked_programs_agree() {
         "[ 1 2 ] [ 2 SQRT ADD ] MAP",
         "[ TRUE FALSE ] [ 1 ADD ] MAP",
         "[ 1 2 ] NIL [ ADD ] FOLD",
-        // Underflow and a trailing literal stay off the fused route.
+        // Underflow stays off the fused route; a trailing literal is the
+        // block's result like any other value.
         "[ 1 2 ] [ ADD ] MAP",
         "[ 1 2 ] [ 1 ADD 5 ] MAP",
         "[ ] [ 1 ADD ] MAP",
@@ -113,6 +114,35 @@ fn hand_picked_programs_agree() {
         // Big operands.
         "[ 9223372036854775807 2 ] [ 9223372036854775807 MUL ] MAP",
         "1 70 RANGE 1 [ MUL ] SCAN",
+        // Comparisons, logic, FLOOR/ROUND, SELECT.
+        "1 20 RANGE [ 10 LT ] MAP",
+        "1 20 RANGE [ 10 GT NOT ] FILTER",
+        "1 20 RANGE [ 3 EQ ] FILTER",
+        "[ 1/2 3/2 -5/2 ] [ FLOOR ] MAP",
+        "[ 1/2 3/2 -5/2 ] [ ROUND ] MAP",
+        "[ TRUE FALSE TRUE ] [ NOT ] MAP",
+        "[ TRUE FALSE TRUE ] [ TRUE EQ ] FILTER",
+        "[ TRUE FALSE ] TRUE [ AND ] FOLD",
+        "[ TRUE FALSE ] [ 1 EQ ] MAP",
+        "1 10 RANGE [ 'X' BIND X 2 MUL X 1 ADD X 5 LT SELECT ] MAP",
+        // The remainder idiom: integer floor division, and its zero divisor.
+        "1 30 RANGE [ 'N' BIND N N 7 DIV FLOOR 7 MUL SUB ] MAP",
+        "-10 10 RANGE [ 'N' BIND N N -3 DIV FLOOR -3 MUL SUB ] MAP",
+        "[ 3 0 4 ] [ 'D' BIND 10 10 D DIV FLOOR D MUL SUB ] MAP",
+        "[ -9223372036854775808 ] [ -1 DIV FLOOR ] MAP",
+        // A name bound outside the block, and one bound nowhere.
+        "5 'K' BIND 1 10 RANGE [ K MUL ] MAP",
+        "1 10 RANGE [ K MUL ] MAP",
+        "1/2 'K' BIND 1 10 RANGE 0 [ ADD K MUL ] FOLD",
+        // A name BIND refuses, and a destructuring BIND.
+        "1 10 RANGE [ 'ADD' BIND 1 ] MAP",
+        "1 10 RANGE [ [ 'A' ] BIND 1 ] MAP",
+        // Domain errors inside the block.
+        "1 10 RANGE [ NOT ] MAP",
+        "1 10 RANGE [ TRUE ADD ] MAP",
+        "1 10 RANGE [ 2 MUL ] FILTER",
+        "[ TRUE ] [ 1 LT ] MAP",
+        "1 10 RANGE [ 1 2 3 SELECT ] MAP",
     ] {
         assert_same(source, Limits::default());
     }
@@ -162,6 +192,14 @@ fn the_fused_route_is_taken_where_it_applies() {
     assert_eq!(fused_runs("[ 0 1 2 ] [ 5 SWAP DIV ] MAP"), 0);
     assert_eq!(fused_runs("[ 1 NIL 2 ] [ 1 ADD ] MAP"), 0);
     assert_eq!(fused_runs("[ 9223372036854775807 ] [ 1 ADD ] MAP"), 1);
+    assert_eq!(fused_runs("1 1000 RANGE [ 3 GT ] FILTER"), 1);
+    assert_eq!(
+        fused_runs("1 1000 RANGE [ 'N' BIND N N 7 DIV FLOOR 7 MUL SUB ] MAP"),
+        1
+    );
+    assert_eq!(fused_runs("5 'K' BIND 1 1000 RANGE [ K MUL ] MAP"), 1);
+    assert_eq!(fused_runs("1 10 RANGE [ K MUL ] MAP"), 0);
+    assert_eq!(fused_runs("1 10 RANGE [ 2 MUL ] FILTER"), 0);
 }
 
 fn literal() -> impl Strategy<Value = String> {
@@ -176,41 +214,136 @@ fn literal() -> impl Strategy<Value = String> {
 }
 
 fn word() -> impl Strategy<Value = &'static str> {
-    prop_oneof![Just("ADD"), Just("SUB"), Just("MUL"), Just("DIV")]
+    prop_oneof![
+        4 => prop_oneof![Just("ADD"), Just("SUB"), Just("MUL"), Just("DIV")],
+        2 => prop_oneof![Just("LT"), Just("GT"), Just("EQ")],
+        2 => prop_oneof![Just("FLOOR"), Just("ROUND"), Just("NOT"), Just("AND"), Just("SELECT")],
+        1 => prop_oneof![Just("TRUE"), Just("FALSE")],
+        // Names: bound in the block, bound outside it (`K`), or both.
+        2 => prop_oneof![Just("'X' BIND"), Just("X"), Just("'K' BIND"), Just("K")],
+    ]
 }
 
 fn block() -> impl Strategy<Value = String> {
-    prop::collection::vec(prop_oneof![literal(), word().prop_map(String::from)], 1..6)
+    prop::collection::vec(prop_oneof![literal(), word().prop_map(String::from)], 1..8)
         .prop_map(|tokens| format!("[ {} ]", tokens.join(" ")))
 }
 
 fn vector() -> impl Strategy<Value = String> {
     prop::collection::vec(
-        prop_oneof![9 => literal(), 1 => Just("NIL".to_string())],
+        prop_oneof![
+            9 => literal(),
+            1 => Just("NIL".to_string()),
+            1 => prop_oneof![Just("TRUE".to_string()), Just("FALSE".to_string())],
+        ],
         0..12,
     )
     .prop_map(|items| format!("[ {} ]", items.join(" ")))
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(512))]
+    #![proptest_config(ProptestConfig::with_cases(2048))]
 
     #[test]
     fn random_walks_agree(
         target in vector(),
         seed in literal(),
         code in block(),
-        walk in 0usize..3,
+        walk in 0usize..4,
+        outer in prop::option::of(literal()),
         steps in prop::option::of(0usize..80),
         work in prop::option::of(0u64..200),
         bits in prop::option::of(1u64..130),
     ) {
-        let source = match walk {
+        let walk = match walk {
             0 => format!("{target} {code} MAP"),
-            1 => format!("{target} {seed} {code} FOLD"),
+            1 => format!("{target} {code} FILTER"),
+            2 => format!("{target} {seed} {code} FOLD"),
             _ => format!("{target} {seed} {code} SCAN"),
         };
+        let source = match outer {
+            Some(value) => format!("{value} 'K' BIND {walk}"),
+            None => walk,
+        };
         let limits = Limits { steps, work, bits };
+        let fused = observe(&source, true, limits);
+        let interpreted = observe(&source, false, limits);
+        prop_assert_eq!(fused, interpreted, "`{}` under {:?}", source, limits);
+    }
+}
+
+/// Well-typed expressions, so the walks below mostly take the fused route
+/// rather than refusing at the first ill-typed op: a numeric or a Boolean
+/// expression tree over the element (`X`), an outer binding (`K`) and
+/// literals, written in postfix.
+fn typed_expr() -> impl Strategy<Value = (String, String)> {
+    let num_leaf = prop_oneof![
+        3 => Just("X".to_string()),
+        1 => Just("K".to_string()),
+        3 => (-9i64..10).prop_map(|n| n.to_string()),
+        1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
+        1 => Just("4611686018427387904".to_string()),
+    ];
+    let bool_leaf = prop_oneof![Just("TRUE".to_string()), Just("FALSE".to_string())];
+    (num_leaf, bool_leaf).prop_recursive(4, 24, 3, |inner| {
+        let num = inner.clone().prop_map(|(n, _)| n);
+        let boolean = inner.prop_map(|(_, b)| b);
+        let num_op = prop_oneof![
+            Just("ADD"),
+            Just("SUB"),
+            Just("MUL"),
+            Just("DIV"),
+            Just("DIV FLOOR")
+        ];
+        let cmp = prop_oneof![Just("LT"), Just("GT"), Just("EQ")];
+        let numeric = prop_oneof![
+            (num.clone(), num.clone(), num_op).prop_map(|(a, b, op)| format!("{a} {b} {op}")),
+            (num.clone(), prop_oneof![Just("FLOOR"), Just("ROUND")])
+                .prop_map(|(a, op)| format!("{a} {op}")),
+            (num.clone(), num.clone(), boolean.clone())
+                .prop_map(|(a, b, m)| format!("{a} {b} {m} SELECT")),
+        ];
+        let truth = prop_oneof![
+            (num.clone(), num, cmp).prop_map(|(a, b, op)| format!("{a} {b} {op}")),
+            boolean.clone().prop_map(|b| format!("{b} NOT")),
+            (boolean.clone(), boolean).prop_map(|(a, b)| format!("{a} {b} AND")),
+        ];
+        (numeric, truth)
+    })
+}
+
+fn integer_vector() -> impl Strategy<Value = String> {
+    prop::collection::vec(
+        prop_oneof![
+            8 => (-50i64..50).prop_map(|n| n.to_string()),
+            1 => Just("9223372036854775807".to_string()),
+            1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
+        ],
+        1..16,
+    )
+    .prop_map(|items| format!("[ {} ]", items.join(" ")))
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(2048))]
+
+    #[test]
+    fn typed_walks_agree(
+        target in integer_vector(),
+        (num, truth) in typed_expr(),
+        walk in 0usize..4,
+        outer in (-9i64..10),
+        steps in prop::option::of(0usize..400),
+        work in prop::option::of(0u64..400),
+    ) {
+        let code = match walk {
+            0 => format!("[ 'X' BIND {num} ] MAP"),
+            1 => format!("[ 'X' BIND {truth} ] FILTER"),
+            2 => format!("0 [ 'X' BIND {num} ADD ] FOLD"),
+            _ => format!("0 [ 'X' BIND {num} ADD ] SCAN"),
+        };
+        let source = format!("{outer} 'K' BIND {target} {code}");
+        let limits = Limits { steps, work, bits: None };
         let fused = observe(&source, true, limits);
         let interpreted = observe(&source, false, limits);
         prop_assert_eq!(fused, interpreted, "`{}` under {:?}", source, limits);

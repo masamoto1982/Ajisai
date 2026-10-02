@@ -5,3 +5,7 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc dbc9c183e2d2d62a7d805cbbbc0a85a6d59a134b234967a15fc7425b9764ee30 # shrinks to target = "[ 0 ]", seed = "0", code = "[ 1 ADD ]", walk = 0, steps = None, work = None, bits = None
+cc 0d7598088023397b6f151dc83d885a107e0573d49988804a0e901fd9a5f9192c # shrinks to target = "[ 0 ]", (num, truth) = ("X X X X LT SELECT", "X X LT"), walk = 0, outer = 0, steps = None, work = None
+cc 67844e9a16753f20a5c6a6fcc494e3c688b76e5093605ac60fac29a3bbd20a88 # shrinks to target = "[ 0 ]", seed = "0", code = "[ LT 9223372036854775807 ]", walk = 2, outer = None, steps = None, work = None, bits = None
+cc 293faccb48eba1bf97ce5d67ed4d7f9c211fa1d651188f90031f5c2e62e4e235 # shrinks to target = "[ 0 ]", seed = "9223372036854775807", code = "[ ADD ]", walk = 2, outer = None, steps = None, work = None, bits = None
+cc ea825e6bf143d842e6355c89b16d260fd5d43f3e41a57f7337dee8eb127b60b3 # shrinks to target = "[ 0 0 ]", seed = "0", code = "[ EQ ]", walk = 2, outer = None, steps = None, work = None, bits = None
