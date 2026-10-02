@@ -6,6 +6,16 @@ beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.7.1
+
+Documentation only: what the server serves about the language is corrected, and no tool, envelope field or computed answer changes.
+
+### Changed
+
+- **Record keys.** The quickstart resource, the Word summaries (`assets/words.json`) and the specification say which keys `GET`, `PUT`, `HAS?` and `WITHOUT` address: their key operand is a leaf, so a key that is itself a Vector, a Record or NIL — which `RECORD`, `TALLY` and `GROUP` accept — is read through `KEYS` and `VALUES` (`R VALUES R KEYS k INDEX-OF GET`). `GROUP`'s summary no longer promises that `R 'a' GET` reads every group.
+- **A leaf includes a Symbol.** The leaf role is any value that is not a container, Symbol included, which is what every leaf Word already did; `STR`'s summary now says it writes a Symbol as its bare name (`[ ADD ] 0 GET STR` is `'ADD'`), as a String that is not the Symbol.
+- **Publishing waits for npm.** The release workflow waits until npm answers for the new version before registering it in the MCP Registry, which refused 0.7.0's first registration because npm had not yet served it.
+
 ## 0.7.0
 
 The first published release, speaking for the Ajisai 1.0.0-beta.1 engine.
