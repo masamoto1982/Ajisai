@@ -16,6 +16,15 @@ impl Fraction {
             return Self::nil();
         }
 
+        // Two `Small` integers: the overwhelmingly common operand pair (a
+        // counter, a running total, an index). Their sum is an integer, so
+        // there is nothing to reduce; `create_from_i128` would still run an
+        // i128 Euclidean gcd against 1 (a `__divti3` call) to find that out.
+        if let (FractionRepr::Small(a, 1), FractionRepr::Small(c, 1)) = (&self.repr, &other.repr) {
+            if let Some(n) = a.checked_add(*c) {
+                return Fraction::from_repr(FractionRepr::Small(n, 1));
+            }
+        }
         if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             if b == 1 && d == 1 {
                 return Self::create_from_i128((a as i128) + (c as i128), 1);
@@ -55,6 +64,15 @@ impl Fraction {
             return Self::nil();
         }
 
+        // Two `Small` integers: the overwhelmingly common operand pair (a
+        // counter, a running total, an index). Their sum is an integer, so
+        // there is nothing to reduce; `create_from_i128` would still run an
+        // i128 Euclidean gcd against 1 (a `__divti3` call) to find that out.
+        if let (FractionRepr::Small(a, 1), FractionRepr::Small(c, 1)) = (&self.repr, &other.repr) {
+            if let Some(n) = a.checked_sub(*c) {
+                return Fraction::from_repr(FractionRepr::Small(n, 1));
+            }
+        }
         if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             if b == 1 && d == 1 {
                 return Self::create_from_i128((a as i128) - (c as i128), 1);
@@ -146,6 +164,12 @@ impl Fraction {
             return Self::nil();
         }
 
+        // As in `add`: an integer product is already in lowest terms.
+        if let (FractionRepr::Small(a, 1), FractionRepr::Small(c, 1)) = (&self.repr, &other.repr) {
+            if let Some(n) = a.checked_mul(*c) {
+                return Fraction::from_repr(FractionRepr::Small(n, 1));
+            }
+        }
         if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             let g1 = compute_gcd_i64(a, d);
             let g2 = compute_gcd_i64(c, b);
