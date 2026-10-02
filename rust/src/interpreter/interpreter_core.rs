@@ -227,6 +227,11 @@ pub struct Interpreter {
     /// singleton tensor/vector wrappers. Disable via
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
+
+    /// When true (default), a `MAP`/`FOLD`/`SCAN` block of straight-line
+    /// rational arithmetic runs fused (`fused_block`), with the interpreted
+    /// walk's charges. Disable via `AJISAI_NO_FUSED_BLOCK` for A/B comparison.
+    pub(crate) fused_block_enabled: bool,
 }
 
 impl Default for Interpreter {
@@ -282,6 +287,7 @@ impl Interpreter {
             current_source_span: None,
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
+            fused_block_enabled: std::env::var("AJISAI_NO_FUSED_BLOCK").is_err(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -482,6 +488,12 @@ impl Interpreter {
     /// plan toggles this affects subsequent primitive executions immediately.
     pub fn set_scalar_fastpath_enabled(&mut self, enabled: bool) {
         self.scalar_fastpath_enabled = enabled;
+    }
+
+    /// Enable or disable fused higher-order blocks. In-process equivalent of
+    /// `AJISAI_NO_FUSED_BLOCK`.
+    pub fn set_fused_block_enabled(&mut self, enabled: bool) {
+        self.fused_block_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a

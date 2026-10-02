@@ -277,6 +277,14 @@ pub fn fraction_result_bits(f: &Fraction) -> u64 {
     if f.is_nil() {
         return 0;
     }
+    // `numerator()` answers an owned `BigInt`, so the general form allocates
+    // twice to measure a value held in two machine words. A `Small` pair is
+    // measured where it lies, as the bit length of each half's magnitude —
+    // what `BigInt::bits` answers for the same integer.
+    if let crate::types::fraction::FractionRepr::Small(n, d) = &f.repr {
+        let width = |v: i64| u64::from(64 - v.unsigned_abs().leading_zeros());
+        return width(*n).max(width(*d));
+    }
     f.numerator().bits().max(f.denominator().bits())
 }
 

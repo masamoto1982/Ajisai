@@ -123,6 +123,18 @@ fn run_accumulator_walk(
         return Ok(());
     }
 
+    let fused_walk = match answer {
+        Answer::Last => crate::interpreter::fused_block::FusedWalk::Fold,
+        Answer::Every => crate::interpreter::fused_block::FusedWalk::Scan,
+    };
+    if let Some(result) = executable
+        .fused(interp, 2)
+        .and_then(|block| block.run(interp, fused_walk, &target_val, Some(&init_val)))
+    {
+        interp.stack.push(result);
+        return Ok(());
+    }
+
     // The seed is kept apart from the running accumulator: a failure part way
     // through the walk puts the operands back as they were written, and the
     // seed is the operand, not whatever the walk had made of it by then.
