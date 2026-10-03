@@ -1,5 +1,6 @@
-//! Fused walks over a one-lane seed and through User Word calls, against
-//! the interpreted walk (`fused_block_tests` holds the comparison).
+//! Fused walks over a one-lane seed, through User Word calls, and with an
+//! inexact `DIV` on the integer tier, against the interpreted walk
+//! (`fused_block_tests` holds the comparison).
 
 use crate::interpreter::fused_block_tests::{assert_same, Limits};
 
@@ -66,7 +67,45 @@ fn lane_and_call_programs_agree() {
         "[ 2 MUL ] 'D' DEF [ D ] 'E' DEF [ E ] 'F' DEF [ F ] 'G' DEF 1 600 RANGE [ G ] MAP",
         "1 20 RANGE [ [ 0 ] ] [ ADD ] FOLD",
         "1 20 RANGE [ TRUE ] [ ADD ] FOLD",
+        // A `DIV` whose quotient may be a fraction, on the integer tier: a
+        // fraction computed and not chosen, one chosen for some lanes (the
+        // small-rational tier's walk then), an exact quotient of i64::MIN,
+        // i64::MIN / -1, a zero divisor, a quotient bound and read back, both
+        // candidates inexact, and a quotient fed to a Word that is not SELECT.
+        "0 600 RANGE [ 'N' BIND N 2 DIV N 3 MUL 1 ADD N 2 DIV FLOOR 2 MUL N EQ SELECT ] MAP",
+        "0 600 RANGE [ 'N' BIND N 2 DIV N 3 MUL 1 ADD N 2 DIV FLOOR 2 MUL N EQ NOT SELECT ] MAP",
+        "0 600 RANGE [ 'N' BIND N 3 DIV N N 3 DIV FLOOR 3 MUL N EQ NOT SELECT ] MAP",
+        "[ -9223372036854775808 4 ] [ 'N' BIND N 1 DIV N TRUE SELECT ] MAP",
+        "[ -9223372036854775808 4 ] [ 'N' BIND N -1 DIV N FALSE SELECT ] MAP",
+        "[ 4 0 6 ] [ 'N' BIND 12 N DIV 7 N 0 EQ NOT SELECT ] MAP",
+        "1 600 RANGE [ 'N' BIND N 4 DIV 'Q' BIND Q N N 4 DIV FLOOR 4 MUL N EQ NOT SELECT ] MAP",
+        "1 600 RANGE [ 'N' BIND N 2 DIV N 3 DIV N 6 GT SELECT ] MAP",
+        "1 600 RANGE [ 'N' BIND N 2 DIV N 3 DIV N 0 GT SELECT ] MAP",
+        "1 600 RANGE [ 2 DIV 1 ADD ] MAP",
+        "1 600 RANGE [ 2 DIV 3 GT ] FILTER",
+        "1 600 RANGE [ 2 DIV ] MAP",
+        "[ 2 4 6 ] [ 2 DIV ] MAP",
+        "1 600 RANGE 0 [ 'E' BIND 'A' BIND E 2 DIV A E E 2 DIV FLOOR 2 MUL EQ NOT SELECT ] FOLD",
+        "1 600 RANGE 0 [ 'E' BIND 'A' BIND A E 2 DIV A E E 2 DIV FLOOR 2 MUL EQ SELECT ] SCAN",
+        "1 600 RANGE [ 'E' BIND E 2 DIV E E 2 MUL EQ SELECT 0 LT ] FILTER",
     ] {
         assert_same(source, Limits::default());
     }
+}
+
+/// The Collatz step stays on the integer tier: its inexact quotient is
+/// never chosen. One that is chosen for some lane leaves for the
+/// small-rational tier.
+#[test]
+fn an_unchosen_fraction_keeps_the_integer_tier() {
+    let rat_runs = |source: &str| {
+        let before = crate::interpreter::fused_block_rat::rat_runs_on_this_thread();
+        let mut interp = crate::interpreter::Interpreter::new();
+        crate::agent::block_on(interp.execute(source)).unwrap();
+        crate::interpreter::fused_block_rat::rat_runs_on_this_thread() - before
+    };
+    let collatz = "[ 'N' BIND N 2 DIV N 3 MUL 1 ADD N 2 DIV FLOOR 2 MUL N EQ SELECT ] MAP";
+    assert_eq!(rat_runs(&format!("0 1000 RANGE {collatz}")), 0);
+    let chosen = "[ 'N' BIND N 2 DIV N N 2 DIV FLOOR 2 MUL N EQ NOT SELECT ] MAP";
+    assert_eq!(rat_runs(&format!("0 1000 RANGE {chosen}")), 1);
 }

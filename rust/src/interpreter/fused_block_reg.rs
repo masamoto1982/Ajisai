@@ -18,7 +18,7 @@
 //! would have, so no wrapped value is ever kept. `run_scalar` runs it once per
 //! element for `FOLD` and `SCAN`, where each run needs the last one's result.
 
-use crate::interpreter::fused_block_int::IntOp;
+use crate::interpreter::fused_block_int::{IntOp, POISON};
 
 /// How many elements `run_columns` takes per instruction.
 const CHUNK: usize = 256;
@@ -35,6 +35,7 @@ enum Kind {
     Sub,
     Mul,
     FloorDiv,
+    ExactDiv,
     Lt,
     Gt,
     Eq,
@@ -73,6 +74,19 @@ fn floor_div(a: i64, b: i64) -> (i64, bool) {
     }
 }
 
+/// `a / b` when `b` divides `a`, [`POISON`] when it does not, and `true`
+/// for a zero divisor or `i64::MIN / -1`. An exact quotient of `i64::MIN`
+/// reads as poison too; that only ever sends a walk on to the next tier,
+/// which answers it exactly.
+#[inline(always)]
+fn exact_div(a: i64, b: i64) -> (i64, bool) {
+    match a.checked_rem(b) {
+        Some(0) => (a / b, false),
+        Some(_) => (POISON, false),
+        None => (0, true),
+    }
+}
+
 /// One instruction on scalars: the value, and whether it left the tier.
 #[inline(always)]
 fn apply(kind: Kind, a: i64, b: i64, c: i64) -> (i64, bool) {
@@ -81,6 +95,7 @@ fn apply(kind: Kind, a: i64, b: i64, c: i64) -> (i64, bool) {
         Kind::Sub => a.overflowing_sub(b),
         Kind::Mul => a.overflowing_mul(b),
         Kind::FloorDiv => floor_div(a, b),
+        Kind::ExactDiv => exact_div(a, b),
         Kind::Lt => (i64::from(a < b), false),
         Kind::Gt => (i64::from(a > b), false),
         Kind::Eq => (i64::from(a == b), false),
@@ -159,6 +174,7 @@ fn exec_column(ins: &Instr, regs: &mut [i64], width: usize, len: usize) -> bool 
         Kind::Sub => zip2(dst, a, b, i64::overflowing_sub),
         Kind::Mul => zip2(dst, a, b, i64::overflowing_mul),
         Kind::FloorDiv => zip2(dst, a, b, floor_div),
+        Kind::ExactDiv => zip2(dst, a, b, exact_div),
         Kind::Lt => zip2(dst, a, b, |x, y| (i64::from(x < y), false)),
         Kind::Gt => zip2(dst, a, b, |x, y| (i64::from(x > y), false)),
         Kind::Eq => zip2(dst, a, b, |x, y| (i64::from(x == y), false)),
@@ -256,6 +272,7 @@ impl RegProgram {
                 | IntOp::Sub
                 | IntOp::Mul
                 | IntOp::FloorDiv
+                | IntOp::ExactDiv
                 | IntOp::Lt
                 | IntOp::Gt
                 | IntOp::Eq
@@ -267,6 +284,7 @@ impl RegProgram {
                         IntOp::Sub => Kind::Sub,
                         IntOp::Mul => Kind::Mul,
                         IntOp::FloorDiv => Kind::FloorDiv,
+                        IntOp::ExactDiv => Kind::ExactDiv,
                         IntOp::Lt => Kind::Lt,
                         IntOp::Gt => Kind::Gt,
                         IntOp::Eq => Kind::Eq,
