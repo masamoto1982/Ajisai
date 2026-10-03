@@ -144,6 +144,15 @@ export function agent_infer_contracts(source: string): string;
 export function agent_predict_outcomes(source: string, step_limit?: number | null): string;
 
 /**
+ * Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+ * interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
+ * the same one `rust/examples/speed_bench.rs` times natively) and answer the
+ * final stack depth. Nothing is converted to JS, so the caller's clock sees
+ * the computation and not the marshalling of its result.
+ */
+export function bench_execute(source: string): Promise<number>;
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
