@@ -162,9 +162,52 @@ fn hand_picked_programs_agree() {
         "1 600 RANGE [ 300 SUB 3074457345618258602 MUL 0 GT ] FILTER",
         "1 600 RANGE 0 [ 300 SUB 3074457345618258602 MUL ADD ] FOLD",
         "1 600 RANGE 9223372036854775000 [ ADD ] FOLD",
+        // The small-rational tier: Henrici's two branches, zero results, a
+        // negative divisor, rounding halves, i64::MIN, and a walk that
+        // outgrows a machine word part way and finishes on the general tier.
+        "1 1 600 RANGE DIV [ 2 MUL ] MAP",
+        "1 1 600 RANGE DIV [ 1/3 ADD 2 MUL ] MAP",
+        "1 1 600 RANGE DIV [ 1/6 SUB 3/4 MUL ] MAP",
+        "1 600 RANGE [ 7 DIV 1/3 ADD FLOOR ] MAP",
+        "1 600 RANGE [ 6 DIV 1/2 ADD ROUND ] MAP",
+        "-30 30 RANGE [ 4 DIV ROUND ] MAP",
+        "1 1 60 RANGE DIV [ 'X' BIND X X SUB ] MAP",
+        "1 1 60 RANGE DIV [ 0 MUL ] MAP",
+        "1 1 60 RANGE DIV [ -3/7 DIV ] MAP",
+        "1 1 60 RANGE DIV [ 0 DIV ] MAP",
+        "[ -9223372036854775808 9223372036854775807 ] [ 1/2 MUL ] MAP",
+        "[ -9223372036854775808/3 ] [ -1 MUL ] MAP",
+        "1 1 600 RANGE DIV [ 1/2 GT ] FILTER",
+        "1 1 600 RANGE DIV [ 1/7 EQ ] FILTER",
+        "1 1 30 RANGE DIV 0 [ ADD ] FOLD",
+        "1 1 60 RANGE DIV 0 [ ADD ] FOLD",
+        "1 1 60 RANGE DIV 0 [ ADD ] SCAN",
+        "1 1 60 RANGE DIV 1 [ MUL ] FOLD",
+        "[ 1/2 1/3 ] 1/5 [ 'E' BIND 'A' BIND A E A E GT SELECT ] FOLD",
     ] {
         assert_same(source, Limits::default());
     }
+}
+
+fn rat_runs(source: &str) -> u64 {
+    let before = crate::interpreter::fused_block_rat::rat_runs_on_this_thread();
+    let mut interp = Interpreter::new();
+    let _ = crate::agent::block_on(interp.execute(source));
+    crate::interpreter::fused_block_rat::rat_runs_on_this_thread() - before
+}
+
+/// The small-rational tier answers the fractional walks the integer tier
+/// declines, and steps aside for what does not fit it.
+#[test]
+fn the_rational_tier_is_taken_where_it_applies() {
+    assert_eq!(rat_runs("1 1 1000 RANGE DIV [ 2 MUL ] MAP"), 1);
+    assert_eq!(rat_runs("1 1000 RANGE [ 7 DIV 1/3 ADD FLOOR ] MAP"), 1);
+    assert_eq!(rat_runs("1 1 1000 RANGE DIV [ 1/2 GT ] FILTER"), 1);
+    assert_eq!(rat_runs("1 1 30 RANGE DIV 0 [ ADD ] FOLD"), 1);
+    // Integers stay on the integer tier; overflow and a zero divisor leave.
+    assert_eq!(rat_runs("1 1000 RANGE [ 2 MUL ] MAP"), 0);
+    assert_eq!(rat_runs("1 1 60 RANGE DIV 0 [ ADD ] FOLD"), 0);
+    assert_eq!(rat_runs("1 1 60 RANGE DIV [ 0 DIV ] MAP"), 0);
 }
 
 #[test]

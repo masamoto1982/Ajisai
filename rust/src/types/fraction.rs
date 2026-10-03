@@ -44,9 +44,17 @@ pub(crate) fn binary_gcd_u64(a: u64, b: u64) -> u64 {
 /// sum of two `i64` pairs is formed from. When both fit 64 bits, as they do
 /// once a sum has been reduced, the 64-bit form runs.
 #[inline]
-fn binary_gcd_u128(mut a: u128, mut b: u128) -> u128 {
+pub(crate) fn binary_gcd_u128(mut a: u128, mut b: u128) -> u128 {
     if let (Ok(x), Ok(y)) = (u64::try_from(a), u64::try_from(b)) {
         return u128::from(binary_gcd_u64(x, y));
+    }
+    // One operand wide, the other a machine word: one division brings the
+    // wide one within the narrow one's width, as `binary_gcd_u64` does.
+    if a > b && b != 0 && u64::try_from(b).is_ok() {
+        return u128::from(binary_gcd_u64((a % b) as u64, b as u64));
+    }
+    if b > a && a != 0 && u64::try_from(a).is_ok() {
+        return u128::from(binary_gcd_u64((b % a) as u64, a as u64));
     }
     if a == 0 {
         return b;

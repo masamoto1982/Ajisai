@@ -27,6 +27,7 @@ mod format_ops;
 pub(crate) mod fused_block;
 mod fused_block_general;
 mod fused_block_int;
+mod fused_block_rat;
 mod fused_block_reg;
 #[cfg(test)]
 mod fused_block_tests;

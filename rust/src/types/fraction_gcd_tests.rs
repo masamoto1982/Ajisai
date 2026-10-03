@@ -65,3 +65,54 @@ proptest! {
         }
     }
 }
+
+/// A reduced pair with a positive denominator, drawn to reach the edges of a
+/// machine word as well as everyday values.
+fn small_pair() -> impl Strategy<Value = (i64, i64)> {
+    let half = prop_oneof![
+        4 => -50i64..50,
+        1 => Just(i64::MAX),
+        1 => Just(i64::MIN),
+        1 => any::<i64>(),
+        1 => 1i64..1 << 31,
+    ];
+    (half.clone(), half).prop_filter_map("a denominator", |(n, d)| {
+        if d == 0 {
+            return None;
+        }
+        let f = Fraction::new(num_bigint::BigInt::from(n), num_bigint::BigInt::from(d));
+        f.extract_i64_pair()
+    })
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(4096))]
+
+    /// `small_rational` against `Fraction`: where it answers, the same pair;
+    /// where it declines, a result `Fraction` could not hold as a pair either
+    /// (or a zero divisor).
+    #[test]
+    fn small_rational_agrees_with_fraction(a in small_pair(), b in small_pair()) {
+        use super::small_rational::{add, div, mul, order};
+        let fa = Fraction::from_normalized_pair(a.0, a.1);
+        let fb = Fraction::from_normalized_pair(b.0, b.1);
+        let cases = [
+            (add(a, b, false), Some(fa.add(&fb))),
+            (add(a, b, true), Some(fa.sub(&fb))),
+            (mul(a, b), Some(fa.mul(&fb))),
+            (div(a, b), (b.0 != 0).then(|| fa.div(&fb))),
+        ];
+        for (fast, oracle) in cases {
+            let oracle = oracle.and_then(|f| f.extract_i64_pair());
+            prop_assert_eq!(fast, oracle, "{:?} and {:?}", a, b);
+        }
+        let ordering = if fa.lt(&fb) {
+            std::cmp::Ordering::Less
+        } else if fa.gt(&fb) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        };
+        prop_assert_eq!(order(a, b), ordering);
+    }
+}
