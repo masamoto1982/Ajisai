@@ -162,10 +162,17 @@ struct Cursor<'a> {
 }
 
 impl Cursor<'_> {
+    #[inline]
     fn peek(&self) -> Option<char> {
-        self.input[self.pos..].chars().next()
+        // Source is nearly all ASCII, which is its own character; decoding
+        // UTF-8 from a fresh slice per character was most of this loop.
+        match *self.input.as_bytes().get(self.pos)? {
+            byte if byte.is_ascii() => Some(char::from(byte)),
+            _ => self.input[self.pos..].chars().next(),
+        }
     }
 
+    #[inline]
     fn bump(&mut self) {
         if let Some(c) = self.peek() {
             self.pos += c.len_utf8();

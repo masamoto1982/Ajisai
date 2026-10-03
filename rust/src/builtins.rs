@@ -21,7 +21,9 @@ mod builtin_word_details_tests;
 /// The inventory is the generated registry: `spec/words.json` decides which
 /// Words exist, and each is registered with its generated hover title as its
 /// description.
-pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
+pub fn register_builtins<S: std::hash::BuildHasher>(
+    dictionary: &mut HashMap<String, Arc<WordDefinition>, S>,
+) {
     for word in GENERATED_WORDS {
         dictionary.insert(
             word.name.to_string(),

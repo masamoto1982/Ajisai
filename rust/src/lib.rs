@@ -13,6 +13,7 @@ static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 mod builtins;
 pub mod coreword_registry;
 mod error;
+mod fast_hash;
 /// Word-name canonicalization, at the path every caller names it by; it lives
 /// beside the Core Word registry (`coreword_registry::canonical_word_name`).
 pub mod word_name {
