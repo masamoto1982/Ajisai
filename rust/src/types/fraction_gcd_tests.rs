@@ -75,6 +75,19 @@ fn small_pair() -> impl Strategy<Value = (i64, i64)> {
         1 => Just(i64::MIN),
         1 => any::<i64>(),
         1 => 1i64..1 << 31,
+        // Products of these straddle a machine word, which is where the
+        // word-sized routes hand over to the widened ones.
+        1 => prop_oneof![
+            Just(3_037_000_499i64),
+            Just(3_037_000_500i64),
+            Just(-3_037_000_500i64),
+            Just(1i64 << 32),
+            Just(-(1i64 << 32)),
+            Just(1i64 << 62),
+            Just(-(1i64 << 62)),
+            Just(i64::MIN + 1),
+            Just(-1i64),
+        ],
     ];
     (half.clone(), half).prop_filter_map("a denominator", |(n, d)| {
         if d == 0 {
@@ -86,7 +99,7 @@ fn small_pair() -> impl Strategy<Value = (i64, i64)> {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(4096))]
+    #![proptest_config(ProptestConfig::with_cases(16384))]
 
     /// `small_rational` against `Fraction`: where it answers, the same pair;
     /// where it declines, a result `Fraction` could not hold as a pair either
