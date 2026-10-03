@@ -35,7 +35,7 @@ impl ExecutableCode {
         if !crate::interpreter::is_plan_valid(&self.plan, interp) {
             return None;
         }
-        crate::interpreter::fused_block::FusedBlock::compile(&self.plan, inputs)
+        crate::interpreter::fused_block::FusedBlock::compile(&self.plan, interp, inputs)
     }
 }
 
@@ -163,6 +163,18 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let n_elements: usize = target_val.len();
     if n_elements == 0 {
         interp.stack.push(Value::from_vector(Vec::new()));
+        return Ok(());
+    }
+
+    if let Some(result) = executable.fused(interp, 1).and_then(|block| {
+        block.run(
+            interp,
+            crate::interpreter::fused_block::FusedWalk::Filter,
+            &target_val,
+            None,
+        )
+    }) {
+        interp.stack.push(result);
         return Ok(());
     }
 

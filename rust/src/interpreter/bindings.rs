@@ -299,7 +299,7 @@ fn check_binding_acyclic(interp: &Interpreter, names: &[String], subject: &Value
 /// The names an operand gives. A String is one name; a Vector of Strings is
 /// that many, and a one-element Vector is the single-name case, so `[ 'W' ]`
 /// and `'W'` mean the same thing.
-fn binding_names(value: &Value) -> Result<Vec<String>> {
+pub(crate) fn binding_names(value: &Value) -> Result<Vec<String>> {
     use crate::interpreter::value_extraction_helpers::value_as_string;
     if value.is_text() {
         return Ok(vec![value_as_string(value).unwrap_or_default()]);
