@@ -12,6 +12,9 @@ mod debug_declared_checks;
 pub mod debug_diagnosis;
 mod debug_next_checks;
 pub(crate) mod declared_nil_contract;
+pub(crate) mod dense_kernels;
+#[cfg(test)]
+mod dense_kernels_tests;
 pub mod error_flow_trace;
 #[cfg(test)]
 mod error_message_format_tests;

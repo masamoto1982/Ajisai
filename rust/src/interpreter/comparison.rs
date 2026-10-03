@@ -137,6 +137,20 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
     if push_ordering_scalar_fastpath(interp, kind) {
         return Ok(());
     }
+    if interp.dense_kernels_enabled && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let slots = interp.stack.as_slice();
+        if let Some(result) = crate::interpreter::dense_kernels::ordering(
+            kind,
+            &slots[stack_len - 2],
+            &slots[stack_len - 1],
+        ) {
+            interp.stack.pop();
+            interp.stack.pop();
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
     apply_binary_comparison(interp, kind)
 }
 

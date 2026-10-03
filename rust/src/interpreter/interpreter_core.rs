@@ -232,6 +232,12 @@ pub struct Interpreter {
     /// rational arithmetic runs fused (`fused_block`), with the interpreted
     /// walk's charges. Disable via `AJISAI_NO_FUSED_BLOCK` for A/B comparison.
     pub(crate) fused_block_enabled: bool,
+
+    /// When true (default), element-wise arithmetic, `LT`/`GT` and
+    /// `FLOOR`/`ROUND` on one-dimensional dense Tensors run on the columns
+    /// (`dense_kernels`). Disable via `AJISAI_NO_DENSE_KERNELS` for A/B
+    /// comparison.
+    pub(crate) dense_kernels_enabled: bool,
 }
 
 impl Default for Interpreter {
@@ -288,6 +294,7 @@ impl Interpreter {
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
             fused_block_enabled: std::env::var("AJISAI_NO_FUSED_BLOCK").is_err(),
+            dense_kernels_enabled: std::env::var("AJISAI_NO_DENSE_KERNELS").is_err(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -494,6 +501,12 @@ impl Interpreter {
     /// `AJISAI_NO_FUSED_BLOCK`.
     pub fn set_fused_block_enabled(&mut self, enabled: bool) {
         self.fused_block_enabled = enabled;
+    }
+
+    /// Enable or disable the dense column kernels. In-process equivalent of
+    /// `AJISAI_NO_DENSE_KERNELS`.
+    pub fn set_dense_kernels_enabled(&mut self, enabled: bool) {
+        self.dense_kernels_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a

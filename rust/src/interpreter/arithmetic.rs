@@ -71,6 +71,33 @@ fn simd_schema_candidate(schema: ExactArithmeticSchema, a: &Value, b: &Value) ->
     }
 }
 
+/// `dense_kernels::arithmetic` on the two operands, when it answers. Every
+/// lane it produces fits a machine word, so the size ceiling can refuse one
+/// only when it is set below that.
+fn push_dense_kernel_result(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+) -> Result<bool> {
+    if !interp.dense_kernels_enabled || interp.stack.len() < 2 {
+        return Ok(false);
+    }
+    let stack_len = interp.stack.len();
+    let slots = interp.stack.as_slice();
+    let Some(result) = crate::interpreter::dense_kernels::arithmetic(
+        schema,
+        &slots[stack_len - 2],
+        &slots[stack_len - 1],
+    ) else {
+        return Ok(false);
+    };
+    if interp.runtime_limits.max_bigint_bits < 64 {
+        check_result_size(interp, &result)?;
+    }
+    consume_stacktop_binary(interp);
+    interp.stack.push(result);
+    Ok(true)
+}
+
 fn push_simd_schema_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
@@ -279,6 +306,10 @@ fn apply_exact_arithmetic_schema(
     }
 
     if push_scalar_fastpath_result(interp, schema)? {
+        return Ok(());
+    }
+
+    if push_dense_kernel_result(interp, schema)? {
         return Ok(());
     }
 

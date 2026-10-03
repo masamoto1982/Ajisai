@@ -112,8 +112,31 @@ fn holds_nil_lane(value: &Value) -> bool {
     }
 }
 
+/// `dense_kernels::rounded` on the operand, when it answers.
+fn push_rounded_dense(
+    interp: &mut Interpreter,
+    rounding: crate::interpreter::dense_kernels::Rounding,
+) -> bool {
+    if !interp.dense_kernels_enabled {
+        return false;
+    }
+    let Some(result) = interp
+        .stack
+        .last()
+        .and_then(|top| crate::interpreter::dense_kernels::rounded(rounding, top))
+    else {
+        return false;
+    };
+    interp.stack.pop();
+    interp.stack.push(result);
+    true
+}
+
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     if record_ops::lift_unary(interp, &op_floor)? {
+        return Ok(());
+    }
+    if push_rounded_dense(interp, crate::interpreter::dense_kernels::Rounding::Floor) {
         return Ok(());
     }
     apply_unary_math(
@@ -125,6 +148,9 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     if record_ops::lift_unary(interp, &op_round)? {
+        return Ok(());
+    }
+    if push_rounded_dense(interp, crate::interpreter::dense_kernels::Rounding::Round) {
         return Ok(());
     }
     apply_unary_math(

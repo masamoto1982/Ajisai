@@ -3,18 +3,77 @@ use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;
 
+/// `gcd(a, b)` by Stein's binary algorithm: shifts and subtractions only.
+///
+/// Euclid's algorithm spends one hardware division per step, 20 to 90 cycles
+/// each on a 64-bit operand, and the normalizer runs it on every rational
+/// result. Stein's needs only `trailing_zeros`, a shift and a subtraction per
+/// step. The gcd is unique, so the two agree everywhere — a property test
+/// below holds them to it.
+#[inline]
+pub(crate) fn binary_gcd_u64(a: u64, b: u64) -> u64 {
+    let (mut a, mut b) = if a >= b { (a, b) } else { (b, a) };
+    if b == 0 {
+        return a;
+    }
+    // Stein's halves the larger operand at least every other step, so a
+    // lopsided pair — a large value against a small denominator, the common
+    // case — takes as many steps as the larger has bits. One division first
+    // brings it within the smaller's width: gcd(a, b) = gcd(a mod b, b).
+    if a >> 16 > b {
+        a %= b;
+        if a == 0 {
+            return b;
+        }
+    }
+    let shift = (a | b).trailing_zeros();
+    a >>= a.trailing_zeros();
+    loop {
+        b >>= b.trailing_zeros();
+        if a > b {
+            std::mem::swap(&mut a, &mut b);
+        }
+        b -= a;
+        if b == 0 {
+            return a << shift;
+        }
+    }
+}
+
+/// [`binary_gcd_u64`] for operands up to 128 bits: the products a rational
+/// sum of two `i64` pairs is formed from. When both fit 64 bits, as they do
+/// once a sum has been reduced, the 64-bit form runs.
+#[inline]
+fn binary_gcd_u128(mut a: u128, mut b: u128) -> u128 {
+    if let (Ok(x), Ok(y)) = (u64::try_from(a), u64::try_from(b)) {
+        return u128::from(binary_gcd_u64(x, y));
+    }
+    if a == 0 {
+        return b;
+    }
+    if b == 0 {
+        return a;
+    }
+    let shift = (a | b).trailing_zeros();
+    a >>= a.trailing_zeros();
+    loop {
+        b >>= b.trailing_zeros();
+        if a > b {
+            std::mem::swap(&mut a, &mut b);
+        }
+        b -= a;
+        if b == 0 {
+            return a << shift;
+        }
+    }
+}
+
 #[inline]
 pub(crate) fn compute_gcd_i64(a: i64, b: i64) -> i64 {
     // Reduce in unsigned space: `i64::MIN.abs()` overflows and panics, so the
     // signed `abs()` form crashed on `i64::MIN` operands (reachable from a
     // `-9223372036854775808` literal flowing through the fraction normalizer).
-    let mut a = a.unsigned_abs();
-    let mut b = b.unsigned_abs();
-    while b != 0 {
-        let t = b;
-        b = a % b;
-        a = t;
-    }
+    let a = binary_gcd_u64(a.unsigned_abs(), b.unsigned_abs());
     // The gcd of two i64 values always fits in i64 except gcd(i64::MIN,
     // i64::MIN) == 2^63, which wraps to i64::MIN. Every caller only ever
     // divides its operands by this result, and i64::MIN / i64::MIN == 1, so the
@@ -396,17 +455,26 @@ impl Fraction {
     #[inline]
     pub(crate) fn create_from_i128(num: i128, den: i128) -> Self {
         debug_assert!(den != 0);
-        fn compute_gcd_i128(mut a: i128, mut b: i128) -> i128 {
-            a = a.abs();
-            b = b.abs();
-            while b != 0 {
-                let t = b;
-                b = a % b;
-                a = t;
+        // Both halves in machine words — every `Small` sum, difference and
+        // product that did not overflow — reduce with 64-bit divisions; the
+        // `i128` ones below are a software routine (`__divti3`) per divide.
+        if let (Ok(n), Ok(d)) = (i64::try_from(num), i64::try_from(den)) {
+            let g = binary_gcd_u64(n.unsigned_abs(), d.unsigned_abs());
+            if let Ok(g) = i64::try_from(g) {
+                let (n, d) = (n / g, d / g);
+                let (n, d) = if d < 0 {
+                    (n.checked_neg(), d.checked_neg())
+                } else {
+                    (Some(n), Some(d))
+                };
+                if let (Some(n), Some(d)) = (n, d) {
+                    return Fraction {
+                        repr: FractionRepr::Small(n, d),
+                    };
+                }
             }
-            a
         }
-        let g: i128 = compute_gcd_i128(num, den);
+        let g: i128 = binary_gcd_u128(num.unsigned_abs(), den.unsigned_abs()) as i128;
         let mut n: i128 = num / g;
         let mut d: i128 = den / g;
         if d < 0 {
