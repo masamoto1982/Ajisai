@@ -31,12 +31,9 @@ use crate::semantic::AbsenceMetadata;
 /// sentinel calls present. So the `valid_mask` failure mode — two records of
 /// the same fact, drifting apart — cannot recur here; there is no second
 /// record of that fact to drift.
-/// One column of a dense tensor's lanes. A tensor of one lane — what `[ 0 ]`
-/// is, and what every element-wise Word answers for one — holds its lane
-/// inline, so building it allocates nothing beyond the tensor itself.
+/// A column of lanes, inline for one lane (`[ 0 ]`), so building one costs
+/// nothing beyond the tensor; and a shape, inline for one axis.
 pub type Column = smallvec::SmallVec<[i64; 1]>;
-
-/// A dense tensor's shape, inline for the one-axis shapes nearly all are.
 pub type Dims = smallvec::SmallVec<[usize; 1]>;
 
 #[derive(Debug, Clone, Eq)]
@@ -116,18 +113,10 @@ impl DenseTensor {
         is_pure_integer: bool,
         absences: BTreeMap<usize, AbsenceMetadata>,
     ) -> Self {
-        let (numerators, denominators, shape) =
-            (numerators.into(), denominators.into(), shape.into());
-        // Nearly every tensor has no absent lane: an empty map is kept as is
-        // rather than walked and rebuilt.
-        let absences = if absences.is_empty() {
-            absences
-        } else {
-            absences
-                .into_iter()
-                .filter(|(index, _)| matches!(denominators.get(*index), Some(0)))
-                .collect()
-        };
+        let (numerators, denominators) = (numerators.into(), denominators.into());
+        let shape = shape.into();
+        let mut absences = absences;
+        absences.retain(|index, _| matches!(denominators.get(*index), Some(0)));
         Self {
             numerators,
             denominators,
