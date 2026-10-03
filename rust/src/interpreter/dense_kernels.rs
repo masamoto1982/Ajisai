@@ -214,7 +214,7 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
         let lanes = match schema {
             ExactArithmeticSchema::Add => integer_lanes(a, b, n, i64::overflowing_add),
             ExactArithmeticSchema::Sub => integer_lanes(a, b, n, i64::overflowing_sub),
-            ExactArithmeticSchema::Mul => integer_lanes(a, b, n, i64::overflowing_mul),
+            ExactArithmeticSchema::Mul => integer_lanes(a, b, n, small_rational::overflowing_mul),
             ExactArithmeticSchema::Div => None,
         };
         if let Some(nums) = lanes {

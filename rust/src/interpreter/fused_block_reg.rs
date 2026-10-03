@@ -19,6 +19,7 @@
 //! element for `FOLD` and `SCAN`, where each run needs the last one's result.
 
 use crate::interpreter::fused_block_int::{IntOp, POISON};
+use crate::types::small_rational::overflowing_mul;
 
 /// How many elements `run_columns` takes per instruction.
 const CHUNK: usize = 256;
@@ -93,7 +94,7 @@ fn apply(kind: Kind, a: i64, b: i64, c: i64) -> (i64, bool) {
     match kind {
         Kind::Add => a.overflowing_add(b),
         Kind::Sub => a.overflowing_sub(b),
-        Kind::Mul => a.overflowing_mul(b),
+        Kind::Mul => overflowing_mul(a, b),
         Kind::FloorDiv => floor_div(a, b),
         Kind::ExactDiv => exact_div(a, b),
         Kind::Lt => (i64::from(a < b), false),
@@ -172,7 +173,7 @@ fn exec_column(ins: &Instr, regs: &mut [i64], width: usize, len: usize) -> bool 
     match ins.kind {
         Kind::Add => zip2(dst, a, b, i64::overflowing_add),
         Kind::Sub => zip2(dst, a, b, i64::overflowing_sub),
-        Kind::Mul => zip2(dst, a, b, i64::overflowing_mul),
+        Kind::Mul => zip2(dst, a, b, overflowing_mul),
         Kind::FloorDiv => zip2(dst, a, b, floor_div),
         Kind::ExactDiv => zip2(dst, a, b, exact_div),
         Kind::Lt => zip2(dst, a, b, |x, y| (i64::from(x < y), false)),
@@ -405,9 +406,7 @@ impl RegProgram {
                     (_, Kind::Add, _) => {
                         fold_with(&mut acc, lanes, &mut each, i64::overflowing_add)
                     }
-                    (_, Kind::Mul, _) => {
-                        fold_with(&mut acc, lanes, &mut each, i64::overflowing_mul)
-                    }
+                    (_, Kind::Mul, _) => fold_with(&mut acc, lanes, &mut each, overflowing_mul),
                     (_, _, false) => fold_with(&mut acc, lanes, &mut each, i64::overflowing_sub),
                     (_, _, true) => {
                         fold_with(&mut acc, lanes, &mut each, |a, x| x.overflowing_sub(a))
