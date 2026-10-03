@@ -73,8 +73,9 @@ fn gcd64(a: i64, b: i64) -> i64 {
 /// in lowest terms. The gcds and quotients stay in machine words — an `i128`
 /// division is a software routine — and only the products widen.
 pub(crate) fn mul((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
-    let g1 = gcd64(an, bd);
-    let g2 = gcd64(bn, ad);
+    // An integer half has nothing to cancel against: gcd(x, 1) is 1.
+    let g1 = if bd == 1 { 1 } else { gcd64(an, bd) };
+    let g2 = if ad == 1 { 1 } else { gcd64(bn, ad) };
     fit(
         i128::from(an / g1) * i128::from(bn / g2),
         i128::from(ad / g2) * i128::from(bd / g1),
@@ -87,7 +88,14 @@ pub(crate) fn div((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
     if bn == 0 {
         return None;
     }
-    let g2 = gcd64(bd, ad);
+    // Two integers where the divisor divides: the quotient is an integer
+    // (`checked_*` declines i64::MIN / -1, which the general route widens).
+    if ad == 1 && bd == 1 && an.checked_rem(bn) == Some(0) {
+        if let Some(q) = an.checked_div(bn) {
+            return Some((q, 1));
+        }
+    }
+    let g2 = if ad == 1 || bd == 1 { 1 } else { gcd64(bd, ad) };
     // gcd(|a|, |b|) is 2^63 only for halves drawn from {0, i64::MIN}; that
     // one case divides in `i128`.
     let g1 = binary_gcd_u64(an.unsigned_abs(), bn.unsigned_abs());
