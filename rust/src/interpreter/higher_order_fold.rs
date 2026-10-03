@@ -1,4 +1,4 @@
-use super::higher_order::{execute_executable_code, extract_executable_code, ExecutableCode};
+use super::higher_order::{execute_executable_code, extract_executable_code};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::Interpreter;
 use crate::types::Stack;
@@ -81,7 +81,7 @@ fn run_accumulator_walk(
 ) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
-    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
+    let executable = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);

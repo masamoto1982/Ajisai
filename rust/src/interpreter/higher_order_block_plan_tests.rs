@@ -15,7 +15,7 @@
 //! the dictionary did.
 
 use crate::interpreter::Interpreter;
-use crate::test_support::answer;
+use crate::test_support::{answer, run};
 
 /// Every higher-order Word, over a block that resolves to Core Words.
 #[tokio::test]
@@ -114,4 +114,29 @@ async fn a_failure_inside_a_compiled_block_still_names_its_word() {
         trace.contains("ADD"),
         "the error-flow trace must name ADD: {trace}"
     );
+}
+
+/// One code Vector run again after the dictionary changed is compiled
+/// again: the compile cache (`higher_order::BlockCache`) keys an entry by the
+/// dictionary epoch as well as by the Vector, so `B` here reaches the `F`
+/// defined second, not a plan holding the first.
+#[tokio::test]
+async fn a_cached_block_is_recompiled_after_the_dictionary_changes() {
+    for (program, expected) in [
+        (
+            "[ 2 MUL ] 'F' DEF [ F ] 'B' BIND [ 1 2 ] B MAP [ 3 MUL ] 'F' DEF [ 1 2 ] B MAP",
+            ["[ 2/1 4/1 ]", "[ 3/1 6/1 ]"],
+        ),
+        (
+            "[ F ] 'B' BIND [ 1 2 ] [ 'F' BIND 0 ] MAP [ 2 MUL ] 'F' DEF [ 1 2 ] B MAP",
+            ["[ 0/1 0/1 ]", "[ 2/1 4/1 ]"],
+        ),
+        (
+            "[ [ 0 ] [ ADD ] FOLD ] 'S' BIND [ [ 1 2 ] [ 3 4 ] ] S MAP [ [ 5 ] ] S MAP",
+            ["[ [ 3/1 ] [ 7/1 ] ]", "[ [ 5/1 ] ]"],
+        ),
+    ] {
+        let stack = crate::types::display::render_stack(run(program).await.get_stack());
+        assert_eq!(stack, expected, "`{program}`");
+    }
 }

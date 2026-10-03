@@ -238,6 +238,8 @@ pub struct Interpreter {
     /// (`dense_kernels`). Disable via `AJISAI_NO_DENSE_KERNELS` for A/B
     /// comparison.
     pub(crate) dense_kernels_enabled: bool,
+    /// Code operands compiled recently (`higher_order::BlockCache`).
+    pub(crate) block_cache: super::higher_order::BlockCache,
 }
 
 impl Default for Interpreter {
@@ -295,6 +297,7 @@ impl Interpreter {
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
             fused_block_enabled: std::env::var("AJISAI_NO_FUSED_BLOCK").is_err(),
             dense_kernels_enabled: std::env::var("AJISAI_NO_DENSE_KERNELS").is_err(),
+            block_cache: Default::default(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
