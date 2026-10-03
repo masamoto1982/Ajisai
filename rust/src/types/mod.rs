@@ -9,6 +9,7 @@ mod fraction_gcd_tests;
 #[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod record;
+pub(crate) mod small_rational;
 pub mod stack;
 mod value_absence;
 mod value_children;

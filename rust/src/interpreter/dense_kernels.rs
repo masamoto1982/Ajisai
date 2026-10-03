@@ -24,7 +24,7 @@
 
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::comparison::OrderingKind;
-use crate::types::fraction::Fraction;
+use crate::types::small_rational;
 use crate::types::{DenseTensor, Value, ValueData};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -227,12 +227,15 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
     let mut dens = Vec::with_capacity(n);
     let mut integer = true;
     for i in 0..n {
-        let (an, ad) = a.at(i);
-        let (bn, bd) = b.at(i);
-        let x = Fraction::from_normalized_pair(an, ad);
-        let y = Fraction::from_normalized_pair(bn, bd);
-        // A zero divisor is a reasoned NIL lane, the general route's to make.
-        let (rn, rd) = schema.fraction(&x, &y).ok()?.extract_i64_pair()?;
+        let (x, y) = (a.at(i), b.at(i));
+        // A zero divisor is a reasoned NIL lane, the general route's to make,
+        // and a lane that outgrows a machine word a boxed Vector.
+        let (rn, rd) = match schema {
+            ExactArithmeticSchema::Add => small_rational::add(x, y, false),
+            ExactArithmeticSchema::Sub => small_rational::add(x, y, true),
+            ExactArithmeticSchema::Mul => small_rational::mul(x, y),
+            ExactArithmeticSchema::Div => small_rational::div(x, y),
+        }?;
         nums.push(rn);
         dens.push(rd);
         integer &= rd == 1;

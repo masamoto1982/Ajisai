@@ -18,9 +18,10 @@
 //!   `SELECT`, and `'NAME' BIND`.
 //!
 //! Such a block is lowered here and run against the elements directly, in one
-//! of two tiers: `fused_block_int` when every value is a machine-word integer
-//! or a Boolean (its types then known before the walk starts), and
-//! `fused_block_general` for anything else in the subset.
+//! of three tiers: `fused_block_int` when every value is a machine-word
+//! integer or a Boolean, `fused_block_rat` when every number is a rational
+//! whose halves each fit a machine word (types known before the walk starts
+//! in both), and `fused_block_general` for anything else in the subset.
 //!
 //! The fused run is *speculative*. It touches no interpreter state while it
 //! runs; it computes what the interpreted walk would have charged — the same
@@ -270,6 +271,15 @@ impl FusedBlock {
         };
         let (value, charges) =
             crate::interpreter::fused_block_int::run(self, interp, walk, target, seed.as_ref())
+                .or_else(|| {
+                    crate::interpreter::fused_block_rat::run(
+                        self,
+                        interp,
+                        walk,
+                        target,
+                        seed.as_ref(),
+                    )
+                })
                 .or_else(|| {
                     crate::interpreter::fused_block_general::run(
                         self,
