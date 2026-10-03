@@ -38,12 +38,9 @@
 //! routes equal.
 
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
-use crate::interpreter::compiled_plan::CompiledOp;
 use crate::interpreter::{CompiledPlan, Interpreter};
-use crate::kernel::generated::WordId;
 use crate::types::fraction::Fraction;
-use crate::types::{Token, Value, ValueData};
-use std::collections::HashMap;
+use crate::types::{Value, ValueData};
 
 /// A plain value: the only kind the fused form reproduces exactly. Each one
 /// is rebuilt by the constructor that built it on the interpreted route
@@ -105,7 +102,7 @@ pub(crate) enum Op {
 }
 
 impl Op {
-    fn is_word(&self) -> bool {
+    pub(crate) fn is_word(&self) -> bool {
         !matches!(self, Op::Push(_) | Op::Load(_))
     }
 }
@@ -130,8 +127,14 @@ pub(crate) struct FusedBlock {
     pub(crate) ops: Vec<Op>,
     /// How many names the block binds.
     pub(crate) slots: usize,
-    /// Words dispatched per run.
+    /// Words dispatched per run, User Word calls included.
     pub(crate) steps_per_run: u64,
+    /// User Word calls per run, each one a compiled-plan lookup.
+    pub(crate) calls_per_run: u64,
+    /// The plans of called User Words that had none current: the interpreted
+    /// walk builds each on its first call, so a committed fused walk stores
+    /// them and counts those builds.
+    pub(crate) builds: Vec<(String, std::sync::Arc<CompiledPlan>)>,
 }
 
 /// What a fused walk would charge, committed only once it has finished.
@@ -142,112 +145,17 @@ pub(crate) struct Charges {
     pub(crate) fastpath: u64,
 }
 
-fn word_op(id: WordId) -> Option<Op> {
-    Some(match id {
-        WordId::Add => Op::Arith(ExactArithmeticSchema::Add),
-        WordId::Sub => Op::Arith(ExactArithmeticSchema::Sub),
-        WordId::Mul => Op::Arith(ExactArithmeticSchema::Mul),
-        WordId::Div => Op::Arith(ExactArithmeticSchema::Div),
-        WordId::Lt => Op::Compare(Compare::Lt),
-        WordId::Gt => Op::Compare(Compare::Gt),
-        WordId::Eq => Op::Compare(Compare::Eq),
-        WordId::Floor => Op::Floor,
-        WordId::Round => Op::Round,
-        WordId::Not => Op::Not,
-        WordId::And => Op::And,
-        WordId::Select => Op::Select,
-        _ => return None,
-    })
-}
-
-/// The single name a `BIND` name operand gives, when it is one the
-/// interpreter would accept. Anything it would refuse, or a destructuring
-/// list, is the ordinary walk's to run.
-fn bindable_name(interp: &Interpreter, value: &Value) -> Option<String> {
-    let names = crate::interpreter::bindings::binding_names(value).ok()?;
-    let [name] = names.as_slice() else {
-        return None;
-    };
-    interp.check_bindable_name(name).ok()?;
-    Some(name.to_uppercase())
-}
-
 impl FusedBlock {
     /// Lower `plan` for a walk that starts the block on `inputs` values, or
     /// `None` when any op is outside the fused subset or the block would
-    /// underflow (an ERROR the ordinary route reports).
-    ///
-    /// A name the plan could not resolve is a `FallbackToken`: it lowers to a
-    /// `Load` when the block bound it earlier, and to a `Push` of its value
-    /// when a frame the block can see holds it. That value is fixed for the
-    /// whole walk, since a block binds only in the frame it opens per run.
+    /// underflow (an ERROR the ordinary route reports). See
+    /// `fused_block_lower`, which also inlines the User Words it calls.
     pub(crate) fn compile(
         plan: &CompiledPlan,
         interp: &Interpreter,
         inputs: usize,
     ) -> Option<Self> {
-        let source = &plan.line.ops;
-        let mut ops = Vec::with_capacity(source.len());
-        let mut local: HashMap<String, usize> = HashMap::new();
-        let mut depth = inputs;
-        let mut i = 0;
-        while i < source.len() {
-            let (op, pops, pushes) = match &source[i] {
-                CompiledOp::PushLiteral(value) => match Plain::of(value) {
-                    Some(plain) => (Op::Push(plain), 0, 1),
-                    // `'NAME' BIND`: the name is folded into the op.
-                    None => {
-                        let CompiledOp::CallBuiltin(call) = source.get(i + 1)? else {
-                            return None;
-                        };
-                        if call.word?.id != WordId::Bind {
-                            return None;
-                        }
-                        let name = bindable_name(interp, value)?;
-                        let next = local.len();
-                        let slot = *local.entry(name).or_insert(next);
-                        i += 1;
-                        (Op::Bind(slot), 1, 0)
-                    }
-                },
-                CompiledOp::PushWordLiteral(value, _) => match Plain::of(value)? {
-                    Plain::Bool(b) => (Op::PushWord(b), 0, 1),
-                    Plain::Num(_) => return None,
-                },
-                CompiledOp::CallBuiltin(call) => {
-                    let op = word_op(call.word?.id)?;
-                    let (pops, pushes) = match op {
-                        Op::Floor | Op::Round | Op::Not => (1, 1),
-                        Op::Select => (3, 1),
-                        _ => (2, 1),
-                    };
-                    (op, pops, pushes)
-                }
-                CompiledOp::FallbackToken(Token::Symbol(name)) => {
-                    let name = crate::word_name::canonical_word_name(name);
-                    match local.get(name.as_ref()) {
-                        Some(slot) => (Op::Load(*slot), 0, 1),
-                        None => (Op::Push(Plain::of(&interp.lookup_binding(&name)?)?), 0, 1),
-                    }
-                }
-                _ => return None,
-            };
-            if depth < pops {
-                return None;
-            }
-            depth = depth - pops + pushes;
-            ops.push(op);
-            i += 1;
-        }
-        if depth == 0 {
-            return None;
-        }
-        let steps_per_run = ops.iter().filter(|op| op.is_word()).count() as u64;
-        Some(Self {
-            ops,
-            slots: local.len(),
-            steps_per_run,
-        })
+        crate::interpreter::fused_block_lower::lower(plan, interp, inputs)
     }
 
     /// Run the walk over `target`, starting from `seed` for `Fold`/`Scan`.
@@ -315,6 +223,12 @@ impl FusedBlock {
             value = rewrap_one_lane(walk, &value)?;
         }
 
+        let builds = self.builds.len() as u64;
+        let hits = self
+            .calls_per_run
+            .checked_mul(charges.runs)?
+            .checked_sub(builds)?;
+
         #[cfg(test)]
         FUSED_RUNS.with(|c| c.set(c.get() + 1));
         // Commit what the interpreted walk would have: a step per dispatched
@@ -326,7 +240,17 @@ impl FusedBlock {
             .runtime_metrics
             .scalar_fastpath_count
             .saturating_add(charges.fastpath);
-        interp.global_epoch += charges.runs;
+        // Each User Word call looks its plan up: the first call of a Word
+        // with none current builds one (a miss, a build and an epoch), every
+        // other call is a hit.
+        for (name, plan) in &self.builds {
+            interp.store_compiled_plan_for_word(name, plan.clone());
+        }
+        let metrics = &mut interp.runtime_metrics;
+        metrics.compiled_plan_cache_miss_count += builds;
+        metrics.compiled_plan_build_count += builds;
+        metrics.compiled_plan_cache_hit_count += hits;
+        interp.global_epoch += charges.runs + builds;
         interp.execution_epoch = interp.global_epoch;
         Some(value)
     }

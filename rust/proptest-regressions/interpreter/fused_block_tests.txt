@@ -23,3 +23,4 @@ cc 77834dab8a2d46f11d0d636eb2ce506f949f1b30ffd5027c067c6ca1859be374 # shrinks to
 cc 6cd18a65de3406b4bc3ce87834c8b2a5153f5153ed5aacf728242d015620beb9 # shrinks to target = "[ 4611686018427387904 ]", seed = "[ 0 ]", code = "[ 0 ]", walk = 2, outer = None, steps = None, work = None, bits = None
 cc badb5c462b3485ea1b1a4be05fd2e87af24deb7adbbf2490344f51620d36c5b6 # shrinks to target = "[ 0 ]", (num, truth) = ("K", "TRUE"), walk = 4, outer = 0, steps = None, work = None
 cc ed29350b12d6299af6273c60b622c5e3fdf139883d3b260efc1d6236c4517396 # shrinks to target = "[ 0 ]", (num, truth) = ("A K X X A EQ SELECT ADD", "X X LT"), walk = 4, outer = 0, steps = None, work = None
+cc c061e8f1b2cf2a3bfb10f7bcd915c6d0ec13cdd71b71a8ea31749256233d014d # shrinks to target = "[ 0 ]", seed = "0", code = "[ DBL ]", walk = 2, outer = None, steps = None, work = None, bits = None

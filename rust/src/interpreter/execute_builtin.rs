@@ -293,7 +293,7 @@ impl Interpreter {
     /// Keep the plan on the definition, so the next call finds it. The
     /// definition is copied once per build — once per Word per dictionary
     /// epoch, since a stored plan stays valid until the dictionary changes.
-    fn store_compiled_plan_for_word(
+    pub(crate) fn store_compiled_plan_for_word(
         &mut self,
         resolved_name: &str,
         plan: std::sync::Arc<super::compiled_plan::CompiledPlan>,

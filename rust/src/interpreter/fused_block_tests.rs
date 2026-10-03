@@ -218,6 +218,30 @@ fn hand_picked_programs_agree() {
         "[ 9223372036854775807 2 0 ] [ 1 ] [ MUL ] FOLD",
         "[ 9223372036854775807 2 0 ] [ 1/3 ] [ MUL ] SCAN",
         "1 20 RANGE [ 0 1 ] [ ADD ] FOLD",
+        // User Words, inlined: a first call that builds the plan, a plan
+        // already current, a Word called twice and one calling another, a
+        // body binding the same name as the block, a body reading a name
+        // only the caller bound (an ERROR across the barrier), a body that
+        // consumes the caller's values, and bodies outside the subset.
+        "[ 3 MUL 1 ADD ] 'F' DEF 1 600 RANGE [ F ] MAP",
+        "[ 3 MUL 1 ADD ] 'F' DEF 1 2 RANGE [ F ] MAP 1 600 RANGE [ F ] MAP",
+        "[ 2 MUL ] 'D' DEF [ D 1 ADD D ] 'G' DEF 1 600 RANGE [ G ] MAP",
+        "[ 2 MUL ] 'D' DEF [ D 1 ADD D ] 'G' DEF 1 600 RANGE [ G D ] MAP",
+        "[ 'X' BIND X X MUL ] 'SQ' DEF 1 600 RANGE [ 'X' BIND X SQ X ADD ] MAP",
+        "[ X 1 ADD ] 'BADX' DEF 1 20 RANGE [ 'X' BIND X BADX ] MAP",
+        "[ K 1 ADD ] 'BADK' DEF 5 'K' BIND 1 20 RANGE [ BADK ] MAP",
+        "[ ADD ] 'PLUS' DEF 1 600 RANGE 0 [ PLUS ] FOLD",
+        "[ ADD ] 'PLUS' DEF 1 600 RANGE [ 0 ] [ PLUS ] FOLD",
+        "[ ADD ] 'PLUS' DEF 1 600 RANGE [ 5 PLUS ] MAP",
+        "[ ADD ] 'PLUS' DEF 1 20 RANGE [ PLUS ] MAP",
+        "[ 3 GT ] 'BIG' DEF 1 600 RANGE [ BIG ] FILTER",
+        "[ 1 SWAP DIV ] 'INV' DEF [ 1 0 2 ] [ INV ] MAP",
+        "[ 1 DIV ] 'INV' DEF [ 1 0 2 ] [ 'X' BIND 1 X INV ] MAP",
+        "[ [ 1 ] ADD ] 'VADD' DEF 1 20 RANGE [ VADD ] MAP",
+        "[ 2 MUL ] 'D' DEF 1 20 RANGE [ D ] MAP [ 3 ADD ] 'D' DEF 1 20 RANGE [ D ] MAP",
+        // A plan made stale by an unrelated DEF is rebuilt, not reused.
+        "[ 2 MUL ] 'D' DEF 1 2 RANGE [ D ] MAP [ 1 ] 'OTHER' DEF 1 600 RANGE [ D ] MAP",
+        "[ 2 MUL ] 'D' DEF [ D ] 'E' DEF [ E ] 'F' DEF [ F ] 'G' DEF 1 600 RANGE [ G ] MAP",
         "1 20 RANGE [ [ 0 ] ] [ ADD ] FOLD",
         "1 20 RANGE [ TRUE ] [ ADD ] FOLD",
     ] {
@@ -267,6 +291,16 @@ fn ceilings_agree_at_their_boundaries() {
             },
         );
     }
+    let source = "[ 3 MUL ] 'T' DEF [ T ADD ] 'U' DEF 1 50 RANGE 0 [ U ] FOLD";
+    for steps in [1, 100, 199, 200, 201, 202, 250] {
+        assert_same(
+            source,
+            Limits {
+                steps: Some(steps),
+                ..Limits::default()
+            },
+        );
+    }
     for bits in [1, 8, 16, 64] {
         assert_same(
             "1 40 RANGE 1 [ MUL ] FOLD",
@@ -302,6 +336,14 @@ fn the_fused_route_is_taken_where_it_applies() {
     assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] SCAN"), 1);
     assert_eq!(fused_runs("1 20 RANGE [ 0 ] [ ADD FLOOR ] FOLD"), 0);
     assert_eq!(fused_runs("1 20 RANGE [ 0 1 ] [ ADD ] FOLD"), 0);
+    assert_eq!(
+        fused_runs("[ 2 MUL ] 'D' DEF 1 1000 RANGE [ D 1 ADD ] MAP"),
+        1
+    );
+    assert_eq!(
+        fused_runs("[ X 1 ADD ] 'B' DEF 1 9 RANGE [ 'X' BIND X B ] MAP"),
+        0
+    );
 }
 
 fn literal() -> impl Strategy<Value = String> {
@@ -323,6 +365,8 @@ fn word() -> impl Strategy<Value = &'static str> {
         1 => prop_oneof![Just("TRUE"), Just("FALSE")],
         // Names: bound in the block, bound outside it (`K`), or both.
         2 => prop_oneof![Just("'X' BIND"), Just("X"), Just("'K' BIND"), Just("K")],
+        // User Words defined by `random_walks_agree`'s prelude.
+        2 => prop_oneof![Just("DBL"), Just("SQ"), Just("G"), Just("PLUS"), Just("BADX"), Just("CMP")],
     ]
 }
 
@@ -363,9 +407,11 @@ proptest! {
             2 => format!("{target} {seed} {code} FOLD"),
             _ => format!("{target} {seed} {code} SCAN"),
         };
+        let words = "[ 2 MUL ] 'DBL' DEF [ 'X' BIND X X MUL ] 'SQ' DEF [ DBL 1 ADD DBL ] 'G' DEF \
+                     [ ADD ] 'PLUS' DEF [ X 1 ADD ] 'BADX' DEF [ 'Y' BIND Y 3 LT Y NOT ] 'CMP' DEF";
         let source = match outer {
-            Some(value) => format!("{value} 'K' BIND {walk}"),
-            None => walk,
+            Some(value) => format!("{words} {value} 'K' BIND {walk}"),
+            None => format!("{words} {walk}"),
         };
         let limits = Limits { steps, work, bits };
         let fused = observe(&source, true, limits);
