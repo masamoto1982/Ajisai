@@ -9,3 +9,8 @@ cc 0d7598088023397b6f151dc83d885a107e0573d49988804a0e901fd9a5f9192c # shrinks to
 cc 67844e9a16753f20a5c6a6fcc494e3c688b76e5093605ac60fac29a3bbd20a88 # shrinks to target = "[ 0 ]", seed = "0", code = "[ LT 9223372036854775807 ]", walk = 2, outer = None, steps = None, work = None, bits = None
 cc 293faccb48eba1bf97ce5d67ed4d7f9c211fa1d651188f90031f5c2e62e4e235 # shrinks to target = "[ 0 ]", seed = "9223372036854775807", code = "[ ADD ]", walk = 2, outer = None, steps = None, work = None, bits = None
 cc ea825e6bf143d842e6355c89b16d260fd5d43f3e41a57f7337dee8eb127b60b3 # shrinks to target = "[ 0 0 ]", seed = "0", code = "[ EQ ]", walk = 2, outer = None, steps = None, work = None, bits = None
+cc f2cbf47e641a49917d5c426b1b290d00b4f21ec6cba59ee72e86407a38c70a23 # shrinks to target = "[ 9223372036854775807 ]", (num, truth) = ("X FLOOR X MUL", "X X LT"), walk = 2, outer = 0, steps = None, work = None
+cc 48e700115e2820335e9b474e8bf9ce1b4c781f1cd406f72e1818a7114861a172 # shrinks to target = "[ 9223372036854775807 ]", seed = "0", code = "[ 9223372036854775807 MUL ]", walk = 0, outer = None, steps = None, work = None, bits = None
+cc a2ce160121090801b7de54992138dd6503314afb394ab46c5a5f7a3ec9f0a864 # shrinks to target = "[ 9223372036854775807 ]", (num, truth) = ("X K FLOOR SUB", "X X LT"), walk = 0, outer = -1, steps = None, work = None
+cc 39f7551d1f82149773a1d964bed5ffc52caa3f1c6cc028d5c18b2f45bb91f46a # shrinks to target = "[ 2 ]", (num, truth) = ("K X K A GT SELECT X ADD FLOOR", "X X LT"), walk = 2, outer = 3, steps = None, work = None
+cc d0ea03d9af9c1114c6df566b2ec863b5ed287681676cda1cf1d4fdb36f86f523 # shrinks to target = "[ 2 ]", (num, truth) = ("X K ADD A FLOOR SUB", "X X LT"), walk = 2, outer = 0, steps = None, work = None

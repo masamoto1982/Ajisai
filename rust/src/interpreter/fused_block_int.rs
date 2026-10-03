@@ -25,6 +25,7 @@
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::fused_block::{Charges, Compare, FusedBlock, FusedWalk, Op, Plain};
 use crate::interpreter::fused_block_general::promote;
+use crate::interpreter::fused_block_reg::RegProgram;
 use crate::interpreter::runtime_limits::binary_numeric_work;
 use crate::interpreter::Interpreter;
 use crate::types::fraction::{Fraction, FractionRepr};
@@ -39,8 +40,10 @@ enum Ty {
     Bool,
 }
 
+/// The block in stack form, typed; `fused_block_reg` compiles it to
+/// register code.
 #[derive(Debug, Clone, Copy)]
-enum IntOp {
+pub(crate) enum IntOp {
     Push(i64),
     Load(usize),
     Store(usize),
@@ -172,16 +175,6 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
     })
 }
 
-/// `floor(a / b)`, or `None` for a zero divisor or `i64::MIN / -1`.
-fn floor_div(a: i64, b: i64) -> Option<i64> {
-    let q = a.checked_div(b)?;
-    Some(if a % b != 0 && ((a < 0) != (b < 0)) {
-        q - 1
-    } else {
-        q
-    })
-}
-
 /// Every element as `(type, i64)`, borrowed in place from a pure-integer
 /// dense Tensor's numerator column, or `None`. `is_pure_integer` is false for
 /// a Tensor with an absent lane (its denominator is 0), so a column it
@@ -230,46 +223,6 @@ fn promote_lanes(ty: Ty, lanes: Vec<i64>) -> Value {
     promote(lanes.into_iter().map(|n| plain(ty, n)).collect())
 }
 
-fn run_block(ops: &[IntOp], stack: &mut Vec<i64>, slots: &mut [i64]) -> Option<i64> {
-    for op in ops {
-        let value = match *op {
-            IntOp::Push(n) => n,
-            IntOp::Load(slot) => slots[slot],
-            IntOp::Store(slot) => {
-                slots[slot] = stack.pop()?;
-                continue;
-            }
-            IntOp::Not => i64::from(stack.pop()? == 0),
-            IntOp::Select => {
-                let mask = stack.pop()?;
-                let when_false = stack.pop()?;
-                let when_true = stack.pop()?;
-                if mask != 0 {
-                    when_true
-                } else {
-                    when_false
-                }
-            }
-            _ => {
-                let b = stack.pop()?;
-                let a = stack.pop()?;
-                match *op {
-                    IntOp::Add => a.checked_add(b)?,
-                    IntOp::Sub => a.checked_sub(b)?,
-                    IntOp::Mul => a.checked_mul(b)?,
-                    IntOp::FloorDiv => floor_div(a, b)?,
-                    IntOp::Lt => i64::from(a < b),
-                    IntOp::Gt => i64::from(a > b),
-                    IntOp::Eq => i64::from(a == b),
-                    _ => i64::from(a != 0 && b != 0),
-                }
-            }
-        };
-        stack.push(value);
-    }
-    stack.pop()
-}
-
 pub(crate) fn run(
     block: &FusedBlock,
     interp: &Interpreter,
@@ -302,45 +255,42 @@ pub(crate) fn run(
         return None;
     }
 
-    let mut stack: Vec<i64> = Vec::with_capacity(typed.ops.len() + 2);
-    let mut slots = vec![0i64; block.slots];
-    let mut accumulator = seed.map(|(_, n)| n);
-    let mut results: Vec<i64> = Vec::with_capacity(match walk {
-        FusedWalk::Fold => 0,
-        _ => elements.len(),
-    });
-    for &x in elements.iter() {
-        stack.clear();
-        if let Some(acc) = accumulator {
-            stack.push(acc);
+    let program = RegProgram::lower(&typed.ops, inputs.len(), block.slots)?;
+    let value = match (walk, seed) {
+        (FusedWalk::Map, _) => {
+            let mut results = Vec::with_capacity(elements.len());
+            program.run_columns(&elements, |_, out| results.extend_from_slice(out))?;
+            promote_lanes(typed.out, results)
         }
-        stack.push(x);
-        let result = run_block(&typed.ops, &mut stack, &mut slots)?;
-        match walk {
-            FusedWalk::Map => results.push(result),
-            FusedWalk::Filter => {
-                if result != 0 {
-                    results.push(x);
+        (FusedWalk::Filter, _) => {
+            let mut kept = Vec::new();
+            program.run_columns(&elements, |xs, keep| {
+                kept.extend(
+                    xs.iter()
+                        .zip(keep)
+                        .filter(|(_, k)| **k != 0)
+                        .map(|(x, _)| *x),
+                );
+            })?;
+            promote_lanes(elem_ty, kept)
+        }
+        (FusedWalk::Fold | FusedWalk::Scan, Some((_, mut acc))) => {
+            let mut visited = Vec::with_capacity(match walk {
+                FusedWalk::Scan => elements.len(),
+                _ => 0,
+            });
+            let scan = walk == FusedWalk::Scan;
+            acc = program.run_accumulating(&elements, acc, |a| {
+                if scan {
+                    visited.push(plain(typed.out, a).into_value());
                 }
+            })?;
+            match walk {
+                FusedWalk::Scan => Value::from_vector(visited),
+                _ => plain(typed.out, acc).into_value(),
             }
-            FusedWalk::Scan => {
-                results.push(result);
-                accumulator = Some(result);
-            }
-            FusedWalk::Fold => accumulator = Some(result),
         }
-    }
-
-    let value = match walk {
-        FusedWalk::Map => promote_lanes(typed.out, results),
-        FusedWalk::Filter => promote_lanes(elem_ty, results),
-        FusedWalk::Scan => Value::from_vector(
-            results
-                .into_iter()
-                .map(|n| plain(typed.out, n).into_value())
-                .collect(),
-        ),
-        FusedWalk::Fold => plain(typed.out, accumulator?).into_value(),
+        (FusedWalk::Fold | FusedWalk::Scan, None) => return None,
     };
     let charges = Charges {
         runs,
