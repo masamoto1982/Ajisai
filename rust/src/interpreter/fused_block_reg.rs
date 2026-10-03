@@ -145,12 +145,12 @@ fn zip2(dst: &mut [i64], a: Col, b: Col, f: impl Fn(i64, i64) -> (i64, bool)) ->
 }
 
 /// One instruction over a chunk of `len` lanes held in `regs`, a register
-/// per [`CHUNK`]-wide row. Answers whether any lane left the tier.
-fn exec_column(ins: &Instr, regs: &mut [i64], len: usize) -> bool {
-    let (lo, hi) = regs.split_at_mut(ins.dst * CHUNK);
+/// per `width`-wide row. Answers whether any lane left the tier.
+fn exec_column(ins: &Instr, regs: &mut [i64], width: usize, len: usize) -> bool {
+    let (lo, hi) = regs.split_at_mut(ins.dst * width);
     let dst = &mut hi[..len];
     let col = |s: Src| match s {
-        Src::Reg(r) => Col::Lanes(&lo[r * CHUNK..r * CHUNK + len]),
+        Src::Reg(r) => Col::Lanes(&lo[r * width..r * width + len]),
         Src::Const(v) => Col::Splat(v),
     };
     let (a, b, c) = (col(ins.a), col(ins.b), col(ins.c));
@@ -343,22 +343,25 @@ impl RegProgram {
         };
 
         let per_run_reads_element = single.is_none();
-        let mut regs = vec![0i64; self.regs * CHUNK];
+        // A row is a chunk wide, or as wide as the walk when that is shorter:
+        // a walk of three elements need not clear a 256-lane row per register.
+        let width = elements.len().clamp(1, CHUNK);
+        let mut regs = vec![0i64; self.regs * width];
         let mut scalars = vec![0i64; self.regs];
         let mut acc = seed;
-        for chunk in elements.chunks(CHUNK) {
+        for chunk in elements.chunks(width) {
             let len = chunk.len();
             if !free.is_empty() || per_run_reads_element {
-                regs[CHUNK..CHUNK + len].copy_from_slice(chunk);
+                regs[width..width + len].copy_from_slice(chunk);
             }
             for ins in &free {
-                if exec_column(ins, &mut regs, len) {
+                if exec_column(ins, &mut regs, width, len) {
                     return None;
                 }
             }
             let at = |regs: &[i64], scalars: &[i64], l: Lane, i: usize| match l {
                 Lane::Scalar(r) => scalars[r],
-                Lane::Column(r) => regs[r * CHUNK + i],
+                Lane::Column(r) => regs[r * width + i],
                 Lane::Const(v) => v,
             };
             if let Some((kind, flipped, x)) = single {
@@ -366,7 +369,7 @@ impl RegProgram {
                     if r == 1 {
                         chunk
                     } else {
-                        &regs[r * CHUNK..r * CHUNK + len]
+                        &regs[r * width..r * width + len]
                     }
                 };
                 let lanes: &[i64] = match x {
@@ -427,18 +430,19 @@ impl RegProgram {
         mut sink: impl FnMut(&[i64], &[i64]),
     ) -> Option<()> {
         debug_assert_eq!(self.inputs, 1);
-        let mut regs = vec![0i64; self.regs * CHUNK];
-        let mut splat = [0i64; CHUNK];
-        for chunk in elements.chunks(CHUNK) {
+        let width = elements.len().clamp(1, CHUNK);
+        let mut regs = vec![0i64; self.regs * width];
+        let mut splat = vec![0i64; width];
+        for chunk in elements.chunks(width) {
             let len = chunk.len();
             regs[..len].copy_from_slice(chunk);
             for ins in &self.instrs {
-                if exec_column(ins, &mut regs, len) {
+                if exec_column(ins, &mut regs, width, len) {
                     return None;
                 }
             }
             let out: &[i64] = match self.out {
-                Src::Reg(r) => &regs[r * CHUNK..r * CHUNK + len],
+                Src::Reg(r) => &regs[r * width..r * width + len],
                 Src::Const(v) => {
                     splat[..len].fill(v);
                     &splat[..len]

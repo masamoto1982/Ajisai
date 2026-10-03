@@ -3,6 +3,13 @@
 // `wasm-bindgen` expands to generated glue that contains `unsafe`.
 #![deny(unsafe_code)]
 
+/// Every native build of the Core — the CLI, the tests, the examples — runs on
+/// mimalloc (see its entry in Cargo.toml for why). The WebAssembly build is
+/// excluded and keeps Rust's default allocator.
+#[cfg(not(target_arch = "wasm32"))]
+#[global_allocator]
+static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 mod builtins;
 pub mod coreword_registry;
 mod error;

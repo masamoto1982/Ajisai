@@ -144,6 +144,15 @@ export function agent_infer_contracts(source: string): string;
 export function agent_predict_outcomes(source: string, step_limit?: number | null): string;
 
 /**
+ * Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+ * interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
+ * the same one `rust/examples/speed_bench.rs` times natively) and answer the
+ * final stack depth. Nothing is converted to JS, so the caller's clock sees
+ * the computation and not the marshalling of its result.
+ */
+export function bench_execute(source: string): Promise<number>;
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
@@ -177,6 +186,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number, number];
     readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
     readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number];
+    readonly bench_execute: (a: number, b: number) => any;
     readonly init_panic_hook: () => void;
     readonly wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___wasm_bindgen_413a9fa07f7179f1___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_413a9fa07f7179f1___JsError___true_: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___js_sys_402f77b0a9aba5cd___Function_fn_wasm_bindgen_413a9fa07f7179f1___JsValue_____wasm_bindgen_413a9fa07f7179f1___sys__Undefined___js_sys_402f77b0a9aba5cd___Function_fn_wasm_bindgen_413a9fa07f7179f1___JsValue_____wasm_bindgen_413a9fa07f7179f1___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;

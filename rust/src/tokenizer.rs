@@ -32,34 +32,20 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>), String> {
     let mut tokens = Vec::new();
     let mut spans: Vec<SourceSpan> = Vec::new();
-    let chars: Vec<char> = input.chars().collect();
 
-    // Position of every character, so a token's span is a lookup at the index
-    // it starts on rather than a second scan.
-    let mut positions: Vec<SourceSpan> = Vec::with_capacity(chars.len());
-    let mut line: u32 = 1;
-    let mut column: u32 = 1;
-    for c in &chars {
-        positions.push(SourceSpan { line, column });
-        if *c == '\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
-    }
-    let span_at = |index: usize| -> SourceSpan {
-        positions
-            .get(index)
-            .copied()
-            .unwrap_or(SourceSpan { line, column })
+    // One pass over the text, by character: `pos` is the byte offset of the
+    // next character and `here` its line and column, so a token's span is the
+    // cursor's position where it starts. Lexemes are slices of `input`, not
+    // copies, until a token keeps one.
+    let mut cursor = Cursor {
+        input,
+        pos: 0,
+        here: SourceSpan { line: 1, column: 1 },
     };
 
-    let mut i = 0;
-
-    while i < chars.len() {
-        if chars[i].is_whitespace() {
-            i += 1;
+    while let Some(c) = cursor.peek() {
+        if c.is_whitespace() {
+            cursor.bump();
             continue;
         }
 
@@ -69,9 +55,9 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // branch right after whitespace or a completed token), exactly like
         // Forth's own comment word — `#` glued to a preceding name is just
         // part of that name, not a comment start.
-        if chars[i] == '#' {
-            while i < chars.len() && chars[i] != '\n' {
-                i += 1;
+        if c == '#' {
+            while cursor.peek().is_some_and(|c| c != '\n') {
+                cursor.bump();
             }
             continue;
         }
@@ -80,18 +66,19 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // can hold whitespace of its own (`'hello world'`), so it is not
         // bounded by the ordinary word-delimiter rule below — it is its own
         // sub-grammar, delimited by the closing quote rather than by space.
-        match parse_string_from_quote(&chars[i..]) {
-            QuoteParseResult::StringSuccess(token, consumed) => {
-                tokens.push(token);
-                spans.push(span_at(i));
-                i += consumed;
-                continue;
+        if c == '\'' {
+            let span = cursor.here;
+            let Some(content) = string_literal_content(&input[cursor.pos..]) else {
+                return Err(format!("Unclosed literal starting with {}", c));
+            };
+            // The opening quote, the content and the closing quote.
+            let end = cursor.pos + content.len() + 2;
+            while cursor.pos < end {
+                cursor.bump();
             }
-            QuoteParseResult::Unclosed => {
-                let quote_char = chars[i];
-                return Err(format!("Unclosed literal starting with {}", quote_char));
-            }
-            QuoteParseResult::NotQuote => {}
+            tokens.push(Token::String(content.into()));
+            spans.push(span);
+            continue;
         }
 
         // Whitespace is the sole word delimiter (LANG.SOURCE.TEXT): a token
@@ -101,12 +88,12 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // for validity on the way, because there is no longer any invalid
         // one: every character but whitespace is a name character
         // (`spec/grammar.json`, characterClasses.nameCharacter).
-        let start = i;
-        while i < chars.len() && !chars[i].is_whitespace() {
-            i += 1;
+        let span = cursor.here;
+        let start = cursor.pos;
+        while cursor.peek().is_some_and(|c| !c.is_whitespace()) {
+            cursor.bump();
         }
-
-        let token_str: String = chars[start..i].iter().collect();
+        let token_str = &input[start..cursor.pos];
 
         // The two structural words of `spec/grammar.json`'s one delimiter
         // pair: like every other Ajisai word (and like Forth's own `[` and
@@ -116,9 +103,9 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // meaningless) name containing a delimiter. This is a
         // whole-lexeme rule, not a per-character one: no character is checked
         // on the way in, and a lexeme either *is* one delimiter or holds none.
-        if let Some(token) = delimiter_token(&token_str) {
+        if let Some(token) = delimiter_token(token_str) {
             tokens.push(token);
-            spans.push(span_at(start));
+            spans.push(span);
             continue;
         }
         if token_str.contains(DELIMITERS) {
@@ -132,23 +119,23 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // grammar accepts the entire lexeme, otherwise a name. This is why no
         // character needs special treatment — `1/2` is a number because the
         // whole token parses as one, and `/` is a name for the same reason.
-        if let Some(token) = parse_number_from_string(&token_str) {
+        if let Some(token) = parse_number_from_string(token_str) {
             // `n/0` has the shape of a number and denotes none. Refused here,
             // with the other source errors, so a program that holds one is
             // refused before it runs rather than halfway through it.
-            if has_zero_denominator(&token_str) {
+            if has_zero_denominator(token_str) {
                 return Err(format!(
                     "zero denominator: '{}' is not a valid fraction literal (the denominator must be non-zero)",
                     token_str
                 ));
             }
             tokens.push(token);
-            spans.push(span_at(start));
+            spans.push(span);
             continue;
         }
 
         tokens.push(Token::Symbol(token_str.into()));
-        spans.push(span_at(start));
+        spans.push(span);
     }
 
     // The one structural gate, over the real tokens, shared with the entry
@@ -164,6 +151,32 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         "every token must carry the position it was written at"
     );
     Ok((tokens, spans))
+}
+
+/// A position in the source being tokenized, advanced one character at a
+/// time so that its line and column stay those of the next character.
+struct Cursor<'a> {
+    input: &'a str,
+    pos: usize,
+    here: SourceSpan,
+}
+
+impl Cursor<'_> {
+    fn peek(&self) -> Option<char> {
+        self.input[self.pos..].chars().next()
+    }
+
+    fn bump(&mut self) {
+        if let Some(c) = self.peek() {
+            self.pos += c.len_utf8();
+            if c == '\n' {
+                self.here.line += 1;
+                self.here.column = 1;
+            } else {
+                self.here.column += 1;
+            }
+        }
+    }
 }
 
 /// The delimiter characters: the one pair `spec/grammar.json` declares.
@@ -229,52 +242,27 @@ pub(crate) fn is_string_token_content(content: &str) -> bool {
     )
 }
 
-enum QuoteParseResult {
-    StringSuccess(Token, usize),
-
-    Unclosed,
-
-    NotQuote,
-}
-
-// LiteralSugar: `'` -> STRING-QUOTE (see surface_forms.rs). A single quote
-// serves as both the opening and closing string delimiter; not a runtime word.
-fn parse_string_from_quote(chars: &[char]) -> QuoteParseResult {
-    if chars.is_empty() {
-        return QuoteParseResult::NotQuote;
-    }
-
-    let quote_char = chars[0];
-
-    match quote_char {
-        '\'' => parse_token_from_string_literal(chars),
-        _ => QuoteParseResult::NotQuote,
-    }
-}
-
-fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
-    if chars.is_empty() || chars[0] != '\'' {
-        return QuoteParseResult::NotQuote;
-    }
-
-    let mut string = String::new();
-    let mut i = 1;
-
-    while i < chars.len() {
-        if chars[i] == '\'' {
-            if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
-                return QuoteParseResult::StringSuccess(Token::String(string.into()), i + 1);
-            } else {
-                string.push(chars[i]);
-                i += 1;
-            }
-        } else {
-            string.push(chars[i]);
-            i += 1;
+/// The content of the string literal `text` opens with its quote, or `None`
+/// when no quote closes it.
+///
+/// LiteralSugar: `'` -> STRING-QUOTE (see surface_forms.rs). A single quote
+/// serves as both the opening and closing string delimiter; not a runtime
+/// word. The closing quote is the first one after the opening quote that is
+/// followed by whitespace or the end of input; every other character,
+/// quotes included, is content.
+fn string_literal_content(text: &str) -> Option<&str> {
+    let body = text.strip_prefix('\'')?;
+    let mut chars = body.char_indices().peekable();
+    while let Some((at, c)) = chars.next() {
+        if c == '\''
+            && chars
+                .peek()
+                .is_none_or(|&(_, next)| is_string_close_delimiter(next))
+        {
+            return Some(&body[..at]);
         }
     }
-
-    QuoteParseResult::Unclosed
+    None
 }
 
 /// A quote closes the string when the next character is whitespace (or end of
@@ -324,14 +312,17 @@ pub(crate) fn denoted_digit_count(lexeme: &str) -> u64 {
 }
 
 fn parse_number_from_string(s: &str) -> Option<Token> {
-    if s.is_empty() {
+    // The numeric grammar is ASCII, so it reads bytes: a byte of a
+    // multi-byte character is never a digit, a sign, a point, an `e` or a
+    // `/`, and stops a number exactly where that character would.
+    let chars = s.as_bytes();
+    if chars.is_empty() {
         return None;
     }
 
-    let chars: Vec<char> = s.chars().collect();
     let mut i = 0;
 
-    if chars[i] == '-' || chars[i] == '+' {
+    if chars[i] == b'-' || chars[i] == b'+' {
         // The sign must be followed by a digit; otherwise the token is a name,
         // not a number. This is what leaves a bare `-` an ordinary name.
         if chars.len() == 1 || !chars[i + 1].is_ascii_digit() {
@@ -355,7 +346,7 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
         i += 1;
     }
 
-    if i < chars.len() && chars[i] == '/' {
+    if i < chars.len() && chars[i] == b'/' {
         i += 1;
 
         if i >= chars.len() || !chars[i].is_ascii_digit() {
@@ -373,7 +364,7 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     }
 
     let mut has_dot = false;
-    if i < chars.len() && chars[i] == '.' {
+    if i < chars.len() && chars[i] == b'.' {
         has_dot = true;
         i += 1;
         // At least one digit after the point: `5.` and `5.e3` are not numbers.
@@ -385,9 +376,9 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
         }
     }
 
-    if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
+    if i < chars.len() && (chars[i] == b'e' || chars[i] == b'E') {
         i += 1;
-        if i < chars.len() && (chars[i] == '-' || chars[i] == '+') {
+        if i < chars.len() && (chars[i] == b'-' || chars[i] == b'+') {
             i += 1;
         }
         if i >= chars.len() || !chars[i].is_ascii_digit() {

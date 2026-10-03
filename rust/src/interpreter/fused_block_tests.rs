@@ -11,7 +11,7 @@ use crate::types::display::render_stack;
 use proptest::prelude::*;
 
 #[derive(Debug, PartialEq)]
-struct Observation {
+pub(super) struct Observation {
     outcome: std::result::Result<(), String>,
     stack: Vec<String>,
     /// The values themselves, not only their rendering: a dense Tensor and
@@ -25,7 +25,7 @@ struct Observation {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-struct Limits {
+pub(super) struct Limits {
     steps: Option<usize>,
     work: Option<u64>,
     bits: Option<u64>,
@@ -59,7 +59,7 @@ fn observe(source: &str, fused: bool, limits: Limits) -> Observation {
     }
 }
 
-fn assert_same(source: &str, limits: Limits) -> Observation {
+pub(super) fn assert_same(source: &str, limits: Limits) -> Observation {
     let fused = observe(source, true, limits);
     let interpreted = observe(source, false, limits);
     assert_eq!(
@@ -231,6 +231,16 @@ fn ceilings_agree_at_their_boundaries() {
             },
         );
     }
+    let source = "[ 3 MUL ] 'T' DEF [ T ADD ] 'U' DEF 1 50 RANGE 0 [ U ] FOLD";
+    for steps in [1, 100, 199, 200, 201, 202, 250] {
+        assert_same(
+            source,
+            Limits {
+                steps: Some(steps),
+                ..Limits::default()
+            },
+        );
+    }
     for bits in [1, 8, 16, 64] {
         assert_same(
             "1 40 RANGE 1 [ MUL ] FOLD",
@@ -262,6 +272,18 @@ fn the_fused_route_is_taken_where_it_applies() {
     assert_eq!(fused_runs("5 'K' BIND 1 1000 RANGE [ K MUL ] MAP"), 1);
     assert_eq!(fused_runs("1 10 RANGE [ K MUL ] MAP"), 0);
     assert_eq!(fused_runs("1 10 RANGE [ 2 MUL ] FILTER"), 0);
+    assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] FOLD"), 1);
+    assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] SCAN"), 1);
+    assert_eq!(fused_runs("1 20 RANGE [ 0 ] [ ADD FLOOR ] FOLD"), 0);
+    assert_eq!(fused_runs("1 20 RANGE [ 0 1 ] [ ADD ] FOLD"), 0);
+    assert_eq!(
+        fused_runs("[ 2 MUL ] 'D' DEF 1 1000 RANGE [ D 1 ADD ] MAP"),
+        1
+    );
+    assert_eq!(
+        fused_runs("[ X 1 ADD ] 'B' DEF 1 9 RANGE [ 'X' BIND X B ] MAP"),
+        0
+    );
 }
 
 fn literal() -> impl Strategy<Value = String> {
@@ -283,6 +305,8 @@ fn word() -> impl Strategy<Value = &'static str> {
         1 => prop_oneof![Just("TRUE"), Just("FALSE")],
         // Names: bound in the block, bound outside it (`K`), or both.
         2 => prop_oneof![Just("'X' BIND"), Just("X"), Just("'K' BIND"), Just("K")],
+        // User Words defined by `random_walks_agree`'s prelude.
+        2 => prop_oneof![Just("DBL"), Just("SQ"), Just("G"), Just("PLUS"), Just("BADX"), Just("CMP")],
     ]
 }
 
@@ -309,7 +333,7 @@ proptest! {
     #[test]
     fn random_walks_agree(
         target in vector(),
-        seed in literal(),
+        seed in prop_oneof![3 => literal(), 1 => literal().prop_map(|l| format!("[ {l} ]"))],
         code in block(),
         walk in 0usize..4,
         outer in prop::option::of(literal()),
@@ -323,9 +347,11 @@ proptest! {
             2 => format!("{target} {seed} {code} FOLD"),
             _ => format!("{target} {seed} {code} SCAN"),
         };
+        let words = "[ 2 MUL ] 'DBL' DEF [ 'X' BIND X X MUL ] 'SQ' DEF [ DBL 1 ADD DBL ] 'G' DEF \
+                     [ ADD ] 'PLUS' DEF [ X 1 ADD ] 'BADX' DEF [ 'Y' BIND Y 3 LT Y NOT ] 'CMP' DEF";
         let source = match outer {
-            Some(value) => format!("{value} 'K' BIND {walk}"),
-            None => walk,
+            Some(value) => format!("{words} {value} 'K' BIND {walk}"),
+            None => format!("{words} {walk}"),
         };
         let limits = Limits { steps, work, bits };
         let fused = observe(&source, true, limits);
@@ -394,7 +420,7 @@ proptest! {
     fn typed_walks_agree(
         target in integer_vector(),
         (num, truth) in typed_expr(),
-        walk in 0usize..4,
+        walk in 0usize..6,
         outer in (-9i64..10),
         steps in prop::option::of(0usize..400),
         work in prop::option::of(0u64..400),
@@ -404,7 +430,11 @@ proptest! {
             1 => format!("[ 'X' BIND 4 'A' BIND {truth} ] FILTER"),
             // `A` is the accumulator, read wherever the expression puts it.
             2 => format!("0 [ 'X' BIND 'A' BIND {num} ] FOLD"),
-            _ => format!("0 [ 'X' BIND 'A' BIND {num} ] SCAN"),
+            3 => format!("0 [ 'X' BIND 'A' BIND {num} ] SCAN"),
+            // A one-lane seed: the walk is fused when `A` meets only
+            // arithmetic, and declined otherwise.
+            4 => format!("[ 0 ] [ 'X' BIND 'A' BIND {num} ] FOLD"),
+            _ => format!("[ 1/2 ] [ 'X' BIND 'A' BIND {num} ] SCAN"),
         };
         let source = format!("{outer} 'K' BIND {target} {code}");
         let limits = Limits { steps, work, bits: None };

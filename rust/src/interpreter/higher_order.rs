@@ -39,10 +39,80 @@ impl ExecutableCode {
     }
 }
 
+/// The last few code operands compiled, so a block that runs a higher-order
+/// Word per element — `[ [ 0 ] [ ADD ] FOLD ] MAP` — compiles its inner block
+/// once rather than once per element.
+///
+/// An entry is keyed by the identity of the operand's storage, which the entry
+/// keeps alive (it holds a clone of the operand), so an equal key is the same
+/// Vector; and by everything compiling reads besides the tokens: the
+/// dictionary, through its epoch, the nesting ceiling and the vector-literal
+/// switch. Compiling a block charges and records nothing, so whether a block
+/// was compiled or found here is unobservable (LANG.AUTHORITY.FREEDOM).
+#[derive(Default)]
+pub(crate) struct BlockCache {
+    entries: [Option<BlockCacheEntry>; 4],
+    next: usize,
+}
+
+struct BlockCacheEntry {
+    _operand: Value,
+    key: BlockKey,
+    code: std::sync::Arc<ExecutableCode>,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+struct BlockKey {
+    storage: usize,
+    dictionary_epoch: u64,
+    max_nesting_depth: usize,
+    vector_literal_enabled: bool,
+}
+
+fn block_key(interp: &Interpreter, val: &Value) -> Option<BlockKey> {
+    let storage = match &val.data {
+        crate::types::ValueData::Vector(items) => std::sync::Arc::as_ptr(items) as usize,
+        crate::types::ValueData::Tensor { data, .. } => std::sync::Arc::as_ptr(data) as usize,
+        _ => return None,
+    };
+    Some(BlockKey {
+        storage,
+        dictionary_epoch: interp.dictionary_epoch,
+        max_nesting_depth: interp.runtime_limits.max_nesting_depth,
+        vector_literal_enabled: interp.vector_literal_enabled,
+    })
+}
+
 pub(crate) fn extract_executable_code(
     interp: &mut Interpreter,
     val: &Value,
-) -> Result<ExecutableCode> {
+) -> Result<std::sync::Arc<ExecutableCode>> {
+    let key = block_key(interp, val);
+    if let Some(key) = key {
+        let hit = interp
+            .block_cache
+            .entries
+            .iter()
+            .flatten()
+            .find(|entry| entry.key == key);
+        if let Some(entry) = hit {
+            return Ok(entry.code.clone());
+        }
+    }
+    let code = std::sync::Arc::new(compile_executable_code(interp, val)?);
+    if let Some(key) = key {
+        let cache = &mut interp.block_cache;
+        cache.entries[cache.next] = Some(BlockCacheEntry {
+            _operand: val.clone(),
+            key,
+            code: code.clone(),
+        });
+        cache.next = (cache.next + 1) % cache.entries.len();
+    }
+    Ok(code)
+}
+
+fn compile_executable_code(interp: &mut Interpreter, val: &Value) -> Result<ExecutableCode> {
     // Every Vector is a code operand candidate now (CodeBlock/Vector
     // unification) — bridged back to tokens (`value_as_code.rs`).
     // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
@@ -130,7 +200,7 @@ pub(crate) fn execute_executable_code(
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
-    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
+    let executable = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -239,7 +309,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
-    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
+    let executable = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);

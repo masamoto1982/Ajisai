@@ -28,6 +28,9 @@ pub(crate) fn fit(n: i128, d: i128) -> Option<Pair> {
 /// `g = gcd(b, d)` first, and when it is 1 the sum is already reduced.
 /// The gcds and quotients stay in machine words where the operands do.
 pub(crate) fn add((an, ad): Pair, (bn, bd): Pair, subtract: bool) -> Option<Pair> {
+    if let Some(sum) = add_in_words((an, ad), (bn, bd), subtract) {
+        return sum;
+    }
     let bn = if subtract {
         -i128::from(bn)
     } else {
@@ -62,6 +65,34 @@ pub(crate) fn add((an, ad): Pair, (bn, bd): Pair, subtract: bool) -> Option<Pair
     fit(n, i128::from(s) * i128::from(bd / g2))
 }
 
+/// `add` with every product and sum in machine words: the answer, or
+/// `None` when an intermediate overflows and `add` must widen. A value that
+/// fits is the same value however it was computed, so this answers exactly
+/// what the widened route does wherever it answers at all — and it matters
+/// on WebAssembly, where an `i128` product is a call into a software routine.
+#[inline]
+fn add_in_words((an, ad): Pair, (bn, bd): Pair, subtract: bool) -> Option<Option<Pair>> {
+    let bn = if subtract { bn.checked_neg()? } else { bn };
+    if ad == 1 && bd == 1 {
+        return Some(Some((an.checked_add(bn)?, 1)));
+    }
+    let g = gcd64(ad, bd);
+    if g == 1 {
+        let n = an.checked_mul(bd)?.checked_add(bn.checked_mul(ad)?)?;
+        if n == 0 {
+            return Some(Some((0, 1)));
+        }
+        return Some(Some((n, ad.checked_mul(bd)?)));
+    }
+    let (s, bd_g) = (ad / g, bd / g);
+    let t = an.checked_mul(bd_g)?.checked_add(bn.checked_mul(s)?)?;
+    if t == 0 {
+        return Some(Some((0, 1)));
+    }
+    let g2 = gcd64(t, g);
+    Some(Some((t / g2, s.checked_mul(bd / g2)?)))
+}
+
 /// `gcd(|a|, b)` for `b > 0`, in machine words.
 #[inline]
 fn gcd64(a: i64, b: i64) -> i64 {
@@ -73,12 +104,15 @@ fn gcd64(a: i64, b: i64) -> i64 {
 /// in lowest terms. The gcds and quotients stay in machine words — an `i128`
 /// division is a software routine — and only the products widen.
 pub(crate) fn mul((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
-    let g1 = gcd64(an, bd);
-    let g2 = gcd64(bn, ad);
-    fit(
-        i128::from(an / g1) * i128::from(bn / g2),
-        i128::from(ad / g2) * i128::from(bd / g1),
-    )
+    // An integer half has nothing to cancel against: gcd(x, 1) is 1.
+    let g1 = if bd == 1 { 1 } else { gcd64(an, bd) };
+    let g2 = if ad == 1 { 1 } else { gcd64(bn, ad) };
+    // Each product fits a word exactly when it fits the answer, so the
+    // checked products are the whole test.
+    Some((
+        (an / g1).checked_mul(bn / g2)?,
+        (ad / g2).checked_mul(bd / g1)?,
+    ))
 }
 
 /// `a ÷ b`: the cross gcds divided out as in `mul`, with `b`'s halves
@@ -87,10 +121,32 @@ pub(crate) fn div((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
     if bn == 0 {
         return None;
     }
-    let g2 = gcd64(bd, ad);
+    // Two integers where the divisor divides: the quotient is an integer
+    // (`checked_*` declines i64::MIN / -1, which the general route widens).
+    if ad == 1 && bd == 1 && an.checked_rem(bn) == Some(0) {
+        if let Some(q) = an.checked_div(bn) {
+            return Some((q, 1));
+        }
+    }
+    let g2 = if ad == 1 || bd == 1 { 1 } else { gcd64(bd, ad) };
     // gcd(|a|, |b|) is 2^63 only for halves drawn from {0, i64::MIN}; that
     // one case divides in `i128`.
     let g1 = binary_gcd_u64(an.unsigned_abs(), bn.unsigned_abs());
+    // In machine words when every product and the sign change fit; else
+    // widened below, which also covers a product of 2^63 that the sign
+    // change brings back into range.
+    if let Ok(g1) = i64::try_from(g1) {
+        let n = (an / g1).checked_mul(bd / g2);
+        let d = (ad / g2).checked_mul(bn / g1);
+        if let (Some(n), Some(d)) = (n, d) {
+            if d > 0 {
+                return Some((n, d));
+            }
+            if let (Some(n), Some(d)) = (n.checked_neg(), d.checked_neg()) {
+                return Some((n, d));
+            }
+        }
+    }
     let (an_g, bn_g) = match i64::try_from(g1) {
         Ok(g1) => (i128::from(an / g1), i128::from(bn / g1)),
         Err(_) => (
@@ -109,5 +165,8 @@ pub(crate) fn div((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
 
 #[inline]
 pub(crate) fn order((an, ad): Pair, (bn, bd): Pair) -> Ordering {
+    if let (Some(x), Some(y)) = (an.checked_mul(bd), bn.checked_mul(ad)) {
+        return x.cmp(&y);
+    }
     (i128::from(an) * i128::from(bd)).cmp(&(i128::from(bn) * i128::from(ad)))
 }
