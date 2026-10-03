@@ -40,6 +40,8 @@ fn word_op(id: WordId) -> Option<Op> {
         WordId::Lt => Op::Compare(Compare::Lt),
         WordId::Gt => Op::Compare(Compare::Gt),
         WordId::Eq => Op::Compare(Compare::Eq),
+        WordId::Min => Op::Extremum { max: false },
+        WordId::Max => Op::Extremum { max: true },
         WordId::Floor => Op::Floor,
         WordId::Round => Op::Round,
         WordId::Not => Op::Not,

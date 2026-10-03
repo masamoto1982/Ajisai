@@ -88,6 +88,20 @@ fn lane_and_call_programs_agree() {
         "1 600 RANGE 0 [ 'E' BIND 'A' BIND E 2 DIV A E E 2 DIV FLOOR 2 MUL EQ NOT SELECT ] FOLD",
         "1 600 RANGE 0 [ 'E' BIND 'A' BIND A E 2 DIV A E E 2 DIV FLOOR 2 MUL EQ SELECT ] SCAN",
         "1 600 RANGE [ 'E' BIND E 2 DIV E E 2 MUL EQ SELECT 0 LT ] FILTER",
+        // MIN and MAX: a step each, no fast-path hit and no work, the left
+        // operand on a tie; on each tier, as a FOLD's whole body, and on a
+        // Boolean (nonNumeric) or a one-lane seed (declined).
+        "-300 300 RANGE [ 0 MAX ] MAP",
+        "-300 300 RANGE [ 0 MIN 5 MAX ] MAP",
+        "-300 300 RANGE 0 [ MAX ] FOLD",
+        "-300 300 RANGE 0 [ MIN ] SCAN",
+        "1 1 600 RANGE DIV [ 1/7 MAX ] MAP",
+        "1 1 600 RANGE DIV 1 [ MIN ] FOLD",
+        "[ 9223372036854775807 2 ] [ 9223372036854775807 MUL 5 MAX ] MAP",
+        "[ 1/2 2/4 3 ] [ 1/2 MIN ] MAP",
+        "[ TRUE FALSE ] [ 1 MAX ] MAP",
+        "1 20 RANGE [ 0 ] [ MAX ] FOLD",
+        "[ 3 1 2 ] [ 'X' BIND X 2 MAX X 2 MIN SUB ] MAP",
     ] {
         assert_same(source, Limits::default());
     }

@@ -273,6 +273,8 @@ fn the_fused_route_is_taken_where_it_applies() {
     assert_eq!(fused_runs("1 10 RANGE [ K MUL ] MAP"), 0);
     assert_eq!(fused_runs("1 10 RANGE [ 2 MUL ] FILTER"), 0);
     assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] FOLD"), 1);
+    assert_eq!(fused_runs("-500 500 RANGE [ 0 MAX ] MAP"), 1);
+    assert_eq!(fused_runs("1 1000 RANGE 0 [ MAX ] FOLD"), 1);
     assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] SCAN"), 1);
     assert_eq!(fused_runs("1 20 RANGE [ 0 ] [ ADD FLOOR ] FOLD"), 0);
     assert_eq!(fused_runs("1 20 RANGE [ 0 1 ] [ ADD ] FOLD"), 0);
@@ -300,7 +302,7 @@ fn literal() -> impl Strategy<Value = String> {
 fn word() -> impl Strategy<Value = &'static str> {
     prop_oneof![
         4 => prop_oneof![Just("ADD"), Just("SUB"), Just("MUL"), Just("DIV")],
-        2 => prop_oneof![Just("LT"), Just("GT"), Just("EQ")],
+        2 => prop_oneof![Just("LT"), Just("GT"), Just("EQ"), Just("MIN"), Just("MAX")],
         2 => prop_oneof![Just("FLOOR"), Just("ROUND"), Just("NOT"), Just("AND"), Just("SELECT")],
         1 => prop_oneof![Just("TRUE"), Just("FALSE")],
         // Names: bound in the block, bound outside it (`K`), or both.
@@ -382,7 +384,9 @@ fn typed_expr() -> impl Strategy<Value = (String, String)> {
             Just("SUB"),
             Just("MUL"),
             Just("DIV"),
-            Just("DIV FLOOR")
+            Just("DIV FLOOR"),
+            Just("MIN"),
+            Just("MAX")
         ];
         let cmp = prop_oneof![Just("LT"), Just("GT"), Just("EQ")];
         let numeric = prop_oneof![

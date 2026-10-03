@@ -55,6 +55,8 @@ enum Kind {
     Sub,
     Mul,
     Div,
+    Min,
+    Max,
     Floor,
     Round,
     Lt,
@@ -137,6 +139,13 @@ fn compile(block: &FusedBlock, inputs: &[Ty]) -> Option<Program> {
                 (mask_ty == Ty::Bool && t_ty == f_ty).then_some(())?;
                 (Kind::Select, when_true, when_false, mask, t_ty)
             }
+            Op::Extremum { max } => {
+                let (b, b_ty) = stack.pop()?;
+                let (a, a_ty) = stack.pop()?;
+                (a_ty == Ty::Num && b_ty == Ty::Num).then_some(())?;
+                let kind = if *max { Kind::Max } else { Kind::Min };
+                (kind, a, b, none, Ty::Num)
+            }
             Op::And | Op::Compare(_) | Op::Arith(_) => {
                 let (b, b_ty) = stack.pop()?;
                 let (a, a_ty) = stack.pop()?;
@@ -202,6 +211,10 @@ impl Program {
                 Kind::Sub => add(a, b, true)?,
                 Kind::Mul => mul(a, b)?,
                 Kind::Div => div(a, b)?,
+                // The left operand on a tie, as MIN and MAX keep it.
+                Kind::Min if order(b, a) == Ordering::Less => b,
+                Kind::Max if order(a, b) == Ordering::Less => b,
+                Kind::Min | Kind::Max => a,
                 Kind::Floor => (a.0.div_euclid(a.1), 1),
                 Kind::Round => {
                     let (n, d) = (i128::from(a.0), i128::from(a.1));

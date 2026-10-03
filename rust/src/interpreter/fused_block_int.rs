@@ -66,6 +66,8 @@ pub(crate) enum IntOp {
     FloorDiv,
     /// `a / b` when `b` divides `a`, else [`POISON`].
     ExactDiv,
+    Min,
+    Max,
     Lt,
     Gt,
     Eq,
@@ -160,6 +162,10 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
                 };
                 fastpath += 1;
                 (op, Ty::Bool)
+            }
+            Op::Extremum { max } => {
+                (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;
+                (if *max { IntOp::Max } else { IntOp::Min }, Ty::Int)
             }
             Op::Arith(schema) => {
                 (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;

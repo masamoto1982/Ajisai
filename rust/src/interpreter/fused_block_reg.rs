@@ -37,6 +37,8 @@ enum Kind {
     Mul,
     FloorDiv,
     ExactDiv,
+    Min,
+    Max,
     Lt,
     Gt,
     Eq,
@@ -97,6 +99,8 @@ fn apply(kind: Kind, a: i64, b: i64, c: i64) -> (i64, bool) {
         Kind::Mul => overflowing_mul(a, b),
         Kind::FloorDiv => floor_div(a, b),
         Kind::ExactDiv => exact_div(a, b),
+        Kind::Min => (a.min(b), false),
+        Kind::Max => (a.max(b), false),
         Kind::Lt => (i64::from(a < b), false),
         Kind::Gt => (i64::from(a > b), false),
         Kind::Eq => (i64::from(a == b), false),
@@ -176,6 +180,8 @@ fn exec_column(ins: &Instr, regs: &mut [i64], width: usize, len: usize) -> bool 
         Kind::Mul => zip2(dst, a, b, overflowing_mul),
         Kind::FloorDiv => zip2(dst, a, b, floor_div),
         Kind::ExactDiv => zip2(dst, a, b, exact_div),
+        Kind::Min => zip2(dst, a, b, |x, y| (x.min(y), false)),
+        Kind::Max => zip2(dst, a, b, |x, y| (x.max(y), false)),
         Kind::Lt => zip2(dst, a, b, |x, y| (i64::from(x < y), false)),
         Kind::Gt => zip2(dst, a, b, |x, y| (i64::from(x > y), false)),
         Kind::Eq => zip2(dst, a, b, |x, y| (i64::from(x == y), false)),
@@ -274,6 +280,8 @@ impl RegProgram {
                 | IntOp::Mul
                 | IntOp::FloorDiv
                 | IntOp::ExactDiv
+                | IntOp::Min
+                | IntOp::Max
                 | IntOp::Lt
                 | IntOp::Gt
                 | IntOp::Eq
@@ -286,6 +294,8 @@ impl RegProgram {
                         IntOp::Mul => Kind::Mul,
                         IntOp::FloorDiv => Kind::FloorDiv,
                         IntOp::ExactDiv => Kind::ExactDiv,
+                        IntOp::Min => Kind::Min,
+                        IntOp::Max => Kind::Max,
                         IntOp::Lt => Kind::Lt,
                         IntOp::Gt => Kind::Gt,
                         IntOp::Eq => Kind::Eq,
