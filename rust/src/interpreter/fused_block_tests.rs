@@ -143,6 +143,25 @@ fn hand_picked_programs_agree() {
         "1 10 RANGE [ 2 MUL ] FILTER",
         "[ TRUE ] [ 1 LT ] MAP",
         "1 10 RANGE [ 1 2 3 SELECT ] MAP",
+        // The register form: an accumulator on either side of the one
+        // instruction that reads it, against a column or a constant.
+        "1 600 RANGE 0 [ 'E' BIND 'A' BIND E A SUB ] FOLD",
+        "1 600 RANGE 7 [ 'E' BIND 'A' BIND E A SUB ] SCAN",
+        "1 600 RANGE 1 [ 'E' BIND 2 MUL ] FOLD",
+        "1 40 RANGE 1 [ 'E' BIND 'A' BIND 3 A SUB ] FOLD",
+        "1 600 RANGE 0 [ 'E' BIND 'A' BIND A E E MUL ADD ] FOLD",
+        "1 600 RANGE 0 [ 'E' BIND 'A' BIND A A 1000 GT A 1000 SUB A SELECT E ADD ] FOLD",
+        // A result that is a constant, or the input itself.
+        "1 600 RANGE [ TRUE ] FILTER",
+        "1 600 RANGE [ 5 ] MAP",
+        "1 600 RANGE [ 'X' BIND X ] MAP",
+        "1 600 RANGE 0 [ 'E' BIND ] FOLD",
+        "1 600 RANGE 0 [ 'E' BIND 'A' BIND E ] FOLD",
+        // An overflow part way through the second chunk, in a column.
+        "1 600 RANGE [ 300 SUB 3074457345618258602 MUL ] MAP",
+        "1 600 RANGE [ 300 SUB 3074457345618258602 MUL 0 GT ] FILTER",
+        "1 600 RANGE 0 [ 300 SUB 3074457345618258602 MUL ADD ] FOLD",
+        "1 600 RANGE 9223372036854775000 [ ADD ] FOLD",
     ] {
         assert_same(source, Limits::default());
     }
@@ -274,11 +293,12 @@ proptest! {
 
 /// Well-typed expressions, so the walks below mostly take the fused route
 /// rather than refusing at the first ill-typed op: a numeric or a Boolean
-/// expression tree over the element (`X`), an outer binding (`K`) and
-/// literals, written in postfix.
+/// expression tree over the element (`X`), the accumulator (`A`, a constant
+/// for `MAP`/`FILTER`), an outer binding (`K`) and literals, in postfix.
 fn typed_expr() -> impl Strategy<Value = (String, String)> {
     let num_leaf = prop_oneof![
         3 => Just("X".to_string()),
+        2 => Just("A".to_string()),
         1 => Just("K".to_string()),
         3 => (-9i64..10).prop_map(|n| n.to_string()),
         1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
@@ -337,10 +357,11 @@ proptest! {
         work in prop::option::of(0u64..400),
     ) {
         let code = match walk {
-            0 => format!("[ 'X' BIND {num} ] MAP"),
-            1 => format!("[ 'X' BIND {truth} ] FILTER"),
-            2 => format!("0 [ 'X' BIND {num} ADD ] FOLD"),
-            _ => format!("0 [ 'X' BIND {num} ADD ] SCAN"),
+            0 => format!("[ 'X' BIND 4 'A' BIND {num} ] MAP"),
+            1 => format!("[ 'X' BIND 4 'A' BIND {truth} ] FILTER"),
+            // `A` is the accumulator, read wherever the expression puts it.
+            2 => format!("0 [ 'X' BIND 'A' BIND {num} ] FOLD"),
+            _ => format!("0 [ 'X' BIND 'A' BIND {num} ] SCAN"),
         };
         let source = format!("{outer} 'K' BIND {target} {code}");
         let limits = Limits { steps, work, bits: None };
