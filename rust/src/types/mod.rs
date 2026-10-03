@@ -3,6 +3,10 @@ pub mod exact;
 pub mod fraction;
 pub(crate) mod fraction_arithmetic;
 #[cfg(test)]
+mod fraction_arithmetic_tests;
+#[cfg(test)]
+mod fraction_gcd_tests;
+#[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod record;
 pub mod stack;
