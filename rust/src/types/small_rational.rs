@@ -19,6 +19,40 @@ use std::cmp::Ordering;
 /// A rational in lowest terms with a positive denominator.
 pub(crate) type Pair = (i64, i64);
 
+/// `a * b` with an overflow flag, as `i64::overflowing_mul` answers it.
+///
+/// On wasm32 the flag is computed through a 128-bit software multiply
+/// (`__multi3`), which was a tenth of a rational MAP's time there. Two
+/// factors that each fit 32 bits cannot overflow, so that case — nearly
+/// every product a program makes — is one plain multiply.
+#[inline(always)]
+pub(crate) fn overflowing_mul(a: i64, b: i64) -> (i64, bool) {
+    #[cfg(target_arch = "wasm32")]
+    return narrow_first_mul(a, b);
+    #[cfg(not(target_arch = "wasm32"))]
+    a.overflowing_mul(b)
+}
+
+/// [`overflowing_mul`]'s wasm32 route, built on every target so the tests
+/// hold it to `i64::overflowing_mul` natively too.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[inline(always)]
+pub(crate) fn narrow_first_mul(a: i64, b: i64) -> (i64, bool) {
+    if a == i64::from(a as i32) && b == i64::from(b as i32) {
+        return (a.wrapping_mul(b), false);
+    }
+    a.overflowing_mul(b)
+}
+
+/// `a * b`, or `None` on overflow, through [`overflowing_mul`].
+#[inline(always)]
+pub(crate) fn checked_mul(a: i64, b: i64) -> Option<i64> {
+    match overflowing_mul(a, b) {
+        (v, false) => Some(v),
+        (_, true) => None,
+    }
+}
+
 #[inline]
 pub(crate) fn fit(n: i128, d: i128) -> Option<Pair> {
     Some((i64::try_from(n).ok()?, i64::try_from(d).ok()?))
@@ -78,19 +112,19 @@ fn add_in_words((an, ad): Pair, (bn, bd): Pair, subtract: bool) -> Option<Option
     }
     let g = gcd64(ad, bd);
     if g == 1 {
-        let n = an.checked_mul(bd)?.checked_add(bn.checked_mul(ad)?)?;
+        let n = checked_mul(an, bd)?.checked_add(checked_mul(bn, ad)?)?;
         if n == 0 {
             return Some(Some((0, 1)));
         }
-        return Some(Some((n, ad.checked_mul(bd)?)));
+        return Some(Some((n, checked_mul(ad, bd)?)));
     }
     let (s, bd_g) = (ad / g, bd / g);
-    let t = an.checked_mul(bd_g)?.checked_add(bn.checked_mul(s)?)?;
+    let t = checked_mul(an, bd_g)?.checked_add(checked_mul(bn, s)?)?;
     if t == 0 {
         return Some(Some((0, 1)));
     }
     let g2 = gcd64(t, g);
-    Some(Some((t / g2, s.checked_mul(bd / g2)?)))
+    Some(Some((t / g2, checked_mul(s, bd / g2)?)))
 }
 
 /// `gcd(|a|, b)` for `b > 0`, in machine words.
@@ -107,12 +141,21 @@ pub(crate) fn mul((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
     // An integer half has nothing to cancel against: gcd(x, 1) is 1.
     let g1 = if bd == 1 { 1 } else { gcd64(an, bd) };
     let g2 = if ad == 1 { 1 } else { gcd64(bn, ad) };
+    // A gcd of 1, the usual case, divides nothing: skip the division, which
+    // costs more than the rest of the product.
+    let (an, bd) = if g1 == 1 {
+        (an, bd)
+    } else {
+        (an / g1, bd / g1)
+    };
+    let (bn, ad) = if g2 == 1 {
+        (bn, ad)
+    } else {
+        (bn / g2, ad / g2)
+    };
     // Each product fits a word exactly when it fits the answer, so the
     // checked products are the whole test.
-    Some((
-        (an / g1).checked_mul(bn / g2)?,
-        (ad / g2).checked_mul(bd / g1)?,
-    ))
+    Some((checked_mul(an, bn)?, checked_mul(ad, bd)?))
 }
 
 /// `a ÷ b`: the cross gcds divided out as in `mul`, with `b`'s halves
@@ -136,8 +179,19 @@ pub(crate) fn div((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
     // widened below, which also covers a product of 2^63 that the sign
     // change brings back into range.
     if let Ok(g1) = i64::try_from(g1) {
-        let n = (an / g1).checked_mul(bd / g2);
-        let d = (ad / g2).checked_mul(bn / g1);
+        // As in `mul`, a gcd of 1 divides nothing.
+        let (an1, bn1) = if g1 == 1 {
+            (an, bn)
+        } else {
+            (an / g1, bn / g1)
+        };
+        let (ad2, bd2) = if g2 == 1 {
+            (ad, bd)
+        } else {
+            (ad / g2, bd / g2)
+        };
+        let n = checked_mul(an1, bd2);
+        let d = checked_mul(ad2, bn1);
         if let (Some(n), Some(d)) = (n, d) {
             if d > 0 {
                 return Some((n, d));
@@ -165,7 +219,7 @@ pub(crate) fn div((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
 
 #[inline]
 pub(crate) fn order((an, ad): Pair, (bn, bd): Pair) -> Ordering {
-    if let (Some(x), Some(y)) = (an.checked_mul(bd), bn.checked_mul(ad)) {
+    if let (Some(x), Some(y)) = (checked_mul(an, bd), checked_mul(bn, ad)) {
         return x.cmp(&y);
     }
     (i128::from(an) * i128::from(bd)).cmp(&(i128::from(bn) * i128::from(ad)))

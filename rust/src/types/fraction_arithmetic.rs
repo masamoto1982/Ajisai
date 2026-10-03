@@ -185,7 +185,7 @@ impl Fraction {
 
         // As in `add`: an integer product is already in lowest terms.
         if let (FractionRepr::Small(a, 1), FractionRepr::Small(c, 1)) = (&self.repr, &other.repr) {
-            if let Some(n) = a.checked_mul(*c) {
+            if let Some(n) = crate::types::small_rational::checked_mul(*a, *c) {
                 return Fraction::from_repr(FractionRepr::Small(n, 1));
             }
         }

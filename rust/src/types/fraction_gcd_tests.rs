@@ -129,3 +129,38 @@ proptest! {
         prop_assert_eq!(order(a, b), ordering);
     }
 }
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(16384))]
+
+    /// The wasm32 multiply (`small_rational::narrow_first_mul`) answers
+    /// exactly what `i64::overflowing_mul` does, at and around the 32-bit
+    /// boundary where it switches routes and at the ends of a machine word.
+    #[test]
+    fn narrow_first_mul_is_overflowing_mul(a in mul_factor(), b in mul_factor()) {
+        prop_assert_eq!(
+            super::small_rational::narrow_first_mul(a, b),
+            a.overflowing_mul(b)
+        );
+    }
+}
+
+fn mul_factor() -> impl Strategy<Value = i64> {
+    let edge = prop_oneof![
+        Just(i64::from(i32::MAX)),
+        Just(i64::from(i32::MAX) + 1),
+        Just(i64::from(i32::MIN)),
+        Just(i64::from(i32::MIN) - 1),
+        Just(i64::MAX),
+        Just(i64::MIN),
+        Just(0i64),
+        Just(-1i64),
+        Just(3_037_000_500i64),
+    ];
+    prop_oneof![
+        2 => edge.clone(),
+        2 => (edge, -3i64..4).prop_map(|(e, d)| e.wrapping_add(d)),
+        1 => any::<i64>(),
+        1 => any::<i32>().prop_map(i64::from),
+    ]
+}

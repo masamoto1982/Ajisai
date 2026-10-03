@@ -105,8 +105,8 @@ pub struct ResourceUsage {
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
-    pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
-    pub(crate) user_words: HashMap<String, Arc<WordDefinition>>,
+    pub(crate) core_vocabulary: crate::fast_hash::FastMap<String, Arc<WordDefinition>>,
+    pub(crate) user_words: crate::fast_hash::FastMap<String, Arc<WordDefinition>>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     /// Structured, ordered host effects produced during execution. This is the
@@ -256,8 +256,8 @@ impl Interpreter {
     pub fn with_host(host_env: Arc<dyn super::HostEnv>) -> Self {
         let mut interpreter = Interpreter {
             stack: Stack::new(),
-            core_vocabulary: HashMap::new(),
-            user_words: HashMap::new(),
+            core_vocabulary: Default::default(),
+            user_words: Default::default(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
             host_effects: Vec::new(),

@@ -85,7 +85,7 @@ fn dense_integer_sort(interp: &mut Interpreter, value: &Value) -> Result<Option<
     // been consumed yet, so a refusal leaves the caller's restore path intact.
     crate::interpreter::collection_meter::charge_comparison_sort_of(interp, value)?;
 
-    let mut sorted: Vec<i64> = data.numerators.clone();
+    let mut sorted: Vec<i64> = data.numerators.to_vec();
     sorted.sort_unstable();
     interp.stack.push(Value::from_int_tensor(sorted));
     Ok(Some(()))

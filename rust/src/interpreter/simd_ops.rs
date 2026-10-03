@@ -135,7 +135,7 @@ pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<Value> {
 }
 
 pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<Value> {
-    apply_simd_binary(a, b, |x, y| x.checked_mul(y))
+    apply_simd_binary(a, b, crate::types::small_rational::checked_mul)
 }
 
 fn apply_simd_scalar(
@@ -157,7 +157,11 @@ pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Valu
 }
 
 pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
-    apply_simd_scalar(vec_val, scalar_val, |x, s| x.checked_mul(s))
+    apply_simd_scalar(
+        vec_val,
+        scalar_val,
+        crate::types::small_rational::checked_mul,
+    )
 }
 
 #[cfg(test)]

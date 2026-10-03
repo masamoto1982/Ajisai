@@ -150,6 +150,20 @@ fn run_block(
                     Plain::Num(_) => return None,
                 }
             }
+            Op::Extremum { max } => {
+                let b = stack.pop()?;
+                let a = stack.pop()?;
+                let (Plain::Num(x), Plain::Num(y)) = (&a, &b) else {
+                    return None;
+                };
+                // The left operand on a tie, as MIN and MAX keep it.
+                let take_right = if *max { x.lt(y) } else { y.lt(x) };
+                if take_right {
+                    b
+                } else {
+                    a
+                }
+            }
             Op::Arith(_) | Op::Compare(_) | Op::And => {
                 let b = stack.pop()?;
                 let a = stack.pop()?;

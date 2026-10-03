@@ -38,7 +38,20 @@ use std::sync::Arc;
 enum Ty {
     Int,
     Bool,
+    /// The quotient of a `DIV` not followed by `FLOOR`: an integer where the
+    /// division is exact and otherwise [`POISON`], a fraction this tier
+    /// cannot hold. It may only be bound, read back, or be a candidate of
+    /// `SELECT` — so a fraction the block computes and then does not choose
+    /// (the Collatz step's `N 2 DIV` for odd `N`) never sends the walk to the
+    /// small-rational tier. A poisoned lane that reaches a `MAP`'s result
+    /// does, from the start.
+    Exact,
 }
+
+/// The lane value of an inexact quotient (`Ty::Exact`). An exact quotient
+/// that happens to be `i64::MIN` reads as one too, which costs only a walk
+/// sent on to the next tier.
+pub(crate) const POISON: i64 = i64::MIN;
 
 /// The block in stack form, typed; `fused_block_reg` compiles it to
 /// register code.
@@ -51,6 +64,10 @@ pub(crate) enum IntOp {
     Sub,
     Mul,
     FloorDiv,
+    /// `a / b` when `b` divides `a`, else [`POISON`].
+    ExactDiv,
+    Min,
+    Max,
     Lt,
     Gt,
     Eq,
@@ -120,8 +137,13 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
             Op::Select => {
                 let mask = stack.pop()?;
                 let (when_false, when_true) = pair(&mut stack)?;
-                (mask == Ty::Bool && when_true == when_false).then_some(())?;
-                (IntOp::Select, when_true)
+                (mask == Ty::Bool).then_some(())?;
+                let ty = match (when_true, when_false) {
+                    (a, b) if a == b => a,
+                    (Ty::Int, Ty::Exact) | (Ty::Exact, Ty::Int) => Ty::Exact,
+                    _ => return None,
+                };
+                (IntOp::Select, ty)
             }
             Op::Compare(kind) => {
                 let (b, a) = pair(&mut stack)?;
@@ -141,6 +163,10 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
                 fastpath += 1;
                 (op, Ty::Bool)
             }
+            Op::Extremum { max } => {
+                (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;
+                (if *max { IntOp::Max } else { IntOp::Min }, Ty::Int)
+            }
             Op::Arith(schema) => {
                 (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;
                 fastpath += 1;
@@ -154,7 +180,10 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
                         // here, and costs its step as the `steps_per_run`
                         // count already has it.
                         if !matches!(block.ops.get(i + 1), Some(Op::Floor)) {
-                            return None;
+                            ops.push(IntOp::ExactDiv);
+                            stack.push(Ty::Exact);
+                            i += 1;
+                            continue;
                         }
                         i += 1;
                         IntOp::FloorDiv
@@ -199,7 +228,7 @@ fn elements(target: &Value) -> Option<(Ty, Cow<'_, [i64]>)> {
 
 fn plain(ty: Ty, n: i64) -> Plain {
     match ty {
-        Ty::Int => Plain::Num(Fraction::from_repr(FractionRepr::Small(n, 1))),
+        Ty::Int | Ty::Exact => Plain::Num(Fraction::from_repr(FractionRepr::Small(n, 1))),
         Ty::Bool => Plain::Bool(n != 0),
     }
 }
@@ -260,7 +289,12 @@ pub(crate) fn run(
         (FusedWalk::Map, _) => {
             let mut results = Vec::with_capacity(elements.len());
             program.run_columns(&elements, |_, out| results.extend_from_slice(out))?;
-            promote_lanes(typed.out, results)
+            match typed.out {
+                // A fraction was chosen for some lane: the next tier's walk.
+                Ty::Exact if results.contains(&POISON) => return None,
+                Ty::Exact => promote_lanes(Ty::Int, results),
+                ty => promote_lanes(ty, results),
+            }
         }
         (FusedWalk::Filter, _) => {
             let mut kept = Vec::new();

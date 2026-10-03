@@ -14,8 +14,9 @@
 //!
 //! - literals, `TRUE`, `FALSE`, and names bound by `BIND` — in the block, or
 //!   in a frame the block can see;
-//! - `ADD` `SUB` `MUL` `DIV`, `LT` `GT` `EQ`, `FLOOR` `ROUND`, `NOT` `AND`
-//!   `SELECT`, and `'NAME' BIND`.
+//! - `ADD` `SUB` `MUL` `DIV`, `LT` `GT` `EQ`, `MIN` `MAX`, `FLOOR` `ROUND`,
+//!   `NOT` `AND` `SELECT`, and `'NAME' BIND`;
+//! - User Words whose bodies are made of these (`fused_block_lower`).
 //!
 //! Such a block is lowered here and run against the elements directly, in one
 //! of three tiers: `fused_block_int` when every value is a machine-word
@@ -89,6 +90,12 @@ pub(crate) enum Op {
     PushWord(bool),
     Arith(ExactArithmeticSchema),
     Compare(Compare),
+    /// `MIN` (`max: false`) or `MAX`: the operand the order picks, the left
+    /// on a tie. A step, and no fast-path hit or work, as the interpreted
+    /// route charges it.
+    Extremum {
+        max: bool,
+    },
     Floor,
     Round,
     Not,
@@ -284,7 +291,7 @@ impl FusedBlock {
                     mixed += u64::from(a != b);
                     stack.push(a || b);
                 }
-                Op::Compare(_) | Op::And => {
+                Op::Compare(_) | Op::And | Op::Extremum { .. } => {
                     let (b, a) = (stack.pop()?, stack.pop()?);
                     if a || b {
                         return None;
