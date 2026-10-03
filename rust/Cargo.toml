@@ -47,6 +47,15 @@ version = "0.3"
 optional = true
 features = ["console", "Window", "CustomEvent", "EventTarget", "Event"]
 
+# The native allocator (the `global_allocator` in src/lib.rs). Values are
+# small and short-lived — a one-lane Tensor is four allocations — so the
+# allocator sits on every hot path the fused tiers do not cover, and mimalloc
+# runs those 1.3-3.5x faster than the system allocator
+# (scripts/bench/speed-bench-cases.json). Native only: the WebAssembly build
+# keeps Rust's default allocator.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+mimalloc = { version = "0.1", default-features = false }
+
 [features]
 default = ["std"]
 std = []
