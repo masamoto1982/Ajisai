@@ -141,12 +141,21 @@ pub(crate) fn mul((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
     // An integer half has nothing to cancel against: gcd(x, 1) is 1.
     let g1 = if bd == 1 { 1 } else { gcd64(an, bd) };
     let g2 = if ad == 1 { 1 } else { gcd64(bn, ad) };
+    // A gcd of 1, the usual case, divides nothing: skip the division, which
+    // costs more than the rest of the product.
+    let (an, bd) = if g1 == 1 {
+        (an, bd)
+    } else {
+        (an / g1, bd / g1)
+    };
+    let (bn, ad) = if g2 == 1 {
+        (bn, ad)
+    } else {
+        (bn / g2, ad / g2)
+    };
     // Each product fits a word exactly when it fits the answer, so the
     // checked products are the whole test.
-    Some((
-        checked_mul(an / g1, bn / g2)?,
-        checked_mul(ad / g2, bd / g1)?,
-    ))
+    Some((checked_mul(an, bn)?, checked_mul(ad, bd)?))
 }
 
 /// `a ÷ b`: the cross gcds divided out as in `mul`, with `b`'s halves
@@ -170,8 +179,19 @@ pub(crate) fn div((an, ad): Pair, (bn, bd): Pair) -> Option<Pair> {
     // widened below, which also covers a product of 2^63 that the sign
     // change brings back into range.
     if let Ok(g1) = i64::try_from(g1) {
-        let n = checked_mul(an / g1, bd / g2);
-        let d = checked_mul(ad / g2, bn / g1);
+        // As in `mul`, a gcd of 1 divides nothing.
+        let (an1, bn1) = if g1 == 1 {
+            (an, bn)
+        } else {
+            (an / g1, bn / g1)
+        };
+        let (ad2, bd2) = if g2 == 1 {
+            (ad, bd)
+        } else {
+            (ad / g2, bd / g2)
+        };
+        let n = checked_mul(an1, bd2);
+        let d = checked_mul(ad2, bn1);
         if let (Some(n), Some(d)) = (n, d) {
             if d > 0 {
                 return Some((n, d));
