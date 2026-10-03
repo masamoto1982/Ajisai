@@ -1,0 +1,21 @@
+{
+  "comment": "Shared by rust/examples/speed_bench.rs (native) and scripts/bench/speed-bench-wasm.mjs (WebAssembly). Each case builds its operand with `setup` and times `source` alone; `repeat` concatenates `source` that many times; `elements` turns the time into a per-element figure.",
+  "repeats": 5,
+  "cases": [
+    { "name": "fold-add-int", "route": "fused register tier", "setup": "0 999999 RANGE", "source": "0 [ ADD ] FOLD", "elements": 1000000 },
+    { "name": "fold-add-vecseed", "route": "FOLD with the idiomatic one-element Vector seed", "setup": "0 999999 RANGE", "source": "[ 0 ] [ ADD ] FOLD", "elements": 1000000 },
+    { "name": "map-affine-int", "route": "fused register tier", "setup": "0 999999 RANGE", "source": "[ 3 MUL 1 ADD ] MAP", "elements": 1000000 },
+    { "name": "filter-gt-int", "route": "fused register tier", "setup": "0 999999 RANGE", "source": "[ 500000 GT ] FILTER", "elements": 1000000 },
+    { "name": "map-rational", "route": "small-rational fused tier", "setup": "0 999999 RANGE", "source": "[ 1/3 ADD 2 MUL ] MAP", "elements": 1000000 },
+    { "name": "map-collatz-step", "route": "fused tier with BIND/SELECT", "setup": "0 999999 RANGE", "source": "[ 'N' BIND N 2 DIV N 3 MUL 1 ADD N 2 DIV FLOOR 2 MUL N EQ SELECT ] MAP", "elements": 1000000 },
+    { "name": "vec-div-floor", "route": "column kernels", "setup": "0 999999 RANGE", "source": "7 DIV FLOOR", "elements": 1000000 },
+    { "name": "vec-gt", "route": "column kernels", "setup": "0 999999 RANGE", "source": "500000 GT", "elements": 1000000 },
+    { "name": "map-userword", "route": "User Word per element", "setup": "[ 3 MUL 1 ADD ] 'AFFINE' DEF 0 99999 RANGE", "source": "[ AFFINE ] MAP", "elements": 100000 },
+    { "name": "map-userword-nested", "route": "two levels of User Words", "setup": "[ 2 MUL ] 'DBL' DEF [ DBL 1 ADD DBL ] 'G' DEF 0 99999 RANGE", "source": "[ G ] MAP", "elements": 100000 },
+    { "name": "map-vector-literal", "route": "token walk per element", "setup": "0 99999 RANGE", "source": "[ [ 1 ] ADD ] MAP", "elements": 100000 },
+    { "name": "map-of-vectors", "route": "nested higher-order blocks", "setup": "0 49999 RANGE [ 'X' BIND X X 2 ADD RANGE ] MAP", "source": "[ [ 0 ] [ ADD ] FOLD ] MAP", "elements": 50000 },
+    { "name": "toplevel-scalars", "route": "top-level token walk", "setup": "", "source": "1 2 ADD 3 MUL ", "repeat": 10000, "elements": 10000 },
+    { "name": "harmonic-2000", "route": "BigInt rationals", "setup": "1 2000 RANGE", "source": "'X' BIND 1 X DIV [ 0 ] [ ADD ] FOLD", "elements": 2000 },
+    { "name": "sort-100k", "route": "SORT", "setup": "0 99999 RANGE [ 'N' BIND N 7919 MUL 'M' BIND M M 100003 DIV FLOOR 100003 MUL SUB ] MAP", "source": "SORT", "elements": 100000 }
+  ]
+}

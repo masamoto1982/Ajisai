@@ -346,3 +346,15 @@ pub fn agent_predict_outcomes(source: &str, step_limit: Option<u32>) -> String {
         .to_json()
         .to_string()
 }
+
+/// Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+/// interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
+/// the same one `rust/examples/speed_bench.rs` times natively) and answer the
+/// final stack depth. Nothing is converted to JS, so the caller's clock sees
+/// the computation and not the marshalling of its result.
+#[wasm_bindgen]
+pub async fn bench_execute(source: &str) -> Result<usize, String> {
+    let mut interp = crate::agent::unbounded_interpreter();
+    interp.execute(source).await.map_err(|e| e.to_string())?;
+    Ok(interp.get_stack().len())
+}

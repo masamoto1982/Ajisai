@@ -316,6 +316,22 @@ export function agent_predict_outcomes(source, step_limit) {
 }
 
 /**
+ * Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+ * interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
+ * the same one `rust/examples/speed_bench.rs` times natively) and answer the
+ * final stack depth. Nothing is converted to JS, so the caller's clock sees
+ * the computation and not the marshalling of its result.
+ * @param {string} source
+ * @returns {Promise<number>}
+ */
+export function bench_execute(source) {
+    const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.bench_execute(ptr0, len0);
+    return ret;
+}
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
@@ -577,7 +593,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 181, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 186, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___wasm_bindgen_413a9fa07f7179f1___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_413a9fa07f7179f1___JsError___true_);
             return ret;
         },
