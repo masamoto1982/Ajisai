@@ -31,11 +31,19 @@ use crate::semantic::AbsenceMetadata;
 /// sentinel calls present. So the `valid_mask` failure mode — two records of
 /// the same fact, drifting apart — cannot recur here; there is no second
 /// record of that fact to drift.
+/// One column of a dense tensor's lanes. A tensor of one lane — what `[ 0 ]`
+/// is, and what every element-wise Word answers for one — holds its lane
+/// inline, so building it allocates nothing beyond the tensor itself.
+pub type Column = smallvec::SmallVec<[i64; 1]>;
+
+/// A dense tensor's shape, inline for the one-axis shapes nearly all are.
+pub type Dims = smallvec::SmallVec<[usize; 1]>;
+
 #[derive(Debug, Clone, Eq)]
 pub struct DenseTensor {
-    pub numerators: Vec<i64>,
-    pub denominators: Vec<i64>,
-    pub shape: Vec<usize>,
+    pub numerators: Column,
+    pub denominators: Column,
+    pub shape: Dims,
     pub is_pure_integer: bool,
     /// Why each absent lane is absent, keyed by lane index.
     ///
@@ -102,16 +110,24 @@ impl DenseTensor {
     /// sentinel is the authority on presence and a reason for a present lane
     /// is not a fact about this tensor.
     pub fn from_columns(
-        numerators: Vec<i64>,
-        denominators: Vec<i64>,
-        shape: Vec<usize>,
+        numerators: impl Into<Column>,
+        denominators: impl Into<Column>,
+        shape: impl Into<Dims>,
         is_pure_integer: bool,
         absences: BTreeMap<usize, AbsenceMetadata>,
     ) -> Self {
-        let absences = absences
-            .into_iter()
-            .filter(|(index, _)| matches!(denominators.get(*index), Some(0)))
-            .collect();
+        let (numerators, denominators, shape) =
+            (numerators.into(), denominators.into(), shape.into());
+        // Nearly every tensor has no absent lane: an empty map is kept as is
+        // rather than walked and rebuilt.
+        let absences = if absences.is_empty() {
+            absences
+        } else {
+            absences
+                .into_iter()
+                .filter(|(index, _)| matches!(denominators.get(*index), Some(0)))
+                .collect()
+        };
         Self {
             numerators,
             denominators,
@@ -141,7 +157,7 @@ impl DenseTensor {
     pub fn from_untrusted_columns(
         numerators: Vec<i64>,
         denominators: Vec<i64>,
-        shape: Vec<usize>,
+        shape: impl Into<Dims>,
         is_pure_integer: bool,
         absences: BTreeMap<usize, AbsenceMetadata>,
     ) -> Self {
@@ -200,8 +216,8 @@ impl DenseTensor {
             return None;
         }
 
-        let mut numerators = Vec::with_capacity(data.len());
-        let mut denominators = Vec::with_capacity(data.len());
+        let mut numerators = Column::with_capacity(data.len());
+        let mut denominators = Column::with_capacity(data.len());
         let mut is_pure_integer = true;
         for fraction in data {
             let (numerator, denominator) = fraction.extract_i64_pair()?;
@@ -281,11 +297,11 @@ impl DenseTensor {
     /// `Vec<i64> → Vec<Fraction> → re-densify` round-trip (handoff 手1).
     pub fn from_integers(numerators: Vec<i64>) -> Self {
         let len = numerators.len();
-        let denominators = vec![1; len];
+        let denominators = smallvec::smallvec![1; len];
         Self {
-            numerators,
+            numerators: numerators.into(),
             denominators,
-            shape: vec![len],
+            shape: smallvec::smallvec![len],
             is_pure_integer: true,
             absences: BTreeMap::new(),
         }
@@ -426,7 +442,7 @@ impl SparseTensor {
             indices,
             numerators,
             denominators,
-            shape: dense.shape.clone(),
+            shape: dense.shape.to_vec(),
             len: dense.len(),
             is_pure_integer: dense.is_pure_integer,
         })

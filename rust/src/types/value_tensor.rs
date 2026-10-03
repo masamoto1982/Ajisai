@@ -329,8 +329,8 @@ mod tensor_boundary_tests {
             panic!("expected DenseTensor representation");
         };
         assert_eq!(&*shape, &[2]);
-        assert_eq!(data.numerators, vec![1, 3]);
-        assert_eq!(data.denominators, vec![1, 2]);
+        assert_eq!(data.numerators.as_slice(), [1, 3]);
+        assert_eq!(data.denominators.as_slice(), [1, 2]);
         assert!(!data.is_pure_integer);
     }
 
@@ -342,7 +342,7 @@ mod tensor_boundary_tests {
         )
         .expect("small fractions should admit dense representation");
 
-        assert_eq!(tensor.denominators, vec![1, 0, 1]);
+        assert_eq!(tensor.denominators.as_slice(), [1, 0, 1]);
         assert!(!tensor.is_valid(1));
         assert!(!tensor.all_lanes_valid());
         assert_eq!(tensor.get_small_fraction(0), Some(Fraction::from(1)));

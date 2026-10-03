@@ -25,6 +25,7 @@
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::comparison::OrderingKind;
 use crate::types::small_rational;
+use crate::types::Column;
 use crate::types::{DenseTensor, Value, ValueData};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -123,7 +124,7 @@ fn hit<T>(answer: Option<T>) -> Option<T> {
     answer
 }
 
-fn dense_value(nums: Vec<i64>, dens: Vec<i64>, integer: bool) -> Value {
+fn dense_value(nums: Column, dens: Column, integer: bool) -> Value {
     let shape = vec![nums.len()];
     let tensor = DenseTensor::from_columns(nums, dens, shape.clone(), integer, BTreeMap::new());
     Value::new(
@@ -144,8 +145,8 @@ fn integer_lanes(
     b: Lanes,
     n: usize,
     f: impl Fn(i64, i64) -> (i64, bool),
-) -> Option<Vec<i64>> {
-    let mut out = vec![0i64; n];
+) -> Option<Column> {
+    let mut out: Column = smallvec::smallvec![0i64; n];
     let mut bad = false;
     match (a, b) {
         (Lanes::Columns { nums: x, .. }, Lanes::Columns { nums: y, .. }) => {
@@ -178,8 +179,8 @@ fn integer_lanes(
 /// carried by the numerator. `None` for a zero divisor (a NIL lane) or the
 /// one quotient a machine word cannot hold, `i64::MIN / -1`.
 fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
-    let mut nums = Vec::with_capacity(n);
-    let mut dens = Vec::with_capacity(n);
+    let mut nums = Column::with_capacity(n);
+    let mut dens = Column::with_capacity(n);
     let mut integer = true;
     for i in 0..n {
         let (x, y) = (a.num(i), b.num(i));
@@ -217,14 +218,14 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
             ExactArithmeticSchema::Div => None,
         };
         if let Some(nums) = lanes {
-            return Some(dense_value(nums, vec![1; n], true));
+            return Some(dense_value(nums, smallvec::smallvec![1; n], true));
         }
         if matches!(schema, ExactArithmeticSchema::Div) {
             return integer_quotients(a, b, n);
         }
     }
-    let mut nums = Vec::with_capacity(n);
-    let mut dens = Vec::with_capacity(n);
+    let mut nums = Column::with_capacity(n);
+    let mut dens = Column::with_capacity(n);
     let mut integer = true;
     for i in 0..n {
         let (x, y) = (a.at(i), b.at(i));
@@ -307,7 +308,7 @@ fn rounded_lanes(rounding: Rounding, value: &Value) -> Option<Value> {
                 (if n < 0 { -magnitude } else { magnitude }) as i64
             }
         })
-        .collect::<Vec<i64>>();
-    let ones = vec![1; out.len()];
+        .collect::<Column>();
+    let ones = smallvec::smallvec![1; out.len()];
     Some(dense_value(out, ones, true))
 }

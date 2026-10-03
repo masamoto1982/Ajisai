@@ -182,9 +182,9 @@ fn encode_data(data: &ValueData) -> PersistData {
             items: items.iter().map(encode_value).collect(),
         },
         ValueData::Tensor { data, shape } => PersistData::Tensor {
-            nums: data.numerators.clone(),
-            dens: data.denominators.clone(),
-            dshape: data.shape.clone(),
+            nums: data.numerators.to_vec(),
+            dens: data.denominators.to_vec(),
+            dshape: data.shape.to_vec(),
             pure_int: data.is_pure_integer,
             shape: (**shape).clone(),
             // The denominators already say *which* lanes are absent. This says

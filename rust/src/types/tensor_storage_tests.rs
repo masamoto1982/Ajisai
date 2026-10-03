@@ -62,7 +62,7 @@ fn dense_tensor_sparse_density_does_not_count_absent_lanes_as_zero() {
 fn sparse_tensor_round_trips_dense_values_and_shape() {
     let dense = dense_from_i64(&[0, 0, 3, 0, -4, 0], vec![2, 3]);
     let sparse = SparseTensor::from_dense(&dense).expect("all-valid dense tensor is sparseable");
-    assert_eq!(sparse.shape, vec![2, 3]);
+    assert_eq!(sparse.shape.as_slice(), [2, 3]);
     assert_eq!(sparse.len, 6);
     assert_eq!(sparse.indices, vec![2, 4]);
     assert_eq!(sparse.nonzero_count(), 2);
@@ -114,9 +114,9 @@ fn with_absence_at(len: usize, absent_at: usize, reason: NilReason) -> DenseTens
 fn reversed_lanes_reverses_both_columns() {
     let tensor = DenseTensor::from_integers(vec![1, 2, 3, 4, 5]);
     let reversed = tensor.reversed_lanes();
-    assert_eq!(reversed.numerators, vec![5, 4, 3, 2, 1]);
-    assert_eq!(reversed.denominators, vec![1, 1, 1, 1, 1]);
-    assert_eq!(reversed.shape, vec![5]);
+    assert_eq!(reversed.numerators.as_slice(), [5, 4, 3, 2, 1]);
+    assert_eq!(reversed.denominators.as_slice(), [1, 1, 1, 1, 1]);
+    assert_eq!(reversed.shape.as_slice(), [5]);
     assert!(reversed.is_pure_integer);
 }
 
@@ -175,8 +175,8 @@ fn reversed_lanes_keeps_a_rational_tensor_rational() {
     .expect("halves build a dense tensor");
     let reversed = tensor.reversed_lanes();
     assert!(!reversed.is_pure_integer);
-    assert_eq!(reversed.numerators, vec![3, 1]);
-    assert_eq!(reversed.denominators, vec![2, 2]);
+    assert_eq!(reversed.numerators.as_slice(), [3, 1]);
+    assert_eq!(reversed.denominators.as_slice(), [2, 2]);
 }
 
 // ── reading a lane reads the columns rather than re-deriving them ──────────

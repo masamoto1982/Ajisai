@@ -42,7 +42,7 @@ mod tensor_storage_tests;
 use self::fraction::Fraction;
 pub use self::record::{RecordBuildError, RecordData};
 pub use self::stack::Stack;
-pub use self::tensor_storage::{DenseTensor, SparseTensor};
+pub use self::tensor_storage::{Column, DenseTensor, Dims, SparseTensor};
 use self::value_identity::{dense_flatten, dense_lane_reasons, tensor_eq_vector};
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
