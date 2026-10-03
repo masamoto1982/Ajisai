@@ -184,6 +184,42 @@ fn hand_picked_programs_agree() {
         "1 1 60 RANGE DIV 0 [ ADD ] SCAN",
         "1 1 60 RANGE DIV 1 [ MUL ] FOLD",
         "[ 1/2 1/3 ] 1/5 [ 'E' BIND 'A' BIND A E A E GT SELECT ] FOLD",
+        // A one-lane seed, the idiomatic `[ 0 ]`: the lane beside a scalar
+        // (no fast-path hit) and beside itself (a hit), on both tiers, as
+        // FOLD and SCAN; and the Words that do not treat a lane as its value.
+        "1 600 RANGE [ 0 ] [ ADD ] FOLD",
+        "1 600 RANGE [ 0 ] [ ADD ] SCAN",
+        "1 30 RANGE [ 1 ] [ MUL ] FOLD",
+        "1 70 RANGE [ 1 ] [ MUL ] FOLD",
+        "1 600 RANGE [ 7 ] [ SUB ] FOLD",
+        "1 600 RANGE [ 7 ] [ 'E' BIND 'A' BIND E A SUB ] FOLD",
+        "1 600 RANGE [ 0 ] [ 'E' BIND 'A' BIND A A ADD E SUB ] SCAN",
+        "1 600 RANGE [ 0 ] [ 'E' BIND 'A' BIND A E E MUL ADD ] FOLD",
+        "1 600 RANGE [ 0 ] [ 'E' BIND 'A' BIND E ] FOLD",
+        "1 600 RANGE [ 0 ] [ 'E' BIND ] FOLD",
+        "1 600 RANGE [ 1/2 ] [ ADD ] FOLD",
+        "1 1 60 RANGE DIV [ 0 ] [ ADD ] FOLD",
+        "1 1 60 RANGE DIV [ 0 ] [ ADD ] SCAN",
+        "1 1 30 RANGE DIV [ 0 ] [ ADD ] FOLD",
+        "[ 1 2 3 ] [ 10 ] [ DIV ] FOLD",
+        "[ 1 0 2 ] [ 1 ] [ DIV ] FOLD",
+        "[ 3 0 2 ] [ 1 ] [ 'E' BIND 'A' BIND E A DIV ] FOLD",
+        "1 600 RANGE [ 9223372036854775000 ] [ ADD ] FOLD",
+        "[ 1 NIL 2 ] [ 0 ] [ ADD ] FOLD",
+        "[ 1 2 ] [ 0 ] [ 2 SQRT ADD ] FOLD",
+        "1 20 RANGE [ 0 ] [ 'E' BIND 'A' BIND A 10 LT ] FOLD",
+        "1 20 RANGE [ 0 ] [ 'E' BIND 'A' BIND A 5 EQ ] FOLD",
+        "1 20 RANGE [ 0 ] [ ADD FLOOR ] FOLD",
+        "1 20 RANGE [ 0 ] [ 'E' BIND 'A' BIND A A A TRUE SELECT ] FOLD",
+        "1 20 RANGE [ 0 ] [ 'E' BIND 'A' BIND E 1 ADD ] FOLD",
+        "1 20 RANGE [ 0 ] [ 'E' BIND 'A' BIND A 5 LT 'T' BIND A E ADD ] FOLD",
+        "1 20 RANGE [ 0 ] [ 'E' BIND 'A' BIND A FLOOR 'T' BIND A E ADD ] FOLD",
+        // A lane that outgrows a machine word part way and comes back.
+        "[ 9223372036854775807 2 0 ] [ 1 ] [ MUL ] FOLD",
+        "[ 9223372036854775807 2 0 ] [ 1/3 ] [ MUL ] SCAN",
+        "1 20 RANGE [ 0 1 ] [ ADD ] FOLD",
+        "1 20 RANGE [ [ 0 ] ] [ ADD ] FOLD",
+        "1 20 RANGE [ TRUE ] [ ADD ] FOLD",
     ] {
         assert_same(source, Limits::default());
     }
@@ -262,6 +298,10 @@ fn the_fused_route_is_taken_where_it_applies() {
     assert_eq!(fused_runs("5 'K' BIND 1 1000 RANGE [ K MUL ] MAP"), 1);
     assert_eq!(fused_runs("1 10 RANGE [ K MUL ] MAP"), 0);
     assert_eq!(fused_runs("1 10 RANGE [ 2 MUL ] FILTER"), 0);
+    assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] FOLD"), 1);
+    assert_eq!(fused_runs("1 1000 RANGE [ 0 ] [ ADD ] SCAN"), 1);
+    assert_eq!(fused_runs("1 20 RANGE [ 0 ] [ ADD FLOOR ] FOLD"), 0);
+    assert_eq!(fused_runs("1 20 RANGE [ 0 1 ] [ ADD ] FOLD"), 0);
 }
 
 fn literal() -> impl Strategy<Value = String> {
@@ -309,7 +349,7 @@ proptest! {
     #[test]
     fn random_walks_agree(
         target in vector(),
-        seed in literal(),
+        seed in prop_oneof![3 => literal(), 1 => literal().prop_map(|l| format!("[ {l} ]"))],
         code in block(),
         walk in 0usize..4,
         outer in prop::option::of(literal()),
@@ -394,7 +434,7 @@ proptest! {
     fn typed_walks_agree(
         target in integer_vector(),
         (num, truth) in typed_expr(),
-        walk in 0usize..4,
+        walk in 0usize..6,
         outer in (-9i64..10),
         steps in prop::option::of(0usize..400),
         work in prop::option::of(0u64..400),
@@ -404,7 +444,11 @@ proptest! {
             1 => format!("[ 'X' BIND 4 'A' BIND {truth} ] FILTER"),
             // `A` is the accumulator, read wherever the expression puts it.
             2 => format!("0 [ 'X' BIND 'A' BIND {num} ] FOLD"),
-            _ => format!("0 [ 'X' BIND 'A' BIND {num} ] SCAN"),
+            3 => format!("0 [ 'X' BIND 'A' BIND {num} ] SCAN"),
+            // A one-lane seed: the walk is fused when `A` meets only
+            // arithmetic, and declined otherwise.
+            4 => format!("[ 0 ] [ 'X' BIND 'A' BIND {num} ] FOLD"),
+            _ => format!("[ 1/2 ] [ 'X' BIND 'A' BIND {num} ] SCAN"),
         };
         let source = format!("{outer} 'K' BIND {target} {code}");
         let limits = Limits { steps, work, bits: None };

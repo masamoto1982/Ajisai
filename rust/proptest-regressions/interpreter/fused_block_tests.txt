@@ -18,3 +18,8 @@ cc 841cfc15efbbfbfecbcaf8f43aff6366609b625cc05829989487d6ce2e8a78cc # shrinks to
 cc eeb60746b26121a9e41ec703d658a4bdf0d4a19c3829b8483814aa4c51e735c4 # shrinks to target = "[ 0 ]", seed = "0", code = "[ -1 DIV 0 'X' BIND ]", walk = 2, outer = None, steps = None, work = None, bits = None
 cc bd5b3f47f3135272afb8df4b1c212149bbe154a702e66c01c5bad3fad3d2262d # shrinks to target = "[ 9223372036854775807 ]", seed = "0", code = "[ 9223372036854775807 0 ADD 4611686018427387904 DIV LT ]", walk = 0, outer = None, steps = None, work = None, bits = None
 cc bf8dd1d9ebcebfd604917ec59dadba40e191002e3e20231a6ab68495754cb205 # shrinks to target = "[ 1 6 ]", (num, truth) = ("X K FLOOR X 5/2 LT SELECT", "X X LT"), walk = 2, outer = 0, steps = None, work = None
+cc d45925b5debdb06cf3cb2b43a8b1cc30f5976dee3b8d8bd5ecb5097ed963fb44 # shrinks to target = "[ 0 ]", (num, truth) = ("X A X A ADD ADD ADD", "X X LT"), walk = 4, outer = 0, steps = None, work = None
+cc 77834dab8a2d46f11d0d636eb2ce506f949f1b30ffd5027c067c6ca1859be374 # shrinks to target = "[ 0 ]", (num, truth) = ("A X ADD FLOOR A ADD", "X X LT"), walk = 4, outer = 0, steps = None, work = None
+cc 6cd18a65de3406b4bc3ce87834c8b2a5153f5153ed5aacf728242d015620beb9 # shrinks to target = "[ 4611686018427387904 ]", seed = "[ 0 ]", code = "[ 0 ]", walk = 2, outer = None, steps = None, work = None, bits = None
+cc badb5c462b3485ea1b1a4be05fd2e87af24deb7adbbf2490344f51620d36c5b6 # shrinks to target = "[ 0 ]", (num, truth) = ("K", "TRUE"), walk = 4, outer = 0, steps = None, work = None
+cc ed29350b12d6299af6273c60b622c5e3fdf139883d3b260efc1d6236c4517396 # shrinks to target = "[ 0 ]", (num, truth) = ("A K X X A EQ SELECT ADD", "X X LT"), walk = 4, outer = 0, steps = None, work = None
