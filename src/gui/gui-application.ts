@@ -289,12 +289,17 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
             if (recognizer.registerTap(end, Date.now()) >= 3) {
                 recognizer.reset();
-                // The first two taps of the run are the OS's own double-tap,
-                // which selects the word under the finger; left in place, that
-                // selection stays painted over the Word after the Run. A Run
-                // is not a selection, so collapse it to a caret first.
+                // Hand the text back from the OS before running it. The last
+                // Word typed may still be the keyboard's unconfirmed
+                // composition, and the first two taps of the run are the OS's
+                // own double-tap, which selects the word under the finger;
+                // either one stays painted over that Word after the Run.
+                // Collapsing the selection alone does not end a composition —
+                // only leaving the field does — and the Run moves on from the
+                // editor anyway, so it gives up focus, keyboard and all.
                 const { selectionEnd } = elements.codeInput;
                 elements.codeInput.setSelectionRange(selectionEnd, selectionEnd);
+                elements.codeInput.blur();
                 // Run; the post-execution auto-navigation (applyExecutionAreaState)
                 // chooses the destination surface from what actually changed, so
                 // we deliberately do not force a switch to Stack here.
