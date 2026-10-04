@@ -24,7 +24,6 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::types::Value;
-use std::collections::HashMap;
 
 use super::Interpreter;
 
@@ -38,7 +37,7 @@ use super::Interpreter;
 /// the blocks written beneath it and never into a Word called from it.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct BindingScope {
-    names: HashMap<String, Value>,
+    names: crate::fast_hash::FastMap<String, Value>,
     barrier: bool,
 }
 
@@ -47,7 +46,7 @@ impl BindingScope {
     /// frame outside the run for a name to come from.
     pub(crate) fn root() -> Self {
         Self {
-            names: HashMap::new(),
+            names: Default::default(),
             barrier: true,
         }
     }
@@ -60,7 +59,7 @@ impl Interpreter {
     /// function so no depth token is needed.
     pub(crate) fn open_binding_scope(&mut self, barrier: bool) {
         self.binding_scopes.push(BindingScope {
-            names: HashMap::new(),
+            names: Default::default(),
             barrier,
         });
     }

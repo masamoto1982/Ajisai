@@ -435,7 +435,7 @@ impl Value {
                 let children = tensor_to_nested_values(data, shape);
                 std::borrow::Cow::Owned(Value::new(
                     ValueData::Vector(Arc::new(children)),
-                    self.absence.clone(),
+                    self.absence.as_deref().cloned(),
                 ))
             }
             _ => std::borrow::Cow::Borrowed(self),

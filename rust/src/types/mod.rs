@@ -196,7 +196,10 @@ impl std::hash::Hash for ValueData {
 #[derive(Debug, Clone)]
 pub struct Value {
     pub data: ValueData,
-    pub absence: Option<AbsenceMetadata>,
+    /// Why this value is absent, for a NIL. Boxed: three words on every value
+    /// for the rare one that carries them would widen every stack slot and
+    /// every Vector lane (`value_layout_tests`).
+    pub absence: Option<Box<AbsenceMetadata>>,
     /// How many containers deep this value nests, computed once when the
     /// value is built (`Value::new`). Private so that no value can be built
     /// around it: every construction goes through `Value::new`, and every
@@ -212,7 +215,7 @@ impl Value {
         let nesting = data.nesting();
         Self {
             data,
-            absence,
+            absence: absence.map(Box::new),
             nesting,
         }
     }

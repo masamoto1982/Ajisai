@@ -108,13 +108,15 @@ impl Value {
 
     #[inline]
     pub fn absence_metadata(&self) -> Option<&AbsenceMetadata> {
-        self.absence.as_ref()
+        self.absence.as_deref()
     }
 
     /// The text a `userDeclared` absence carries beside its reason.
     #[inline]
     pub fn absence_detail(&self) -> Option<&str> {
-        self.absence.as_ref().and_then(AbsenceMetadata::detail_text)
+        self.absence
+            .as_deref()
+            .and_then(AbsenceMetadata::detail_text)
     }
 
     #[inline]
@@ -124,7 +126,8 @@ impl Value {
         }
         Some(
             self.absence
-                .clone()
+                .as_deref()
+                .cloned()
                 .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
         )
     }

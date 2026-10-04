@@ -114,10 +114,26 @@ pub(crate) fn create_bigint_from_i128(n: i128) -> BigInt {
 #[derive(Debug, Clone)]
 pub(crate) enum FractionRepr {
     Small(i64, i64),
-    Big {
-        numerator: BigInt,
-        denominator: BigInt,
-    },
+    /// Boxed, so a `Fraction` is three words rather than the eight two
+    /// inline `BigInt`s would make it: every `Value` holding a number pays
+    /// for its width, and a fraction past a machine word is the rare one.
+    Big(Box<BigPair>),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct BigPair {
+    pub(crate) numerator: BigInt,
+    pub(crate) denominator: BigInt,
+}
+
+impl FractionRepr {
+    #[inline]
+    pub(crate) fn big(numerator: BigInt, denominator: BigInt) -> Self {
+        FractionRepr::Big(Box::new(BigPair {
+            numerator,
+            denominator,
+        }))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -145,9 +161,9 @@ impl PartialEq for Fraction {
                 }
                 (*a as i128) * (*d as i128) == (*c as i128) * (*b as i128)
             }
-            (FractionRepr::Small(..), FractionRepr::Big { .. })
-            | (FractionRepr::Big { .. }, FractionRepr::Small(..))
-            | (FractionRepr::Big { .. }, FractionRepr::Big { .. }) => {
+            (FractionRepr::Small(..), FractionRepr::Big(_))
+            | (FractionRepr::Big(_), FractionRepr::Small(..))
+            | (FractionRepr::Big(_), FractionRepr::Big(_)) => {
                 let (an, ad): (BigInt, BigInt) = self.to_bigint_pair();
                 let (bn, bd): (BigInt, BigInt) = other.to_bigint_pair();
                 if ad == bd {
@@ -224,7 +240,7 @@ impl Fraction {
     pub fn is_nil(&self) -> bool {
         match &self.repr {
             FractionRepr::Small(_, d) => *d == 0,
-            FractionRepr::Big { denominator, .. } => denominator.is_zero(),
+            FractionRepr::Big(big) => big.denominator.is_zero(),
         }
     }
 
@@ -339,10 +355,7 @@ impl Fraction {
             };
         }
         Fraction {
-            repr: FractionRepr::Big {
-                numerator,
-                denominator,
-            },
+            repr: FractionRepr::big(numerator, denominator),
         }
     }
 
@@ -350,7 +363,7 @@ impl Fraction {
     pub fn numerator(&self) -> BigInt {
         match &self.repr {
             FractionRepr::Small(n, _) => BigInt::from(*n),
-            FractionRepr::Big { numerator, .. } => numerator.clone(),
+            FractionRepr::Big(big) => big.numerator.clone(),
         }
     }
 
@@ -358,7 +371,7 @@ impl Fraction {
     pub fn denominator(&self) -> BigInt {
         match &self.repr {
             FractionRepr::Small(_, d) => BigInt::from(*d),
-            FractionRepr::Big { denominator, .. } => denominator.clone(),
+            FractionRepr::Big(big) => big.denominator.clone(),
         }
     }
 
@@ -366,10 +379,7 @@ impl Fraction {
     pub fn to_bigint_pair(&self) -> (BigInt, BigInt) {
         match &self.repr {
             FractionRepr::Small(n, d) => (BigInt::from(*n), BigInt::from(*d)),
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => (numerator.clone(), denominator.clone()),
+            FractionRepr::Big(big) => (big.numerator.clone(), big.denominator.clone()),
         }
     }
 
@@ -377,7 +387,7 @@ impl Fraction {
     pub fn is_integer(&self) -> bool {
         match &self.repr {
             FractionRepr::Small(_, d) => *d == 1,
-            FractionRepr::Big { denominator, .. } => denominator.is_one(),
+            FractionRepr::Big(big) => big.denominator.is_one(),
         }
     }
 
@@ -385,7 +395,7 @@ impl Fraction {
     pub fn is_zero(&self) -> bool {
         match &self.repr {
             FractionRepr::Small(n, _) => *n == 0,
-            FractionRepr::Big { numerator, .. } => numerator.is_zero(),
+            FractionRepr::Big(big) => big.numerator.is_zero(),
         }
     }
 
@@ -395,7 +405,7 @@ impl Fraction {
     pub fn is_positive(&self) -> bool {
         match &self.repr {
             FractionRepr::Small(n, _) => *n > 0,
-            FractionRepr::Big { numerator, .. } => numerator > &BigInt::zero(),
+            FractionRepr::Big(big) => big.numerator > BigInt::zero(),
         }
     }
 
@@ -403,10 +413,8 @@ impl Fraction {
     pub(crate) fn extract_i64_pair(&self) -> Option<(i64, i64)> {
         match &self.repr {
             FractionRepr::Small(n, d) => Some((*n, *d)),
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 let n = numerator.to_i64()?;
                 let d = denominator.to_i64()?;
                 Some((n, d))
@@ -424,10 +432,8 @@ impl Fraction {
                     None
                 }
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 if !denominator.is_one() {
                     return None;
                 }
@@ -448,10 +454,8 @@ impl Fraction {
                 // wrong count instead of "not a usize".
                 usize::try_from(*n).ok()
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 if !denominator.is_one() || *numerator < BigInt::zero() {
                     return None;
                 }
@@ -496,10 +500,7 @@ impl Fraction {
             };
         }
         Fraction {
-            repr: FractionRepr::Big {
-                numerator: create_bigint_from_i128(n),
-                denominator: create_bigint_from_i128(d),
-            },
+            repr: FractionRepr::big(create_bigint_from_i128(n), create_bigint_from_i128(d)),
         }
     }
 
@@ -603,10 +604,7 @@ impl Fraction {
                 });
             }
             Ok(Fraction {
-                repr: FractionRepr::Big {
-                    numerator: num,
-                    denominator: BigInt::one(),
-                },
+                repr: FractionRepr::big(num, BigInt::one()),
             })
         }
     }
@@ -665,10 +663,7 @@ impl ToPrimitive for Fraction {
                 }
                 Some(n / d)
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => (numerator / denominator).to_i64(),
+            FractionRepr::Big(big) => (&big.numerator / &big.denominator).to_i64(),
         }
     }
 
@@ -680,10 +675,8 @@ impl ToPrimitive for Fraction {
                 }
                 Some((*n / *d) as u64)
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 if *numerator < BigInt::zero() {
                     return None;
                 }
@@ -700,10 +693,8 @@ impl ToPrimitive for Fraction {
                 }
                 Some(*n as f64 / *d as f64)
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 let num_f64: f64 = numerator.to_f64()?;
                 let den_f64: f64 = denominator.to_f64()?;
                 if den_f64 == 0.0 {
@@ -744,10 +735,8 @@ impl std::fmt::Display for Fraction {
                     write!(f, "{}/{}", n, d)
                 }
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 if denominator.is_one() {
                     write!(f, "{}", numerator)
                 } else {

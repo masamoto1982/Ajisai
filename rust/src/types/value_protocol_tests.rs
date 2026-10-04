@@ -142,7 +142,7 @@ fn algebraic_stack_display_writes_the_normal_form_short() {
         ValueData::ExactScalar(ExactReal::Algebraic(algebraic)) => {
             match algebraic.mul_fraction(&Fraction::new(2.into(), 1.into())) {
                 crate::types::exact::AlgebraicResult::Irrational(scaled) => {
-                    Value::from_exact_real(ExactReal::Algebraic(scaled))
+                    Value::from_exact_real(ExactReal::Algebraic(Box::new(scaled)))
                 }
                 other => panic!("2·√2 stays irrational, got {other:?}"),
             }

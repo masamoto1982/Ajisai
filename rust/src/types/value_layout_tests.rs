@@ -23,13 +23,9 @@ use std::mem::size_of;
 /// alignment. Anything materially wider means something rare was inlined
 /// into every value again.
 ///
-/// The envelope is two thin pointers and three one-byte tags: the boxed
-/// diagnosis, the `Arc<String>` detail an `ABSENT` NIL carries, and the
-/// reason, origin and recoverability. Both pointers are `None` on every
-/// present value; what this budget forbids is inlining what they point
-/// to. The detail is `Arc<String>` rather than `Arc<str>` because a fat
-/// pointer would cost a third word for nothing.
-const ENVELOPE_BUDGET: usize = 32;
+/// The envelope is one pointer — the boxed `AbsenceMetadata`, `None` on
+/// every present value — and the cached nesting depth.
+const ENVELOPE_BUDGET: usize = 16;
 
 #[test]
 fn a_value_is_its_payload_plus_a_pointer_sized_envelope() {
@@ -57,4 +53,19 @@ fn absence_metadata_holds_its_diagnosis_behind_a_pointer() {
          DebugDiagnosis, which is hundreds of bytes of strings and lists, \
          nor widen its detail to a fat pointer"
     );
+}
+
+/// The numbers a `ValueData` holds stay three words: a rational's two
+/// machine words and its tag, with anything wider — a `BigInt` pair, an
+/// algebraic basis and term map — behind a pointer. Those were inline once,
+/// and made every `Value` 104 bytes to hold what nearly every value never
+/// does.
+#[test]
+fn numbers_hold_their_rare_wide_forms_behind_a_pointer() {
+    use crate::types::exact::ExactReal;
+    use crate::types::fraction::Fraction;
+    assert!(size_of::<Fraction>() <= 3 * size_of::<u64>());
+    assert!(size_of::<ExactReal>() <= 3 * size_of::<u64>());
+    assert!(size_of::<ValueData>() <= 4 * size_of::<u64>());
+    assert!(size_of::<Value>() <= 6 * size_of::<u64>());
 }
