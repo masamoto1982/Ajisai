@@ -24,8 +24,10 @@ pub enum ExactReal {
     /// value, exactly as in `Fraction` itself).
     Rational(Fraction),
     /// Tier 1: an algebraic irrational in multiquadratic normal form.
-    /// Invariant: never rational (rational results demote eagerly).
-    Algebraic(Algebraic),
+    /// Invariant: never rational (rational results demote eagerly). Boxed:
+    /// a basis and a term map are five words, and every `Value` would carry
+    /// that width for the rare value that is irrational.
+    Algebraic(Box<Algebraic>),
 }
 
 /// Hashes the same way the derived `PartialEq` compares: by variant, then by
@@ -66,7 +68,7 @@ impl ExactReal {
     fn from_result(result: AlgebraicResult) -> Self {
         match result {
             AlgebraicResult::Rational(f) => Self::Rational(f),
-            AlgebraicResult::Irrational(a) => Self::Algebraic(a),
+            AlgebraicResult::Irrational(a) => Self::Algebraic(Box::new(a)),
         }
     }
 
@@ -137,7 +139,7 @@ impl ExactReal {
                 }
                 Self::Rational(Fraction::new(-f.numerator(), f.denominator()))
             }
-            Self::Algebraic(a) => Self::Algebraic(a.neg()),
+            Self::Algebraic(a) => Self::Algebraic(Box::new(a.neg())),
         }
     }
 

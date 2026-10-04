@@ -297,22 +297,16 @@ impl Fraction {
             // operand widens to `Big`, as `round` and `compute_gcd_i64` do.
             FractionRepr::Small(n, d) => match n.checked_abs() {
                 Some(magnitude) => Fraction::from_repr(FractionRepr::Small(magnitude, *d)),
-                None => Fraction::from_repr(FractionRepr::Big {
-                    numerator: -BigInt::from(*n),
-                    denominator: BigInt::from(*d),
-                }),
+                None => Fraction::from_repr(FractionRepr::big(-BigInt::from(*n), BigInt::from(*d))),
             },
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => Fraction::from_repr(FractionRepr::Big {
-                numerator: if *numerator < BigInt::zero() {
-                    -numerator.clone()
+            FractionRepr::Big(big) => {
+                let numerator = if big.numerator < BigInt::zero() {
+                    -big.numerator.clone()
                 } else {
-                    numerator.clone()
-                },
-                denominator: denominator.clone(),
-            }),
+                    big.numerator.clone()
+                };
+                Fraction::from_repr(FractionRepr::big(numerator, big.denominator.clone()))
+            }
         }
     }
 
@@ -334,10 +328,8 @@ impl Fraction {
                 let floored = if *n < 0 && r != 0 { q - 1 } else { q };
                 Fraction::from_repr(FractionRepr::Small(floored, 1))
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 let q = numerator / denominator;
                 let r = numerator % denominator;
                 let floored = if *numerator < BigInt::zero() && !r.is_zero() {
@@ -378,10 +370,8 @@ impl Fraction {
                     1,
                 ))
             }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
+            FractionRepr::Big(big) => {
+                let (numerator, denominator) = (&big.numerator, &big.denominator);
                 let is_negative = *numerator < BigInt::zero();
                 let abs_num = if is_negative {
                     -numerator.clone()
