@@ -1,5 +1,4 @@
-//! Lowering a run of a line to a typed segment (`segment`), from a compiled
-//! line's ops or from the program's own tokens.
+//! Lowering a run of a compiled line to a typed segment (`segment`).
 //!
 //! A run is cut at the first op a segment cannot hold, and kept only when it
 //! dispatches at least two Words: one alone is `quickened`'s already.
@@ -19,7 +18,7 @@ use crate::interpreter::interpreter_core::MAX_USER_WORD_DEPTH;
 use crate::interpreter::quickened::{Kind, Slot};
 use crate::interpreter::segment::{LineSegment, SegOp, Segment};
 use crate::interpreter::{is_plan_valid, Interpreter};
-use crate::types::{Token, Value};
+use crate::types::Token;
 
 /// Ops one segment may grow to through inlining: a call tree can be far
 /// larger than the line that makes it.
@@ -28,8 +27,7 @@ const MAX_SEGMENT_OPS: usize = 4096;
 /// One thing a run does, read from either source.
 enum Item {
     Literal(Slot),
-    /// `TRUE`/`FALSE`, and whether its route checks nesting after it.
-    WordLiteral(bool, bool),
+    WordLiteral(bool),
     Word(Kind),
     /// `'NAME' BIND`, the name already checked bindable.
     Bind(String),
@@ -51,7 +49,7 @@ fn op_item(interp: &Interpreter, ops: &[CompiledOp], i: usize) -> Option<(Item, 
             },
         },
         CompiledOp::PushWordLiteral(value, _) => match Slot::of(value)? {
-            Slot::Bool(b) => (Item::WordLiteral(b, false), 1),
+            Slot::Bool(b) => (Item::WordLiteral(b), 1),
             Slot::Num(_) => return None,
         },
         CompiledOp::CallBuiltin(call) => (Item::Word(Kind::of(call.word?.id)?), 1),
@@ -61,41 +59,6 @@ fn op_item(interp: &Interpreter, ops: &[CompiledOp], i: usize) -> Option<(Item, 
             1,
         ),
         CompiledOp::PushVectorLiteral(_) | CompiledOp::FallbackToken(_) => return None,
-    })
-}
-
-fn token_item(interp: &Interpreter, tokens: &[Token], i: usize) -> Option<(Item, usize)> {
-    Some(match &tokens[i] {
-        Token::Number(literal) => (
-            Item::Literal(Slot::of(&Value::from_fraction(literal.parsed().ok()?))?),
-            1,
-        ),
-        Token::String(name) => match tokens.get(i + 1) {
-            Some(Token::Symbol(word))
-                if crate::word_name::canonical_word_name(word).as_ref() == "BIND" =>
-            {
-                (
-                    Item::Bind(bindable_name(interp, &Value::from_string(name))?),
-                    2,
-                )
-            }
-            _ => return None,
-        },
-        Token::Symbol(symbol) => {
-            let name = crate::word_name::canonical_word_name(symbol);
-            let item = match name.as_ref() {
-                "TRUE" => Item::WordLiteral(true, true),
-                "FALSE" => Item::WordLiteral(false, true),
-                core if interp.core_vocabulary.contains_key(core) => {
-                    let word = interp.core_vocabulary.get(core)?.generated?;
-                    Item::Word(Kind::of(word.id)?)
-                }
-                user if interp.user_words.contains_key(user) => Item::Call(user.to_string()),
-                other => Item::Name(other.to_string()),
-            };
-            (item, 1)
-        }
-        Token::VectorStart | Token::VectorEnd | Token::Value(_) => return None,
     })
 }
 
@@ -174,8 +137,8 @@ impl<'a> Builder<'a> {
                 self.ops.push(SegOp::Push(slot));
                 self.depth += 1;
             }
-            Item::WordLiteral(value, checked) => {
-                self.ops.push(SegOp::PushWord { value, checked });
+            Item::WordLiteral(b) => {
+                self.ops.push(SegOp::PushWord(b));
                 self.depth += 1;
                 self.steps += 1;
             }
@@ -278,17 +241,12 @@ impl<'a> Builder<'a> {
         Some(())
     }
 
-    /// Lower the items from `start` in the run's own frame for as long as
-    /// they lower, and answer where the run ends.
-    fn extend(
-        &mut self,
-        start: usize,
-        len: usize,
-        item_at: impl Fn(usize) -> Option<(Item, usize)>,
-    ) -> usize {
+    /// Lower `ops` from `start` in the run's own frame for as long as they
+    /// lower, and answer where the run ends.
+    fn extend(&mut self, ops: &[CompiledOp], start: usize) -> usize {
         let mut i = start;
-        while i < len {
-            let Some((item, consumed)) = item_at(i) else {
+        while i < ops.len() {
+            let Some((item, consumed)) = op_item(self.interp, ops, i) else {
                 break;
             };
             if !self.accept(item, None, 0) {
@@ -325,7 +283,7 @@ pub(crate) fn segment_line(ops: &[CompiledOp], interp: &Interpreter) -> Vec<Line
     while i < ops.len() {
         let start = i;
         let mut builder = Builder::new(interp);
-        i = builder.extend(start, ops.len(), |i| op_item(interp, ops, i));
+        i = builder.extend(ops, start);
         if let Some(code) = builder.finish() {
             segments.push(LineSegment {
                 start,
@@ -338,16 +296,4 @@ pub(crate) fn segment_line(ops: &[CompiledOp], interp: &Interpreter) -> Vec<Line
         }
     }
     segments
-}
-
-/// The segment starting at `tokens[start]`, if one is worth running, and
-/// where the run it was lowered from ends.
-pub(crate) fn segment_tokens(
-    interp: &Interpreter,
-    tokens: &[Token],
-    start: usize,
-) -> (Option<Segment>, usize) {
-    let mut builder = Builder::new(interp);
-    let end = builder.extend(start, tokens.len(), |i| token_item(interp, tokens, i));
-    (builder.finish(), end.max(start + 1))
 }

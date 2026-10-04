@@ -6,6 +6,8 @@ pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;
 pub mod compiled_plan;
+#[cfg(test)]
+mod compiled_plan_tests;
 mod contract_record;
 pub mod control;
 mod debug_declared_checks;

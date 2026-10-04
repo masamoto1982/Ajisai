@@ -16,6 +16,13 @@
 //! - a call of a User Word whose body is made of these, inlined
 //!   (`segment_lower`).
 //!
+//! Segments are lowered when a line is compiled — a User Word body, or a
+//! higher-order Word's block — and kept in its plan, so the lowering is paid
+//! once and the segment runs on every call or element. The program's own
+//! top-level tokens run once, where lowering a run costs about what
+//! dispatching it does, so they are walked as before; a User Word they call
+//! runs its body's segments all the same.
+//!
 //! It holds every value as a `Slot` — a rational whose halves fit a machine
 //! word, or a truth value — and runs speculatively, like a fused walk
 //! (`fused_block`): it reads its operands and the names it needs, computes
@@ -56,10 +63,9 @@ use crate::interpreter::{is_plan_valid, CompiledPlan, Interpreter};
 pub(crate) enum SegOp {
     /// A literal: free.
     Push(Slot),
-    /// `TRUE`/`FALSE`: a Word, so a step. `checked` when the route it
-    /// stands for runs the nesting check after it, as the token walk's
-    /// dispatch does and a compiled `PushWordLiteral` does not.
-    PushWord { value: bool, checked: bool },
+    /// `TRUE`/`FALSE`: a Word, so a step — and, as a compiled
+    /// `PushWordLiteral`, one the nesting check does not follow.
+    PushWord(bool),
     /// A scalar Word: a step, and what `quickened::apply` charges.
     Word(Kind),
     /// `'NAME' BIND` into a slot: a step.
@@ -145,12 +151,7 @@ impl Segment {
             match *op {
                 SegOp::Push(slot) => stack.push(slot),
                 SegOp::Load(slot) => stack.push(slots[slot as usize]),
-                SegOp::PushWord { value, checked } => {
-                    stack.push(Slot::Bool(value));
-                    if checked {
-                        checked_below = Some(stack.len());
-                    }
-                }
+                SegOp::PushWord(value) => stack.push(Slot::Bool(value)),
                 SegOp::Bind(slot) => {
                     slots[slot as usize] = stack.pop()?;
                     checked_below = Some(stack.len());

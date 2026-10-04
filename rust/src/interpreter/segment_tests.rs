@@ -3,9 +3,9 @@
 //! LANG.AUTHORITY.FREEDOM makes the route unobservable, so a program must
 //! leave the same stack, outcome, resource usage, metrics, epochs, trace and
 //! source position whether its scalar runs are segments or dispatched Word
-//! by Word. The programs put runs at the top level (lowered from tokens),
-//! in User Word bodies and in blocks the fused walk declines (compiled
-//! lines), with names, `BIND`, inlined calls and the plans they build.
+//! by Word. The programs put runs in User Word bodies and in blocks the
+//! fused walk declines, with names, `BIND`, inlined calls and the plans they
+//! build, and call those Words from the top level too.
 
 use crate::interpreter::route_observation::{self, Limits, Observation};
 use crate::interpreter::segment::segment_runs_on_this_thread;
@@ -39,8 +39,21 @@ fn segment_runs(source: &str) -> u64 {
 #[test]
 fn hand_picked_programs_agree() {
     for source in [
-        // The top level: literals, Words, TRUE/FALSE, names, BIND.
+        // The top level, walked; and the same runs in bodies.
         "1 2 ADD 3 MUL",
+        "[ 1/3 2/5 ADD 7 DIV 3 LT TRUE AND NOT ] 'F' DEF F F EQ",
+        "[ 'X' BIND X X MUL X 1 SUB DIV ] 'F' DEF 5 F",
+        "[ 'X' BIND X 1 ADD 'X' BIND X X MUL ] 'F' DEF 5 F",
+        "[ 'x' BIND x 2 MUL ] 'F' DEF 5 F",
+        "[ 'N' BIND N 2 DIV N 3 MUL 1 ADD N 2 DIV FLOOR 2 MUL N EQ SELECT ] 'F' DEF 4 F 7 F",
+        "[ FLOOR -7/2 ROUND 9 MIN 2 MAX ] 'F' DEF 7/2 F",
+        "[ TRUE FALSE EQ 1 1 EQ AND ] 'F' DEF F",
+        "[ 3 ADD 4 MUL ] 'F' DEF [ 1 2 ] LENGTH F",
+        "[ 3 ADD 4 MUL ] 'F' DEF F",
+        "[ 2 ADD 2 MUL ] 'F' DEF 1 0 DIV F 9223372036854775807 F 99999999999999999999999 F",
+        "[ 2 ADD 2 MUL ] 'F' DEF NIL F 'a' F [ 1 2 ] F 2 SQRT F TRUE F",
+        "[ 1 TRUE EQ 1 2 ADD ] 'F' DEF F",
+        "[ FALSE 1 AND 1 2 ADD ] 'F' DEF F",
         "1 2 ADD 3 MUL 1 2 ADD 3 MUL ADD",
         "1/3 2/5 ADD 7 DIV 3 LT TRUE AND NOT",
         "5 'X' BIND X X MUL X 1 SUB DIV",
@@ -96,7 +109,9 @@ fn hand_picked_programs_agree() {
         "1 30 RANGE [ [ 7 ] LENGTH ADD 'X' BIND X 2 MUL [ X ] EXEC ADD ] MAP",
         "[ 3 MUL ] 'T3' DEF 1 30 RANGE [ [ 7 ] LENGTH ADD T3 T3 1 ADD ] MAP",
         "[ 1 2 3 ] [ 'X' BIND [ 9 ] 'K' DEF X K ADD ] MAP",
-        // `DEF` keeps a body as written, which only the token walk has.
+        // `DEF` keeps a body as written, which only the token walk has: a
+        // body that binds and defines stays on it.
+        "[ 'X' BIND [ 0.5 1e2 ] 'K' DEF X K ADD ] 'W' DEF 3 W",
         "[ 1 2 3 ] [ 'X' BIND [ 0.5 1e2 ] 'K' DEF X K ADD ] MAP",
         // Errors after a run, for the position and the trace.
         "1 2 ADD 3 MUL 'a' ADD",
@@ -144,14 +159,16 @@ fn ceilings_agree_at_their_boundaries() {
 /// they do, where they should.
 #[test]
 fn runs_are_segments() {
-    assert_eq!(segment_runs("1 2 ADD 3 MUL"), 1);
-    assert_eq!(segment_runs("[ 2 MUL 1 ADD ] 'F' DEF 5 F"), 1);
-    assert_eq!(segment_runs("5 'X' BIND X X MUL"), 1);
+    // A body run on every call.
+    assert_eq!(segment_runs("[ 2 MUL 1 ADD ] 'F' DEF 5 F 6 F"), 2);
+    assert_eq!(segment_runs("[ 'X' BIND X X MUL ] 'SQ' DEF 5 SQ"), 1);
+    // The top level runs once, and is walked.
+    assert_eq!(segment_runs("1 2 ADD 3 MUL"), 0);
     // One Word alone is quickened, not a segment.
-    assert_eq!(segment_runs("1 2 ADD"), 0);
-    // Declined, then walked.
-    assert_eq!(segment_runs("1 0 DIV 2 ADD"), 0);
-    // A compiled line's run, once per element.
+    assert_eq!(segment_runs("[ 2 ADD ] 'F' DEF 5 F"), 0);
+    // Declined, then dispatched.
+    assert_eq!(segment_runs("[ 0 DIV 2 ADD ] 'F' DEF 5 F"), 0);
+    // A block's run, once per element.
     assert_eq!(
         segment_runs("1 10 RANGE [ [ 7 ] LENGTH ADD 'X' BIND X 2 MUL X ADD ] MAP"),
         10
@@ -162,6 +179,12 @@ fn runs_are_segments() {
 /// not run the old body.
 #[test]
 fn a_dictionary_change_retires_the_segments_lowered_against_it() {
+    // The line's own `DEF` moves the dictionary between lowering and the
+    // run that inlined `F`.
+    assert_same(
+        "[ 2 ] 'F' DEF [ 1 2 ] [ [ 10 ] 'F' DEF F 1 ADD 2 MUL ADD ] MAP",
+        Limits::default(),
+    );
     assert_same(
         "[ 2 ] 'F' DEF [ 1 2 3 ] [ 'X' BIND [ 10 ] 'F' DEF X F ADD F MUL ] MAP",
         Limits::default(),
