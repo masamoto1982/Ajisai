@@ -63,8 +63,7 @@ use crate::interpreter::{is_plan_valid, CompiledPlan, Interpreter};
 pub(crate) enum SegOp {
     /// A literal: free.
     Push(Slot),
-    /// `TRUE`/`FALSE`: a Word, so a step — and, as a compiled
-    /// `PushWordLiteral`, one the nesting check does not follow.
+    /// `TRUE`/`FALSE`: a Word, so a step, followed by the nesting check.
     PushWord(bool),
     /// A scalar Word: a step, and what `quickened::apply` charges.
     Word(Kind),
@@ -151,7 +150,10 @@ impl Segment {
             match *op {
                 SegOp::Push(slot) => stack.push(slot),
                 SegOp::Load(slot) => stack.push(slots[slot as usize]),
-                SegOp::PushWord(value) => stack.push(Slot::Bool(value)),
+                SegOp::PushWord(value) => {
+                    stack.push(Slot::Bool(value));
+                    checked_below = Some(stack.len());
+                }
                 SegOp::Bind(slot) => {
                     slots[slot as usize] = stack.pop()?;
                     checked_below = Some(stack.len());

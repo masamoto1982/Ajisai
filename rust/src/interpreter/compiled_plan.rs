@@ -305,15 +305,20 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 interp.stack.push(v.clone());
             }
             CompiledOp::PushWordLiteral(v, name) => {
-                // A Word, so it costs a step, exactly as the Symbol dispatch the
-                // interpreted route takes for it does — and a refusal by the
-                // ceiling is that Word's failure, recorded like any other.
+                // A Word, so it costs a step and is followed by the nesting
+                // check, exactly as the Symbol dispatch the interpreted route
+                // takes for it is — and a refusal by the ceiling is that Word's
+                // failure, recorded like any other.
                 let stack_len_before = interp.stack.len();
-                if let Err(err) = interp.charge_execution_step() {
+                let mut outcome = interp.charge_execution_step();
+                if outcome.is_ok() {
+                    interp.stack.push(v.clone());
+                    outcome = interp.check_fresh_nesting();
+                }
+                if let Err(err) = outcome {
                     interp.record_word_dispatch_failure(name, &err, stack_len_before);
                     return Err(err);
                 }
-                interp.stack.push(v.clone());
             }
             CompiledOp::CallBuiltin(call) => {
                 if let Some(word) = call.word {

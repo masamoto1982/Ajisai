@@ -113,6 +113,12 @@ fn hand_picked_programs_agree() {
         // body that binds and defines stays on it.
         "[ 'X' BIND [ 0.5 1e2 ] 'K' DEF X K ADD ] 'W' DEF 3 W",
         "[ 1 2 3 ] [ 'X' BIND [ 0.5 1e2 ] 'K' DEF X K ADD ] MAP",
+        // A Word literal, then a failure: the nesting mark it leaves is
+        // the token walk's, on a line that binds as on one that does not.
+        "[ 'X' BIND X NIL 0 Q SELECT ] 'F' DEF 0 F",
+        "[ 'X' BIND X TRUE FALSE Q ] 'F' DEF 0 F",
+        "[ NIL TRUE Q ] 'F' DEF 0 F",
+        "[ 1 2 ] [ 'X' BIND X TRUE FALSE [ 1 ] LENGTH Q ] MAP",
         // Errors after a run, for the position and the trace.
         "1 2 ADD 3 MUL 'a' ADD",
         "1 2 ADD 3 MUL\n4 5 ADD UNKNOWNWORD",
@@ -287,7 +293,16 @@ proptest! {
             .collect::<Vec<_>>()
             .join(" ");
         // `F` reads only what it binds; `X` and `Y` are its caller's.
-        let callee = callee.replace(" X", " 2").replace(" Y", " 3").replace(" F", " 4");
+        let callee = callee
+            .split(' ')
+            .map(|token| match token {
+                "X" => "2",
+                "Y" => "3",
+                "F" => "4",
+                other => other,
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
         let callee = format!("[ 'X' BIND X {callee} ] 'F' DEF");
         let source = match mode {
             0 => format!("{callee} [ 'X' BIND X {code} ] 'W' DEF [ {elements} ] [ [ 7 ] LENGTH 7 SUB ADD W ] MAP"),
