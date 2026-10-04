@@ -251,7 +251,17 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
 /// cannot close a cycle between its own parts either.
 fn check_binding_acyclic(interp: &Interpreter, names: &[String], subject: &Value) -> Result<()> {
     use super::body_symbols::value_symbol_names;
+    use crate::types::ValueData;
     use std::collections::HashSet;
+    // Only a Symbol names anything, and only a Symbol, a Vector or a Record
+    // can hold one (`value_symbol_names`): a number, a truth value, a String
+    // or a Tensor binds with nothing to follow.
+    if !matches!(
+        subject.data,
+        ValueData::Symbol(_) | ValueData::Vector(_) | ValueData::Record(_)
+    ) {
+        return Ok(());
+    }
     let pending: Vec<(String, Value)> = match names {
         [only] => vec![(only.to_uppercase(), subject.clone())],
         several => several
