@@ -93,6 +93,23 @@ fn hand_picked_programs_agree() {
         "[ 0 DIV ] 'Z' DEF 5 Z",
         "[ ADD ] 'P' DEF 1 2 P 3 P",
         "[ ADD ] 'P' DEF 1 P",
+        // Rounding, logic and SELECT on plain values, and declined on others.
+        "[ 7/2 -7/2 5 -1/2 1/2 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X FLOOR X ROUND ADD ] MAP",
+        "[ 9223372036854775807/2 ] [ [ 7 ] LENGTH 7 SUB ADD ROUND ] MAP",
+        "[ 1 -1 0 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X 0 LT NOT X 0 GT AND ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X 0 LT X 0 GT EQ ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X X 2 MUL X 0 LT SELECT ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND TRUE FALSE X 0 LT SELECT ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND 'a' 'b' X 0 LT SELECT ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND [ 1 2 ] 9 X 0 LT SELECT ] MAP",
+        // A Vector candidate lifts the choice lane by lane: `[ 9 9 ]`, not 9.
+        "[ 7 8 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND [ 1 2 ] 9 X 0 LT SELECT ] MAP",
+        "[ 1 2 ] 9 FALSE SELECT",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X 9 NIL SELECT ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND NIL NOT ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X NOT ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND TRUE X AND ] MAP",
+        "[ 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND TRUE X EQ ] MAP",
     ] {
         assert_same(source, Limits::default());
     }
@@ -178,17 +195,29 @@ fn word() -> impl Strategy<Value = &'static str> {
         Just("EQ"),
         Just("MIN"),
         Just("MAX"),
+        Just("AND"),
+    ]
+}
+
+/// One step of a body: a binary Word on a pushed operand, a unary Word on
+/// the top, or a SELECT between two pushed candidates by a pushed mask.
+fn step() -> impl Strategy<Value = String> {
+    let mask = prop_oneof![
+        Just("TRUE"),
+        Just("FALSE"),
+        Just("NIL"),
+        Just("1"),
+        Just("X 0 LT"),
+    ];
+    prop_oneof![
+        6 => (operand(), word()).prop_map(|(o, w)| format!("{o} {w}")),
+        2 => prop_oneof![Just("FLOOR"), Just("ROUND"), Just("NOT")].prop_map(String::from),
+        1 => (operand(), operand(), mask).prop_map(|(a, b, m)| format!("{a} {b} {m} SELECT")),
     ]
 }
 
 fn body() -> impl Strategy<Value = String> {
-    prop::collection::vec((operand(), word()), 1..7).prop_map(|steps| {
-        steps
-            .into_iter()
-            .map(|(o, w)| format!("{o} {w}"))
-            .collect::<Vec<_>>()
-            .join(" ")
-    })
+    prop::collection::vec(step(), 1..7).prop_map(|steps| steps.join(" "))
 }
 
 proptest! {

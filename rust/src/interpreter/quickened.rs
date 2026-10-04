@@ -1,5 +1,6 @@
-//! A compiled call site specialised to the operands it meets: the scalar
-//! arithmetic, comparison and selection Words on two machine-word rationals.
+//! A Word call specialised to the operands it meets: the scalar arithmetic,
+//! comparison, rounding and logic Words, and SELECT, on plain machine-word
+//! rationals and truth values.
 //!
 //! A compiled `CallBuiltin` runs the whole dispatch for every call: the
 //! declared NIL contract, the declared lift, the Word's own NIL passthrough
@@ -16,8 +17,9 @@
 //! - one execution step (`charge_execution_step`, the same counter);
 //! - for `ADD` `SUB` `MUL` `DIV`, one unit of numeric work — two operands of
 //!   one limb each, `binary_numeric_work(1, 1)` — and a fast-path hit;
-//! - for `LT` `GT` `EQ`, a fast-path hit and no work;
-//! - for `MIN` `MAX`, neither;
+//! - for `LT` `GT` and an `EQ` of two numbers, a fast-path hit and no work;
+//! - for `MIN` `MAX`, `FLOOR` `ROUND`, `NOT` `AND`, `SELECT` and an `EQ` of two
+//!   truth values, neither;
 //! - the nesting check the dispatch makes after every Word
 //!   (`check_fresh_nesting`), which also resets the stack's fresh mark.
 //!
@@ -52,24 +54,104 @@ fn small(value: &Value) -> Option<Pair> {
     }
 }
 
-/// Run `word` on the two scalars on top of the stack, or answer `false`
+/// A plain truth value in a stack slot.
+#[inline]
+fn truth(value: &Value) -> Option<bool> {
+    match (&value.data, &value.absence) {
+        (ValueData::Boolean(b), None) => Some(*b),
+        _ => None,
+    }
+}
+
+/// A slot `SELECT` may choose without lifting: a plain machine-word
+/// rational or a plain truth value.
+#[inline]
+fn candidate(value: &Value) -> bool {
+    small(value).is_some() || truth(value).is_some()
+}
+
+#[inline]
+fn number((n, d): Pair) -> Value {
+    Value::from_fraction(Fraction::from_repr(FractionRepr::Small(n, d)))
+}
+
+/// What `word` does to the top of the stack — how many slots it consumes,
+/// what it leaves, and the work and fast-path hits it is charged — when it
+/// is one of the calls answered here, or `None`.
+fn answer(slots: &[Value], word: WordId) -> Option<(usize, Value, u64, u64)> {
+    let top = |k: usize| slots.len().checked_sub(k).map(|i| &slots[i]);
+    match word {
+        WordId::Add | WordId::Sub | WordId::Mul | WordId::Div => {
+            let (a, b) = (small(top(2)?)?, small(top(1)?)?);
+            let r = match word {
+                WordId::Add => add(a, b, false),
+                WordId::Sub => add(a, b, true),
+                WordId::Mul => mul(a, b),
+                _ => div(a, b),
+            }?;
+            Some((2, number(r), 1, 1))
+        }
+        WordId::Lt | WordId::Gt => {
+            let (a, b) = (small(top(2)?)?, small(top(1)?)?);
+            let want = if word == WordId::Lt {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            };
+            Some((2, Value::from_bool(order(a, b) == want), 0, 1))
+        }
+        // Two numbers compare on the fast path; two truth values by
+        // `pairwise_eq`, off it.
+        WordId::Eq => match (top(2)?, top(1)?) {
+            (x, y) if small(x).is_some() && small(y).is_some() => {
+                Some((2, Value::from_bool(small(x) == small(y)), 0, 1))
+            }
+            (x, y) => Some((2, Value::from_bool(truth(x)? == truth(y)?), 0, 0)),
+        },
+        // The left operand on a tie, as MIN and MAX keep it.
+        WordId::Min | WordId::Max => {
+            let (a, b) = (small(top(2)?)?, small(top(1)?)?);
+            let take_right = if word == WordId::Min {
+                order(b, a) == Ordering::Less
+            } else {
+                order(a, b) == Ordering::Less
+            };
+            Some((2, number(if take_right { b } else { a }), 0, 0))
+        }
+        WordId::Floor => {
+            let (n, d) = small(top(1)?)?;
+            Some((1, number((n.div_euclid(d), 1)), 0, 0))
+        }
+        WordId::Round => {
+            let (n, d) = small(top(1)?)?;
+            let (n, d) = (i128::from(n), i128::from(d));
+            let magnitude = (2 * n.abs() + d) / (2 * d);
+            let rounded = i64::try_from(if n < 0 { -magnitude } else { magnitude }).ok()?;
+            Some((1, number((rounded, 1)), 0, 0))
+        }
+        WordId::Not => Some((1, Value::from_bool(!truth(top(1)?)?), 0, 0)),
+        WordId::And => {
+            let (a, b) = (truth(top(2)?)?, truth(top(1)?)?);
+            Some((2, Value::from_bool(a && b), 0, 0))
+        }
+        WordId::Select => {
+            let mask = truth(top(1)?)?;
+            let (when_true, when_false) = (top(3)?, top(2)?);
+            (candidate(when_true) && candidate(when_false)).then_some(())?;
+            let chosen = if mask { when_true } else { when_false };
+            Some((3, chosen.clone(), 0, 0))
+        }
+        _ => None,
+    }
+}
+
+/// Run `word` on the plain values on top of the stack, or answer `false`
 /// having touched nothing.
 pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
     if !interp.quickening_enabled || !interp.scalar_fastpath_enabled {
         return false;
     }
-    let (work, fastpath) = match word {
-        WordId::Add | WordId::Sub | WordId::Mul | WordId::Div => (1, 1),
-        WordId::Lt | WordId::Gt | WordId::Eq => (0, 1),
-        WordId::Min | WordId::Max => (0, 0),
-        _ => return false,
-    };
-    let len = interp.stack.len();
-    if len < 2 {
-        return false;
-    }
-    let slots = interp.stack.as_slice();
-    let (Some(a), Some(b)) = (small(&slots[len - 2]), small(&slots[len - 1])) else {
+    let Some((pops, result, work, fastpath)) = answer(interp.stack.as_slice(), word) else {
         return false;
     };
     // Every ceiling the dispatch could stop at, checked before anything
@@ -80,25 +162,6 @@ pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
     {
         return false;
     }
-    let number =
-        |(n, d): Pair| Value::from_fraction(Fraction::from_repr(FractionRepr::Small(n, d)));
-    let result = match word {
-        WordId::Add => add(a, b, false).map(number),
-        WordId::Sub => add(a, b, true).map(number),
-        WordId::Mul => mul(a, b).map(number),
-        WordId::Div => div(a, b).map(number),
-        WordId::Lt => Some(Value::from_bool(order(a, b) == Ordering::Less)),
-        WordId::Gt => Some(Value::from_bool(order(a, b) == Ordering::Greater)),
-        WordId::Eq => Some(Value::from_bool(a == b)),
-        // The left operand on a tie, as MIN and MAX keep it.
-        WordId::Min if order(b, a) == Ordering::Less => Some(number(b)),
-        WordId::Max if order(a, b) == Ordering::Less => Some(number(b)),
-        WordId::Min | WordId::Max => Some(number(a)),
-        _ => None,
-    };
-    let Some(result) = result else {
-        return false;
-    };
 
     interp.execution_step_count += 1;
     interp.numeric_work_used += work;
@@ -106,14 +169,15 @@ pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
         .runtime_metrics
         .scalar_fastpath_count
         .saturating_add(fastpath);
-    interp.stack.pop();
-    interp.stack.pop();
+    for _ in 0..pops {
+        interp.stack.pop();
+    }
     interp.stack.push(result);
-    // A scalar nests nothing, so this cannot fail; it is made for the
-    // fresh mark it resets, which the dispatch resets too.
+    // A plain scalar or truth value nests nothing, so this cannot fail; it
+    // is made for the fresh mark it resets, which the dispatch resets too.
     interp
         .check_fresh_nesting()
-        .expect("a scalar result is within any nesting ceiling");
+        .expect("a plain result is within any nesting ceiling");
     #[cfg(test)]
     QUICKENED.with(|c| c.set(c.get() + 1));
     true
