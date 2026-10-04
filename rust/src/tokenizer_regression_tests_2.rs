@@ -376,3 +376,23 @@ fn test_brackets_in_comment_ignored() {
     let result = tokenize("[ 1 ] # { ( [");
     assert!(result.is_ok());
 }
+
+proptest::proptest! {
+    #![proptest_config(proptest::prelude::ProptestConfig::with_cases(8192))]
+
+    /// `is_symbol_token_lexeme` decides printable-ASCII lexemes without the
+    /// tokenizer; on every lexeme it answers what tokenizing does.
+    #[test]
+    fn symbol_lexeme_shortcut_matches_the_tokenizer(lexeme in "[ -~\u{a0}é]{0,6}") {
+        let tokenized = matches!(
+            tokenize(&lexeme).ok().as_deref(),
+            Some([Token::Symbol(value)]) if value.as_ref() == lexeme
+        );
+        proptest::prop_assert_eq!(
+            crate::tokenizer::is_symbol_token_lexeme(&lexeme),
+            tokenized,
+            "{:?}",
+            lexeme
+        );
+    }
+}
