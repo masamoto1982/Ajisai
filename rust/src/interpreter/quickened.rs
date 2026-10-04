@@ -39,109 +39,191 @@ use crate::types::small_rational::{add, div, mul, order, Pair};
 use crate::types::{Value, ValueData};
 use std::cmp::Ordering;
 
-/// The machine-word rational a stack slot holds, when it holds a plain one.
-#[inline]
-fn small(value: &Value) -> Option<Pair> {
-    if value.absence.is_some() {
-        return None;
+/// A plain value held unboxed: a rational whose halves each fit a machine
+/// word, or a truth value. `quickened` reads its operands as these, and the
+/// typed segments (`segment`) hold every value they compute as one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Slot {
+    Num(Pair),
+    Bool(bool),
+}
+
+impl Slot {
+    /// The slot a stack value is, when it is a plain one.
+    #[inline]
+    pub(crate) fn of(value: &Value) -> Option<Self> {
+        match (&value.data, &value.absence) {
+            // A zero denominator is the absent sentinel, not a number.
+            (
+                ValueData::Scalar(Fraction {
+                    repr: FractionRepr::Small(n, d),
+                }),
+                None,
+            ) if *d != 0 => Some(Slot::Num((*n, *d))),
+            (ValueData::Boolean(b), None) => Some(Slot::Bool(*b)),
+            _ => None,
+        }
     }
-    match &value.data {
-        // A zero denominator is the absent sentinel, not a number.
-        ValueData::Scalar(Fraction {
-            repr: FractionRepr::Small(n, d),
-        }) if *d != 0 => Some((*n, *d)),
-        _ => None,
+
+    /// The value the interpreted route builds for this slot.
+    #[inline]
+    pub(crate) fn into_value(self) -> Value {
+        match self {
+            Slot::Num((n, d)) => {
+                Value::from_fraction(Fraction::from_repr(FractionRepr::Small(n, d)))
+            }
+            Slot::Bool(b) => Value::from_bool(b),
+        }
+    }
+
+    #[inline]
+    fn num(self) -> Option<Pair> {
+        match self {
+            Slot::Num(p) => Some(p),
+            Slot::Bool(_) => None,
+        }
+    }
+
+    #[inline]
+    fn truth(self) -> Option<bool> {
+        match self {
+            Slot::Bool(b) => Some(b),
+            Slot::Num(_) => None,
+        }
     }
 }
 
-/// A plain truth value in a stack slot.
-#[inline]
-fn truth(value: &Value) -> Option<bool> {
-    match (&value.data, &value.absence) {
-        (ValueData::Boolean(b), None) => Some(*b),
-        _ => None,
+/// The Words answered on plain slots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Kind {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Lt,
+    Gt,
+    Eq,
+    Min,
+    Max,
+    Floor,
+    Round,
+    Not,
+    And,
+    Select,
+}
+
+impl Kind {
+    pub(crate) fn of(word: WordId) -> Option<Self> {
+        Some(match word {
+            WordId::Add => Kind::Add,
+            WordId::Sub => Kind::Sub,
+            WordId::Mul => Kind::Mul,
+            WordId::Div => Kind::Div,
+            WordId::Lt => Kind::Lt,
+            WordId::Gt => Kind::Gt,
+            WordId::Eq => Kind::Eq,
+            WordId::Min => Kind::Min,
+            WordId::Max => Kind::Max,
+            WordId::Floor => Kind::Floor,
+            WordId::Round => Kind::Round,
+            WordId::Not => Kind::Not,
+            WordId::And => Kind::And,
+            WordId::Select => Kind::Select,
+            _ => return None,
+        })
+    }
+
+    /// How many operands the Word consumes; each leaves one result.
+    pub(crate) fn arity(self) -> usize {
+        match self {
+            Kind::Floor | Kind::Round | Kind::Not => 1,
+            Kind::Select => 3,
+            _ => 2,
+        }
     }
 }
 
-/// A slot `SELECT` may choose without lifting: a plain machine-word
-/// rational or a plain truth value.
-#[inline]
-fn candidate(value: &Value) -> bool {
-    small(value).is_some() || truth(value).is_some()
+/// What a Word answered on plain slots, with the numeric work and fast-path
+/// hits the dispatch charges for it.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Answer {
+    pub(crate) value: Slot,
+    pub(crate) work: u64,
+    pub(crate) fastpath: u64,
 }
 
 #[inline]
-fn number((n, d): Pair) -> Value {
-    Value::from_fraction(Fraction::from_repr(FractionRepr::Small(n, d)))
+fn answered(value: Slot, work: u64, fastpath: u64) -> Option<Answer> {
+    Some(Answer {
+        value,
+        work,
+        fastpath,
+    })
 }
 
-/// What `word` does to the top of the stack — how many slots it consumes,
-/// what it leaves, and the work and fast-path hits it is charged — when it
-/// is one of the calls answered here, or `None`.
-fn answer(slots: &[Value], word: WordId) -> Option<(usize, Value, u64, u64)> {
-    let top = |k: usize| slots.len().checked_sub(k).map(|i| &slots[i]);
-    match word {
-        WordId::Add | WordId::Sub | WordId::Mul | WordId::Div => {
-            let (a, b) = (small(top(2)?)?, small(top(1)?)?);
-            let r = match word {
-                WordId::Add => add(a, b, false),
-                WordId::Sub => add(a, b, true),
-                WordId::Mul => mul(a, b),
+/// What `kind` answers on `operands` (deepest first, `kind.arity()` of
+/// them), or `None` for any call the dispatch must make itself.
+#[inline]
+pub(crate) fn apply(kind: Kind, operands: &[Slot]) -> Option<Answer> {
+    let x = |i: usize| operands[i];
+    match kind {
+        Kind::Add | Kind::Sub | Kind::Mul | Kind::Div => {
+            let (a, b) = (x(0).num()?, x(1).num()?);
+            let r = match kind {
+                Kind::Add => add(a, b, false),
+                Kind::Sub => add(a, b, true),
+                Kind::Mul => mul(a, b),
                 _ => div(a, b),
             }?;
-            Some((2, number(r), 1, 1))
+            answered(Slot::Num(r), 1, 1)
         }
-        WordId::Lt | WordId::Gt => {
-            let (a, b) = (small(top(2)?)?, small(top(1)?)?);
-            let want = if word == WordId::Lt {
+        Kind::Lt | Kind::Gt => {
+            let (a, b) = (x(0).num()?, x(1).num()?);
+            let want = if kind == Kind::Lt {
                 Ordering::Less
             } else {
                 Ordering::Greater
             };
-            Some((2, Value::from_bool(order(a, b) == want), 0, 1))
+            answered(Slot::Bool(order(a, b) == want), 0, 1)
         }
         // Two numbers compare on the fast path; two truth values by
         // `pairwise_eq`, off it.
-        WordId::Eq => match (top(2)?, top(1)?) {
-            (x, y) if small(x).is_some() && small(y).is_some() => {
-                Some((2, Value::from_bool(small(x) == small(y)), 0, 1))
-            }
-            (x, y) => Some((2, Value::from_bool(truth(x)? == truth(y)?), 0, 0)),
+        Kind::Eq => match (x(0), x(1)) {
+            (Slot::Num(a), Slot::Num(b)) => answered(Slot::Bool(a == b), 0, 1),
+            (Slot::Bool(a), Slot::Bool(b)) => answered(Slot::Bool(a == b), 0, 0),
+            _ => None,
         },
         // The left operand on a tie, as MIN and MAX keep it.
-        WordId::Min | WordId::Max => {
-            let (a, b) = (small(top(2)?)?, small(top(1)?)?);
-            let take_right = if word == WordId::Min {
+        Kind::Min | Kind::Max => {
+            let (a, b) = (x(0).num()?, x(1).num()?);
+            let take_right = if kind == Kind::Min {
                 order(b, a) == Ordering::Less
             } else {
                 order(a, b) == Ordering::Less
             };
-            Some((2, number(if take_right { b } else { a }), 0, 0))
+            answered(Slot::Num(if take_right { b } else { a }), 0, 0)
         }
-        WordId::Floor => {
-            let (n, d) = small(top(1)?)?;
-            Some((1, number((n.div_euclid(d), 1)), 0, 0))
+        Kind::Floor => {
+            let (n, d) = x(0).num()?;
+            answered(Slot::Num((n.div_euclid(d), 1)), 0, 0)
         }
-        WordId::Round => {
-            let (n, d) = small(top(1)?)?;
+        Kind::Round => {
+            let (n, d) = x(0).num()?;
             let (n, d) = (i128::from(n), i128::from(d));
             let magnitude = (2 * n.abs() + d) / (2 * d);
             let rounded = i64::try_from(if n < 0 { -magnitude } else { magnitude }).ok()?;
-            Some((1, number((rounded, 1)), 0, 0))
+            answered(Slot::Num((rounded, 1)), 0, 0)
         }
-        WordId::Not => Some((1, Value::from_bool(!truth(top(1)?)?), 0, 0)),
-        WordId::And => {
-            let (a, b) = (truth(top(2)?)?, truth(top(1)?)?);
-            Some((2, Value::from_bool(a && b), 0, 0))
+        Kind::Not => answered(Slot::Bool(!x(0).truth()?), 0, 0),
+        // Both operands are read before either decides: a FALSE beside a
+        // number is the dispatch's ERROR, not FALSE.
+        Kind::And => {
+            let (a, b) = (x(0).truth()?, x(1).truth()?);
+            answered(Slot::Bool(a && b), 0, 0)
         }
-        WordId::Select => {
-            let mask = truth(top(1)?)?;
-            let (when_true, when_false) = (top(3)?, top(2)?);
-            (candidate(when_true) && candidate(when_false)).then_some(())?;
-            let chosen = if mask { when_true } else { when_false };
-            Some((3, chosen.clone(), 0, 0))
-        }
-        _ => None,
+        // Either candidate may be a number or a truth value; anything else
+        // would be lifted over, which is the dispatch's to do.
+        Kind::Select => answered(if x(2).truth()? { x(0) } else { x(1) }, 0, 0),
     }
 }
 
@@ -151,7 +233,27 @@ pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
     if !interp.quickening_enabled || !interp.scalar_fastpath_enabled {
         return false;
     }
-    let Some((pops, result, work, fastpath)) = answer(interp.stack.as_slice(), word) else {
+    let Some(kind) = Kind::of(word) else {
+        return false;
+    };
+    let pops = kind.arity();
+    let slots = interp.stack.as_slice();
+    let Some(base) = slots.len().checked_sub(pops) else {
+        return false;
+    };
+    let mut operands = [Slot::Bool(false); 3];
+    for (operand, value) in operands.iter_mut().zip(&slots[base..]) {
+        match Slot::of(value) {
+            Some(slot) => *operand = slot,
+            None => return false,
+        }
+    }
+    let Some(Answer {
+        value,
+        work,
+        fastpath,
+    }) = apply(kind, &operands[..pops])
+    else {
         return false;
     };
     // Every ceiling the dispatch could stop at, checked before anything
@@ -169,10 +271,8 @@ pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
         .runtime_metrics
         .scalar_fastpath_count
         .saturating_add(fastpath);
-    for _ in 0..pops {
-        interp.stack.pop();
-    }
-    interp.stack.push(result);
+    interp.stack.truncate(base);
+    interp.stack.push(value.into_value());
     // A plain scalar or truth value nests nothing, so this cannot fail; it
     // is made for the fresh mark it resets, which the dispatch resets too.
     interp

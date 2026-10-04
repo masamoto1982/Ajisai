@@ -54,7 +54,7 @@ fn word_op(id: WordId) -> Option<Op> {
 /// The single name a `BIND` name operand gives, when it is one the
 /// interpreter would accept. Anything it would refuse, or a destructuring
 /// list, is the ordinary walk's to run.
-fn bindable_name(interp: &Interpreter, value: &Value) -> Option<String> {
+pub(crate) fn bindable_name(interp: &Interpreter, value: &Value) -> Option<String> {
     let names = crate::interpreter::bindings::binding_names(value).ok()?;
     let [name] = names.as_slice() else {
         return None;

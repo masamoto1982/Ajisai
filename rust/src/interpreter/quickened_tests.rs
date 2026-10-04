@@ -7,52 +7,21 @@
 //! holds a Vector literal), inside User Word bodies, and at the top level:
 //! compiled call sites and the token walk's dispatch both take the route.
 
+use crate::interpreter::route_observation::{self, Limits, Observation};
 use crate::interpreter::Interpreter;
-use crate::types::display::render_stack;
 use proptest::prelude::*;
 
-#[derive(Debug, PartialEq)]
-struct Observation {
-    outcome: std::result::Result<(), String>,
-    stack: Vec<String>,
-    values: String,
-    usage: crate::interpreter::ResourceUsage,
-    metrics: String,
-    epochs: crate::interpreter::EpochSnapshot,
-    trace: String,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-struct Limits {
-    steps: Option<usize>,
-    work: Option<u64>,
-    bits: Option<u64>,
-}
-
+/// A run with quickening on or off, and the typed segments off, so every
+/// scalar call takes one of the two routes compared here.
 fn observe(source: &str, quickened: bool, limits: Limits) -> Observation {
-    let mut interp = Interpreter::new();
-    interp.set_quickening_enabled(quickened);
-    if let Some(steps) = limits.steps {
-        interp.set_max_execution_steps(steps);
-    }
-    let mut runtime = *interp.runtime_limits();
-    if let Some(work) = limits.work {
-        runtime.max_numeric_work = work;
-    }
-    if let Some(bits) = limits.bits {
-        runtime.max_bigint_bits = bits;
-    }
-    interp.set_runtime_limits(runtime);
-    let outcome = crate::agent::block_on(interp.execute(source)).map_err(|e| format!("{e:?}"));
-    Observation {
-        outcome: outcome.map(|_| ()),
-        stack: render_stack(interp.get_stack()),
-        values: format!("{:?}", interp.get_stack()),
-        usage: interp.resource_usage(),
-        metrics: format!("{:?}", interp.runtime_metrics()),
-        epochs: interp.current_epoch_snapshot(),
-        trace: format!("{:?}", interp.error_flow_trace_log),
-    }
+    route_observation::observe(
+        source,
+        |interp| {
+            interp.set_quickening_enabled(quickened);
+            interp.set_segments_enabled(false);
+        },
+        limits,
+    )
 }
 
 fn assert_same(source: &str, limits: Limits) {
@@ -151,6 +120,7 @@ fn compiled_scalar_calls_are_quickened() {
     let steps_without_dispatch = |quickened: bool| {
         let mut interp = Interpreter::new();
         interp.set_quickening_enabled(quickened);
+        interp.set_segments_enabled(false);
         let started = interp.error_flow_trace_log.len();
         crate::agent::block_on(interp.execute("[ 2 MUL 1 ADD ] 'F' DEF 5 F")).unwrap();
         (
@@ -160,6 +130,7 @@ fn compiled_scalar_calls_are_quickened() {
     };
     assert_eq!(steps_without_dispatch(true), steps_without_dispatch(false));
     let mut interp = Interpreter::new();
+    interp.set_segments_enabled(false);
     let before = crate::interpreter::quickened::quickened_calls_on_this_thread();
     crate::agent::block_on(interp.execute("[ 2 MUL 1 ADD ] 'F' DEF 5 F")).unwrap();
     assert_eq!(

@@ -75,8 +75,25 @@ impl Interpreter {
         track_source_position: bool,
     ) -> Result<usize> {
         let mut i: usize = 0;
+        // The program's own stream runs its scalar runs as typed segments
+        // (`segment`); tokens before `walk_until` were already lowered once
+        // and declined, and are walked.
+        let segments = self.segments_enabled && self.section_depth == 1;
+        let mut walk_until = 0;
 
         while i < execute_tokens.len() {
+            if segments && i >= walk_until {
+                let (segment, end) = super::segment_lower::segment_tokens(self, execute_tokens, i);
+                if segment.is_some_and(|segment| segment.try_run(self)) {
+                    if track_source_position {
+                        self.current_source_span =
+                            self.source_spans.get(start_index + end - 1).copied();
+                    }
+                    i = end;
+                    continue;
+                }
+                walk_until = end;
+            }
             if track_source_position {
                 self.current_source_span = self.source_spans.get(start_index + i).copied();
             }
