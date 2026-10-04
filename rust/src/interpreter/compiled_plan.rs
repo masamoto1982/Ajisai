@@ -262,6 +262,11 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 interp.stack.push(v.clone());
             }
             CompiledOp::CallBuiltin(call) => {
+                if let Some(word) = call.word {
+                    if super::quickened::try_scalar_call(interp, word.id) {
+                        continue;
+                    }
+                }
                 // The step and the call are one dispatch, so one failure record
                 // covers both. Charging with `?` instead would let the ceiling's
                 // own refusal escape unattributed — and the ceiling firing on a

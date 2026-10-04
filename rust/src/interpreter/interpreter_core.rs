@@ -238,6 +238,8 @@ pub struct Interpreter {
     /// (`dense_kernels`). Disable via `AJISAI_NO_DENSE_KERNELS` for A/B
     /// comparison.
     pub(crate) dense_kernels_enabled: bool,
+    /// Compiled scalar calls answered without the dispatch (`quickened`).
+    pub(crate) quickening_enabled: bool,
     /// Code operands compiled recently (`higher_order::BlockCache`).
     pub(crate) block_cache: super::higher_order::BlockCache,
 }
@@ -297,6 +299,7 @@ impl Interpreter {
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
             fused_block_enabled: std::env::var("AJISAI_NO_FUSED_BLOCK").is_err(),
             dense_kernels_enabled: std::env::var("AJISAI_NO_DENSE_KERNELS").is_err(),
+            quickening_enabled: std::env::var("AJISAI_NO_QUICKEN").is_err(),
             block_cache: Default::default(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -508,6 +511,10 @@ impl Interpreter {
 
     /// Enable or disable the dense column kernels. In-process equivalent of
     /// `AJISAI_NO_DENSE_KERNELS`.
+    pub fn set_quickening_enabled(&mut self, enabled: bool) {
+        self.quickening_enabled = enabled;
+    }
+
     pub fn set_dense_kernels_enabled(&mut self, enabled: bool) {
         self.dense_kernels_enabled = enabled;
     }

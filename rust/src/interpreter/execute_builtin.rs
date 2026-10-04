@@ -31,16 +31,25 @@ impl Interpreter {
         // stored under either way — the uppercase that used to be here could
         // only ever rebuild a string already in hand, once per word dispatch,
         // which is the hottest path the interpreter has.
-        if let Some(value) = self.lookup_binding(name) {
-            self.stack.push(value);
-            return Ok(());
+        //
+        // A Core Word is the one exception to that order, and only for speed:
+        // `BIND` refuses every Core Word's name, so no binding can answer one,
+        // and one probe of the Core dictionary spares the walk over every
+        // scope that would only miss. Most names a program dispatches are
+        // Core Words.
+        let core = self.core_vocabulary.get(name).cloned();
+        if core.is_none() {
+            if let Some(value) = self.lookup_binding(name) {
+                self.stack.push(value);
+                return Ok(());
+            }
         }
 
         // `name` is already canonical, and resolution answers under that same
         // name, so the dispatch asks only for the definition. Taking a name back
         // meant allocating a copy of the one in hand — a `String` from
         // `to_uppercase` and an `Arc<str>` built from it — on every dispatch.
-        let def = self.definition_of(name).ok_or_else(|| {
+        let def = core.or_else(|| self.definition_of(name)).ok_or_else(|| {
             // Both arms are the same resolution failure — the name did not
             // resolve to a usable Word — with a more specific message where
             // there is one. `UnknownWord` is the one structural category
@@ -65,6 +74,17 @@ impl Interpreter {
 
         // Provenance (Phase 6): record the resolved word for the execution
         // receipt. No-op unless receipt recording is enabled.
+
+        // A Core Word on two machine-word scalars, answered and charged as
+        // the dispatch below would (`quickened`): the step, the work, the
+        // fast-path hit and the nesting check are all made there.
+        if def.body.is_empty() {
+            if let Some(word) = def.generated {
+                if super::quickened::try_scalar_call(self, word.id) {
+                    return Ok(());
+                }
+            }
+        }
 
         self.charge_execution_step()?;
 

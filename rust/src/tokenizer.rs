@@ -231,6 +231,17 @@ pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
 /// fail this test: none of them can be written as one name at a word
 /// position, so none of them can name a Word or a binding.
 pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
+    // The common case decided without tokenizing: printable ASCII with no
+    // whitespace, quote, bracket or `#` is one lexeme that opens no string,
+    // comment or delimiter, and it is a name unless it is a number. Anything
+    // else is tokenized, which is the definition.
+    let plain = !lexeme.is_empty()
+        && lexeme
+            .bytes()
+            .all(|b| b.is_ascii_graphic() && !matches!(b, b'\'' | b'[' | b']' | b'#'));
+    if plain {
+        return parse_number_from_string(lexeme).is_none();
+    }
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
 }
 

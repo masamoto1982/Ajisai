@@ -12,6 +12,7 @@
     { "name": "vec-gt", "route": "column kernels", "setup": "0 999999 RANGE", "source": "500000 GT", "elements": 1000000 },
     { "name": "map-userword", "route": "User Word per element", "setup": "[ 3 MUL 1 ADD ] 'AFFINE' DEF 0 99999 RANGE", "source": "[ AFFINE ] MAP", "elements": 100000 },
     { "name": "map-userword-nested", "route": "two levels of User Words", "setup": "[ 2 MUL ] 'DBL' DEF [ DBL 1 ADD DBL ] 'G' DEF 0 99999 RANGE", "source": "[ G ] MAP", "elements": 100000 },
+    { "name": "map-unfused-scalars", "route": "scalar Words in a block the fused walk declines (quickened)", "setup": "0 99999 RANGE", "source": "[ [ 7 ] LENGTH ADD 'X' BIND X 2 DIV FLOOR X 3 MUL X 0 LT SELECT 5 GT X 9 LT NOT AND ] MAP", "elements": 100000 },
     { "name": "map-vector-literal", "route": "token walk per element", "setup": "0 99999 RANGE", "source": "[ [ 1 ] ADD ] MAP", "elements": 100000 },
     { "name": "map-of-vectors", "route": "nested higher-order blocks", "setup": "0 49999 RANGE [ 'X' BIND X X 2 ADD RANGE ] MAP", "source": "[ [ 0 ] [ ADD ] FOLD ] MAP", "elements": 50000 },
     { "name": "toplevel-scalars", "route": "top-level token walk", "setup": "", "source": "1 2 ADD 3 MUL ", "repeat": 10000, "elements": 10000 },
