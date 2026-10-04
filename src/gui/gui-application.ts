@@ -289,6 +289,12 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
             if (recognizer.registerTap(end, Date.now()) >= 3) {
                 recognizer.reset();
+                // The first two taps of the run are the OS's own double-tap,
+                // which selects the word under the finger; left in place, that
+                // selection stays painted over the Word after the Run. A Run
+                // is not a selection, so collapse it to a caret first.
+                const { selectionEnd } = elements.codeInput;
+                elements.codeInput.setSelectionRange(selectionEnd, selectionEnd);
                 // Run; the post-execution auto-navigation (applyExecutionAreaState)
                 // chooses the destination surface from what actually changed, so
                 // we deliberately do not force a switch to Stack here.
