@@ -7,7 +7,8 @@ import {
     extractToken,
     separateWord,
     MAX_HISTORY_ENTRIES,
-    createEditorHistory
+    createEditorHistory,
+    selectSuggestions
 } from './code-input-editor';
 
 const write = (text: string, caret: number, word: string): string => {
@@ -188,5 +189,30 @@ describe('createEditorHistory', () => {
 
         expect(history.recallOlder('draft')).toBeNull();
         expect(history.recallNewer()).toBeNull();
+    });
+});
+
+// The suggestion panel sits just below the caret — exactly where a finished
+// line's triple-tap Run lands — so it may only appear when it has something
+// to complete.
+describe('selectSuggestions', () => {
+    const words = ['ADD', 'ADDALL', 'AND', 'SQRT'];
+
+    test('offers the words the token starts', () => {
+        expect(selectSuggestions(words, 'AD')).toEqual(['ADD', 'ADDALL']);
+        expect(selectSuggestions(words, 'ad')).toEqual(['ADD', 'ADDALL']);
+    });
+
+    test('does not offer the word the token already spells out', () => {
+        expect(selectSuggestions(['ADD', 'SQRT'], 'ADD')).toEqual([]);
+        expect(selectSuggestions(words, 'ADD')).toEqual(['ADDALL']);
+    });
+
+    test('still offers a case correction', () => {
+        expect(selectSuggestions(['ADD'], 'add')).toEqual(['ADD']);
+    });
+
+    test('offers nothing below the trigger length', () => {
+        expect(selectSuggestions(words, 'A')).toEqual([]);
     });
 });
