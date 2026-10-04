@@ -183,6 +183,18 @@ const MAX_SUGGESTIONS = 10;
 // costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
 
+// The completions offered for `token`. A word the token already spells out
+// exactly completes nothing, so it is not offered: a panel holding only
+// `ADD` under a finished `ADD` would sit, highlighted, over the very lines
+// the editor's triple-tap Run lands on and swallow those taps.
+export const selectSuggestions = (words: readonly string[], token: string): string[] => {
+    if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) return [];
+    const prefix = token.toLowerCase();
+    return words
+        .filter(word => word !== token && word.toLowerCase().startsWith(prefix))
+        .slice(0, MAX_SUGGESTIONS);
+};
+
 const CARET_MIRROR_STYLE_PROPERTIES = [
     'borderBottomWidth',
     'borderLeftWidth',
@@ -348,14 +360,10 @@ export const createEditor = (
         // Symbols come from the device's own keyboard; this panel completes
         // Words, from their second character.
         const { token } = extractToken(element.value, element.selectionStart);
-        if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) {
-            hideSuggestions();
-            return;
-        }
-
-        const suggestions = requestSuggestions(token)
-            .filter(word => word.toLowerCase().startsWith(token.toLowerCase()))
-            .slice(0, MAX_SUGGESTIONS);
+        const suggestions = selectSuggestions(
+            token.length < MIN_SUGGESTION_TRIGGER_LENGTH ? [] : requestSuggestions(token),
+            token
+        );
 
         currentSuggestions = suggestions;
         selectedSuggestionIndex = 0;
@@ -395,6 +403,10 @@ export const createEditor = (
     element.addEventListener('click', syncLastKnownSelection);
     element.addEventListener('keyup', syncLastKnownSelection);
     element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
+    // A touch on the text itself is not a completion being picked: it places
+    // the caret, or begins the triple-tap Run. Close the panel so it cannot
+    // cover the spot the next tap of that run lands on; typing reopens it.
+    element.addEventListener('touchstart', hideSuggestions, { passive: true });
 
     element.addEventListener('keydown', (e) => {
         if (currentSuggestions.length === 0) return;
