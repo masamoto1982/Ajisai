@@ -1,0 +1,13 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9af7d28c422c746d058bfb9ad03298a4d9e134e42b35949dcde867686683b198 # shrinks to elements = ["0"], code = "0 MIN", mode = 0, steps = None, work = None, bits = None
+cc dc8159253a5fbb12b1a609f484499086a8af9afe46237994b1ec2fbfd37e91ed # shrinks to elements = ["0"], code = "0 LT", mode = 0, steps = None, work = None, bits = None
+cc bec953c64c284ebaf20beff30b974881aeb51bfc94fe7762a43f47d0f8f5ec8c # shrinks to elements = ["0"], code = "0 ADD", mode = 0, steps = Some(3), work = None, bits = None
+cc d7a1d29d919f78db8e7f149393b166c9236773ebb34bce4c867b9c68ea75963f # shrinks to elements = ["4611686018427387904"], code = "0 ADD", mode = 0, steps = None, work = None, bits = Some(1)
+cc f49aacf97cfcbaa9090f1799672d0535e76c28c6a4d2b8c4f649fc6d004a49cc # shrinks to elements = ["0"], code = "0 MIN", mode = 0, steps = None, work = None, bits = None
+cc e2d46adb03c13ddb1660412e6a4357506748cbdfa772d320a99cef60882dd797 # shrinks to elements = ["0", "0"], code = "0 EQ", mode = 0, steps = None, work = None, bits = None
+cc f03bc793546dde0053d25b15ab74395a433258af38ebc71061355e4079e5ed5f # shrinks to elements = ["0", "0"], code = "0 LT", mode = 0, steps = None, work = Some(0), bits = None

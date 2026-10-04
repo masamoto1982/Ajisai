@@ -37,6 +37,9 @@ mod fused_block_tests;
 pub mod higher_order;
 pub mod higher_order_fold;
 pub mod host;
+mod quickened;
+#[cfg(test)]
+mod quickened_tests;
 // The host-side Word lookup lives in `host.rs`; the module path it used to
 // have is kept for the hosts (`wasm_interpreter_bindings`, `rust/tests`) that
 // import it by that name.

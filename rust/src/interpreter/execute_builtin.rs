@@ -66,6 +66,17 @@ impl Interpreter {
         // Provenance (Phase 6): record the resolved word for the execution
         // receipt. No-op unless receipt recording is enabled.
 
+        // A Core Word on two machine-word scalars, answered and charged as
+        // the dispatch below would (`quickened`): the step, the work, the
+        // fast-path hit and the nesting check are all made there.
+        if def.body.is_empty() {
+            if let Some(word) = def.generated {
+                if super::quickened::try_scalar_call(self, word.id) {
+                    return Ok(());
+                }
+            }
+        }
+
         self.charge_execution_step()?;
 
         if def.body.is_empty() {
