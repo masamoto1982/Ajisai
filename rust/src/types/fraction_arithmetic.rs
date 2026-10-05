@@ -174,12 +174,14 @@ impl Fraction {
             };
             return Self::create_already_reduced(num, ad * bd);
         }
-        let ad_g: BigInt = ad / &g;
+        use crate::types::small_divisor::quotient;
+        let ad_g: BigInt = quotient(ad, &g);
+        let bd_g: BigInt = quotient(bd, &g);
         let cross = bn * &ad_g;
         let t: BigInt = if subtract {
-            an * (bd / &g) - cross
+            an * &bd_g - cross
         } else {
-            an * (bd / &g) + cross
+            an * &bd_g + cross
         };
         if t.is_zero() {
             return Fraction::from_repr(FractionRepr::Small(0, 1));
@@ -188,7 +190,7 @@ impl Fraction {
         if g2.is_one() {
             return Self::create_already_reduced(t, ad_g * bd);
         }
-        Self::create_already_reduced(&t / &g2, ad_g * (bd / &g2))
+        Self::create_already_reduced(quotient(&t, &g2), ad_g * quotient(bd, &g2))
     }
 
     /// A product or quotient of two cross-cancelled reduced pairs: already in
@@ -454,9 +456,11 @@ pub(crate) fn balanced_bigint_gcd(a: &BigInt, b: &BigInt) -> BigInt {
     if b.is_zero() {
         return a.gcd(b);
     }
-    if a.bits() >= b.bits() {
-        b.gcd(&(a % b))
-    } else {
-        a.gcd(&(b % a))
+    let (wide, narrow) = if a.bits() >= b.bits() { (a, b) } else { (b, a) };
+    // A one-word narrow side, against a wide one: the remainder by reciprocal
+    // and a word gcd, not a `div` per digit.
+    if let Some(g) = crate::types::small_divisor::gcd_with_word(wide, narrow) {
+        return g;
     }
+    narrow.gcd(&(wide % narrow))
 }

@@ -1,4 +1,5 @@
 mod dense_columns;
+mod small_divisor;
 pub(crate) use self::dense_columns::ScalarColumns;
 #[cfg(test)]
 mod dense_columns_tests;
