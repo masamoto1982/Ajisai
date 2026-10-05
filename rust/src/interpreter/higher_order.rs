@@ -8,7 +8,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::fused_block::FusedBlock;
 use crate::interpreter::Interpreter;
-use crate::types::{Stack, Value};
+use crate::types::{ScalarColumns, Stack, Value};
 use std::sync::Arc;
 
 mod fused_cache;
@@ -352,7 +352,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    let mut results: Vec<Value> = Vec::with_capacity(n_elements);
+    // The answers, as columns while every one is a plain scalar (a block that
+    // answers numbers does, almost always) and as a list from the first that
+    // is not: the Tensor is the one `from_vector_promoted` builds from the list.
+    let mut columns: Option<ScalarColumns> = Some(ScalarColumns::with_capacity(n_elements));
+    let mut results: Vec<Value> = Vec::new();
     let mut saved_stack: Stack = Stack::new();
     std::mem::swap(&mut interp.stack, &mut saved_stack);
     let saved_no_change_check: bool = interp.disable_no_change_check;
@@ -380,7 +384,17 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // answer, which is exactly the quiet wrong result
                 // LANG.FAILURE.TRICHOTOMY exists to rule out.
                 Some(result_val) => {
-                    results.push(result_val);
+                    if let Some(taken) = columns.as_mut() {
+                        if !taken.push(&result_val) {
+                            results = columns
+                                .take()
+                                .expect("checked above")
+                                .into_values(n_elements);
+                            results.push(result_val);
+                        }
+                    } else {
+                        results.push(result_val);
+                    }
                 }
                 None => {
                     error = Some(AjisaiError::declared(
@@ -405,7 +419,10 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
 
-    interp.stack.push(Value::from_vector_promoted(results));
+    interp.stack.push(match columns {
+        Some(taken) => taken.finish(),
+        None => Value::from_vector_promoted(results),
+    });
 
     Ok(())
 }
