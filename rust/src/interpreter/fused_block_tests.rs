@@ -471,3 +471,19 @@ fn one_lane_seeds_that_outgrow_a_word_agree() {
         assert!(fused_runs(source) > 0, "`{source}` was not fused");
     }
 }
+
+/// The business programs that seed a `FOLD` with a one-element Vector and let
+/// the running value outgrow a machine word — a harmonic sum, compound
+/// interest, the logistic map — are walked fused, not declined to the
+/// dispatcher, and answer what the dispatcher answers.
+#[test]
+fn one_element_seeds_in_business_folds_are_fused() {
+    for source in [
+        "1 2000 RANGE 'X' BIND 1 X DIV [ 0 ] [ ADD ] FOLD",
+        "1 360 RANGE [ 1000000 ] [ 'E' BIND 'X' BIND X 1.005 MUL ] FOLD",
+        "1 14 RANGE [ 1/10 ] [ 'E' BIND 'X' BIND X 1 X SUB MUL 7/2 MUL ] FOLD",
+    ] {
+        assert_same(source, Limits::default());
+        assert!(fused_runs(source) > 0, "`{source}` was not fused");
+    }
+}
