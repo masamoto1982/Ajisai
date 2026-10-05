@@ -1,0 +1,1760 @@
+{
+ "rate_test": {
+  "blocks": 347,
+  "fused": 183,
+  "n": 498316,
+  "nf": 492837
+ },
+ "rate_example": {
+  "blocks": 44,
+  "fused": 34,
+  "n": 200168,
+  "nf": 199925
+ },
+ "rate_bench": {
+  "blocks": 16,
+  "fused": 10,
+  "n": 6852000,
+  "nf": 6450000
+ },
+ "rate_business": {
+  "blocks": 15,
+  "fused": 11,
+  "n": 5602394,
+  "nf": 5600000
+ },
+ "rate_all": {
+  "blocks": 422,
+  "fused": 238,
+  "n": 13152878,
+  "nf": 12742762
+ },
+ "rankingAll": [
+  {
+   "k": "SQRT",
+   "first": {
+    "blocks": 12,
+    "n": 149,
+    "byKind": {
+     "test": 12
+    }
+   },
+   "single": {
+    "blocks": 12,
+    "n": 149,
+    "byKind": {
+     "test": 12
+    }
+   },
+   "any": {
+    "blocks": 13,
+    "n": 151,
+    "byKind": {
+     "test": 13
+    }
+   }
+  },
+  {
+   "k": "vector literal",
+   "first": {
+    "blocks": 62,
+    "n": 350929,
+    "byKind": {
+     "test": 57,
+     "example": 1,
+     "bench": 4
+    }
+   },
+   "single": {
+    "blocks": 5,
+    "n": 100046,
+    "byKind": {
+     "test": 3,
+     "example": 1,
+     "bench": 1
+    }
+   },
+   "any": {
+    "blocks": 62,
+    "n": 350929,
+    "byKind": {
+     "test": 57,
+     "example": 1,
+     "bench": 4
+    }
+   }
+  },
+  {
+   "k": "RANGE",
+   "first": {
+    "blocks": 7,
+    "n": 50880,
+    "byKind": {
+     "test": 5,
+     "example": 1,
+     "bench": 1
+    }
+   },
+   "single": {
+    "blocks": 5,
+    "n": 50480,
+    "byKind": {
+     "test": 4,
+     "bench": 1
+    }
+   },
+   "any": {
+    "blocks": 7,
+    "n": 50880,
+    "byKind": {
+     "test": 5,
+     "example": 1,
+     "bench": 1
+    }
+   }
+  },
+  {
+   "k": "nested block → DEF",
+   "first": {
+    "blocks": 5,
+    "n": 12,
+    "byKind": {
+     "test": 5
+    }
+   },
+   "single": {
+    "blocks": 5,
+    "n": 12,
+    "byKind": {
+     "test": 5
+    }
+   },
+   "any": {
+    "blocks": 6,
+    "n": 14,
+    "byKind": {
+     "test": 6
+    }
+   }
+  },
+  {
+   "k": "nested block → MAP",
+   "first": {
+    "blocks": 5,
+    "n": 10,
+    "byKind": {
+     "test": 4,
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 4,
+    "n": 8,
+    "byKind": {
+     "test": 3,
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 6,
+    "n": 13,
+    "byKind": {
+     "test": 5,
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "block leaves no value",
+   "first": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "single": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "any": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 4
+    }
+   }
+  },
+  {
+   "k": "underflow",
+   "first": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 3,
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 3,
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 3,
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "COLLECT",
+   "first": {
+    "blocks": 7,
+    "n": 545,
+    "byKind": {
+     "test": 4,
+     "example": 3
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 2,
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 7,
+    "n": 545,
+    "byKind": {
+     "test": 4,
+     "example": 3
+    }
+   }
+  },
+  {
+   "k": "string literal",
+   "first": {
+    "blocks": 3,
+    "n": 3,
+    "byKind": {
+     "test": 2,
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 3,
+    "byKind": {
+     "test": 2,
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 5,
+    "n": 6,
+    "byKind": {
+     "test": 4,
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "REVERSE",
+   "first": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 2,
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 2,
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 2,
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "POW",
+   "first": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "PRINT",
+   "first": {
+    "blocks": 3,
+    "n": 9,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 9,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 9,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "nested block → FOLD",
+   "first": {
+    "blocks": 2,
+    "n": 5,
+    "byKind": {
+     "test": 1,
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 5,
+    "byKind": {
+     "test": 1,
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 14,
+    "n": 50652,
+    "byKind": {
+     "test": 11,
+     "example": 2,
+     "bench": 1
+    }
+   }
+  },
+  {
+   "k": "unresolved name X",
+   "first": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "any": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   }
+  },
+  {
+   "k": "nested block → EXEC",
+   "first": {
+    "blocks": 1,
+    "n": 20,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 20,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 2,
+    "n": 50,
+    "byKind": {
+     "test": 2
+    }
+   }
+  },
+  {
+   "k": "SORT",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "nested block → FILTER",
+   "first": {
+    "blocks": 1,
+    "n": 50,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 50,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 50,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "unresolved name K",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "BIND (destructuring / reserved name)",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "NIL?",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "NUM",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "TAKE",
+   "first": {
+    "blocks": 1,
+    "n": 3,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 3,
+    "n": 514,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "LENGTH",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 45,
+    "n": 200624,
+    "byKind": {
+     "test": 43,
+     "bench": 2
+    }
+   }
+  },
+  {
+   "k": "NIL literal",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "GET",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 2,
+    "n": 28,
+    "byKind": {
+     "example": 2
+    }
+   }
+  },
+  {
+   "k": "nested block → SCAN",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "BIND",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 1,
+    "n": 10,
+    "byKind": {
+     "test": 1
+    }
+   }
+  }
+ ],
+ "rankingNonTest": [
+  {
+   "k": "vector literal",
+   "first": {
+    "blocks": 5,
+    "n": 350005,
+    "byKind": {
+     "example": 1,
+     "bench": 4
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 100005,
+    "byKind": {
+     "example": 1,
+     "bench": 1
+    }
+   },
+   "any": {
+    "blocks": 5,
+    "n": 350005,
+    "byKind": {
+     "example": 1,
+     "bench": 4
+    }
+   }
+  },
+  {
+   "k": "COLLECT",
+   "first": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "example": 3
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "example": 3
+    }
+   }
+  },
+  {
+   "k": "RANGE",
+   "first": {
+    "blocks": 2,
+    "n": 50200,
+    "byKind": {
+     "example": 1,
+     "bench": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 50000,
+    "byKind": {
+     "bench": 1
+    }
+   },
+   "any": {
+    "blocks": 2,
+    "n": 50200,
+    "byKind": {
+     "example": 1,
+     "bench": 1
+    }
+   }
+  },
+  {
+   "k": "nested block → FOLD",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 50202,
+    "byKind": {
+     "example": 2,
+     "bench": 1
+    }
+   }
+  },
+  {
+   "k": "underflow",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "string literal",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "nested block → MAP",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "REVERSE",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "example": 1
+    }
+   }
+  },
+  {
+   "k": "GET",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 2,
+    "n": 28,
+    "byKind": {
+     "example": 2
+    }
+   }
+  },
+  {
+   "k": "LENGTH",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 2,
+    "n": 200000,
+    "byKind": {
+     "bench": 2
+    }
+   }
+  }
+ ],
+ "rankingTest": [
+  {
+   "k": "SQRT",
+   "first": {
+    "blocks": 12,
+    "n": 149,
+    "byKind": {
+     "test": 12
+    }
+   },
+   "single": {
+    "blocks": 12,
+    "n": 149,
+    "byKind": {
+     "test": 12
+    }
+   },
+   "any": {
+    "blocks": 13,
+    "n": 151,
+    "byKind": {
+     "test": 13
+    }
+   }
+  },
+  {
+   "k": "nested block → DEF",
+   "first": {
+    "blocks": 5,
+    "n": 12,
+    "byKind": {
+     "test": 5
+    }
+   },
+   "single": {
+    "blocks": 5,
+    "n": 12,
+    "byKind": {
+     "test": 5
+    }
+   },
+   "any": {
+    "blocks": 6,
+    "n": 14,
+    "byKind": {
+     "test": 6
+    }
+   }
+  },
+  {
+   "k": "RANGE",
+   "first": {
+    "blocks": 5,
+    "n": 680,
+    "byKind": {
+     "test": 5
+    }
+   },
+   "single": {
+    "blocks": 4,
+    "n": 480,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "any": {
+    "blocks": 5,
+    "n": 680,
+    "byKind": {
+     "test": 5
+    }
+   }
+  },
+  {
+   "k": "block leaves no value",
+   "first": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "single": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "any": {
+    "blocks": 4,
+    "n": 4,
+    "byKind": {
+     "test": 4
+    }
+   }
+  },
+  {
+   "k": "vector literal",
+   "first": {
+    "blocks": 57,
+    "n": 924,
+    "byKind": {
+     "test": 57
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 41,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 57,
+    "n": 924,
+    "byKind": {
+     "test": 57
+    }
+   }
+  },
+  {
+   "k": "nested block → MAP",
+   "first": {
+    "blocks": 4,
+    "n": 8,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 5,
+    "n": 11,
+    "byKind": {
+     "test": 5
+    }
+   }
+  },
+  {
+   "k": "underflow",
+   "first": {
+    "blocks": 3,
+    "n": 3,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 3,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 3,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "POW",
+   "first": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 30,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "PRINT",
+   "first": {
+    "blocks": 3,
+    "n": 9,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "single": {
+    "blocks": 3,
+    "n": 9,
+    "byKind": {
+     "test": 3
+    }
+   },
+   "any": {
+    "blocks": 3,
+    "n": 9,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "COLLECT",
+   "first": {
+    "blocks": 4,
+    "n": 515,
+    "byKind": {
+     "test": 4
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 4,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "any": {
+    "blocks": 4,
+    "n": 515,
+    "byKind": {
+     "test": 4
+    }
+   }
+  },
+  {
+   "k": "string literal",
+   "first": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "any": {
+    "blocks": 4,
+    "n": 5,
+    "byKind": {
+     "test": 4
+    }
+   }
+  },
+  {
+   "k": "unresolved name X",
+   "first": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "any": {
+    "blocks": 2,
+    "n": 2,
+    "byKind": {
+     "test": 2
+    }
+   }
+  },
+  {
+   "k": "REVERSE",
+   "first": {
+    "blocks": 2,
+    "n": 4,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "single": {
+    "blocks": 2,
+    "n": 4,
+    "byKind": {
+     "test": 2
+    }
+   },
+   "any": {
+    "blocks": 2,
+    "n": 4,
+    "byKind": {
+     "test": 2
+    }
+   }
+  },
+  {
+   "k": "nested block → FOLD",
+   "first": {
+    "blocks": 1,
+    "n": 3,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 3,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 11,
+    "n": 450,
+    "byKind": {
+     "test": 11
+    }
+   }
+  },
+  {
+   "k": "nested block → EXEC",
+   "first": {
+    "blocks": 1,
+    "n": 20,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 20,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 2,
+    "n": 50,
+    "byKind": {
+     "test": 2
+    }
+   }
+  },
+  {
+   "k": "SORT",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "nested block → FILTER",
+   "first": {
+    "blocks": 1,
+    "n": 50,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 50,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 50,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "unresolved name K",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "BIND (destructuring / reserved name)",
+   "first": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 1,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "NIL?",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "NUM",
+   "first": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "TAKE",
+   "first": {
+    "blocks": 1,
+    "n": 3,
+    "byKind": {
+     "test": 1
+    }
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 3,
+    "n": 514,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "LENGTH",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 43,
+    "n": 624,
+    "byKind": {
+     "test": 43
+    }
+   }
+  },
+  {
+   "k": "NIL literal",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 3,
+    "n": 6,
+    "byKind": {
+     "test": 3
+    }
+   }
+  },
+  {
+   "k": "nested block → SCAN",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 1,
+    "n": 2,
+    "byKind": {
+     "test": 1
+    }
+   }
+  },
+  {
+   "k": "BIND",
+   "first": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "single": {
+    "blocks": 0,
+    "n": 0,
+    "byKind": {}
+   },
+   "any": {
+    "blocks": 1,
+    "n": 10,
+    "byKind": {
+     "test": 1
+    }
+   }
+  }
+ ],
+ "combos": [
+  [
+   "RANGE + nested block → FOLD",
+   {
+    "blocks": 2,
+    "n": 400,
+    "kinds": {
+     "test": 1,
+     "example": 1
+    }
+   }
+  ],
+  [
+   "COLLECT + TAKE",
+   {
+    "blocks": 2,
+    "n": 511,
+    "kinds": {
+     "test": 2
+    }
+   }
+  ],
+  [
+   "nested block → MAP + vector literal",
+   {
+    "blocks": 1,
+    "n": 3,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "nested block → FOLD + vector literal",
+   {
+    "blocks": 9,
+    "n": 50244,
+    "kinds": {
+     "test": 8,
+     "bench": 1
+    }
+   }
+  ],
+  [
+   "nested block → DEF + nested block → MAP",
+   {
+    "blocks": 1,
+    "n": 2,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "nested block → SCAN + vector literal",
+   {
+    "blocks": 1,
+    "n": 2,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "BIND + vector literal",
+   {
+    "blocks": 1,
+    "n": 10,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "LENGTH + vector literal",
+   {
+    "blocks": 38,
+    "n": 200583,
+    "kinds": {
+     "test": 36,
+     "bench": 2
+    }
+   }
+  ],
+  [
+   "LENGTH + NIL literal + vector literal",
+   {
+    "blocks": 3,
+    "n": 6,
+    "kinds": {
+     "test": 3
+    }
+   }
+  ],
+  [
+   "LENGTH + string literal + vector literal",
+   {
+    "blocks": 2,
+    "n": 3,
+    "kinds": {
+     "test": 2
+    }
+   }
+  ],
+  [
+   "LENGTH + SQRT + vector literal",
+   {
+    "blocks": 1,
+    "n": 2,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "LENGTH + nested block → EXEC + vector literal",
+   {
+    "blocks": 1,
+    "n": 30,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "TAKE + nested block → FOLD",
+   {
+    "blocks": 1,
+    "n": 3,
+    "kinds": {
+     "test": 1
+    }
+   }
+  ],
+  [
+   "COLLECT + GET",
+   {
+    "blocks": 2,
+    "n": 28,
+    "kinds": {
+     "example": 2
+    }
+   }
+  ]
+ ],
+ "valueCauses": [
+  {
+   "k": "外部の名前の値が有理数・真偽値でない（lowering 時）",
+   "blocks": 1,
+   "calls": 1,
+   "n": 2,
+   "kinds": {
+    "test": 1
+   }
+  },
+  {
+   "k": "seed が 1 要素ベクトル: 途中の値が機械語を超えた（lane walk は一般 tier を使わない）",
+   "blocks": 18,
+   "calls": 18,
+   "n": 5853,
+   "kinds": {
+    "test": 14,
+    "bench": 1,
+    "business": 3
+   }
+  },
+  {
+   "k": "要素・seed とも素の値（ゼロ除算の NIL・上限など。内訳は測っていない）",
+   "blocks": 10,
+   "calls": 10,
+   "n": 94,
+   "kinds": {
+    "test": 10
+   }
+  },
+  {
+   "k": "ERROR で中断（演算に型違いの値: 文字列・真偽値など）",
+   "blocks": 13,
+   "calls": 13,
+   "n": 697,
+   "kinds": {
+    "test": 13
+   }
+  },
+  {
+   "k": "seed が 1 要素ベクトル: ブロックの形が lane walk の条件外（比較・丸め等が累積値に触れる）",
+   "blocks": 8,
+   "calls": 8,
+   "n": 740,
+   "kinds": {
+    "test": 8
+   }
+  },
+  {
+   "k": "seed がベクトル（複数要素・ネスト）",
+   "blocks": 2,
+   "calls": 2,
+   "n": 40,
+   "kinds": {
+    "test": 2
+   }
+  },
+  {
+   "k": "seed が Nil",
+   "blocks": 1,
+   "calls": 1,
+   "n": 2,
+   "kinds": {
+    "test": 1
+   }
+  },
+  {
+   "k": "要素に代数的数（SQRT）",
+   "blocks": 1,
+   "calls": 1,
+   "n": 20,
+   "kinds": {
+    "business": 1
+   }
+  }
+ ]
+}

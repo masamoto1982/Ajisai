@@ -1,0 +1,212 @@
+{
+ "B": {
+  "total": 390.82999999999987,
+  "sum": {
+   "alloc": 6.4799999999999995,
+   "drop": 17.47,
+   "valueio": 60.11000000000001,
+   "allocwrap": 17.549999999999997,
+   "dispatch": 121.89999999999998,
+   "stack": 1.01,
+   "arith": 144.6,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 21.709999999999997
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 7.390000000000001,
+   "allocwrap": 17.549999999999997,
+   "dispatch": 28.490000000000002,
+   "stack": 0,
+   "arith": 43.14,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": [
+   "518:19.4"
+  ]
+ },
+ "C": {
+  "total": 375.94000000000005,
+  "sum": {
+   "alloc": 8.04,
+   "drop": 15.25,
+   "valueio": 53.73000000000002,
+   "allocwrap": 21.84,
+   "dispatch": 100.23000000000003,
+   "stack": 0,
+   "arith": 154.29,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 22.559999999999995
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 6.640000000000001,
+   "allocwrap": 21.84,
+   "dispatch": 27.77,
+   "stack": 0,
+   "arith": 46.470000000000006,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": [
+   "518:20.3",
+   "464:0.9"
+  ]
+ },
+ "K": {
+  "total": 163.25,
+  "sum": {
+   "alloc": 5.459999999999999,
+   "drop": 7.6499999999999995,
+   "valueio": 51.43,
+   "allocwrap": 0,
+   "dispatch": 94.78000000000002,
+   "stack": 1.15,
+   "arith": 2.46,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0.32
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 1.07,
+   "allocwrap": 0,
+   "dispatch": 16.280000000000005,
+   "stack": 0,
+   "arith": 0,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": []
+ },
+ "F": {
+  "total": 176.78000000000003,
+  "sum": {
+   "alloc": 6.070000000000001,
+   "drop": 8.61,
+   "valueio": 55.720000000000006,
+   "allocwrap": 0,
+   "dispatch": 102.16999999999997,
+   "stack": 1.11,
+   "arith": 2.54,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0.56
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 1.46,
+   "allocwrap": 0,
+   "dispatch": 18.18,
+   "stack": 0,
+   "arith": 0,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": []
+ },
+ "D": {
+  "total": 369.7099999999999,
+  "sum": {
+   "alloc": 6.53,
+   "drop": 15.449999999999998,
+   "valueio": 52.88,
+   "allocwrap": 17.11,
+   "dispatch": 118.67,
+   "stack": 1.12,
+   "arith": 140.05,
+   "tokenize": 0,
+   "setupfused": -0.3000000000000007,
+   "unknown": 18.2
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 7.31,
+   "allocwrap": 17.11,
+   "dispatch": 28.07,
+   "stack": 0,
+   "arith": 39.93,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": [
+   "518:17.0"
+  ]
+ },
+ "E": {
+  "total": 1178.5999999999992,
+  "sum": {
+   "alloc": 258.51000000000005,
+   "drop": 62.209999999999994,
+   "valueio": 68.98,
+   "allocwrap": 112.75999999999999,
+   "dispatch": 189.31000000000003,
+   "stack": 0,
+   "arith": 417.91,
+   "tokenize": 0.22,
+   "setupfused": 47.04,
+   "unknown": 21.659999999999993
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 16.68,
+   "allocwrap": 112.75999999999999,
+   "dispatch": 67.03,
+   "stack": 0,
+   "arith": 160.91000000000003,
+   "tokenize": 0,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": [
+   "518:15.6",
+   "886:1.1",
+   "239:1.0",
+   "compileFunction:0.9"
+  ]
+ },
+ "G": {
+  "total": 279.40000000000003,
+  "sum": {
+   "alloc": 33.54,
+   "drop": 15.57,
+   "valueio": 21.95,
+   "allocwrap": 0,
+   "dispatch": 96.36000000000001,
+   "stack": 1.12,
+   "arith": 2.87,
+   "tokenize": 105.31,
+   "setupfused": 0,
+   "unknown": 2.6799999999999993
+  },
+  "inferred": {
+   "alloc": 0,
+   "drop": 0,
+   "valueio": 0,
+   "allocwrap": 0,
+   "dispatch": 19.35,
+   "stack": 0,
+   "arith": 0,
+   "tokenize": 30.299999999999997,
+   "setupfused": 0,
+   "unknown": 0
+  },
+  "unk": [
+   "302:1.4"
+  ]
+ }
+}
