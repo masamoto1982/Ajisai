@@ -1,3 +1,6 @@
+mod dense_columns;
+#[cfg(test)]
+mod dense_columns_tests;
 pub mod display;
 pub mod exact;
 pub mod fraction;

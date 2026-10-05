@@ -58,14 +58,22 @@ impl Interpreter {
     /// pops whatever this pushed, and the two are always paired within one
     /// function so no depth token is needed.
     pub(crate) fn open_binding_scope(&mut self, barrier: bool) {
-        self.binding_scopes.push(BindingScope {
-            names: Default::default(),
-            barrier,
-        });
+        let names = self.spare_binding_maps.pop().unwrap_or_default();
+        self.binding_scopes.push(BindingScope { names, barrier });
     }
 
+    /// Close the innermost scope. Its emptied table is kept for the next
+    /// scope to open: a block a higher-order Word applies opens and closes
+    /// one per element, and a `BIND` in it would otherwise allocate a fresh
+    /// table every time. Only small tables are kept, and only a few.
     pub(crate) fn close_binding_scope(&mut self) {
-        self.binding_scopes.pop();
+        if let Some(mut scope) = self.binding_scopes.pop() {
+            let capacity = scope.names.capacity();
+            if capacity > 0 && capacity <= 64 && self.spare_binding_maps.len() < 8 {
+                scope.names.clear();
+                self.spare_binding_maps.push(scope.names);
+            }
+        }
     }
 
     /// Discard every scope and open a fresh root. A run's bindings are the
@@ -135,8 +143,8 @@ impl Interpreter {
                 ),
             ));
         }
-        let upper = name.to_uppercase();
-        if self.core_vocabulary.contains_key(&upper) {
+        let upper = crate::word_name::canonical_word_name(name);
+        if self.core_vocabulary.contains_key(upper.as_ref()) {
             return Err(AjisaiError::declared(
                 "nameConflict",
                 format!(
@@ -145,7 +153,7 @@ impl Interpreter {
                 ),
             ));
         }
-        if self.user_words.contains_key(&upper) {
+        if self.user_words.contains_key(upper.as_ref()) {
             return Err(AjisaiError::declared(
                 "nameConflict",
                 format!(
@@ -198,7 +206,16 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
     }
 
     match names.as_slice() {
-        [only] => interp.bind_local(only.to_uppercase(), subject),
+        [_] => {
+            // The name, uppercased, as the key: the String in hand is the key
+            // already when it has no lowercase letter to fold.
+            let only = names.into_iter().next().expect("one name");
+            let folded = match crate::word_name::canonical_word_name(&only) {
+                std::borrow::Cow::Owned(folded) => Some(folded),
+                std::borrow::Cow::Borrowed(_) => None,
+            };
+            interp.bind_local(folded.unwrap_or(only), subject);
+        }
         several => {
             // Destructuring is exact. A Vector longer than the name list would
             // otherwise drop its tail silently, and a shorter one would bind a
@@ -309,9 +326,9 @@ fn check_binding_acyclic(interp: &Interpreter, names: &[String], subject: &Value
 /// that many, and a one-element Vector is the single-name case, so `[ 'W' ]`
 /// and `'W'` mean the same thing.
 pub(crate) fn binding_names(value: &Value) -> Result<Vec<String>> {
-    use crate::interpreter::value_extraction_helpers::value_as_string;
-    if value.is_text() {
-        return Ok(vec![value_as_string(value).unwrap_or_default()]);
+    // A String's name is its text (what `value_as_string` reads from one).
+    if let crate::types::ValueData::Text(text) = &value.data {
+        return Ok(vec![text.to_string()]);
     }
     let Some(children) = value.as_vector() else {
         return Err(AjisaiError::declared(
@@ -325,8 +342,8 @@ pub(crate) fn binding_names(value: &Value) -> Result<Vec<String>> {
     children
         .iter()
         .map(|child| {
-            if child.is_text() {
-                Ok(value_as_string(child).unwrap_or_default())
+            if let crate::types::ValueData::Text(text) = &child.data {
+                Ok(text.to_string())
             } else {
                 Err(AjisaiError::declared(
                     "nonText",
