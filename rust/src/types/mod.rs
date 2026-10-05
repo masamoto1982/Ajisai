@@ -35,6 +35,8 @@ pub(crate) mod value_protocol;
 #[cfg(test)]
 mod value_protocol_tests;
 
+#[cfg(test)]
+mod tensor_lanes_tests;
 mod tensor_storage;
 #[cfg(test)]
 mod tensor_storage_tests;

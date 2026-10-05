@@ -142,6 +142,11 @@ pub(crate) struct FusedBlock {
     /// walk builds each on its first call, so a committed fused walk stores
     /// them and counts those builds.
     pub(crate) builds: Vec<(String, std::sync::Arc<CompiledPlan>)>,
+    /// Whether a name bound outside the block was read into it as a
+    /// constant (`Op::Push`), which ties the lowering to that binding.
+    pub(crate) reads_outer: bool,
+    /// The integer tier's compiled forms of the block.
+    pub(crate) int_programs: crate::interpreter::fused_block_int::IntPrograms,
 }
 
 /// What a fused walk would charge, committed only once it has finished.
@@ -342,10 +347,12 @@ fn one_lane_seed(interp: &Interpreter, seed: &Value) -> Option<Plain> {
     (!lane.is_nil()).then_some(Plain::Num(lane))
 }
 
-/// A one-lane Tensor holding `lane`, built as the column kernel and the
-/// scalar fast path build it (`DenseTensor::from_fractions`).
+/// A one-lane Tensor holding `lane`, as the column kernel and the scalar
+/// fast path build it (`DenseTensor::from_fractions`): the lane's pair as
+/// its two columns, pure when its denominator is 1, no absences.
 fn one_lane(lane: Fraction) -> Option<Value> {
-    let data = crate::types::DenseTensor::from_fractions(vec![lane], vec![1])?;
+    let (n, d) = lane.extract_i64_pair()?;
+    let data = crate::types::DenseTensor::from_columns([n], [d], [1], d == 1, Default::default());
     Some(Value::new(
         ValueData::Tensor {
             data: std::sync::Arc::new(data),

@@ -152,19 +152,18 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
     }
     let rest: Vec<usize> = shape[1..].to_vec();
     let stride: usize = rest.iter().product();
-    let start = index * stride;
-    let slice: Vec<Fraction> = (start..start + stride)
-        .map(|lane| data.fraction_or_nil(lane))
-        .collect();
     // The sub-tensor's lanes are re-indexed from the slice's start, so its
-    // absences are too. Dropping this rebase was the whole bug one level down:
-    // the child kept the holes and lost the reasons for them.
-    let absences = data
-        .absences()
-        .filter(|(lane, _)| *lane >= start && *lane < start + stride)
-        .map(|(lane, metadata)| (lane - start, metadata.clone()))
-        .collect();
-    Some(Value::from_tensor_with_absences(slice, rest, absences))
+    // absences are too (`DenseTensor::lanes`). Dropping that rebase was the
+    // whole bug one level down: the child kept the holes and lost the reasons
+    // for them.
+    let tensor = data.lanes(index * stride, stride, rest.clone());
+    Some(Value::new(
+        ValueData::Tensor {
+            data: Arc::new(tensor),
+            shape: Arc::new(rest),
+        },
+        None,
+    ))
 }
 
 /// The nested fallback for lanes too wide for `i64` columns. Takes the
