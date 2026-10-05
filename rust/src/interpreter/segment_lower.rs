@@ -71,7 +71,7 @@ struct Builder<'a> {
     lowest: isize,
     top: HashMap<String, u32>,
     reads: Vec<(String, u32)>,
-    binds: Vec<(String, u32)>,
+    binds: Vec<(Arc<str>, u32)>,
     steps: usize,
     callees: Vec<String>,
     calls: u64,
@@ -154,8 +154,8 @@ impl<'a> Builder<'a> {
                         let mut top = std::mem::take(&mut self.top);
                         let slot = self.slot(&mut top, &name);
                         self.top = top;
-                        if !self.binds.iter().any(|(bound, _)| *bound == name) {
-                            self.binds.push((name, slot));
+                        if !self.binds.iter().any(|(bound, _)| **bound == *name) {
+                            self.binds.push((name.into(), slot));
                         }
                         slot
                     }

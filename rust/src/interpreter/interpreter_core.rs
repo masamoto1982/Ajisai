@@ -125,7 +125,7 @@ pub struct Interpreter {
     /// and dies with it, so a name here is never reachable from another Word.
     pub(crate) binding_scopes: Vec<super::bindings::BindingScope>,
     /// Emptied binding tables kept for reuse (`close_binding_scope`).
-    pub(crate) spare_binding_maps: Vec<crate::fast_hash::FastMap<String, Value>>,
+    pub(crate) spare_binding_maps: Vec<crate::fast_hash::FastMap<std::sync::Arc<str>, Value>>,
     /// The dictionary changes this top-level `execute` has made so far, in
     /// order — `Defined word:` / `Deleted word:` without the prose.
     ///

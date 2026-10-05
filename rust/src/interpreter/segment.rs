@@ -86,7 +86,7 @@ pub(crate) struct Segment {
     /// Names the run's own frame binds, and the slot holding each one's
     /// last value. A called Word's frame ends with the call, so its names
     /// are not here.
-    pub(crate) binds: Vec<(String, u32)>,
+    pub(crate) binds: Vec<(Arc<str>, u32)>,
     /// Words dispatched, User Word calls included.
     pub(crate) steps: usize,
     /// Each User Word called, once, and how many calls in all.
@@ -212,7 +212,7 @@ impl Segment {
             interp.store_compiled_plan_for_word(name, plan);
         }
         for (name, slot) in &self.binds {
-            interp.bind_local(name.clone(), slots[*slot as usize].into_value());
+            interp.bind_local(Arc::clone(name), slots[*slot as usize].into_value());
         }
         interp.stack.truncate(base);
         for slot in stack {
