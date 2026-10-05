@@ -184,7 +184,7 @@ impl Algebraic {
         }
     }
 
-        /// Best rational approximation within a denominator bound: the
+    /// Best rational approximation within a denominator bound: the
     /// deepest principal convergent whose denominator does not exceed
     /// `max_denominator`. Same contract as the historical
     /// `ExactReal::best_rational_approximation`; `None` when

@@ -365,8 +365,15 @@ fn a_wide_sum_of_roots_is_approximated_in_linear_time() {
     let approx = sum
         .best_rational_approximation(&BigInt::from(1_000_000_000u64))
         .expect("a bound of 1e9 admits a convergent");
-    assert!(started.elapsed().as_millis() < 500, "took {:?}", started.elapsed());
+    assert!(
+        started.elapsed().as_millis() < 500,
+        "took {:?}",
+        started.elapsed()
+    );
     let (lo, hi) = sum.bounds(256);
-    assert!(approx.sub(&lo).abs().lt(&frac(1, 1_000_000)) && approx.sub(&hi).abs().lt(&frac(1, 1_000_000)));
+    assert!(
+        approx.sub(&lo).abs().lt(&frac(1, 1_000_000))
+            && approx.sub(&hi).abs().lt(&frac(1, 1_000_000))
+    );
     assert!(approx.denominator() <= BigInt::from(1_000_000_000u64));
 }
