@@ -6,6 +6,8 @@ pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;
 pub mod compiled_plan;
+#[cfg(test)]
+mod compiled_plan_tests;
 mod contract_record;
 pub mod control;
 mod debug_declared_checks;
@@ -40,6 +42,12 @@ pub mod host;
 mod quickened;
 #[cfg(test)]
 mod quickened_tests;
+#[cfg(test)]
+mod route_observation;
+pub(crate) mod segment;
+mod segment_lower;
+#[cfg(test)]
+mod segment_tests;
 // The host-side Word lookup lives in `host.rs`; the module path it used to
 // have is kept for the hosts (`wasm_interpreter_bindings`, `rust/tests`) that
 // import it by that name.

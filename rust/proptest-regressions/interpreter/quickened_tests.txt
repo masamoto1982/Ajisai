@@ -17,3 +17,4 @@ cc 0c2001104e8061351b623057ab56f811f12ed534b93e4adfcee7eb61f7324a4f # shrinks to
 cc b23aa21c1dc210d9e24b2b30b4a34ea77562c5968b4bd4289fd42cb1d585cad5 # shrinks to elements = ["1/2"], code = "FLOOR", mode = 0, steps = None, work = None, bits = None
 cc d6c4b01affed3a91cdbbb2e9de10e839901c52568e45a5af27fe3303ae7ab4fc # shrinks to elements = ["0", "2"], code = "2 SQRT LT TRUE AND", mode = 2, steps = None, work = None, bits = None
 cc 665d9a856a7993a874ac94c0666ee13a9c10c76a2de3650d860dd02a47927e1e # shrinks to elements = ["0", "0"], code = "TRUE EQ NOT", mode = 0, steps = None, work = None, bits = None
+cc a65a13c4ef95481d00b7eb7f609aea62b854ee94336b1b42313b75e55a8bd378 # shrinks to elements = ["0"], code = "0 GT 0 AND", mode = 0, steps = None, work = None, bits = None

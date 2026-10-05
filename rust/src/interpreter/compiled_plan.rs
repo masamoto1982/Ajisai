@@ -17,6 +17,10 @@ pub struct CompiledPlan {
 pub struct CompiledLine {
     pub ops: Vec<CompiledOp>,
     pub source_tokens: Vec<Token>,
+    /// The runs of `ops` lowered to typed segments (`segment`).
+    pub(crate) segments: Vec<super::segment::LineSegment>,
+    /// Whether the line is re-interpreted from `source_tokens` instead.
+    pub(crate) reinterpret: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -138,8 +142,8 @@ fn try_collect_literal_vector(
     None // unclosed
 }
 
-/// Compile one token sequence into a single `CompiledLine`.
-fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
+/// Lower one token sequence to compiled ops.
+pub(crate) fn lower_tokens_to_ops(tokens: &[Token], interp: &Interpreter) -> Vec<CompiledOp> {
     let mut ops = Vec::with_capacity(tokens.len());
     let mut i = 0_usize;
 
@@ -152,7 +156,7 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
             },
             Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
             Token::VectorStart => match try_collect_literal_vector(
-                &tokens,
+                tokens,
                 i,
                 1,
                 interp.runtime_limits.max_nesting_depth,
@@ -173,10 +177,56 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
         ops.push(op);
         i += 1;
     }
+    ops
+}
 
+/// Whether a line must be re-interpreted from its source tokens.
+///
+/// A name the compiler could not resolve is a binding, or a Word the line
+/// itself defines, and is dispatched by name where it stands, exactly as
+/// the token walk dispatches it. Every other fallback — a malformed number,
+/// a vector the compiler could not build — sends the whole line back to the
+/// token walk, which reports it; and so does a line that runs `DEF` beside an
+/// unresolved name, since the token walk hands `DEF` the body tokens a
+/// literal before it was written as (`pending_def_body_tokens`), which a
+/// compiled line, lacking the source of its prebuilt literals, does not.
+///
+/// Dispatching a name in place is part of the segment route: with segments
+/// off (`AJISAI_NO_SEGMENTS`), every fallback re-interprets the line, as it
+/// did before either existed.
+fn must_reinterpret(ops: &[CompiledOp], interp: &Interpreter) -> bool {
+    if !interp.segments_enabled {
+        return ops
+            .iter()
+            .any(|op| matches!(op, CompiledOp::FallbackToken(_)));
+    }
+    let mut names = false;
+    let mut defines = false;
+    for op in ops {
+        match op {
+            CompiledOp::FallbackToken(Token::Symbol(_)) => names = true,
+            CompiledOp::FallbackToken(_) => return true,
+            CompiledOp::CallBuiltin(call) if call.name == "DEF" => defines = true,
+            _ => {}
+        }
+    }
+    names && defines
+}
+
+/// Compile one token sequence into a single `CompiledLine`.
+fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
+    let ops = lower_tokens_to_ops(&tokens, interp);
+    let reinterpret = must_reinterpret(&ops, interp);
+    let segments = if reinterpret {
+        Vec::new()
+    } else {
+        super::segment_lower::segment_line(&ops, interp)
+    };
     CompiledLine {
         ops,
         source_tokens: tokens,
+        segments,
+        reinterpret,
     }
 }
 
@@ -233,33 +283,42 @@ pub fn execute_compiled_plan(interp: &mut Interpreter, plan: &CompiledPlan) -> R
 }
 
 fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Result<()> {
-    if line
-        .ops
-        .iter()
-        .any(|op| matches!(op, CompiledOp::FallbackToken(_)))
-    {
-        // A line the compiler could not lower is re-interpreted from its
-        // source tokens.
+    if line.reinterpret {
         return interp
             .execute_section_core(&line.source_tokens, 0)
             .map(|_| ());
     }
 
-    for op in line.ops.iter() {
+    let mut segments = line.segments.iter().peekable();
+    let mut i = 0;
+    while i < line.ops.len() {
+        if let Some(segment) = segments.next_if(|segment| segment.start == i) {
+            if segment.code.try_run(interp) {
+                i = segment.end;
+                continue;
+            }
+        }
+        let op = &line.ops[i];
+        i += 1;
         match op {
             CompiledOp::PushLiteral(v) | CompiledOp::PushVectorLiteral(v) => {
                 interp.stack.push(v.clone());
             }
             CompiledOp::PushWordLiteral(v, name) => {
-                // A Word, so it costs a step, exactly as the Symbol dispatch the
-                // interpreted route takes for it does — and a refusal by the
-                // ceiling is that Word's failure, recorded like any other.
+                // A Word, so it costs a step and is followed by the nesting
+                // check, exactly as the Symbol dispatch the interpreted route
+                // takes for it is — and a refusal by the ceiling is that Word's
+                // failure, recorded like any other.
                 let stack_len_before = interp.stack.len();
-                if let Err(err) = interp.charge_execution_step() {
+                let mut outcome = interp.charge_execution_step();
+                if outcome.is_ok() {
+                    interp.stack.push(v.clone());
+                    outcome = interp.check_fresh_nesting();
+                }
+                if let Err(err) = outcome {
                     interp.record_word_dispatch_failure(name, &err, stack_len_before);
                     return Err(err);
                 }
-                interp.stack.push(v.clone());
             }
             CompiledOp::CallBuiltin(call) => {
                 if let Some(word) = call.word {
@@ -304,8 +363,25 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                     }
                 }
             }
-            // Unreachable: a line holding any fallback token is re-interpreted
-            // whole, above.
+            // A name dispatched where it stands, as the token walk's Symbol
+            // arm dispatches it.
+            CompiledOp::FallbackToken(Token::Symbol(symbol)) => {
+                let name = crate::word_name::canonical_word_name(symbol);
+                let witness = interp.begin_dispatch();
+                match interp.execute_word_core(name.as_ref()) {
+                    Ok(()) => interp.trace_nil_outcome(name.as_ref(), &witness),
+                    Err(err) => {
+                        interp.record_word_dispatch_failure(
+                            name.as_ref(),
+                            &err,
+                            witness.stack_len_before,
+                        );
+                        return Err(err);
+                    }
+                }
+            }
+            // Unreachable: a line holding any other fallback token is
+            // re-interpreted whole, above.
             CompiledOp::FallbackToken(_) => {}
         }
     }
@@ -367,75 +443,4 @@ pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCal
         },
     };
     result.map_err(|err| err.attributed_to(word.name))
-}
-
-#[cfg(test)]
-mod tests {
-    //! Test suite for `crate::interpreter::compiled_plan`.
-
-    use crate::interpreter::{compile_word_definition, is_plan_valid, CompiledOp, Interpreter};
-    use crate::types::{Token, WordDefinition};
-    use std::collections::HashSet;
-    use std::sync::Arc;
-
-    fn test_word(tokens: Vec<Token>) -> WordDefinition {
-        WordDefinition {
-            body: Arc::from(tokens),
-            is_builtin: false,
-            description: None,
-            dependencies: HashSet::new(),
-            text_references: HashSet::new(),
-            registration_order: 0,
-            compiled_plan: None,
-            generated: None,
-        }
-    }
-
-    #[test]
-    fn compiled_plan_invalidates_on_dictionary_epoch_change() {
-        let mut interp = Interpreter::new();
-        let wd = test_word(vec![Token::number("1")]);
-        let plan = compile_word_definition(&wd, &interp);
-        assert!(is_plan_valid(&plan, &interp));
-        interp.bump_dictionary_epoch();
-        assert!(!is_plan_valid(&plan, &interp));
-    }
-    #[test]
-    fn compile_collects_vector_literal() {
-        let interp = Interpreter::new();
-        let wd = test_word(vec![
-            Token::VectorStart,
-            Token::number("1"),
-            Token::Symbol("+".into()),
-            Token::VectorEnd,
-        ]);
-        let plan = compile_word_definition(&wd, &interp);
-        assert!(matches!(plan.line.ops[0], CompiledOp::PushVectorLiteral(_)));
-    }
-
-    /// A body the compiler can lower none of still gets a plan — one that runs
-    /// its source through the interpreter, as a body with no plan would. It used
-    /// to be declined instead, and since nothing remembered the refusal the body
-    /// was recompiled, and its definition copied, on every call.
-    #[tokio::test]
-    async fn a_body_the_compiler_cannot_lower_is_compiled_once() {
-        let mut interp = Interpreter::new();
-        // `[ LATER ]` names nothing yet, so the quotation is not a literal the
-        // compiler can build, and neither is anything else in the body.
-        interp
-            .execute("[ [ LATER ] ] 'QUOTE' DEF")
-            .await
-            .expect("must define");
-        let before = interp.runtime_metrics();
-        interp.execute("QUOTE QUOTE QUOTE").await.expect("must run");
-        let after = interp.runtime_metrics();
-        assert_eq!(
-            after.compiled_plan_build_count - before.compiled_plan_build_count,
-            1
-        );
-        assert_eq!(
-            after.compiled_plan_cache_hit_count - before.compiled_plan_cache_hit_count,
-            2
-        );
-    }
 }

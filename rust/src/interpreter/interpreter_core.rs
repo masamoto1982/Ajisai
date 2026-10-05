@@ -240,6 +240,9 @@ pub struct Interpreter {
     pub(crate) dense_kernels_enabled: bool,
     /// Compiled scalar calls answered without the dispatch (`quickened`).
     pub(crate) quickening_enabled: bool,
+    /// Runs of scalar Words, names and User Word calls lowered to typed
+    /// segments and run without the dispatch (`segment`).
+    pub(crate) segments_enabled: bool,
     /// Code operands compiled recently (`higher_order::BlockCache`).
     pub(crate) block_cache: super::higher_order::BlockCache,
 }
@@ -300,6 +303,7 @@ impl Interpreter {
             fused_block_enabled: std::env::var("AJISAI_NO_FUSED_BLOCK").is_err(),
             dense_kernels_enabled: std::env::var("AJISAI_NO_DENSE_KERNELS").is_err(),
             quickening_enabled: std::env::var("AJISAI_NO_QUICKEN").is_err(),
+            segments_enabled: std::env::var("AJISAI_NO_SEGMENTS").is_err(),
             block_cache: Default::default(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -509,12 +513,20 @@ impl Interpreter {
         self.fused_block_enabled = enabled;
     }
 
-    /// Enable or disable the dense column kernels. In-process equivalent of
-    /// `AJISAI_NO_DENSE_KERNELS`.
+    /// Enable or disable quickened scalar calls. In-process equivalent of
+    /// `AJISAI_NO_QUICKEN`.
     pub fn set_quickening_enabled(&mut self, enabled: bool) {
         self.quickening_enabled = enabled;
     }
 
+    /// Enable or disable typed segments. In-process equivalent of
+    /// `AJISAI_NO_SEGMENTS`; takes effect for lines compiled after the change.
+    pub fn set_segments_enabled(&mut self, enabled: bool) {
+        self.segments_enabled = enabled;
+    }
+
+    /// Enable or disable the dense column kernels. In-process equivalent of
+    /// `AJISAI_NO_DENSE_KERNELS`.
     pub fn set_dense_kernels_enabled(&mut self, enabled: bool) {
         self.dense_kernels_enabled = enabled;
     }

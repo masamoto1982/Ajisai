@@ -47,8 +47,19 @@ impl Stack {
         self.fresh_from = self.fresh_from.min(index);
     }
 
-    /// The first slot written since the last call, and forget it: every slot
-    /// from there to the top holds a value no check has seen yet.
+    /// The first slot written since the last check: every slot from there
+    /// to the top holds a value no check has seen yet.
+    pub fn fresh_start(&self) -> usize {
+        self.fresh_from.min(self.values.len())
+    }
+
+    /// Note that every slot below `index` has been checked, as a check
+    /// made when the stack was `index` high would have left it.
+    pub(crate) fn set_fresh_start(&mut self, index: usize) {
+        self.fresh_from = index;
+    }
+
+    /// [`Self::fresh_start`], and forget it.
     pub fn take_fresh_start(&mut self) -> usize {
         let start = self.fresh_from.min(self.values.len());
         self.fresh_from = self.values.len();
