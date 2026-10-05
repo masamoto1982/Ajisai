@@ -56,6 +56,39 @@ fn hand_picked_programs_agree() {
         "[ 1 2 ] [ [ 7 ] LENGTH 7 SUB ADD TRUE EQ ] MAP",
         "[ -9223372036854775808 ] [ [ 7 ] LENGTH 7 SUB ADD -1 DIV ] MAP",
         "[ -9223372036854775808 ] [ [ 7 ] LENGTH 7 SUB ADD -1 MUL ] MAP",
+        // POW and LENGTH: each costs a step and nothing else.
+        "1 50 RANGE [ [ 7 ] LENGTH ADD 2 POW ] MAP",
+        "[ 0 1 2 3 -1 -2 1/2 -3/4 ] [ [ 7 ] LENGTH 7 SUB ADD 3 POW ] MAP",
+        "[ 0 1 2 3 -1 -2 1/2 -3/4 ] [ [ 7 ] LENGTH 7 SUB ADD 0 POW ] MAP",
+        "[ 0 1 2 3 -1 -2 1/2 -3/4 ] [ [ 7 ] LENGTH 7 SUB ADD 1 POW ] MAP",
+        "[ 0 1 2 3 -1 -2 1/2 -3/4 ] [ [ 7 ] LENGTH 7 SUB ADD -2 POW ] MAP",
+        "[ 0 1 2 3 -1 -2 1/2 -3/4 ] [ [ 7 ] LENGTH 7 SUB ADD 1/2 POW ] MAP",
+        "[ 0 1 2 3 -1 -2 1/2 -3/4 ] [ [ 7 ] LENGTH 7 SUB ADD 2 SQRT POW ] MAP",
+        "[ 0 4 9 1/4 ] [ [ 7 ] LENGTH 7 SUB ADD 3/2 POW ] MAP",
+        "[ 2 3 -2 -3 10 ] [ [ 7 ] LENGTH 7 SUB ADD 62 POW ] MAP",
+        "[ 2 3 -2 -3 10 ] [ [ 7 ] LENGTH 7 SUB ADD 63 POW ] MAP",
+        "[ 2 -2 ] [ [ 7 ] LENGTH 7 SUB ADD 64 POW ] MAP",
+        "[ 1/2 -1/2 3/5 ] [ [ 7 ] LENGTH 7 SUB ADD 40 POW ] MAP",
+        "[ 0 1 -1 2 ] [ [ 7 ] LENGTH 7 SUB ADD 524288 POW ] MAP",
+        "[ 0 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 524289 POW ] MAP",
+        "[ 0 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 9223372036854775807 POW ] MAP",
+        "[ 0 1 -1 ] [ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X TRUE POW ] MAP",
+        "[ 2 3 ] [ [ 7 ] LENGTH 7 SUB ADD NIL POW ] MAP",
+        "[ 2 3 ] [ [ 7 ] LENGTH 7 SUB ADD [ 2 ] POW ] MAP",
+        "[ 0 ] [ [ 7 ] LENGTH 7 SUB ADD 0 POW ] MAP",
+        "[ 0 ] [ [ 7 ] LENGTH 7 SUB ADD -1 POW ] MAP",
+        "[ 1 2 3 ] [ 2 POW LENGTH ] MAP",
+        "[ 1 2 3 ] LENGTH [ ] LENGTH [ NIL 1 ] LENGTH ADD ADD",
+        "[ [ 1 2 ] [ 3 ] [ ] ] [ LENGTH ] MAP",
+        "[ 1 2 3 ] [ 'X' BIND [ X X ] LENGTH ] MAP",
+        "NIL LENGTH",
+        "'abc' LENGTH",
+        "5 LENGTH",
+        "LENGTH",
+        "TRUE LENGTH",
+        "[ 1 2 3 ] 2 SQRT LENGTH",
+        "3 POW",
+        "POW",
         // User Word bodies, called from the top level and from a block.
         "[ 2 MUL 1 ADD ] 'F' DEF 5 F 6 F ADD",
         "[ 'X' BIND X X MUL X 3 DIV SUB ] 'G' DEF 1 30 RANGE [ [ 7 ] LENGTH G ] MAP",
@@ -167,6 +200,7 @@ fn word() -> impl Strategy<Value = &'static str> {
         Just("MIN"),
         Just("MAX"),
         Just("AND"),
+        Just("POW"),
     ]
 }
 
@@ -183,6 +217,8 @@ fn step() -> impl Strategy<Value = String> {
     prop_oneof![
         6 => (operand(), word()).prop_map(|(o, w)| format!("{o} {w}")),
         2 => prop_oneof![Just("FLOOR"), Just("ROUND"), Just("NOT")].prop_map(String::from),
+        1 => (prop_oneof![Just("[ ]"), Just("[ 1 2 ]"), Just("[ NIL ]"), Just("X"), Just("'ab'"), Just("NIL")], word())
+            .prop_map(|(v, w)| format!("{v} LENGTH {w}")),
         1 => (operand(), operand(), mask).prop_map(|(a, b, m)| format!("{a} {b} {m} SELECT")),
     ]
 }
@@ -221,4 +257,25 @@ proptest! {
             "`{}` under {:?}", source, limits
         );
     }
+}
+
+/// `POW` on plain operands and `LENGTH` of a Vector are quickened; a negative
+/// exponent, an overflow and a NIL are left to the dispatch.
+#[test]
+fn pow_and_length_are_quickened_where_they_apply() {
+    let quickened = |source: &str| {
+        let mut interp = Interpreter::new();
+        interp.set_segments_enabled(false);
+        let before = crate::interpreter::quickened::quickened_calls_on_this_thread();
+        let _ = crate::agent::block_on(interp.execute(source));
+        crate::interpreter::quickened::quickened_calls_on_this_thread() - before
+    };
+    assert_eq!(quickened("[ 3 POW ] 'P' DEF 5 P"), 1);
+    assert_eq!(quickened("[ 0 POW ] 'P' DEF 1/2 P"), 1);
+    assert_eq!(quickened("[ LENGTH ] 'L' DEF [ 1 2 3 ] L"), 1);
+    assert_eq!(quickened("[ 1 2 3 ] [ [ ] LENGTH ADD ] MAP"), 6);
+    assert_eq!(quickened("[ -1 POW ] 'P' DEF 5 P"), 0);
+    assert_eq!(quickened("[ 63 POW ] 'P' DEF 3 P"), 0);
+    assert_eq!(quickened("[ 2 POW ] 'P' DEF NIL P"), 0);
+    assert_eq!(quickened("[ LENGTH ] 'L' DEF NIL L"), 0);
 }
