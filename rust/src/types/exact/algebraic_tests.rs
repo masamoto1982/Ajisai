@@ -377,3 +377,44 @@ fn a_wide_sum_of_roots_is_approximated_in_linear_time() {
     );
     assert!(approx.denominator() <= BigInt::from(1_000_000_000u64));
 }
+
+/// `(√2 − 1)ⁿ` written out as `a − b√2` is tiny, and its coefficients are as
+/// wide as `n` is long: the two ends of an enclosure agree on even its sign
+/// only once the enclosure is about as fine as the coefficients are wide. The
+/// approximation is a convenience beside the value and no meter pays for it,
+/// so it answers within its work ceiling — the exact convergent `0/1` while the
+/// coefficients are narrow enough, `None` (the caller's termwise fallback)
+/// once they are not — and never spends seconds getting there.
+#[test]
+fn a_value_whose_terms_cancel_is_answered_within_the_work_ceiling() {
+    let mut x = match sqrt_irr(2, 1).add_fraction(&frac(-1, 1)) {
+        AlgebraicResult::Irrational(a) => a,
+        other => panic!("√2 − 1 is irrational, got {other:?}"),
+    };
+    let bound = BigInt::from(1_000_000_000u64);
+    for squarings in 1..=19 {
+        x = match x.mul(&x) {
+            AlgebraicResult::Irrational(a) => a,
+            other => panic!("a power of √2 − 1 is irrational, got {other:?}"),
+        };
+        let started = std::time::Instant::now();
+        let answer = x.best_rational_approximation(&bound);
+        assert!(
+            started.elapsed().as_secs_f64() < 2.0,
+            "(√2 − 1)^(2^{squarings}) took {:?}",
+            started.elapsed()
+        );
+        if squarings <= 4 {
+            assert_eq!(
+                answer,
+                Some(convergent_by_reciprocal(&x, &bound)),
+                "(√2 − 1)^(2^{squarings})"
+            );
+        } else if squarings <= 12 {
+            // Below 1e-9 from here, so no convergent past 0/1 fits the bound.
+            assert_eq!(answer, Some(frac(0, 1)), "(√2 − 1)^(2^{squarings})");
+        } else {
+            assert!(answer.is_none() || answer == Some(frac(0, 1)));
+        }
+    }
+}

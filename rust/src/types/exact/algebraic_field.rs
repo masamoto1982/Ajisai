@@ -19,9 +19,18 @@ use num_traits::{One, Zero};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-/// A ceiling on how finely the approximation reads the enclosure, so a bound
-/// no enclosure can reach cannot loop for ever.
-const MAX_ENCLOSURE_BITS: u64 = 1 << 20;
+/// A ceiling on the work one approximation may spend tightening its
+/// enclosure, counted as terms × (enclosure bits + coefficient bits): each
+/// `bounds(bits)` takes one integer square root and one product per term, at
+/// about that width. This approximation is a convenience beside a value in the
+/// wire protocol, never a meter-charged operation, so it must not cost
+/// seconds: a value whose terms cancel almost exactly (`(√2 − 1)ⁿ`, written
+/// out as `a − b√2` with coefficients of hundreds of thousands of bits) needs
+/// an enclosure about as fine as its coefficients are wide before even its
+/// sign is known. Past the ceiling it answers what it has, or `None` for the
+/// caller's termwise fallback — the answer the work-budgeted expansion gave
+/// such values before.
+const ENCLOSURE_WORK: u64 = 1 << 18;
 
 impl Algebraic {
     /// Multiplicative inverse `1/self` by recursive conjugation.
@@ -204,8 +213,10 @@ impl Algebraic {
             return None;
         }
         let mut bits = (2 * max_denominator.bits() + 32).max(64);
+        let terms = (self.term_count() as u64).max(1);
+        let coefficient_bits = self.max_coefficient_bits();
         let mut best: Option<Fraction> = None;
-        while bits <= MAX_ENCLOSURE_BITS {
+        while terms.saturating_mul(bits.saturating_add(coefficient_bits)) <= ENCLOSURE_WORK {
             let (lo, hi) = self.bounds(bits);
             let (mut a_num, mut a_den) = lo.to_bigint_pair();
             let (mut b_num, mut b_den) = hi.to_bigint_pair();
@@ -221,6 +232,18 @@ impl Algebraic {
                 // neither ends here: a terminated end is a convergent itself,
                 // and the value lies beyond it.
                 if qa != qb || ra.is_zero() || rb.is_zero() {
+                    // The value's own term lies between the two ends' (the
+                    // map from a shared prefix to the next term is monotone
+                    // on the interval), one lower when an end terminates
+                    // here, since `[…, q]` is also `[…, q − 1, 1]`. When even
+                    // the least of those carries the denominator past the
+                    // bound, the convergent found so far is the answer and
+                    // no finer enclosure can change it.
+                    let terminated = ra.is_zero() || rb.is_zero();
+                    let least = qa.min(qb) - BigInt::from(u8::from(terminated));
+                    if !k_prev1.is_zero() && &(&least * &k_prev1 + &k_prev2) > max_denominator {
+                        shared_ran_out = false;
+                    }
                     break;
                 }
                 let h = &qa * &h_prev1 + &h_prev2;
