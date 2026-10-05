@@ -318,7 +318,7 @@ fn agent_options(step_limit: Option<u32>) -> api::ComputeOptions {
 pub async fn agent_compute(source: &str, step_limit: Option<u32>) -> String {
     api::compute(source, agent_options(step_limit))
         .await
-        .to_json()
+        .into_json()
         .to_string()
 }
 

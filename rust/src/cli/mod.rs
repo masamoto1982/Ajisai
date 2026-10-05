@@ -64,6 +64,10 @@ Commands:
 Options:
   --json                          With `test`/`repl`/`version`: emit JSON
                                   (pipe-safe). `agent` always emits JSON
+  --compact                       With `agent`: emit the envelope as compact
+                                  JSON with no trailing newline, the exact
+                                  bytes the WASM agent entry points return
+                                  (default: indented for reading)
   --contract                      With `check`: verify `#:contract` word
                                   declarations against the inferred contract
                                   (exit 1 on a contradiction). The check is
@@ -94,6 +98,7 @@ pub fn run(args: &[String]) -> i32 {
         return 2;
     };
     let mut json = false;
+    let mut compact = false;
     let mut contract = false;
     let mut limits = LimitProfile::Agent;
     let mut limits_given = false;
@@ -103,6 +108,7 @@ pub fn run(args: &[String]) -> i32 {
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--json" => json = true,
+            "--compact" => compact = true,
             "--contract" => contract = true,
             "--limits" => match iter.next().map(String::as_str) {
                 Some("agent") => (limits, limits_given) = (LimitProfile::Agent, true),
@@ -131,6 +137,7 @@ pub fn run(args: &[String]) -> i32 {
     }
     let opts = Opts {
         json,
+        compact,
         contract,
         step_limit,
         limits,
@@ -164,6 +171,7 @@ pub fn run(args: &[String]) -> i32 {
             command == "run" || agent_op("compute") || agent_op("outcomes"),
         ),
         ("--contract", contract, command == "check"),
+        ("--compact", compact, command == "agent"),
     ];
     for (flag, given, applies) in misplaced {
         if given && !applies {
@@ -330,7 +338,8 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
     let (document, exit_code) = match operation {
         "compute" => {
             let response = block_on(agent_api::compute(&source, compute_options(opts)));
-            (response.to_json(), response.exit_code())
+            let exit_code = response.exit_code();
+            (response.into_json(), exit_code)
         }
         "check" => {
             let response = agent_api::check(&source, true);
@@ -349,7 +358,18 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
             return 2;
         }
     };
-    println!("{}", pretty(&document));
+    if opts.compact {
+        // The bytes the WASM entry points return (`agent_compute` and its
+        // siblings answer `Value::to_string()`), so a host that caps a
+        // response by its size caps both backends at the same result.
+        use std::io::Write;
+        let mut out = std::io::stdout().lock();
+        if serde_json::to_writer(&mut out, &document).is_ok() {
+            let _ = out.flush();
+        }
+    } else {
+        println!("{}", pretty(&document));
+    }
     exit_code
 }
 

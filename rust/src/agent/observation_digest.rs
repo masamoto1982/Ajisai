@@ -155,6 +155,29 @@ fn write_sint(bytes: &mut Vec<u8>, i: &BigInt) {
     write_str(bytes, &i.to_str_radix(16));
 }
 
+/// [`write_sint`] for an integer that fits an `i128`: the same length-prefixed
+/// radix-16 spelling `BigInt::to_str_radix(16)` gives — lowercase digits, a
+/// leading `-` for a negative, `0` for zero.
+fn write_small_sint(bytes: &mut Vec<u8>, i: i128) {
+    let mut digits = [0u8; 33];
+    let mut at = digits.len();
+    let mut magnitude = i.unsigned_abs();
+    loop {
+        at -= 1;
+        digits[at] = b"0123456789abcdef"[(magnitude % 16) as usize];
+        magnitude /= 16;
+        if magnitude == 0 {
+            break;
+        }
+    }
+    if i < 0 {
+        at -= 1;
+        digits[at] = b'-';
+    }
+    write_u64(bytes, (digits.len() - at) as u64);
+    bytes.extend_from_slice(&digits[at..]);
+}
+
 /// Encode one value. Leaves are matched directly on `ValueData` first — this
 /// is what keeps `Scalar`/`ExactScalar` (whose `len()`/`child()` describe a
 /// one-element self-loop) from ever reaching the `Vector`/`Tensor` recursion.
@@ -227,6 +250,24 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
 /// canonical reduced pair, so an unreduced and a reduced fraction still land
 /// on identical bytes (Step 1.4's `unreduced_fraction_matches_reduced`).
 fn encode_rational(bytes: &mut Vec<u8>, f: &Fraction) {
+    // A pair held in two machine words is reduced and spelled in place: the
+    // same lowest terms, sign and radix-16 digits the `BigInt` route below
+    // writes, without building two `BigInt`s, a gcd and two strings per lane.
+    if let crate::types::fraction::FractionRepr::Small(n, d) = f.repr {
+        if d != 0 {
+            let (n, d) = (i128::from(n), i128::from(d));
+            let g = n.unsigned_abs().gcd(&d.unsigned_abs()) as i128;
+            let (mut n, mut d) = (n / g, d / g);
+            if d < 0 {
+                n = -n;
+                d = -d;
+            }
+            bytes.push(b'Q');
+            write_small_sint(bytes, n);
+            write_small_sint(bytes, d);
+            return;
+        }
+    }
     let (mut n, mut d) = f.to_bigint_pair();
     let g = n.gcd(&d);
     if !g.is_zero() {
@@ -283,3 +324,7 @@ fn encode_algebraic(bytes: &mut Vec<u8>, alg: &Algebraic) {
     bytes.push(b'A');
     write_sint(bytes, &key);
 }
+
+#[cfg(test)]
+#[path = "observation_digest_small_tests.rs"]
+mod small_tests;

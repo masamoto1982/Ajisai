@@ -123,10 +123,21 @@ impl Report {
     }
 
     pub(crate) fn to_json(&self) -> Json {
+        self.document(self.stack.clone())
+    }
+
+    /// [`Report::to_json`], moving the stack's JSON into the document instead
+    /// of copying it: the stack is most of a large report, and `json!` would
+    /// rebuild it node by node through `serde_json::to_value`.
+    pub(crate) fn into_json(mut self) -> Json {
+        let stack = std::mem::take(&mut self.stack);
+        self.document(stack)
+    }
+
+    fn document(&self, stack: Json) -> Json {
         let mut doc = json!({
             "schemaVersion": SCHEMA_VERSION,
             "status": self.status,
-            "stack": self.stack,
             "stackDisplay": self.stack_display,
             "output": self.output,
             "message": self.message,
@@ -144,6 +155,7 @@ impl Report {
             "observationDigest": self.observation_digest,
             "receipt": self.receipt,
         });
+        doc["stack"] = stack;
         if let Some(outcome) = &self.outcome {
             doc["outcome"] = json!(outcome);
         }

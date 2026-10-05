@@ -40,6 +40,9 @@ use std::collections::HashMap;
 /// module ignore it.
 pub(crate) struct Opts {
     pub json: bool,
+    /// `agent`: print the envelope compact, byte-identical to the WASM entry
+    /// points, instead of indented.
+    pub compact: bool,
     /// `check`: verify `#:contract` word declarations against the inferred
     /// contract.
     pub contract: bool,
