@@ -210,12 +210,17 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
         [_] => {
             // The name, uppercased, as the key: the String in hand is the key
             // already when it has no lowercase letter to fold.
-            let only = names.into_iter().next().expect("one name");
-            let folded = match crate::word_name::canonical_word_name(&only) {
-                std::borrow::Cow::Owned(folded) => Some(folded),
-                std::borrow::Cow::Borrowed(_) => None,
+            // The key shares the name's own `Arc<str>` when it needs no
+            // folding, so a `BIND` makes no copy of the name for the table.
+            let text: Arc<str> = match &name_value.data {
+                crate::types::ValueData::Text(text) => Arc::clone(text),
+                _ => Arc::from(names[0].as_str()),
             };
-            interp.bind_local(folded.unwrap_or(only).into(), subject);
+            let key: Arc<str> = match crate::word_name::canonical_word_name(&text) {
+                std::borrow::Cow::Owned(folded) => folded.into(),
+                std::borrow::Cow::Borrowed(_) => text,
+            };
+            interp.bind_local(key, subject);
         }
         several => {
             // Destructuring is exact. A Vector longer than the name list would
