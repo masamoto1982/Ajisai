@@ -124,6 +124,8 @@ pub struct Interpreter {
     /// second dictionary: each scope belongs to one frame of LANG.SOURCE.FRAME
     /// and dies with it, so a name here is never reachable from another Word.
     pub(crate) binding_scopes: Vec<super::bindings::BindingScope>,
+    /// Emptied binding tables kept for reuse (`close_binding_scope`).
+    pub(crate) spare_binding_maps: Vec<crate::fast_hash::FastMap<String, Value>>,
     /// The dictionary changes this top-level `execute` has made so far, in
     /// order — `Defined word:` / `Deleted word:` without the prose.
     ///
@@ -268,6 +270,7 @@ impl Interpreter {
             host_effects: Vec::new(),
             host_env,
             binding_scopes: vec![super::bindings::BindingScope::root()],
+            spare_binding_maps: Vec::new(),
             dictionary_changes_this_run: Vec::new(),
             disable_no_change_check: true,
             pending_tokens: None,

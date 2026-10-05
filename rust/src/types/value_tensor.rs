@@ -115,6 +115,9 @@ impl Value {
     /// a Fraction scalar and the shape is rectangular. Otherwise the nested
     /// form is preserved.
     pub fn from_vector_promoted(values: Vec<Value>) -> Self {
+        if let Some(promoted) = super::dense_columns::try_promote_columns(&values) {
+            return promoted;
+        }
         if let Some(collected) = try_collect_dense(&values) {
             if let Some(tensor) = DenseTensor::from_fractions_with_absences(
                 collected.data,
