@@ -214,12 +214,6 @@ impl FusedBlock {
                     )
                 })
                 .or_else(|| {
-                    // The general tier's numbers can outgrow a machine word,
-                    // where a one-lane Tensor stops being one; a lane walk
-                    // stays on the two tiers whose numbers never do.
-                    if lane_mixed.is_some() {
-                        return None;
-                    }
                     crate::interpreter::fused_block_general::run(
                         self,
                         interp,
@@ -347,11 +341,17 @@ fn one_lane_seed(interp: &Interpreter, seed: &Value) -> Option<Plain> {
     (!lane.is_nil()).then_some(Plain::Num(lane))
 }
 
-/// A one-lane Tensor holding `lane`, as the column kernel and the scalar
-/// fast path build it (`DenseTensor::from_fractions`): the lane's pair as
-/// its two columns, pure when its denominator is 1, no absences.
+/// The one-lane value the interpreted walk holds for `lane`: a one-lane
+/// Tensor while both halves fit a machine word, as the column kernel and the
+/// scalar fast path build it (`DenseTensor::from_fractions`) — the lane's pair
+/// as its two columns, pure when its denominator is 1, no absences — and, once
+/// either half outgrows one, the lift's Vector of that one scalar. The form is
+/// a function of the value alone: a lane that grows past a word and shrinks
+/// back is a Tensor again.
 fn one_lane(lane: Fraction) -> Option<Value> {
-    let (n, d) = lane.extract_i64_pair()?;
+    let Some((n, d)) = lane.extract_i64_pair() else {
+        return Some(Value::from_vector(vec![Value::from_fraction(lane)]));
+    };
     let data = crate::types::DenseTensor::from_columns([n], [d], [1], d == 1, Default::default());
     Some(Value::new(
         ValueData::Tensor {

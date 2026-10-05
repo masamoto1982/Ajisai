@@ -447,3 +447,27 @@ proptest! {
         prop_assert_eq!(fused, interpreted, "`{}` under {:?}", source, limits);
     }
 }
+
+/// A one-lane seed whose accumulator outgrows a machine word is still walked
+/// fused, and answers the form the interpreted walk holds for each value.
+#[test]
+fn one_lane_seeds_that_outgrow_a_word_agree() {
+    let programs = [
+        "1 30 RANGE [ 1 ] [ MUL ] FOLD",
+        "1 30 RANGE [ 1 ] [ MUL ] SCAN",
+        "1 40 RANGE [ 1 ] [ 'X' BIND 'A' BIND 1 X DIV A ADD ] FOLD",
+        "1 40 RANGE [ 1 ] [ 'X' BIND 'A' BIND 1 X DIV A ADD ] SCAN",
+        "[ 2 ] [ 7 ] [ 'X' BIND 4000000000 MUL 4000000000 MUL 4000000000 DIV 4000000000 DIV ] FOLD",
+        "[ 2 2 ] [ 7 ] [ 'X' BIND 4000000000 MUL 4000000000 MUL 0 MUL ] SCAN",
+        "[ 2 ] [ 7 ] [ 'X' BIND 4000000000 MUL 4000000000 MUL 'A' BIND A A MUL ] FOLD",
+        "[ 2 ] [ 7 ] [ 'X' BIND 4000000000 MUL 4000000000 MUL 'A' BIND A A DIV ] FOLD",
+        "1 20 RANGE [ 1000000 ] [ 'X' BIND 'A' BIND A A MUL 1 ADD ] FOLD",
+        "1 20 RANGE [ 1000000 ] [ 'X' BIND 'A' BIND A A MUL 1 ADD ] SCAN",
+    ];
+    for source in programs {
+        assert_same(source, Limits::default());
+    }
+    for source in &programs[..4] {
+        assert!(fused_runs(source) > 0, "`{source}` was not fused");
+    }
+}
