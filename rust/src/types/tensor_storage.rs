@@ -9,6 +9,7 @@
 //! reason lives.
 
 use std::collections::BTreeMap;
+mod lanes;
 
 use super::fraction::Fraction;
 use crate::error::NilReason;

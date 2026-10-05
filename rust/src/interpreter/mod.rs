@@ -27,6 +27,8 @@ pub mod execute_def;
 mod format_json_tests;
 mod format_ops;
 pub(crate) mod fused_block;
+#[cfg(test)]
+mod fused_block_cache_tests;
 mod fused_block_general;
 mod fused_block_int;
 #[cfg(test)]

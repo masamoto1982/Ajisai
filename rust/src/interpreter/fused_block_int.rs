@@ -77,11 +77,58 @@ pub(crate) enum IntOp {
 }
 
 /// The block checked against `inputs`, with what one run charges.
+#[derive(Debug)]
 struct Typed {
     ops: Vec<IntOp>,
     out: Ty,
     fastpath_per_run: u64,
     work_per_run: u64,
+}
+
+/// The block typed and lowered to register code, per input types, kept on
+/// the block (`FusedBlock::int_programs`) so a block walked again and again —
+/// the inner `FOLD` of `[ [ 0 ] [ ADD ] FOLD ] MAP` — is compiled once. Both
+/// depend on the block and the input types alone; what a walk is charged is
+/// checked against the ceilings on every walk.
+#[derive(Debug, Default)]
+pub(crate) struct IntPrograms(std::sync::Mutex<Vec<KeptProgram>>);
+
+/// One input-type combination and what compiling the block for it gave.
+type KeptProgram = (Vec<Ty>, Option<Arc<Compiled>>);
+
+#[derive(Debug)]
+struct Compiled {
+    typed: Typed,
+    program: RegProgram,
+}
+
+/// Input-type combinations kept per block; a block meets one or two.
+const KEPT_PROGRAMS: usize = 4;
+
+impl Clone for IntPrograms {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+
+impl IntPrograms {
+    fn get(&self, block: &FusedBlock, inputs: &[Ty]) -> Option<Arc<Compiled>> {
+        let mut kept = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some((_, compiled)) = kept.iter().find(|(types, _)| types == inputs) {
+            return compiled.clone();
+        }
+        let compiled = typed(block, inputs).and_then(|typed| {
+            let program = RegProgram::lower(&typed.ops, inputs.len(), block.slots)?;
+            Some(Arc::new(Compiled { typed, program }))
+        });
+        if kept.len() < KEPT_PROGRAMS {
+            kept.push((inputs.to_vec(), compiled.clone()));
+        }
+        compiled
+    }
 }
 
 fn small_integer(f: &Fraction) -> Option<i64> {
@@ -268,7 +315,8 @@ pub(crate) fn run(
         None => None,
     };
     let inputs: Vec<Ty> = seed.iter().map(|(t, _)| *t).chain([elem_ty]).collect();
-    let typed = typed(block, &inputs)?;
+    let compiled = block.int_programs.get(block, &inputs)?;
+    let (typed, program) = (&compiled.typed, &compiled.program);
     match walk {
         FusedWalk::Filter if typed.out != Ty::Bool => return None,
         FusedWalk::Fold | FusedWalk::Scan if Some(typed.out) != seed.map(|(t, _)| t) => {
@@ -284,7 +332,6 @@ pub(crate) fn run(
         return None;
     }
 
-    let program = RegProgram::lower(&typed.ops, inputs.len(), block.slots)?;
     let value = match (walk, seed) {
         (FusedWalk::Map, _) => {
             let mut results = Vec::with_capacity(elements.len());

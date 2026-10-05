@@ -72,6 +72,7 @@ struct Lowering<'a> {
     depth: usize,
     calls: u64,
     builds: Vec<(String, Arc<CompiledPlan>)>,
+    reads_outer: bool,
 }
 
 /// Lower `plan` for a walk that starts the block on `inputs` values, or
@@ -95,6 +96,7 @@ pub(crate) fn lower(
         depth: inputs,
         calls: 0,
         builds: Vec::new(),
+        reads_outer: false,
     };
     lowering.line(&plan.line.ops, &mut HashMap::new(), true, interp.call_depth)?;
     if lowering.depth == 0 {
@@ -107,6 +109,8 @@ pub(crate) fn lower(
         steps_per_run: words + lowering.calls,
         calls_per_run: lowering.calls,
         builds: lowering.builds,
+        reads_outer: lowering.reads_outer,
+        int_programs: Default::default(),
     })
 }
 
@@ -161,11 +165,14 @@ impl Lowering<'_> {
                     let name = crate::word_name::canonical_word_name(name);
                     match frame.get(name.as_ref()) {
                         Some(slot) => (Op::Load(*slot), 0, 1),
-                        None if sees_outer => (
-                            Op::Push(Plain::of(&self.interp.lookup_binding(&name)?)?),
-                            0,
-                            1,
-                        ),
+                        None if sees_outer => {
+                            self.reads_outer = true;
+                            (
+                                Op::Push(Plain::of(&self.interp.lookup_binding(&name)?)?),
+                                0,
+                                1,
+                            )
+                        }
                         None => return None,
                     }
                 }

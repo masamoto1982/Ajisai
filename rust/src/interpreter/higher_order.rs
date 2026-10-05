@@ -6,8 +6,12 @@
 //! on a scratch stack (`execute_executable_code`).
 
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::fused_block::FusedBlock;
 use crate::interpreter::Interpreter;
 use crate::types::{Stack, Value};
+use std::sync::Arc;
+
+mod fused_cache;
 
 /// A block, with the compiled plan for it built once.
 ///
@@ -22,21 +26,8 @@ use crate::types::{Stack, Value};
 pub(crate) struct ExecutableCode {
     tokens: Vec<crate::types::Token>,
     plan: crate::interpreter::CompiledPlan,
-}
-
-impl ExecutableCode {
-    /// The block lowered for a fused walk that starts it on `inputs` values,
-    /// when its plan is current and inside the fused subset.
-    pub(crate) fn fused(
-        &self,
-        interp: &Interpreter,
-        inputs: usize,
-    ) -> Option<crate::interpreter::fused_block::FusedBlock> {
-        if !crate::interpreter::is_plan_valid(&self.plan, interp) {
-            return None;
-        }
-        crate::interpreter::fused_block::FusedBlock::compile(&self.plan, interp, inputs)
-    }
+    /// The last fused lowering of the block, kept for the next walk.
+    fused: std::sync::Mutex<Option<(fused_cache::FusedKey, Arc<FusedBlock>)>>,
 }
 
 /// The last few code operands compiled, so a block that runs a higher-order
@@ -126,7 +117,11 @@ fn compile_executable_code(interp: &mut Interpreter, val: &Value) -> Result<Exec
         // place a block becomes executable, and every higher-order Word reaches
         // it before its first element.
         let plan = crate::interpreter::compile_token_block(tokens.clone(), interp);
-        return Ok(ExecutableCode { tokens, plan });
+        return Ok(ExecutableCode {
+            tokens,
+            plan,
+            fused: Default::default(),
+        });
     }
 
     // A String is not code. LANG.SOURCE.CODE says code is a Vector, and
@@ -185,7 +180,7 @@ pub(crate) fn execute_executable_code(
     interp: &mut Interpreter,
     exec: &ExecutableCode,
 ) -> Result<()> {
-    let ExecutableCode { tokens, plan } = exec;
+    let ExecutableCode { tokens, plan, .. } = exec;
     interp.bump_execution_epoch();
     // `bump_execution_epoch` moves the execution epoch, not the dictionary one,
     // so a plan stays valid across the loop's elements; only a dictionary change

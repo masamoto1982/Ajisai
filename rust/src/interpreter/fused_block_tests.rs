@@ -26,9 +26,9 @@ pub(super) struct Observation {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct Limits {
-    steps: Option<usize>,
-    work: Option<u64>,
-    bits: Option<u64>,
+    pub(super) steps: Option<usize>,
+    pub(super) work: Option<u64>,
+    pub(super) bits: Option<u64>,
 }
 
 fn observe(source: &str, fused: bool, limits: Limits) -> Observation {
