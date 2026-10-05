@@ -290,3 +290,83 @@ fn normal_form_terms_expose_the_stored_representation() {
         vec![(frac(1, 2), BigInt::from(1)), (frac(1, 3), BigInt::from(5))]
     );
 }
+
+/// The convergents the floor-and-reciprocate iteration gives, to any depth:
+/// the reference the enclosure-based approximation must agree with.
+fn convergent_by_reciprocal(value: &Algebraic, max_denominator: &BigInt) -> Fraction {
+    let (mut h2, mut h1) = (BigInt::from(0), BigInt::from(1));
+    let (mut k2, mut k1) = (BigInt::from(1), BigInt::from(0));
+    let mut best = None;
+    let mut state = Some(value.clone());
+    while let Some(x) = state {
+        let a = x.floor_int();
+        let h = &a * &h1 + &h2;
+        let k = &a * &k1 + &k2;
+        if &k > max_denominator {
+            break;
+        }
+        h2 = std::mem::replace(&mut h1, h.clone());
+        k2 = std::mem::replace(&mut k1, k.clone());
+        best = Some(Fraction::new(h, k));
+        state = match x.add_fraction(&Fraction::new(-a, BigInt::from(1))) {
+            AlgebraicResult::Irrational(f) => match f.reciprocal() {
+                AlgebraicResult::Irrational(next) => Some(next),
+                AlgebraicResult::Rational(_) => None,
+            },
+            AlgebraicResult::Rational(_) => None,
+        };
+    }
+    best.expect("a denominator bound of 1 or more admits the integer part")
+}
+
+fn sum_of_roots(radicands: &[i64]) -> Algebraic {
+    let mut sum = sqrt_irr(radicands[0], 1);
+    for &m in &radicands[1..] {
+        sum = match sum.add(&sqrt_irr(m, 1)) {
+            AlgebraicResult::Irrational(a) => a,
+            other => panic!("a sum of distinct roots is irrational, got {other:?}"),
+        };
+    }
+    sum
+}
+
+#[test]
+fn the_enclosure_approximation_matches_floor_and_reciprocate() {
+    let values = [
+        sum_of_roots(&[2]),
+        sum_of_roots(&[2, 3]),
+        sum_of_roots(&[2, 3, 5]),
+        sum_of_roots(&[2, 3, 5, 7]),
+        sum_of_roots(&[2, 3, 5, 6, 7]),
+        sqrt_irr(2, 1).neg(),
+        sqrt_irr(1, 7),
+    ];
+    for value in &values {
+        for bound in [1u64, 2, 12, 70, 1_000, 1_000_000, 1_000_000_000] {
+            let bound = BigInt::from(bound);
+            assert_eq!(
+                value.best_rational_approximation(&bound),
+                Some(convergent_by_reciprocal(value, &bound)),
+                "{value:?} within {bound}"
+            );
+        }
+    }
+}
+
+/// √1 + … + √30 is nineteen terms; its first reciprocal step alone took
+/// twenty-one seconds. The enclosure reads it in well under one.
+#[test]
+fn a_wide_sum_of_roots_is_approximated_in_linear_time() {
+    let radicands = [
+        2, 3, 5, 6, 7, 10, 11, 13, 14, 15, 17, 19, 21, 22, 23, 26, 29, 30,
+    ];
+    let sum = sum_of_roots(&radicands);
+    let started = std::time::Instant::now();
+    let approx = sum
+        .best_rational_approximation(&BigInt::from(1_000_000_000u64))
+        .expect("a bound of 1e9 admits a convergent");
+    assert!(started.elapsed().as_millis() < 500, "took {:?}", started.elapsed());
+    let (lo, hi) = sum.bounds(256);
+    assert!(approx.sub(&lo).abs().lt(&frac(1, 1_000_000)) && approx.sub(&hi).abs().lt(&frac(1, 1_000_000)));
+    assert!(approx.denominator() <= BigInt::from(1_000_000_000u64));
+}

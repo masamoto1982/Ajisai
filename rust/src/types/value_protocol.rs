@@ -85,11 +85,9 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
 }
 
 /// A rational near an irrational value that costs one integer square root per
-/// term, for when the continued-fraction budget affords not even a first
-/// convergent. That budget is sized for the common case; a value of hundreds
-/// of terms can exhaust it on the first step, and the fallback used to be
-/// `Fraction::nil()` — `0/0`, the internal absence sentinel, shipped as if it
-/// were a number. Each term `c·√m` contributes `c·⌊√m·10⁹⌋/10⁹`, so the sum
+/// term, for when the enclosure-based approximation answers nothing (a bound
+/// no enclosure can reach). The fallback once was `Fraction::nil()` — `0/0`,
+/// the internal absence sentinel, shipped as if it were a number. Each term `c·√m` contributes `c·⌊√m·10⁹⌋/10⁹`, so the sum
 /// is within `terms·|c|·10⁻⁹` of the value: coarse, marked `approximate` like
 /// every approximation here, and never a denominator of zero.
 fn termwise_approximation(er: &crate::types::exact::ExactReal) -> Fraction {
