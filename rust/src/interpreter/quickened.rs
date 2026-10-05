@@ -227,11 +227,102 @@ pub(crate) fn apply(kind: Kind, operands: &[Slot]) -> Option<Answer> {
     }
 }
 
+/// `base` raised to the non-negative integer `exponent`, by square-and-
+/// multiply with each half checked, or `None` when a half leaves a machine
+/// word or the operands are not the plain case: a base in lowest terms with a
+/// positive denominator (so its powers stay in lowest terms) and an integer
+/// exponent. `x⁰` is 1, `0ⁿ` is 0 and `0⁰` is 1, as `power_by_integer` has it.
+/// Negative and fractional exponents, and every overflow, are the dispatch's.
+#[inline]
+fn small_power(base: Pair, exponent: Pair) -> Option<Pair> {
+    let ((n, d), (e, one)) = (base, exponent);
+    if one != 1 || e < 0 || d <= 0 {
+        return None;
+    }
+    // The dispatch refuses an exponent whose answer could pass this many bits
+    // (`INTEGER_POWER_RESULT_BITS`), even for a base of 1, whose answer is
+    // small: the refusal is its to report.
+    let width = |v: i64| u64::from(64 - v.unsigned_abs().leading_zeros());
+    let bits = width(n).max(width(d)).max(2);
+    if u128::from(e.unsigned_abs()) * u128::from(bits) > 1 << 20 {
+        return None;
+    }
+    let mut e = u64::try_from(e).ok()?;
+    let (mut num, mut den) = (1i64, 1i64);
+    let (mut base_n, mut base_d) = (n, d);
+    while e > 0 {
+        if e & 1 == 1 {
+            num = num.checked_mul(base_n)?;
+            den = den.checked_mul(base_d)?;
+        }
+        e >>= 1;
+        if e > 0 {
+            base_n = base_n.checked_mul(base_n)?;
+            base_d = base_d.checked_mul(base_d)?;
+        }
+    }
+    Some((num, den))
+}
+
+/// The two Words that cost one step and nothing else on a plain operand: they
+/// charge no work and no fast-path hit, and mint no NIL.
+///
+/// `POW` on a plain base and a plain non-negative integer exponent whose
+/// answer stays in a machine word; `LENGTH` of a non-NIL Vector or Tensor.
+/// Both read their operands without a copy and decline, touching nothing, for
+/// anything else.
+fn try_single_step_call(interp: &mut Interpreter, word: WordId) -> bool {
+    let slots = interp.stack.as_slice();
+    let (pops, value) = match word {
+        WordId::Pow => {
+            let Some(base) = slots.len().checked_sub(2) else {
+                return false;
+            };
+            let (Some(Slot::Num(b)), Some(Slot::Num(e))) =
+                (Slot::of(&slots[base]), Slot::of(&slots[base + 1]))
+            else {
+                return false;
+            };
+            match small_power(b, e) {
+                Some(r) => (2, Slot::Num(r).into_value()),
+                None => return false,
+            }
+        }
+        WordId::Length => {
+            let Some(target) = slots.last() else {
+                return false;
+            };
+            if target.absence.is_some() || !target.is_vector() || target.is_nil() {
+                return false;
+            }
+            let len = Fraction::from(target.len() as i64);
+            (1, Value::from_fraction(len))
+        }
+        _ => return false,
+    };
+    if interp.execution_step_count >= interp.max_execution_steps {
+        return false;
+    }
+    let base = interp.stack.len() - pops;
+    interp.execution_step_count += 1;
+    interp.stack.truncate(base);
+    interp.stack.push(value);
+    interp
+        .check_fresh_nesting()
+        .expect("a plain result is within any nesting ceiling");
+    #[cfg(test)]
+    QUICKENED.with(|c| c.set(c.get() + 1));
+    true
+}
+
 /// Run `word` on the plain values on top of the stack, or answer `false`
 /// having touched nothing.
 pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
     if !interp.quickening_enabled || !interp.scalar_fastpath_enabled {
         return false;
+    }
+    if matches!(word, WordId::Pow | WordId::Length) {
+        return try_single_step_call(interp, word);
     }
     let Some(kind) = Kind::of(word) else {
         return false;
