@@ -8,7 +8,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::fused_block::FusedBlock;
 use crate::interpreter::Interpreter;
-use crate::types::{Stack, Value};
+use crate::types::{ScalarColumns, Stack, Value};
 use std::sync::Arc;
 
 mod fused_cache;
@@ -352,7 +352,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    let mut results: Vec<Value> = Vec::with_capacity(n_elements);
+    // The answers, as columns while every one is a plain scalar (a block that
+    // answers numbers does, almost always) and as a list from the first that
+    // is not: the Tensor is the one `from_vector_promoted` builds from the list.
+    let mut columns: Option<ScalarColumns> = Some(ScalarColumns::with_capacity(n_elements));
+    let mut results: Vec<Value> = Vec::new();
     let mut saved_stack: Stack = Stack::new();
     std::mem::swap(&mut interp.stack, &mut saved_stack);
     let saved_no_change_check: bool = interp.disable_no_change_check;
@@ -380,7 +384,17 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // answer, which is exactly the quiet wrong result
                 // LANG.FAILURE.TRICHOTOMY exists to rule out.
                 Some(result_val) => {
-                    results.push(result_val);
+                    if let Some(taken) = columns.as_mut() {
+                        if !taken.push(&result_val) {
+                            results = columns
+                                .take()
+                                .expect("checked above")
+                                .into_values(n_elements);
+                            results.push(result_val);
+                        }
+                    } else {
+                        results.push(result_val);
+                    }
                 }
                 None => {
                     error = Some(AjisaiError::declared(
@@ -405,7 +419,10 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
 
-    interp.stack.push(Value::from_vector_promoted(results));
+    interp.stack.push(match columns {
+        Some(taken) => taken.finish(),
+        None => Value::from_vector_promoted(results),
+    });
 
     Ok(())
 }
@@ -423,6 +440,7 @@ mod tests {
 
     use crate::interpreter::Interpreter;
     use crate::types::display::render_stack;
+    use crate::types::Value;
 
     async fn run(source: &str) -> String {
         let mut interp = Interpreter::new();
@@ -471,5 +489,65 @@ mod tests {
             run("[ 1 COLLECT ] 'WRAP' DEF [ 1 2 ] [ WRAP ] MAP").await,
             "[ [ 1/1 ] [ 2/1 ] ]"
         );
+    }
+
+    /// An unfused `MAP` collects plain scalar answers into columns as they
+    /// arrive. Whatever the answers are, the result must be what promoting
+    /// the list of them builds: the same Tensor, or the same Vector.
+    #[test]
+    fn map_answers_what_promoting_its_answers_builds() {
+        let blocks = [
+            "[ [ 7 ] LENGTH ADD ]",
+            "[ [ 7 ] LENGTH ADD 3 DIV ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 4611686018427387904 MUL ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 99999999999999999999 MUL ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 'X' BIND 6 X DIV ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 3 GT ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 2 SQRT MUL ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 'X' BIND [ X X ] ]",
+            "[ [ 7 ] LENGTH 7 SUB ADD 'X' BIND X 2 GT ]",
+            "[ 'X' BIND X [ 5 ] LENGTH X 2 GT SELECT ]",
+            "[ 'X' BIND X 3 GT 'a' [ 7 ] LENGTH SELECT ]",
+            "[ 'X' BIND [ 7 ] LENGTH X 2 GT [ 1 2 ] SWAP SELECT ]",
+        ];
+        for block in blocks {
+            for target in ["[ 1 2 3 4 5 ]", "[ 1/2 3 7/3 ]", "[ 5 ]", "[ 0 1 2 ]"] {
+                let run = |source: &str| {
+                    let mut interp = Interpreter::new();
+                    let _ = crate::agent::block_on(interp.execute(source));
+                    format!("{:?}", interp.get_stack().as_slice())
+                };
+                let mapped = run(&format!("{target} {block} MAP"));
+                // The reference: each element through the block on its own,
+                // the answers promoted as a list.
+                let mut interp = Interpreter::new();
+                let elements = crate::agent::block_on(interp.execute(target))
+                    .is_ok()
+                    .then(|| interp.get_stack().last().cloned().expect("a target"));
+                let target_value = elements.expect("target runs");
+                let mut answers = Vec::new();
+                let mut failed = false;
+                for i in 0..target_value.len() {
+                    let mut one = Interpreter::new();
+                    let element = target_value.child(i).unwrap();
+                    one.stack.push(element);
+                    let body = block.trim_start_matches("[ ").trim_end_matches(" ]");
+                    if crate::agent::block_on(one.execute(body)).is_err() {
+                        failed = true;
+                        break;
+                    }
+                    answers.push(one.stack.pop().expect("one answer"));
+                }
+                if failed {
+                    continue;
+                }
+                let expected = {
+                    let mut i2 = Interpreter::new();
+                    i2.stack.push(Value::from_vector_promoted(answers));
+                    format!("{:?}", i2.get_stack().as_slice())
+                };
+                assert_eq!(mapped, expected, "`{target} {block} MAP`");
+            }
+        }
     }
 }

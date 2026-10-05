@@ -26,6 +26,7 @@ use std::sync::Arc;
 use super::tensor_storage::{Column, DenseTensor};
 use super::{Value, ValueData};
 use crate::semantic::AbsenceMetadata;
+use crate::types::fraction::{Fraction, FractionRepr};
 
 /// A shape on the way up the walk; four dimensions fit without allocating.
 type Shape = smallvec::SmallVec<[usize; 4]>;
@@ -34,6 +35,79 @@ struct Columns {
     nums: Column,
     dens: Column,
     absences: BTreeMap<usize, AbsenceMetadata>,
+}
+
+/// The plain scalars a per-element walk answers, written into the two columns
+/// as they arrive, so that a walk whose every answer is one never holds them as
+/// `Value`s at all (`MAP`'s unfused loop).
+///
+/// A scalar is taken only when it is held as a machine-word pair with a real
+/// denominator and carries no absence; anything else is declined, and the
+/// caller turns what has been taken back into the `Value`s it came from
+/// (`into_values`) and carries on with a list. `finish` is the Tensor
+/// `Value::from_vector_promoted` builds from that list.
+pub(crate) struct ScalarColumns {
+    nums: Column,
+    dens: Column,
+}
+
+impl ScalarColumns {
+    pub(crate) fn with_capacity(lanes: usize) -> Self {
+        Self {
+            nums: Column::with_capacity(lanes),
+            dens: Column::with_capacity(lanes),
+        }
+    }
+
+    /// Take `value` as the next lane, or answer `false` having taken nothing.
+    #[inline]
+    pub(crate) fn push(&mut self, value: &Value) -> bool {
+        match (&value.data, &value.absence) {
+            (
+                ValueData::Scalar(Fraction {
+                    repr: FractionRepr::Small(n, d),
+                }),
+                None,
+            ) if *d != 0 => {
+                self.nums.push(*n);
+                self.dens.push(*d);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// The values taken so far, as the walk held them.
+    pub(crate) fn into_values(self, capacity: usize) -> Vec<Value> {
+        let mut values = Vec::with_capacity(capacity.max(self.nums.len()));
+        values.extend(
+            self.nums.iter().zip(&self.dens).map(|(&n, &d)| {
+                Value::from_fraction(Fraction::from_repr(FractionRepr::Small(n, d)))
+            }),
+        );
+        values
+    }
+
+    /// The one-dimensional Tensor of the lanes taken, which is what promoting
+    /// them as a list builds.
+    pub(crate) fn finish(self) -> Value {
+        let shape = vec![self.nums.len()];
+        let is_pure_integer = self.dens.iter().all(|&d| d == 1);
+        let tensor = DenseTensor::from_columns(
+            self.nums,
+            self.dens,
+            shape.clone(),
+            is_pure_integer,
+            BTreeMap::new(),
+        );
+        Value::new(
+            ValueData::Tensor {
+                data: Arc::new(tensor),
+                shape: Arc::new(shape),
+            },
+            None,
+        )
+    }
 }
 
 /// `values` promoted to a dense Tensor, or `None` for the two-step route.
