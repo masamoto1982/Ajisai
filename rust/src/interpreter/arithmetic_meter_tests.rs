@@ -229,3 +229,44 @@ async fn a_fold_past_i64_promotes_exactly() {
         );
     }
 }
+
+/// A fraction's width is read where it lies, without copying its halves out;
+/// it must be the width those halves have as `BigInt`s, `Small` and `Big`
+/// alike, and a sum or difference of wide fractions must be what the owned
+/// pair arithmetic would give.
+#[test]
+fn width_and_wide_sums_are_what_the_owned_halves_give() {
+    use crate::interpreter::runtime_limits::fraction_result_bits;
+    use crate::types::fraction::Fraction;
+    use num_bigint::BigInt;
+
+    let wide: BigInt = BigInt::from(10).pow(40u32) + 7;
+    let fractions = [
+        Fraction::new(BigInt::from(0), BigInt::from(1)),
+        Fraction::new(BigInt::from(1), BigInt::from(3)),
+        Fraction::new(BigInt::from(-7), BigInt::from(2)),
+        Fraction::new(BigInt::from(i64::MAX), BigInt::from(1)),
+        Fraction::new(BigInt::from(i64::MIN), BigInt::from(3)),
+        Fraction::new(wide.clone(), BigInt::from(1)),
+        Fraction::new(BigInt::from(5), wide.clone()),
+        Fraction::new(-wide.clone(), wide.clone() + 2),
+        Fraction::new(wide.clone() * 3, BigInt::from(6)),
+    ];
+    for f in &fractions {
+        assert_eq!(
+            fraction_result_bits(f),
+            f.numerator().bits().max(f.denominator().bits()),
+            "{f:?}"
+        );
+    }
+    for a in &fractions {
+        for b in &fractions {
+            let (an, ad) = a.to_bigint_pair();
+            let (bn, bd) = b.to_bigint_pair();
+            let sum = Fraction::new(&an * &bd + &bn * &ad, &ad * &bd);
+            let diff = Fraction::new(&an * &bd - &bn * &ad, &ad * &bd);
+            assert_eq!(a.add(b), sum, "{a:?} + {b:?}");
+            assert_eq!(a.sub(b), diff, "{a:?} - {b:?}");
+        }
+    }
+}

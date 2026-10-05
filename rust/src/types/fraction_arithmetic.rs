@@ -11,6 +11,35 @@ use num_integer::Integer;
 use num_traits::{One, Zero};
 
 impl Fraction {
+    /// The pair as `BigInt`s, a `Big` half borrowed and a `Small` one built.
+    #[inline]
+    pub(crate) fn bigint_pair_cow(
+        &self,
+    ) -> (std::borrow::Cow<'_, BigInt>, std::borrow::Cow<'_, BigInt>) {
+        use std::borrow::Cow;
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                (Cow::Owned(BigInt::from(*n)), Cow::Owned(BigInt::from(*d)))
+            }
+            FractionRepr::Big(big) => (
+                Cow::Borrowed(&big.numerator),
+                Cow::Borrowed(&big.denominator),
+            ),
+        }
+    }
+
+    /// Bit length of the wider half's magnitude, read where it lies.
+    #[inline]
+    pub(crate) fn magnitude_bits(&self) -> u64 {
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                let width = |v: i64| u64::from(64 - v.unsigned_abs().leading_zeros());
+                width(*n).max(width(*d))
+            }
+            FractionRepr::Big(big) => big.numerator.bits().max(big.denominator.bits()),
+        }
+    }
+
     pub fn add(&self, other: &Fraction) -> Fraction {
         if self.is_nil() || other.is_nil() {
             return Self::nil();
@@ -41,19 +70,22 @@ impl Fraction {
             }
         }
 
-        let (an, ad): (BigInt, BigInt) = self.to_bigint_pair();
-        let (bn, bd): (BigInt, BigInt) = other.to_bigint_pair();
+        // A `Big` half is borrowed, not cloned: the running total of a long
+        // sum is the wide operand, and copying it each step is a copy of the
+        // whole accumulator.
+        let (an, ad) = self.bigint_pair_cow();
+        let (bn, bd) = other.bigint_pair_cow();
 
         if ad == bd {
-            let sum: BigInt = &an + &bn;
+            let sum: BigInt = &*an + &*bn;
             if sum.is_zero() {
                 return Fraction::from_repr(FractionRepr::Small(0, 1));
             }
             let g: BigInt = balanced_bigint_gcd(&sum, &ad);
             if g.is_one() {
-                return Self::create_already_reduced(sum, ad);
+                return Self::create_already_reduced(sum, ad.into_owned());
             }
-            return Self::create_already_reduced(&sum / &g, &ad / &g);
+            return Self::create_already_reduced(&sum / &g, &*ad / &g);
         }
 
         Self::add_reduced_bigint(&an, &ad, &bn, &bd, false)
@@ -89,19 +121,19 @@ impl Fraction {
             }
         }
 
-        let (an, ad): (BigInt, BigInt) = self.to_bigint_pair();
-        let (bn, bd): (BigInt, BigInt) = other.to_bigint_pair();
+        let (an, ad) = self.bigint_pair_cow();
+        let (bn, bd) = other.bigint_pair_cow();
 
         if ad == bd {
-            let diff: BigInt = &an - &bn;
+            let diff: BigInt = &*an - &*bn;
             if diff.is_zero() {
                 return Fraction::from_repr(FractionRepr::Small(0, 1));
             }
             let g: BigInt = balanced_bigint_gcd(&diff, &ad);
             if g.is_one() {
-                return Self::create_already_reduced(diff, ad);
+                return Self::create_already_reduced(diff, ad.into_owned());
             }
-            return Self::create_already_reduced(&diff / &g, &ad / &g);
+            return Self::create_already_reduced(&diff / &g, &*ad / &g);
         }
 
         Self::add_reduced_bigint(&an, &ad, &bn, &bd, true)
