@@ -24,6 +24,7 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::types::Value;
+use std::sync::Arc;
 
 use super::Interpreter;
 
@@ -37,7 +38,7 @@ use super::Interpreter;
 /// the blocks written beneath it and never into a Word called from it.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct BindingScope {
-    names: crate::fast_hash::FastMap<String, Value>,
+    names: crate::fast_hash::FastMap<Arc<str>, Value>,
     barrier: bool,
 }
 
@@ -117,7 +118,7 @@ impl Interpreter {
     /// would buy nothing. This is a local, not a definition: the rule that
     /// protects a referenced Word from being redefined is about names other
     /// code can reach, and nothing outside this frame can reach this one.
-    pub(crate) fn bind_local(&mut self, name: String, value: Value) {
+    pub(crate) fn bind_local(&mut self, name: Arc<str>, value: Value) {
         if let Some(scope) = self.binding_scopes.last_mut() {
             scope.names.insert(name, value);
         }
@@ -214,7 +215,7 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 std::borrow::Cow::Owned(folded) => Some(folded),
                 std::borrow::Cow::Borrowed(_) => None,
             };
-            interp.bind_local(folded.unwrap_or(only), subject);
+            interp.bind_local(folded.unwrap_or(only).into(), subject);
         }
         several => {
             // Destructuring is exact. A Vector longer than the name list would
@@ -247,7 +248,7 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 let part = subject
                     .child(position)
                     .expect("the element count was checked against the name count");
-                interp.bind_local(name.to_uppercase(), part);
+                interp.bind_local(name.to_uppercase().into(), part);
             }
         }
     }
