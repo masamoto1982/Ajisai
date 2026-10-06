@@ -462,5 +462,12 @@ pub(crate) fn balanced_bigint_gcd(a: &BigInt, b: &BigInt) -> BigInt {
     if let Some(g) = crate::types::small_divisor::gcd_with_word(wide, narrow) {
         return g;
     }
+    if narrow.bits() > LEHMER_BITS {
+        return crate::types::lehmer_gcd::gcd(wide, narrow);
+    }
     narrow.gcd(&(wide % narrow))
 }
+
+/// A narrower side is left to `num-bigint`: one remainder brings the pair
+/// within two words, where its binary gcd is short.
+const LEHMER_BITS: u64 = 128;

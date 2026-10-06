@@ -15,7 +15,6 @@
 //! the codomain simply does not contain it.
 
 use num_bigint::BigInt;
-use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
 
 use super::ordering_ops::{restore, take_operand};
@@ -42,7 +41,7 @@ fn strip_factor(mut n: BigInt, factor: u32) -> (u32, BigInt) {
 /// The finite decimal spelling of `f`, or `None` when it has none.
 fn decimal_spelling(f: &Fraction) -> Option<String> {
     let (numerator, denominator) = f.to_bigint_pair();
-    let gcd = numerator.gcd(&denominator);
+    let gcd = crate::types::fraction_arithmetic::balanced_bigint_gcd(&numerator, &denominator);
     let (numerator, denominator) = if gcd.is_zero() {
         (numerator, denominator)
     } else {

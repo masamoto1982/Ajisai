@@ -1,4 +1,5 @@
 mod dense_columns;
+mod lehmer_gcd;
 mod small_divisor;
 pub(crate) use self::dense_columns::ScalarColumns;
 #[cfg(test)]
@@ -11,6 +12,8 @@ pub(crate) mod fraction_arithmetic;
 mod fraction_arithmetic_tests;
 #[cfg(test)]
 mod fraction_gcd_tests;
+#[cfg(test)]
+mod fraction_lowest_terms_tests;
 #[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod record;
