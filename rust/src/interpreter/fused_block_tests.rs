@@ -69,7 +69,7 @@ pub(super) fn assert_same(source: &str, limits: Limits) -> Observation {
     fused
 }
 
-fn fused_runs(source: &str) -> u64 {
+pub(super) fn fused_runs(source: &str) -> u64 {
     let before = crate::interpreter::fused_block::fused_runs_on_this_thread();
     let mut interp = Interpreter::new();
     let _ = crate::agent::block_on(interp.execute(source));
@@ -305,6 +305,15 @@ fn word() -> impl Strategy<Value = &'static str> {
         2 => prop_oneof![Just("LT"), Just("GT"), Just("EQ"), Just("MIN"), Just("MAX")],
         2 => prop_oneof![Just("FLOOR"), Just("ROUND"), Just("NOT"), Just("AND"), Just("SELECT")],
         1 => prop_oneof![Just("TRUE"), Just("FALSE")],
+        // `POW`; `LENGTH` of a literal (a constant) and of the top (refused).
+        2 => prop_oneof![
+            Just("POW"),
+            Just("2 POW"),
+            Just("[ 1 2 3 ] LENGTH"),
+            Just("[ ] LENGTH"),
+            Just("[ 1 NIL ] LENGTH"),
+            Just("LENGTH"),
+        ],
         // Names: bound in the block, bound outside it (`K`), or both.
         2 => prop_oneof![Just("'X' BIND"), Just("X"), Just("'K' BIND"), Just("K")],
         // User Words defined by `random_walks_agree`'s prelude.
@@ -393,6 +402,8 @@ fn typed_expr() -> impl Strategy<Value = (String, String)> {
             (num.clone(), num.clone(), num_op).prop_map(|(a, b, op)| format!("{a} {b} {op}")),
             (num.clone(), prop_oneof![Just("FLOOR"), Just("ROUND")])
                 .prop_map(|(a, op)| format!("{a} {op}")),
+            (num.clone(), 0u32..4).prop_map(|(a, e)| format!("{a} {e} POW")),
+            num.clone().prop_map(|a| format!("{a} [ 1 2 ] LENGTH ADD")),
             (num.clone(), num.clone(), boolean.clone())
                 .prop_map(|(a, b, m)| format!("{a} {b} {m} SELECT")),
         ];

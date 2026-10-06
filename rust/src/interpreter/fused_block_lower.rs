@@ -47,6 +47,7 @@ fn word_op(id: WordId) -> Option<Op> {
         WordId::Not => Op::Not,
         WordId::And => Op::And,
         WordId::Select => Op::Select,
+        WordId::Pow => Op::Pow,
         _ => return None,
     })
 }
@@ -180,6 +181,24 @@ impl Lowering<'_> {
                     self.call(name, call_depth)?;
                     i += 1;
                     continue;
+                }
+                // `[ ... ] LENGTH` on a literal Vector is the
+                // constant `quickened::try_length_call` answers, for one
+                // step and nothing else.
+                CompiledOp::PushVectorLiteral(value) => {
+                    let CompiledOp::CallBuiltin(call) = source.get(i + 1)? else {
+                        return None;
+                    };
+                    if call.word?.id != WordId::Length
+                        || value.absence.is_some()
+                        || !value.is_vector()
+                        || value.is_nil()
+                    {
+                        return None;
+                    }
+                    let len = crate::types::fraction::Fraction::from(value.len() as i64);
+                    i += 1;
+                    (Op::Const(Plain::Num(len)), 0, 1)
                 }
                 _ => return None,
             };

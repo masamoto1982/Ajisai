@@ -71,6 +71,9 @@ pub(crate) enum SegOp {
     Bind(u32),
     /// A bound name read: free, as a binding read is.
     Load(u32),
+    /// A Word whose answer is a constant — `[ ... ] LENGTH` on a literal
+    /// Vector: a step, followed by the nesting check.
+    Const(Slot),
 }
 
 /// A lowered run of a line (`segment_lower`).
@@ -152,6 +155,10 @@ impl Segment {
                 SegOp::Load(slot) => stack.push(slots[slot as usize]),
                 SegOp::PushWord(value) => {
                     stack.push(Slot::Bool(value));
+                    checked_below = Some(stack.len());
+                }
+                SegOp::Const(slot) => {
+                    stack.push(slot);
                     checked_below = Some(stack.len());
                 }
                 SegOp::Bind(slot) => {

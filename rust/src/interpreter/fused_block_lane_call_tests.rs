@@ -1,8 +1,9 @@
-//! Fused walks over a one-lane seed, through User Word calls, and with an
-//! inexact `DIV` on the integer tier, against the interpreted walk
-//! (`fused_block_tests` holds the comparison).
+//! Fused walks over a one-lane seed, through User Word calls, with an
+//! inexact `DIV` on the integer tier, and with `POW` and `LENGTH` of a
+//! literal, against the interpreted walk (`fused_block_tests` holds the
+//! comparison).
 
-use crate::interpreter::fused_block_tests::{assert_same, Limits};
+use crate::interpreter::fused_block_tests::{assert_same, fused_runs, Limits};
 
 #[test]
 fn lane_and_call_programs_agree() {
@@ -122,4 +123,58 @@ fn an_unchosen_fraction_keeps_the_integer_tier() {
     assert_eq!(rat_runs(&format!("0 1000 RANGE {collatz}")), 0);
     let chosen = "[ 'N' BIND N 2 DIV N N 2 DIV FLOOR 2 MUL N EQ NOT SELECT ] MAP";
     assert_eq!(rat_runs(&format!("0 1000 RANGE {chosen}")), 1);
+}
+
+/// `POW` and `LENGTH` of a literal Vector fuse; `LENGTH` of the element, or
+/// of a literal NIL, does not.
+#[test]
+fn pow_and_literal_length_fuse() {
+    assert_eq!(fused_runs("1 9 RANGE [ 2 POW ] MAP"), 1);
+    assert_eq!(fused_runs("1 9 RANGE [ [ 1 2 3 ] LENGTH ADD ] MAP"), 1);
+    assert_eq!(fused_runs("1 9 RANGE 0 [ 3 POW ADD ] FOLD"), 1);
+    assert_eq!(fused_runs("[ [ 1 ] [ 2 3 ] ] [ LENGTH ] MAP"), 0);
+}
+
+#[test]
+fn pow_and_literal_length_programs_agree() {
+    for source in [
+        "1 9 RANGE [ 2 POW ] MAP",
+        "-9 9 RANGE [ 3 POW ] MAP",
+        "1 9 RANGE [ 1/2 ADD 5 POW ] MAP",
+        "1 70 RANGE [ 'X' BIND 2 X POW ] MAP",
+        "1 9 RANGE [ -1 POW ] MAP",
+        "1 9 RANGE [ 0 POW ] MAP",
+        "[ 0 1 2 ] [ 0 SWAP POW ] MAP",
+        "1 9 RANGE [ 1/2 POW ] MAP",
+        "1 600 RANGE 0 [ 2 POW ADD ] FOLD",
+        "1 600 RANGE [ 0 ] [ 2 POW ADD ] SCAN",
+        "1 9 RANGE [ [ 1 2 3 ] LENGTH ADD ] MAP",
+        "1 9 RANGE [ [ ] LENGTH MUL ] MAP",
+        "1 9 RANGE [ [ 1 NIL ] LENGTH ADD ] MAP",
+        "1 9 RANGE [ [ [ 1 2 ] [ 3 4 ] ] LENGTH ADD ] MAP",
+        "1 9 RANGE [ [ 1 2 3 ] LENGTH POW ] MAP",
+    ] {
+        for steps in [None, Some(0), Some(3), Some(20)] {
+            for work in [None, Some(0), Some(5), Some(40)] {
+                assert_same(
+                    source,
+                    Limits {
+                        steps,
+                        work,
+                        bits: None,
+                    },
+                );
+            }
+        }
+        for bits in [8, 32, 63, 64, 65] {
+            assert_same(
+                source,
+                Limits {
+                    steps: None,
+                    work: None,
+                    bits: Some(bits),
+                },
+            );
+        }
+    }
 }

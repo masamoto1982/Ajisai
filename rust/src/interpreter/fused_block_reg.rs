@@ -47,6 +47,7 @@ enum Kind {
     Not,
     And,
     Select,
+    Pow,
 }
 
 /// `dst = kind(a, b, c)`. `dst` is always a register numbered above every
@@ -95,6 +96,17 @@ fn exact_div(a: i64, b: i64) -> (i64, bool) {
     }
 }
 
+/// `a` to the `b`, as `quickened::small_power` answers it, with
+/// `true` wherever it declines (so the walk is abandoned). Kept out of line:
+/// its loop, inlined into `apply`, slows every other instruction's walk.
+#[inline(never)]
+fn pow_int(a: i64, b: i64) -> (i64, bool) {
+    match crate::interpreter::quickened::small_power((a, 1), (b, 1)) {
+        Some((n, 1)) => (n, false),
+        _ => (0, true),
+    }
+}
+
 /// One instruction on scalars: the value, and whether it left the tier.
 #[inline(always)]
 fn apply(kind: Kind, a: i64, b: i64, c: i64) -> (i64, bool) {
@@ -112,6 +124,7 @@ fn apply(kind: Kind, a: i64, b: i64, c: i64) -> (i64, bool) {
         Kind::Not => (i64::from(a == 0), false),
         Kind::And => (i64::from(a != 0 && b != 0), false),
         Kind::Select => (if c != 0 { a } else { b }, false),
+        Kind::Pow => pow_int(a, b),
     }
 }
 
@@ -185,6 +198,7 @@ fn exec_column(ins: &Instr, regs: &mut [i64], width: usize, len: usize) -> bool 
         Kind::Mul => zip2(dst, a, b, overflowing_mul),
         Kind::FloorDiv => zip2(dst, a, b, floor_div),
         Kind::ExactDiv => zip2(dst, a, b, exact_div),
+        Kind::Pow => zip2(dst, a, b, pow_int),
         Kind::Min => zip2(dst, a, b, |x, y| (x.min(y), false)),
         Kind::Max => zip2(dst, a, b, |x, y| (x.max(y), false)),
         Kind::Lt => zip2(dst, a, b, |x, y| (i64::from(x < y), false)),
@@ -240,6 +254,7 @@ impl RegProgram {
                 | IntOp::Lt
                 | IntOp::Gt
                 | IntOp::Eq
+                | IntOp::Pow
                 | IntOp::And => {
                     let b = stack.pop()?;
                     let a = stack.pop()?;
@@ -254,6 +269,7 @@ impl RegProgram {
                         IntOp::Lt => Kind::Lt,
                         IntOp::Gt => Kind::Gt,
                         IntOp::Eq => Kind::Eq,
+                        IntOp::Pow => Kind::Pow,
                         _ => Kind::And,
                     };
                     emit(&mut stack, kind, a, b, none);
