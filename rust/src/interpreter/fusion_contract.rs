@@ -43,6 +43,7 @@ use crate::kernel::generated::{
     ValueDomain, WordId,
 };
 use crate::types::Value;
+use num_integer::Integer;
 
 /// Whether `word`'s contract lets it run on plain values inside a fused
 /// block. See the module documentation for the conditions.
@@ -134,6 +135,21 @@ fn uncharged(value: Value) -> Option<Answer> {
 /// declines here.
 fn gcd(operands: &[Plain], _: &Interpreter) -> Option<Answer> {
     let [a, b] = operands else { return None };
+    // Two machine-word integers: the gcd the law computes, without the
+    // `BigInt`s it reads them into. `Fraction::new` would hold the answer as
+    // this same machine-word pair, so the value is the law's to the
+    // representation (the route suites compare it).
+    if let (Plain::Num(x), Plain::Num(y)) = (a, b) {
+        if let (Some((n, 1)), Some((m, 1))) = (x.extract_i64_pair(), y.extract_i64_pair()) {
+            if let Ok(g) = i64::try_from(n.unsigned_abs().gcd(&m.unsigned_abs())) {
+                return Some(Answer {
+                    value: Plain::Num(crate::types::fraction::Fraction::from(g)),
+                    work: 0,
+                    fastpath: 0,
+                });
+            }
+        }
+    }
     let law =
         crate::interpreter::math_ops::gcd_scalar(&a.clone().into_value(), &b.clone().into_value());
     uncharged(law.ok()?)
