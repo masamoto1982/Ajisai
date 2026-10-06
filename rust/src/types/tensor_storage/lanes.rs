@@ -34,3 +34,38 @@ impl DenseTensor {
         Self::from_columns(numerators, denominators, shape, is_pure_integer, absences)
     }
 }
+
+impl DenseTensor {
+    /// `self`'s lanes followed by `other`'s, as a tensor of `shape` — `CONCAT`
+    /// of two dense operands whose rows agree in shape.
+    ///
+    /// The columns are appended as they are stored; purity holds when it held
+    /// for both; and the reasons of `other`'s absent lanes move up by
+    /// `self.len()`, which is the whole of the re-indexing, the reverse of what
+    /// [`Self::lanes`] does to a slice.
+    pub fn concatenated(&self, other: &Self, shape: Vec<usize>) -> Self {
+        let offset = self.len();
+        let mut numerators = Column::with_capacity(offset + other.len());
+        numerators.extend_from_slice(&self.numerators);
+        numerators.extend_from_slice(&other.numerators);
+        let mut denominators = Column::with_capacity(offset + other.len());
+        denominators.extend_from_slice(&self.denominators);
+        denominators.extend_from_slice(&other.denominators);
+        let absences = self
+            .absences()
+            .map(|(index, metadata)| (index, metadata.clone()))
+            .chain(
+                other
+                    .absences()
+                    .map(|(index, metadata)| (index + offset, metadata.clone())),
+            )
+            .collect();
+        Self::from_columns(
+            numerators,
+            denominators,
+            shape,
+            self.is_pure_integer && other.is_pure_integer,
+            absences,
+        )
+    }
+}

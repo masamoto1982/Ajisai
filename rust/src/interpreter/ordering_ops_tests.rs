@@ -73,8 +73,9 @@ async fn a_dense_scan_counts_in_the_order_unique_reports() {
 }
 
 /// The two routes agree on the same integers *in the same order*. `MAP`
-/// leaves a dense `Tensor`; `CONCAT` does not promote, so the right-hand
-/// side is the same sequence as a nested `Vector` and takes the boxed scan
+/// leaves a dense `Tensor`; `CONCAT` with a boxed operand (the empty literal)
+/// does not promote, so the right-hand side is the same sequence as a nested
+/// `Vector` and takes the boxed scan
 /// the dense one declines.
 ///
 /// The order matters to the comparison, not just to the contract: an earlier
@@ -90,7 +91,7 @@ async fn the_two_routes_answer_alike() {
                 &format!("0 99 RANGE [ 1/7 MUL FLOOR ] MAP {word}"),
                 &format!(
                     "0 49 RANGE [ 1/7 MUL FLOOR ] MAP \
-                     50 99 RANGE [ 1/7 MUL FLOOR ] MAP CONCAT {word}"
+                     50 99 RANGE [ 1/7 MUL FLOOR ] MAP CONCAT [ ] CONCAT {word}"
                 )
             )
             .await,

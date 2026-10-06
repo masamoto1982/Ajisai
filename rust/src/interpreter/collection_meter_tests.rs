@@ -382,8 +382,9 @@ async fn every_charging_word_charges_something() {
 // Measured as a *delta*, not as a total: the two programs that put the same
 // integers on the stack in different representations do so through different
 // prefixes, and a total would be comparing those prefixes as much as the
-// sort. `CONCAT` builds with the non-promoting constructor, so it leaves a
-// nested `Vector` where `REVERSE` of a range leaves a dense `Tensor`.
+// sort. `CONCAT` with a boxed operand (the empty literal) builds with the
+// non-promoting constructor, so it leaves a nested `Vector` where `REVERSE` of
+// a range leaves a dense `Tensor`.
 
 /// Collection work charged by `source`, which must compute.
 async fn collection_work_of(source: &str) -> u64 {
@@ -407,8 +408,8 @@ async fn charge_of_appending(word: &str, prefix: &str) -> u64 {
 }
 
 /// The same integers, as a flat dense `Tensor` and as a nested `Vector`.
-/// `REVERSE` of a range leaves the former; `CONCAT` does not promote, so it
-/// leaves the latter. `modulo` sets how many distinct values the data holds,
+/// `REVERSE` of a range leaves the former; `CONCAT` with the empty literal
+/// does not promote, so it leaves the latter. `modulo` sets how many distinct values the data holds,
 /// which is the axis a hash-keyed scan's price actually turns on.
 fn dense_and_nested(n: usize, modulo: Option<usize>) -> (String, String) {
     let half = n / 2;
@@ -417,7 +418,7 @@ fn dense_and_nested(n: usize, modulo: Option<usize>) -> (String, String) {
     (
         format!("0 {} RANGE{fold} REVERSE", n - 1),
         format!(
-            "0 {} RANGE{fold} {half} {} RANGE{fold} CONCAT",
+            "0 {} RANGE{fold} {half} {} RANGE{fold} CONCAT [ ] CONCAT",
             half - 1,
             n - 1
         ),
@@ -430,8 +431,13 @@ async fn sorting_costs_the_same_whichever_representation_holds_the_elements() {
         let half = n / 2;
         // Dense: a range reversed is a flat `Tensor`.
         let dense = format!("0 {} RANGE REVERSE", n - 1);
-        // Nested: `CONCAT` does not promote, so this stays a `Vector`.
-        let nested = format!("0 {} RANGE {half} {} RANGE CONCAT", half - 1, n - 1);
+        // Nested: `CONCAT` with a boxed operand does not promote, so this
+        // stays a `Vector`.
+        let nested = format!(
+            "0 {} RANGE {half} {} RANGE CONCAT [ ] CONCAT",
+            half - 1,
+            n - 1
+        );
         assert_eq!(
             charge_of_appending("SORT", &dense).await,
             charge_of_appending("SORT", &nested).await,
