@@ -7,7 +7,13 @@
       "stack": {
         "inputs": 0,
         "outputs": 1,
-        "operands": []
+        "operands": [],
+        "domains": {
+          "operands": [],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "preserveReason",
       "projection": {
@@ -51,7 +57,13 @@
       "stack": {
         "inputs": 0,
         "outputs": 1,
-        "operands": []
+        "operands": [],
+        "domains": {
+          "operands": [],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "preserveReason",
       "projection": {
@@ -98,7 +110,16 @@
         "operands": [
           "truth",
           "truth"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "boolean",
+            "boolean"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
@@ -148,7 +169,15 @@
         "outputs": 1,
         "operands": [
           "truth"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "boolean"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
@@ -199,7 +228,17 @@
           "element",
           "element",
           "truth"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any",
+            "any",
+            "boolean"
+          ],
+          "results": [
+            "any"
+          ]
+        }
       },
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
@@ -250,7 +289,16 @@
         "operands": [
           "data",
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any",
+            "any"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -299,7 +347,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -351,7 +408,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -403,7 +469,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -455,7 +530,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -508,7 +592,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -560,7 +653,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -612,7 +714,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -662,7 +772,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -714,7 +832,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -767,7 +894,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -819,7 +955,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -871,7 +1015,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -933,7 +1086,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -986,7 +1148,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1039,7 +1209,22 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            [
+              "vector",
+              "record"
+            ],
+            [
+              "scalar",
+              "string"
+            ]
+          ],
+          "results": [
+            "any"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1098,7 +1283,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1148,7 +1341,16 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "scalar"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1202,7 +1404,16 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "scalar"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1256,7 +1467,16 @@
         "operands": [
           "data",
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1305,7 +1525,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1403,7 +1631,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1456,7 +1693,25 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            [
+              "scalar",
+              "boolean",
+              "string"
+            ]
+          ],
+          "results": [
+            [
+              "vector",
+              "scalar",
+              "boolean",
+              "string"
+            ]
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1508,7 +1763,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1556,7 +1819,16 @@
         "operands": [
           "data",
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1608,7 +1880,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1657,7 +1937,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1704,7 +1992,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1755,7 +2051,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1806,7 +2110,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1856,7 +2168,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "record"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1907,7 +2227,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1960,7 +2288,26 @@
           "data",
           "leaf",
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            [
+              "vector",
+              "record"
+            ],
+            [
+              "scalar",
+              "string"
+            ],
+            "any"
+          ],
+          "results": [
+            [
+              "vector",
+              "record"
+            ]
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -2014,7 +2361,16 @@
         "operands": [
           "data",
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "vector"
+          ],
+          "results": [
+            "record"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2067,7 +2423,16 @@
         "operands": [
           "data",
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "any"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -2119,7 +2484,16 @@
         "operands": [
           "data",
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "any"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2170,7 +2544,16 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "scalar"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -2225,7 +2608,16 @@
         "operands": [
           "data",
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "vector"
+          ],
+          "results": [
+            "record"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2277,7 +2669,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "record"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2326,7 +2726,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "record"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2376,7 +2784,16 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "record",
+            "string"
+          ],
+          "results": [
+            "record"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -2428,7 +2845,16 @@
         "operands": [
           "data",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "record",
+            "string"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2479,7 +2905,16 @@
         "operands": [
           "data",
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "record",
+            "record"
+          ],
+          "results": [
+            "record"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2529,7 +2964,16 @@
         "operands": [
           "data",
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2580,7 +3024,16 @@
         "operands": [
           "data",
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2634,7 +3087,17 @@
           "data",
           "element",
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "any",
+            "vector"
+          ],
+          "results": [
+            "any"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2686,7 +3149,17 @@
           "data",
           "element",
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "any",
+            "vector"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2737,7 +3210,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2787,7 +3268,15 @@
         "outputs": 1,
         "operands": [
           "data"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2837,7 +3326,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2888,7 +3385,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2939,7 +3444,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2991,7 +3504,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string",
+            "string"
+          ],
+          "results": [
+            "vector"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -3044,7 +3566,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string",
+            "string"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -3099,7 +3630,17 @@
           "leaf",
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string",
+            "string",
+            "string"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -3151,7 +3692,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "scalar"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -3208,7 +3757,19 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            [
+              "scalar",
+              "boolean",
+              "string"
+            ]
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -3258,7 +3819,16 @@
         "operands": [
           "leaf",
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "scalar",
+            "scalar"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -3312,7 +3882,15 @@
         "outputs": 1,
         "operands": [
           "leaf"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "any"
+          ]
+        }
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -3371,7 +3949,15 @@
         "outputs": 1,
         "operands": [
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3470,7 +4056,18 @@
         "outputs": 1,
         "operands": [
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            [
+              "symbol",
+              "vector"
+            ]
+          ],
+          "results": [
+            "record"
+          ]
+        }
       },
       "nilPolicy": "createsNil",
       "projection": {
@@ -3522,7 +4119,13 @@
         "outputs": 0,
         "operands": [
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": []
+        }
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -3570,7 +4173,13 @@
       "stack": {
         "inputs": 0,
         "outputs": 1,
-        "operands": []
+        "operands": [],
+        "domains": {
+          "operands": [],
+          "results": [
+            "nil"
+          ]
+        }
       },
       "nilPolicy": "preserveReason",
       "projection": {
@@ -3617,7 +4226,15 @@
         "outputs": 1,
         "operands": [
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": [
+            "boolean"
+          ]
+        }
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3664,7 +4281,15 @@
         "outputs": 1,
         "operands": [
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3712,7 +4337,15 @@
         "outputs": 1,
         "operands": [
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": [
+            "nil"
+          ]
+        }
       },
       "nilPolicy": "createsNil",
       "projection": {
@@ -3764,7 +4397,17 @@
         "operands": [
           "element",
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any",
+            [
+              "string",
+              "vector"
+            ]
+          ],
+          "results": []
+        }
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3818,7 +4461,14 @@
         "operands": [
           "control",
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "vector",
+            "string"
+          ],
+          "results": []
+        }
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -3876,7 +4526,13 @@
         "outputs": 0,
         "operands": [
           "control"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "string"
+          ],
+          "results": []
+        }
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -3930,7 +4586,15 @@
         "outputs": 1,
         "operands": [
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": [
+            "string"
+          ]
+        }
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3979,7 +4643,13 @@
         "outputs": 0,
         "operands": [
           "element"
-        ]
+        ],
+        "domains": {
+          "operands": [
+            "any"
+          ],
+          "results": []
+        }
       },
       "nilPolicy": "consumeNil",
       "projection": {

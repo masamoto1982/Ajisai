@@ -202,3 +202,5 @@ mod builtin_dispatch_tests;
 mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod scalar_fastpath_tests;
+#[cfg(test)]
+mod word_domains_tests;

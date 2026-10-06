@@ -216,6 +216,29 @@
          "truth"
         ]
        }
+      },
+      "domains": {
+       "description": "The value domains (LANG.VALUES.DISJOINT) of each operand and result, first-pushed first. An operand's entry names what the Word reads there: for a `leaf` or `truth` operand, the domain of one lane, since a Vector or Record there lifts the Word over its elements (LANG.COLLECTIONS.LIFT); for any other role, the whole value. A result's entry names what the Word answers when every operand is in its declared domain and nothing is lifted; a NIL the Word projects is declared by `projection`, not here. Present exactly when both `inputs` and `outputs` are fixed counts, with one entry per operand and per result. Read by the fused route, which runs a Word inside a block only when its domains stay within scalars and Booleans.",
+       "type": "object",
+       "required": [
+        "operands",
+        "results"
+       ],
+       "properties": {
+        "operands": {
+         "type": "array",
+         "items": {
+          "$ref": "#/$defs/domainSet"
+         }
+        },
+        "results": {
+         "type": "array",
+         "items": {
+          "$ref": "#/$defs/domainSet"
+         }
+        }
+       },
+       "additionalProperties": false
       }
      },
      "additionalProperties": false
@@ -345,6 +368,35 @@
        ]
       }
      }
+    }
+   ]
+  },
+  "domain": {
+   "description": "One of the seven disjoint domains of LANG.VALUES.DISJOINT, or `any` for a position that takes every domain.",
+   "enum": [
+    "scalar",
+    "boolean",
+    "string",
+    "vector",
+    "record",
+    "nil",
+    "symbol",
+    "any"
+   ]
+  },
+  "domainSet": {
+   "description": "One domain, or a list of two or more when a position takes several.",
+   "oneOf": [
+    {
+     "$ref": "#/$defs/domain"
+    },
+    {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/domain"
+     },
+     "minItems": 2,
+     "uniqueItems": true
     }
    ]
   }
