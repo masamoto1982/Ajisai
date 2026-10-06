@@ -40,7 +40,7 @@
 
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 use crate::interpreter::word_identity::content_digest;
 use crate::types::exact::algebraic::floor_scaled;
@@ -241,14 +241,18 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
     }
 }
 
-/// A rational scalar, reduced and sign-normalized the same way
-/// `impl Hash for Fraction` (`types/fraction.rs`) is: divide out the gcd, then
-/// flip both signs if the denominator came out negative. The gcd is
-/// `Fraction`'s own `balanced_bigint_gcd` (Lehmer's method on wide pairs): a
-/// wide stack value's digest is one gcd of its full width, which `num-bigint`'s
-/// binary gcd made as costly as the computation that produced it. Any gcd
-/// gives the same canonical reduced pair, so an unreduced and a reduced
-/// fraction still land on identical bytes (`unreduced_fraction_matches_reduced`).
+/// A rational scalar in lowest terms with a positive denominator, so that
+/// equal values land on identical bytes however each was built.
+///
+/// A `Small` pair is reduced here (a machine-word gcd), which keeps the digest
+/// equal for an unreduced construction (`unreduced_fraction_matches_reduced`).
+/// A `Big` pair is written as it is held: every constructor that makes one
+/// leaves it in lowest terms with a positive denominator — `Fraction::new`
+/// divides out the gcd, the arithmetic's cross-cancellation keeps reduced
+/// operands reduced, and the one unreduced constructor, `create_unreduced`,
+/// exists only in tests (`fraction_lowest_terms_tests` holds the arithmetic to
+/// it). Re-reducing cost one gcd of the value's full width per digest, as
+/// much as the computation that produced it on a wide running product.
 fn encode_rational(bytes: &mut Vec<u8>, f: &Fraction) {
     // A pair held in two machine words is reduced and spelled in place: the
     // same lowest terms, sign and radix-16 digits the `BigInt` route below
@@ -268,8 +272,24 @@ fn encode_rational(bytes: &mut Vec<u8>, f: &Fraction) {
             return;
         }
     }
+    if let crate::types::fraction::FractionRepr::Big(big) = &f.repr {
+        debug_assert!(
+            big.denominator.sign() == Sign::Plus
+                && crate::types::fraction_arithmetic::balanced_bigint_gcd(
+                    &big.numerator,
+                    &big.denominator
+                )
+                .is_one(),
+            "a Big fraction is held in lowest terms with a positive denominator"
+        );
+        bytes.push(b'Q');
+        write_sint(bytes, &big.numerator);
+        write_sint(bytes, &big.denominator);
+        return;
+    }
+    // `Small` with a zero denominator (the NIL rational): reduced as before.
     let (mut n, mut d) = f.to_bigint_pair();
-    let g = crate::types::fraction_arithmetic::balanced_bigint_gcd(&n, &d);
+    let g = n.gcd(&d);
     if !g.is_zero() {
         n /= &g;
         d /= &g;

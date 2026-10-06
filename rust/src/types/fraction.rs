@@ -325,7 +325,11 @@ impl Fraction {
         Self::from_bigint_pair(num, den)
     }
 
-    #[inline]
+    /// A pair kept as given (only the sign normalized), for tests of what
+    /// must not depend on reduction (`impl Hash`, the digest's `Small` path).
+    /// Test-only: every other constructor keeps a `Big` pair in lowest terms,
+    /// which the observation digest relies on.
+    #[cfg(test)]
     pub fn create_unreduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
         if denominator.is_zero() {
             panic!("Division by zero");
