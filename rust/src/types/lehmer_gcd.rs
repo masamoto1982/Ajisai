@@ -7,7 +7,7 @@
 //! map) reduces numbers of tens of thousands of bits at every step, and spent
 //! 94% of its time there. Lehmer's method runs Euclid's quotients on the top
 //! two words alone, as long as they are provably the full numbers' quotients
-//! (Knuth, TAOCP vol. 2, §4.5.2, Algorithm L), then applies the steps they
+//! (Knuth, TAOCP vol. 2, 4.5.2, Algorithm L), then applies the steps they
 //! stand for to the full numbers in one pass: about one pass per word of
 //! progress, not per bit.
 //!
