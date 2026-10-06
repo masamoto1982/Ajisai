@@ -32,8 +32,9 @@ use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
 use crate::types::{Value, ValueData};
 
-use super::debug_diagnosis::{CauseClass, DebugCheck, DebugDiagnosis, ErrorPhase, LocalizedText};
+use super::debug_diagnosis::{CauseClass, DebugCheck, DebugDiagnosis, LocalizedText};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
+use super::trace_diagnosis::{EventDiagnosis, NilProduction};
 
 /// The operational-NIL metadata of a value, or `None` when it is not an
 /// operational NIL.
@@ -256,29 +257,33 @@ impl Interpreter {
             word,
             reason.as_protocol_str()
         );
-        let mut diagnosis = DebugDiagnosis::from_error_category(
-            ErrorPhase::ExecuteWord,
-            Some(word),
-            None,
-            Some(&reason),
-            stack_len_before,
-            stack_len_after,
-            Some(message.clone()),
-        );
-        // A User Word that answered the NIL is named as one; only the live
-        // dictionary knows it is.
-        diagnosis.with_user_vocabulary(self.user_words.keys().map(String::as_str));
         // The absence envelope belongs to the value that actually carries the
         // projection, which for a lifted Word is a lane rather than the result.
         let absence = self.stack.last().and_then(projected_absence_metadata);
-        // The ceiling facts behind a resource projection are decided at the
-        // projection site — the only place that knows which limit fired and at
-        // what size — so they are carried over rather than rebuilt from the
-        // category here, which could only say that *a* limit was crossed.
-        diagnosis.resource_limit = absence
+        // The diagnosis is built when the trace is read, from these facts
+        // (`trace_diagnosis`). Two of them can only be read here:
+        // - a User Word that answered the NIL is named as one, and only the
+        //   live dictionary knows it is;
+        // - the ceiling facts behind a resource projection are decided at the
+        //   projection site — the only place that knows which limit fired and
+        //   at what size — so they are carried over rather than rebuilt from
+        //   the category, which could only say that *a* limit was crossed.
+        let user_word =
+            NilProduction::user_word_of(word, |name| self.user_words.contains_key(name));
+        let resource_limit = absence
             .as_ref()
             .and_then(|metadata| metadata.diagnosis.as_ref())
             .and_then(|d| d.resource_limit.clone());
+        let diagnosis = EventDiagnosis::nil_produced(NilProduction {
+            word: word.to_string(),
+            reason,
+            stack_len_before,
+            stack_len_after,
+            message: message.clone(),
+            user_word,
+            resource_limit,
+            enclosing: Vec::new(),
+        });
         self.push_error_flow_trace(ErrorFlowEvent {
             kind: ErrorFlowEventKind::NilProduced,
             word: Some(word.to_string()),

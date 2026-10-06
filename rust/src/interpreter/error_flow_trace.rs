@@ -1,4 +1,5 @@
 use super::debug_diagnosis::DebugDiagnosis;
+use super::trace_diagnosis::EventDiagnosis;
 use crate::error::ErrorCategory;
 use crate::semantic::AbsenceMetadata;
 
@@ -17,7 +18,8 @@ pub struct ErrorFlowEvent {
     pub stack_len_before: usize,
     pub stack_len_after: usize,
     pub message: String,
-    pub diagnosis: Option<DebugDiagnosis>,
+    /// Built on first read for a `nilProduced` event (`trace_diagnosis`).
+    pub diagnosis: Option<EventDiagnosis>,
     /// The raised error as it renders, for a `WordError`; empty otherwise.
     ///
     /// An error unwinds through every frame that reached it, and each frame
@@ -83,7 +85,7 @@ impl crate::interpreter::Interpreter {
             stack_len_before,
             stack_len_after: self.stack.len(),
             message: format!("word error word={} error={}", word, err),
-            diagnosis: Some(diagnosis),
+            diagnosis: Some(EventDiagnosis::built(diagnosis)),
             error_text: err.to_string(),
         });
     }
@@ -131,7 +133,7 @@ impl crate::interpreter::Interpreter {
             stack_len_before,
             stack_len_after: self.stack.len(),
             message: format!("word error word={} error={}", word, err),
-            diagnosis: Some(diagnosis),
+            diagnosis: Some(EventDiagnosis::built(diagnosis)),
             error_text,
         });
     }
