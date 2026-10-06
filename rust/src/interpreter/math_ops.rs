@@ -296,7 +296,7 @@ fn non_numeric_value() -> Value {
     Value::from_symbol("__nonNumeric")
 }
 
-fn gcd_scalar(a: &Value, b: &Value) -> Result<Value> {
+pub(crate) fn gcd_scalar(a: &Value, b: &Value) -> Result<Value> {
     if exact_real_of(a).is_none() || exact_real_of(b).is_none() {
         return Err(non_numeric(&[a, b]));
     }

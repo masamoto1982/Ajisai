@@ -201,6 +201,12 @@ const projectionReasons = (reason) => {
 const operandRoles = (roles) =>
   `&[${(roles ?? []).map((role) => `OperandRole::${pascal(role)}`).join(', ')}]`;
 
+// One position's domains: a single domain or a list, always a slice in Rust.
+const domainSets = (sets) =>
+  `&[${(sets ?? [])
+    .map((set) => `&[${[set].flat().map((domain) => `ValueDomain::${pascal(domain)}`).join(', ')}]`)
+    .join(', ')}]`;
+
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
 
 const rows = entries
@@ -212,6 +218,8 @@ const rows = entries
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
         operand_roles: ${operandRoles(word.stack.operands)},
+        operand_domains: ${domainSets(word.stack.domains?.operands)},
+        result_domains: ${domainSets(word.stack.domains?.results)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
         projection_reasons: ${projectionReasons(word.projection.reason)},
@@ -264,6 +272,23 @@ pub enum OperandRole {
     Control,
     /// Read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH).
     Truth,
+}
+
+/// A value domain (LANG.VALUES.DISJOINT), as a Word's \`stack.domains\`
+/// names one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ValueDomain {
+    /// A number: a rational or an algebraic Scalar.
+    Scalar,
+    Boolean,
+    String,
+    /// A Vector, however it is held (a dense Tensor is one too).
+    Vector,
+    Record,
+    Nil,
+    Symbol,
+    /// Any value: the position takes every domain.
+    Any,
 }
 
 /// Stack arity as declared in spec/words.json: an exact count, or one of the
@@ -328,6 +353,15 @@ pub struct GeneratedWord {
     /// position (\`declared_nil_contract\`), and \`nil_policy\` is its
     /// summary.
     pub operand_roles: &'static [OperandRole],
+    /// The value domains of each operand and of each result, one slice of
+    /// domains per position; both empty when either arity is data-dependent.
+    /// An operand's domains are those of one lane for a \`leaf\` or \`truth\`
+    /// operand and of the whole value otherwise; a result's are those of the
+    /// answer when every operand is in its domains and nothing is lifted.
+    /// Read by \`fusion_contract\`, which runs a Word inside a fused block
+    /// only when every operand and result stays within scalars and Booleans.
+    pub operand_domains: &'static [&'static [ValueDomain]],
+    pub result_domains: &'static [&'static [ValueDomain]],
     pub nil_policy: NilPolicy,
     /// The conditions under which a *well-formed* operand yields a reasoned
     /// NIL; empty for the Words that declare \`never\`. Distinct from

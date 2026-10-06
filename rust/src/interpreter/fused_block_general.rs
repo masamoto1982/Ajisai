@@ -10,6 +10,8 @@
 //!   and no work. `EQ` takes it only for two scalars; any other pair is
 //!   decided by `pairwise_eq`, which counts nothing.
 //! - `FLOOR`, `ROUND`, `NOT`, `AND`, `SELECT` and `BIND` charge nothing else.
+//! - A Word run by its plain law (`fusion_contract`) charges what that law
+//!   reports, which is what its dispatch charges.
 //!
 //! An operand outside the domain a Word accepts is that Word's ERROR, and a
 //! zero divisor its NIL projection; both answer `None` here, for the ordinary
@@ -142,6 +144,17 @@ fn run_block(
                 Plain::Num(Fraction::from_repr(
                     crate::types::fraction::FractionRepr::Small(r.0, r.1),
                 ))
+            }
+            Op::Kernel(kernel) => {
+                let at = stack.len().checked_sub(kernel.arity)?;
+                let answer = (kernel.apply)(&stack[at..], meter.interp)?;
+                stack.truncate(at);
+                meter.work = meter.work.saturating_add(answer.work);
+                if meter.work > meter.work_budget {
+                    return None;
+                }
+                meter.fastpath += answer.fastpath;
+                answer.value
             }
             Op::Load(slot) => slots[*slot].clone()?,
             Op::Bind(slot) => {

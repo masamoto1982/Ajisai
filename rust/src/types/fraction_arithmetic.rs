@@ -8,7 +8,7 @@
 use super::fraction::{compute_gcd_i64, Fraction, FractionRepr};
 use num_bigint::BigInt;
 use num_integer::Integer;
-use num_traits::{One, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 
 impl Fraction {
     /// The pair as `BigInt`s, a `Big` half borrowed and a `Small` one built.
@@ -461,6 +461,15 @@ pub(crate) fn balanced_bigint_gcd(a: &BigInt, b: &BigInt) -> BigInt {
     // and a word gcd, not a `div` per digit.
     if let Some(g) = crate::types::small_divisor::gcd_with_word(wide, narrow) {
         return g;
+    }
+    // Both within two machine words: the binary gcd on `u128`, with none of
+    // the `BigInt` shifts the gcd below makes per bit. This is the `GCD` Word
+    // on ordinary integers, and the reduction of every fraction a little past
+    // a machine word.
+    if wide.bits() <= 128 {
+        if let (Some(x), Some(y)) = (wide.magnitude().to_u128(), narrow.magnitude().to_u128()) {
+            return BigInt::from(x.gcd(&y));
+        }
     }
     if narrow.bits() > LEHMER_BITS {
         return crate::types::lehmer_gcd::gcd(wide, narrow);

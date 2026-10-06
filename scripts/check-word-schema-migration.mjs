@@ -113,6 +113,28 @@ for (const word of words.entries) {
   } else if (operands !== undefined) {
     fail(`${word.name} has data-dependent arity and must not declare operand roles`);
   }
+  // Value domains (LANG.VALUES.DISJOINT) sit beside the roles and must agree
+  // with them: a truth operand is read as a Boolean, a lifted lane is never a
+  // container or an absence, and a control operand is a block, a name or a
+  // message. Which values the Words actually answer is checked by running
+  // them (`rust/src/interpreter/word_domains_tests.rs`).
+  const domains = word.stack.domains;
+  const fixedArity = typeof word.stack.inputs === 'number' && typeof word.stack.outputs === 'number';
+  if (fixedArity !== (domains !== undefined)) {
+    fail(`${word.name} ${fixedArity ? 'must' : 'must not'} declare stack.domains: they are declared exactly when inputs and outputs are fixed`);
+  } else if (domains !== undefined) {
+    if (domains.operands.length !== word.stack.inputs || domains.results.length !== word.stack.outputs) {
+      fail(`${word.name} declares ${domains.operands.length} operand and ${domains.results.length} result domain(s) for ${word.stack.inputs} input(s) and ${word.stack.outputs} output(s)`);
+    }
+    const allowed = { truth: ['boolean'], leaf: ['scalar', 'boolean', 'string', 'symbol'], control: ['vector', 'string', 'symbol'] };
+    (operands ?? []).forEach((role, i) => {
+      const declared = [domains.operands[i]].flat();
+      const permitted = allowed[role];
+      if (permitted && declared.some((domain) => !permitted.includes(domain))) {
+        fail(`${word.name} operand ${i + 1} is a ${role} operand but declares domain ${declared.join(' | ')}`);
+      }
+    });
+  }
   for (const clause of word.clauses) if (!language.includes(`${clause} —`)) fail(`${word.name} references missing clause ${clause}`);
   // Two clauses restate a fact the declaration already records, so the
   // citation is derived from it rather than chosen: a Word is subject to the

@@ -131,6 +131,11 @@ mod value_as_code;
 
 mod execute_builtin;
 
+pub(crate) mod fusion_contract;
+#[cfg(test)]
+mod fusion_contract_route_tests;
+#[cfg(test)]
+mod fusion_contract_tests;
 pub(crate) mod nil_diagnostics;
 
 #[cfg(test)]
@@ -202,3 +207,5 @@ mod builtin_dispatch_tests;
 mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod scalar_fastpath_tests;
+#[cfg(test)]
+mod word_domains_tests;

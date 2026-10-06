@@ -19,6 +19,8 @@
 //! - `POW` on a plain base and a non-negative integer exponent whose answer
 //!   stays in a machine word, and `[ ... ] LENGTH` on a literal Vector (a
 //!   constant): each one step and nothing else, as `quickened` charges them;
+//! - any other Word whose contract admits it to a fused block and that has a
+//!   plain law there (`fusion_contract`): `GCD`, `NIL?`, `DEPTH`;
 //! - User Words whose bodies are made of these (`fused_block_lower`).
 //!
 //! Such a block is lowered here and run against the elements directly, in one
@@ -118,6 +120,10 @@ pub(crate) enum Op {
     /// fractional exponent, an answer past a machine word, an exponent the
     /// dispatch refuses as too large — declines the walk.
     Pow,
+    /// Any other Word the contract admits (`fusion_contract`): its plain law,
+    /// a step, and the work and fast-path hits that law reports. Run by the
+    /// general tier only; the typed tiers decline a block that has one.
+    Kernel(&'static crate::interpreter::fusion_contract::PlainKernel),
 }
 
 impl Op {
@@ -319,6 +325,14 @@ impl FusedBlock {
                     let (m, f, t) = (stack.pop()?, stack.pop()?, stack.pop()?);
                     if m || f || t {
                         return None;
+                    }
+                    stack.push(false);
+                }
+                Op::Kernel(kernel) => {
+                    for _ in 0..kernel.arity {
+                        if stack.pop()? {
+                            return None;
+                        }
                     }
                     stack.push(false);
                 }

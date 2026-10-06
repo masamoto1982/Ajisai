@@ -31,7 +31,10 @@ use crate::interpreter::{is_plan_valid, CompiledPlan, Interpreter};
 use crate::kernel::generated::WordId;
 use crate::types::{Token, Value};
 
-fn word_op(id: WordId) -> Option<Op> {
+/// The op `id` lowers to: a hand-written one, or the plain law of a Word the
+/// contract admits (`fusion_contract`). `fusion_contract_tests` holds every
+/// hand-written one to its Word's contract too.
+pub(crate) fn word_op(id: WordId) -> Option<Op> {
     Some(match id {
         WordId::Add => Op::Arith(ExactArithmeticSchema::Add),
         WordId::Sub => Op::Arith(ExactArithmeticSchema::Sub),
@@ -48,7 +51,7 @@ fn word_op(id: WordId) -> Option<Op> {
         WordId::And => Op::And,
         WordId::Select => Op::Select,
         WordId::Pow => Op::Pow,
-        _ => return None,
+        _ => Op::Kernel(crate::interpreter::fusion_contract::kernel(id)?),
     })
 }
 
@@ -158,6 +161,7 @@ impl Lowering<'_> {
                     let (pops, pushes) = match op {
                         Op::Floor | Op::Round | Op::Not => (1, 1),
                         Op::Select => (3, 1),
+                        Op::Kernel(kernel) => (kernel.arity, 1),
                         _ => (2, 1),
                     };
                     (op, pops, pushes)

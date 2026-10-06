@@ -5,6 +5,7 @@ use super::fraction::Fraction;
 use super::fraction_arithmetic::balanced_bigint_gcd;
 use num_bigint::BigInt;
 use num_integer::Integer;
+use num_traits::Signed;
 use proptest::prelude::*;
 
 /// Hand-picked pairs covering the shapes the doc comment's measurements
@@ -51,6 +52,21 @@ proptest! {
             b = -b;
         }
         prop_assert_eq!(balanced_bigint_gcd(&a, &b), a.gcd(&b));
+    }
+
+    /// Both operands within two machine words, the `u128` path: signs,
+    /// zero, and the edges of both widths (`u128::MAX` and `i128::MIN`
+    /// measure 128 bits).
+    #[test]
+    fn agrees_with_integer_gcd_within_two_words(
+        a in prop_oneof![any::<i128>(), Just(i128::MIN), Just(0i128), (0u32..64).prop_map(|k| 3i128.pow(k))],
+        b in prop_oneof![any::<i64>().prop_map(i128::from), Just(i128::MAX), Just(0i128)],
+        widen in any::<bool>(),
+    ) {
+        let a = BigInt::from(a);
+        let b = if widen { BigInt::from(u128::MAX) - BigInt::from(b).abs() } else { BigInt::from(b) };
+        prop_assert_eq!(balanced_bigint_gcd(&a, &b), a.gcd(&b));
+        prop_assert_eq!(balanced_bigint_gcd(&b, &a), a.gcd(&b));
     }
 
     /// Henrici's `add`/`sub` against the schoolbook oracle
