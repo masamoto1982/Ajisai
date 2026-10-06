@@ -11,10 +11,43 @@ use num_traits::ToPrimitive;
 /// anything else — so there is no singleton-lifting branch here: an element is
 /// carried across exactly as it sits, and `[ [ 1 ] ] [ [ 2 ] ] CONCAT` stays
 /// `[ [ 1 ] [ 2 ] ]`.
+///
+/// Two dense Tensors whose rows have one shape join as columns
+/// (`DenseTensor::concatenated`). The nested route boxed every lane of both
+/// operands into a `Value` and answered an AoS `Vector` — 72 ms for two
+/// million-lane ranges, and a result every Word downstream then had to read
+/// the slow way. The joined Tensor equals the Vector it replaces
+/// (`tensor_eq_vector`), and `CONCAT`'s charge is priced from the operands
+/// before either route runs, so the choice is unobservable
+/// (LANG.AUTHORITY.FREEDOM).
 fn concat_values(left: &Value, right: &Value) -> Value {
-    let mut elements = Vec::new();
-    elements.extend(extract_vector_elements(left));
-    elements.extend(extract_vector_elements(right));
+    use crate::types::ValueData;
+    if let (
+        ValueData::Tensor {
+            data: left_data,
+            shape: left_shape,
+        },
+        ValueData::Tensor {
+            data: right_data,
+            shape: right_shape,
+        },
+    ) = (&left.data, &right.data)
+    {
+        if !left_shape.is_empty() && !right_shape.is_empty() && left_shape[1..] == right_shape[1..]
+        {
+            let mut shape = left_shape.to_vec();
+            shape[0] += right_shape[0];
+            return Value::from_dense_tensor(
+                left_data.concatenated(right_data, shape.clone()),
+                shape,
+            );
+        }
+    }
+    let left = left.as_vector_view().unwrap_or_default();
+    let right = right.as_vector_view().unwrap_or_default();
+    let mut elements = Vec::with_capacity(left.len() + right.len());
+    elements.extend_from_slice(&left);
+    elements.extend_from_slice(&right);
     Value::from_vector(elements)
 }
 
@@ -115,7 +148,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                 ));
             }
         }
-        let mut v = extract_vector_elements(vector_val).to_vec();
+        let mut v = extract_vector_elements(vector_val);
         v.reverse();
         Ok(Value::from_vector(v))
     })?;

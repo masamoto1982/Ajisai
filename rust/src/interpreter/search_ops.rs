@@ -13,7 +13,7 @@ use crate::interpreter::collection_meter::{self, ScanMeter};
 use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 
 fn non_vector(got: &Value) -> AjisaiError {
     AjisaiError::declared(
@@ -22,31 +22,124 @@ fn non_vector(got: &Value) -> AjisaiError {
     )
 }
 
+/// The elements of a Vector operand, read one at a time.
+///
+/// A flat dense Tensor is read lane by lane, on demand. These Words used to
+/// materialize every lane as a boxed `Value` before looking at the first one
+/// (`as_vector_view`), so `5 MEMBER?` over a million-lane range spent 35 ms
+/// boxing lanes it never compared, and `BSEARCH` paid for a million boxes to
+/// probe twenty of them. A lane read here is the lane the materialization
+/// would have built (`Value::from_dense_lane`, its one definition), so every
+/// comparison sees the same value either way.
+///
+/// The price is the same too: [`ScanMeter::for_vector`] and
+/// [`collection_meter::element_cost`] read a flat dense Tensor's width in
+/// O(1) and reach the units the per-lane reading reaches
+/// (`search_meter_parity_tests`), so which route ran stays unobservable
+/// (LANG.AUTHORITY.FREEDOM). A higher-rank Tensor's element is a row, not a
+/// lane, and keeps the materializing route.
+enum Elements<'a> {
+    Boxed(std::borrow::Cow<'a, [Value]>),
+    Lanes(&'a Value, &'a crate::types::DenseTensor),
+}
+
+impl<'a> Elements<'a> {
+    fn of(value: &'a Value) -> Option<Self> {
+        match &value.data {
+            ValueData::Tensor { data, shape } if shape.len() == 1 => {
+                Some(Elements::Lanes(value, data))
+            }
+            _ => value.as_vector_view().map(Elements::Boxed),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Elements::Boxed(items) => items.len(),
+            Elements::Lanes(_, data) => data.len(),
+        }
+    }
+
+    fn get(&self, index: usize) -> std::borrow::Cow<'_, Value> {
+        match self {
+            Elements::Boxed(items) => std::borrow::Cow::Borrowed(&items[index]),
+            Elements::Lanes(_, data) => {
+                std::borrow::Cow::Owned(Value::from_dense_lane(data, index))
+            }
+        }
+    }
+
+    fn scan_meter(&self) -> ScanMeter {
+        match self {
+            Elements::Boxed(items) => ScanMeter::new(items),
+            Elements::Lanes(value, _) => ScanMeter::for_vector(value),
+        }
+    }
+
+    fn element_cost(&self) -> crate::interpreter::runtime_limits::ElementCost {
+        match self {
+            Elements::Boxed(items) => collection_meter::element_cost_of_slice(items),
+            Elements::Lanes(value, _) => collection_meter::element_cost(value),
+        }
+    }
+
+    /// Whether the elements ascend, compared as `SORT` compares them. A flat,
+    /// all-present, pure-integer Tensor compares its numerator column: every
+    /// lane is an integer there, and `compare_for_sort` orders integers as
+    /// integers, so the column answers what the pairwise comparison would.
+    fn check_ascending(&self) -> Result<bool> {
+        if let Elements::Lanes(_, data) = self {
+            if data.is_pure_integer && data.all_lanes_valid() {
+                return Ok(data.numerators.windows(2).all(|pair| pair[0] <= pair[1]));
+            }
+        }
+        for index in 1..self.len() {
+            if compare_for_sort(&self.get(index - 1), &self.get(index))?
+                == std::cmp::Ordering::Greater
+            {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+}
+
 /// `MEMBER? ( [ vec ] [ x ] -> [ TRUE | FALSE ] )`: whether `x` occurs in the
 /// vector, by the value equality `UNIQUE` and `INDEX-OF` use. The needle is
 /// one value compared, not read (an `element` operand), so a Vector needle is
 /// looked for as an element rather than taken as several needles.
 pub fn op_member(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
-    let Some(elements) = operands[0].as_vector_view().map(|view| view.into_owned()) else {
-        let err = non_vector(&operands[0]);
-        interp.stack.extend(operands);
-        return Err(err);
-    };
-
-    let meter = ScanMeter::new(&elements);
-    for (completed, item) in elements.iter().enumerate() {
-        if let Err(e) = meter.charge_scan_of(interp, completed) {
+    let found = {
+        let Some(elements) = Elements::of(&operands[0]) else {
+            let err = non_vector(&operands[0]);
             interp.stack.extend(operands);
-            return Err(e);
+            return Err(err);
+        };
+        let meter = elements.scan_meter();
+        let mut found = Ok(false);
+        for completed in 0..elements.len() {
+            if let Err(e) = meter.charge_scan_of(interp, completed) {
+                found = Err(e);
+                break;
+            }
+            if *elements.get(completed) == operands[1] {
+                found = Ok(true);
+                break;
+            }
         }
-        if *item == operands[1] {
-            interp.stack.push(Value::from_bool(true));
-            return Ok(());
+        found
+    };
+    match found {
+        Ok(found) => {
+            interp.stack.push(Value::from_bool(found));
+            Ok(())
+        }
+        Err(e) => {
+            interp.stack.extend(operands);
+            Err(e)
         }
     }
-    interp.stack.push(Value::from_bool(false));
-    Ok(())
 }
 
 /// What one binary search answered.
@@ -58,11 +151,11 @@ enum Found {
 /// The first index in ascending `sorted` whose element equals `key`, by
 /// halving. `compare_for_sort` decides; a structurally non-comparable key is
 /// its `nonNumeric`.
-fn lower_bound(sorted: &[Value], key: &Value) -> Result<Found> {
+fn lower_bound(sorted: &Elements<'_>, key: &Value) -> Result<Found> {
     let (mut lo, mut hi) = (0usize, sorted.len());
     while lo < hi {
         let mid = lo + (hi - lo) / 2;
-        match compare_for_sort(&sorted[mid], key)? {
+        match compare_for_sort(&sorted.get(mid), key)? {
             std::cmp::Ordering::Less => lo = mid + 1,
             _ => hi = mid,
         }
@@ -70,7 +163,7 @@ fn lower_bound(sorted: &[Value], key: &Value) -> Result<Found> {
     if lo == sorted.len() {
         return Ok(Found::Absent);
     }
-    match compare_for_sort(&sorted[lo], key)? {
+    match compare_for_sort(&sorted.get(lo), key)? {
         std::cmp::Ordering::Equal => Ok(Found::At(lo)),
         _ => Ok(Found::Absent),
     }
@@ -83,112 +176,90 @@ fn lower_bound(sorted: &[Value], key: &Value) -> Result<Found> {
 /// data (`unsortedInput`). A key that is not there is a `notFound` lane.
 pub fn op_bsearch(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
-    let Some(sorted) = operands[0].as_vector_view().map(|view| view.into_owned()) else {
-        let err = non_vector(&operands[0]);
-        interp.stack.extend(operands);
-        return Err(err);
+    let answer = bsearch_answer(interp, &operands[0], &operands[1]);
+    match answer {
+        Ok(answer) => {
+            interp.stack.push(answer);
+            Ok(())
+        }
+        Err(e) => {
+            interp.stack.extend(operands);
+            Err(e)
+        }
+    }
+}
+
+fn bsearch_answer(interp: &mut Interpreter, sorted: &Value, keys: &Value) -> Result<Value> {
+    let Some(sorted) = Elements::of(sorted) else {
+        return Err(non_vector(sorted));
     };
 
     // The order check walks the vector once; priced like INDEX-OF's miss.
-    let units = collection_meter::element_cost_of_slice(&sorted)
+    let units = sorted
+        .element_cost()
         .probe()
         .saturating_mul(sorted.len() as u64);
-    if let Err(e) = collection_meter::charge(interp, units) {
-        interp.stack.extend(operands);
-        return Err(e);
-    }
-    for pair in sorted.windows(2) {
-        match compare_for_sort(&pair[0], &pair[1]) {
-            Ok(std::cmp::Ordering::Greater) => {
-                interp.stack.extend(operands);
-                return Err(AjisaiError::declared(
-                    "unsortedInput",
-                    "expected an ascending Vector, got one that is not in order",
-                ));
-            }
-            Ok(_) => {}
-            Err(e) => {
-                interp.stack.extend(operands);
-                return Err(e);
-            }
-        }
+    collection_meter::charge(interp, units)?;
+    if !sorted.check_ascending()? {
+        return Err(AjisaiError::declared(
+            "unsortedInput",
+            "expected an ascending Vector, got one that is not in order",
+        ));
     }
 
     let lane = |found: Found| match found {
         Found::At(index) => Value::from_int(index as i64),
         Found::Absent => Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable),
     };
-    let answer = match operands[1].as_vector_view() {
+    Ok(match keys.as_vector_view() {
         Some(keys) => {
             let mut lanes = Vec::with_capacity(keys.len());
             for key in keys.iter() {
-                match lower_bound(&sorted, key) {
-                    Ok(found) => lanes.push(lane(found)),
-                    Err(e) => {
-                        interp.stack.extend(operands);
-                        return Err(e);
-                    }
-                }
+                lanes.push(lane(lower_bound(&sorted, key)?));
             }
             Value::from_vector(lanes)
         }
-        None => match lower_bound(&sorted, &operands[1]) {
-            Ok(found) => lane(found),
-            Err(e) => {
-                interp.stack.extend(operands);
-                return Err(e);
-            }
-        },
-    };
-    interp.stack.push(answer);
-    Ok(())
-}
-
-fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<Value>, Value)> {
-    let operands = extract_operands(interp, 2)?;
-    match operands[0].as_vector_view() {
-        Some(view) => {
-            let vector = view.into_owned();
-            Ok((vector, operands[1].clone()))
-        }
-        None => {
-            let got = operands[0].domain_name();
-            interp.stack.extend(operands);
-            // A noun phrase, not a sentence: the template around it already
-            // says "expected _, got _", and the failing Word's name is the
-            // diagnosis locus rather than part of the message.
-            Err(AjisaiError::declared(
-                "nonVector",
-                format!("expected a Vector, got {got}"),
-            ))
-        }
-    }
+        None => lane(lower_bound(&sorted, keys)?),
+    })
 }
 
 /// `vector value -- index`. Index of the first element equal to the target.
 /// A well-formed miss (value absent from a valid vector) projects to
 /// NIL with `reason = notFound` per the NIL Projection Rule.
 pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
-    let (vector, target) = pop_vector_and_target(interp, "INDEX-OF")?;
-    // A linear search, priced at its worst case — the miss, which is the only
-    // outcome that has to walk the whole vector. The count is known before the
-    // scan starts, unlike the distinct-value scans, so this is a pre-charge.
-    let units = crate::interpreter::collection_meter::element_cost_of_slice(&vector)
-        .probe()
-        .saturating_mul(vector.len() as u64);
-    if let Err(e) = crate::interpreter::collection_meter::charge(interp, units) {
-        interp.stack.extend([Value::from_vector(vector), target]);
-        return Err(e);
-    }
-    match vector.iter().position(|elem| elem == &target) {
-        Some(index) => {
-            interp.stack.push(Value::from_int(index as i64));
-        }
-        None => {
-            interp.stack.push(Value::nil_with_reason(
-                NilReason::NotFound,
-                Recoverability::Recoverable,
+    let operands = extract_operands(interp, 2)?;
+    let position = {
+        let Some(elements) = Elements::of(&operands[0]) else {
+            let got = operands[0].domain_name();
+            interp.stack.extend(operands);
+            // A noun phrase, not a sentence: the template around it already
+            // says "expected _, got _", and the failing Word's name is the
+            // diagnosis locus rather than part of the message.
+            return Err(AjisaiError::declared(
+                "nonVector",
+                format!("expected a Vector, got {got}"),
             ));
+        };
+        // A linear search, priced at its worst case — the miss, which is the
+        // only outcome that has to walk the whole vector. The count is known
+        // before the scan starts, unlike the distinct-value scans, so this is
+        // a pre-charge.
+        let units = elements
+            .element_cost()
+            .probe()
+            .saturating_mul(elements.len() as u64);
+        collection_meter::charge(interp, units)
+            .map(|()| (0..elements.len()).find(|&index| *elements.get(index) == operands[1]))
+    };
+    match position {
+        Ok(Some(index)) => interp.stack.push(Value::from_int(index as i64)),
+        Ok(None) => interp.stack.push(Value::nil_with_reason(
+            NilReason::NotFound,
+            Recoverability::Recoverable,
+        )),
+        Err(e) => {
+            interp.stack.extend(operands);
+            return Err(e);
         }
     }
     Ok(())

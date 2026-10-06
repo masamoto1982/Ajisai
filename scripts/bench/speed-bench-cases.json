@@ -20,6 +20,13 @@
     { "name": "toplevel-userword", "route": "top-level User Word calls", "setup": "[ 'X' BIND X X MUL 1 ADD ] 'SQ1' DEF", "source": "5 SQ1 3 SQ1 ADD ", "repeat": 10000, "elements": 10000 },
     { "name": "map-bind-unfused", "route": "names in a block the fused walk declines", "setup": "0 99999 RANGE", "source": "[ 'X' BIND [ 7 ] LENGTH X ADD 2 MUL X X MUL SUB ] MAP", "elements": 100000 },
     { "name": "harmonic-2000", "route": "BigInt rationals", "setup": "1 2000 RANGE", "source": "'X' BIND 1 X DIV [ 0 ] [ ADD ] FOLD", "elements": 2000 },
+    { "name": "take-dense", "route": "TAKE on a dense Tensor", "setup": "0 999999 RANGE", "source": "10 TAKE", "elements": 1000000 },
+    { "name": "drop-dense", "route": "DROP on a dense Tensor", "setup": "0 999999 RANGE", "source": "10 DROP", "elements": 1000000 },
+    { "name": "member-dense-early", "route": "MEMBER? hit near the front of a dense Tensor", "setup": "0 999999 RANGE", "source": "5 MEMBER?", "elements": 1000000 },
+    { "name": "bsearch-dense", "route": "BSEARCH over a dense Tensor", "setup": "0 999999 RANGE", "source": "[ 5 500000 ] BSEARCH", "elements": 1000000 },
+    { "name": "concat-dense", "route": "CONCAT of two dense Tensors", "setup": "0 999999 RANGE 0 999999 RANGE", "source": "CONCAT", "elements": 2000000 },
+    { "name": "map-nil-per-elem", "route": "a block that answers a reasoned NIL per element", "setup": "0 99999 RANGE", "source": "[ 'X' BIND 'x' NUM ] MAP", "elements": 100000 },
+    { "name": "pipeline-map-filter-fold", "route": "MAP then FILTER then FOLD over one Tensor", "setup": "0 999999 RANGE", "source": "[ 3 MUL ] MAP [ 2 GT ] FILTER 0 [ ADD ] FOLD", "elements": 1000000 },
     { "name": "sort-100k", "route": "SORT", "setup": "0 99999 RANGE [ 'N' BIND N 7919 MUL 'M' BIND M M 100003 DIV FLOOR 100003 MUL SUB ] MAP", "source": "SORT", "elements": 100000 }
   ]
 }

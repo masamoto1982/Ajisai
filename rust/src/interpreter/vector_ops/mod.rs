@@ -311,10 +311,9 @@ fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
     }
 
     let result = with_stacktop_vector_target_with_arg(interp, &count_val, |vector_val| {
-        let elements = extract_vector_elements(vector_val);
         Ok(split
-            .bounds(elements.len(), count)
-            .map(|(start, end)| Value::from_vector(elements[start..end].to_vec()))
+            .bounds(vector_val.len(), count)
+            .map(|(start, end)| vector_val.children_range(start, end))
             .unwrap_or_else(|| {
                 Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
             }))

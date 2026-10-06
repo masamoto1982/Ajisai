@@ -9,6 +9,43 @@ use super::{Value, ValueData};
 use std::sync::Arc;
 
 impl Value {
+    /// Children `start..end` of a Vector or dense Tensor, as one Vector — the
+    /// answer `TAKE` and `DROP` give. The caller has already clamped the range
+    /// to `0..=self.len()`.
+    ///
+    /// A dense Tensor is cut as columns: the rows in the range are one run of
+    /// lanes, so the slice is a copy of that run (`DenseTensor::lanes`) and
+    /// nothing outside it is touched. The nested route materialized every lane
+    /// of the operand as a boxed `Value` first and then copied the slice out of
+    /// *that*, so `10 TAKE` of a million-lane range cost what boxing a million
+    /// numbers costs — 39 ms — and answered an AoS `Vector`, which threw the
+    /// dense representation away for every Word downstream.
+    ///
+    /// The two answers are the same value: a Tensor equals the nested Vector
+    /// holding its lanes, absent lanes' reasons included (`tensor_eq_vector`).
+    /// An empty slice is the empty Vector either way.
+    pub fn children_range(&self, start: usize, end: usize) -> Value {
+        if start >= end {
+            return Self::from_vector(Vec::new());
+        }
+        match &self.data {
+            ValueData::Tensor { data, shape } if !shape.is_empty() => {
+                let stride: usize = shape[1..].iter().product();
+                let mut sliced_shape = shape.to_vec();
+                sliced_shape[0] = end - start;
+                let lanes =
+                    data.lanes(start * stride, (end - start) * stride, sliced_shape.clone());
+                Self::from_dense_tensor(lanes, sliced_shape)
+            }
+            ValueData::Vector(children) => Self::from_vector(children[start..end].to_vec()),
+            _ => Self::from_vector(
+                self.as_vector_view()
+                    .map(|children| children[start..end].to_vec())
+                    .unwrap_or_default(),
+            ),
+        }
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         match &self.data {

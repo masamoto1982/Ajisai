@@ -241,14 +241,15 @@ mod sort_word_tests {
     }
 
     /// Sorting is idempotent, and agrees with the comparison route on the same
-    /// integers held nested — `CONCAT` does not promote, so the right-hand side
-    /// takes the route the dense one declines.
+    /// integers held nested — `CONCAT` with a boxed operand (the empty literal)
+    /// does not promote, so the right-hand side takes the route the dense one
+    /// declines.
     #[tokio::test]
     async fn the_two_routes_answer_alike() {
         assert_eq!(
             equals(
                 "0 99 RANGE REVERSE SORT",
-                "0 49 RANGE 50 99 RANGE CONCAT SORT"
+                "0 49 RANGE 50 99 RANGE CONCAT [ ] CONCAT SORT"
             )
             .await,
             Some(true),
