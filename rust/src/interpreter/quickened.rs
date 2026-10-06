@@ -296,6 +296,48 @@ fn try_length_call(interp: &mut Interpreter) -> bool {
     true
 }
 
+/// A Word with no `Kind` of its own that the contract admits to plain values
+/// (`fusion_contract`): its plain law, charged as its dispatch charges it.
+fn try_kernel_call(interp: &mut Interpreter, word: WordId) -> bool {
+    let Some(kernel) = crate::interpreter::fusion_contract::kernel(word) else {
+        return false;
+    };
+    let slots = interp.stack.as_slice();
+    let Some(base) = slots.len().checked_sub(kernel.arity) else {
+        return false;
+    };
+    let Some(operands) = slots[base..]
+        .iter()
+        .map(crate::interpreter::fused_block::Plain::of)
+        .collect::<Option<Vec<_>>>()
+    else {
+        return false;
+    };
+    let Some(answer) = (kernel.apply)(&operands, interp) else {
+        return false;
+    };
+    if interp.execution_step_count >= interp.max_execution_steps
+        || interp.numeric_work_used.saturating_add(answer.work)
+            > interp.runtime_limits.max_numeric_work
+    {
+        return false;
+    }
+    interp.execution_step_count += 1;
+    interp.numeric_work_used += answer.work;
+    interp.runtime_metrics.scalar_fastpath_count = interp
+        .runtime_metrics
+        .scalar_fastpath_count
+        .saturating_add(answer.fastpath);
+    interp.stack.truncate(base);
+    interp.stack.push(answer.value.into_value());
+    interp
+        .check_fresh_nesting()
+        .expect("a plain result is within any nesting ceiling");
+    #[cfg(test)]
+    QUICKENED.with(|c| c.set(c.get() + 1));
+    true
+}
+
 /// Run `word` on the plain values on top of the stack, or answer `false`
 /// having touched nothing.
 pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
@@ -306,7 +348,7 @@ pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
         return try_length_call(interp);
     }
     let Some(kind) = Kind::of(word) else {
-        return false;
+        return try_kernel_call(interp, word);
     };
     let pops = kind.arity();
     let slots = interp.stack.as_slice();

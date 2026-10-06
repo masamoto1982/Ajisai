@@ -111,6 +111,8 @@ fn compile(block: &FusedBlock, inputs: &[Ty]) -> Option<Program> {
                 stack.push((Src::Const(pair), ty));
                 continue;
             }
+            // A Word's plain law runs in the general tier only.
+            Op::Kernel(_) => return None,
             Op::Pow => {
                 let (b, b_ty) = stack.pop()?;
                 let (a, a_ty) = stack.pop()?;

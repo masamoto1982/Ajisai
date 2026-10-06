@@ -49,7 +49,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
 
 /// How deeply a value nests: a leaf is 0, a Vector one more than its deepest
 /// element, so an empty Vector is 1.
-fn depth_of(value: &Value) -> usize {
+pub(crate) fn depth_of(value: &Value) -> usize {
     if let ValueData::Tensor { shape, .. } = &value.data {
         return shape.len();
     }

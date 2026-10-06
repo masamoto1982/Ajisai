@@ -161,6 +161,8 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
                 (IntOp::Push(n), ty)
             }
             Op::PushWord(b) => (IntOp::Push(i64::from(*b)), Ty::Bool),
+            // A Word's plain law runs in the general tier only.
+            Op::Kernel(_) => return None,
             Op::Pow => {
                 (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;
                 (IntOp::Pow, Ty::Int)
