@@ -24,7 +24,7 @@ async fn raise_diagnosis(code: &str) -> crate::interpreter::debug_diagnosis::Deb
     trace
         .iter()
         .filter(|e| e.kind == ErrorFlowEventKind::WordError)
-        .find_map(|e| e.diagnosis.clone())
+        .find_map(|e| e.diagnosis.as_ref().map(|d| d.to_diagnosis()))
         .unwrap_or_else(|| panic!("expected a diagnosis for {:?}", code))
 }
 

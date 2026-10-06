@@ -154,7 +154,7 @@ pub(crate) async fn diagnose(source: &str) -> DebugDiagnosis {
         .drain_error_flow_trace()
         .iter()
         .rev()
-        .find_map(|event| event.diagnosis.clone())
+        .find_map(|event| event.diagnosis.as_ref().map(|d| d.to_diagnosis()))
         .expect("a failed run records a diagnosis")
 }
 

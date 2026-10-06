@@ -52,6 +52,7 @@ pub(crate) mod segment;
 mod segment_lower;
 #[cfg(test)]
 mod segment_tests;
+pub mod trace_diagnosis;
 // The host-side Word lookup lives in `host.rs`; the module path it used to
 // have is kept for the hosts (`wasm_interpreter_bindings`, `rust/tests`) that
 // import it by that name.

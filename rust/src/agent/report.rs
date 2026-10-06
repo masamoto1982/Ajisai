@@ -17,6 +17,7 @@ use super::{error_report, stack_display, user_word_identities};
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
+use crate::interpreter::trace_diagnosis::EventDiagnosis;
 use crate::interpreter::upstream_nil_link::link_upstream_nil;
 use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
@@ -444,7 +445,7 @@ pub(crate) fn failed_run_diagnosis(
     let mut diagnosis = trace
         .iter()
         .rev()
-        .find_map(|event| event.diagnosis.clone())
+        .find_map(|event| event.diagnosis.as_ref().map(EventDiagnosis::to_diagnosis))
         .unwrap_or_else(|| DebugDiagnosis::from_error(err, None, stack_len, stack_len));
     // A NIL that flowed downstream fails at the Word that *received* it, so
     // the top-level diagnosis names that Word and not the cause. Give the top
