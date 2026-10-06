@@ -29,6 +29,9 @@ enum Item {
     Literal(Slot),
     WordLiteral(bool),
     Word(Kind),
+    /// A Word the contract admits to plain values, run by its plain law
+    /// (`fusion_contract`).
+    Kernel(&'static crate::interpreter::fusion_contract::PlainKernel),
     /// `'NAME' BIND`, the name already checked bindable.
     Bind(String),
     Name(String),
@@ -54,7 +57,16 @@ fn op_item(interp: &Interpreter, ops: &[CompiledOp], i: usize) -> Option<(Item, 
             Slot::Bool(b) => (Item::WordLiteral(b), 1),
             Slot::Num(_) => return None,
         },
-        CompiledOp::CallBuiltin(call) => (Item::Word(Kind::of(call.word?.id)?), 1),
+        CompiledOp::CallBuiltin(call) => {
+            let id = call.word?.id;
+            match Kind::of(id) {
+                Some(kind) => (Item::Word(kind), 1),
+                None => (
+                    Item::Kernel(crate::interpreter::fusion_contract::kernel(id)?),
+                    1,
+                ),
+            }
+        }
         CompiledOp::CallUserWord(name) => (Item::Call(name.clone()), 1),
         CompiledOp::FallbackToken(Token::Symbol(name)) => (
             Item::Name(crate::word_name::canonical_word_name(name).into_owned()),
@@ -163,6 +175,11 @@ impl<'a> Builder<'a> {
             Item::Word(kind) => {
                 self.ops.push(SegOp::Word(kind));
                 self.pop_push(kind.arity());
+                self.steps += 1;
+            }
+            Item::Kernel(kernel) => {
+                self.ops.push(SegOp::Kernel(kernel));
+                self.pop_push(kernel.arity);
                 self.steps += 1;
             }
             Item::Bind(name) => {

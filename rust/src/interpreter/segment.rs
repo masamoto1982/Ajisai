@@ -11,7 +11,10 @@
 //!
 //! - literals, `TRUE`, `FALSE`;
 //! - `ADD` `SUB` `MUL` `DIV`, `LT` `GT` `EQ`, `MIN` `MAX`, `FLOOR` `ROUND`,
-//!   `NOT` `AND` `SELECT` (`quickened::apply`, the one definition both use);
+//!   `NOT` `AND` `SELECT` `POW` (`quickened::apply`, the one definition both
+//!   use), and `[ ... ] LENGTH` on a literal Vector;
+//! - any other Word its contract admits to plain values, by its plain law
+//!   (`fusion_contract`): `GCD`, `NIL?`, `DEPTH`;
 //! - `'NAME' BIND`, and a bound name read;
 //! - a call of a User Word whose body is made of these, inlined
 //!   (`segment_lower`).
@@ -54,6 +57,7 @@ use std::sync::Arc;
 use smallvec::SmallVec;
 
 use crate::interpreter::compiled_plan::{arc_plan, compile_word_definition};
+use crate::interpreter::fused_block::Plain;
 use crate::interpreter::interpreter_core::MAX_USER_WORD_DEPTH;
 use crate::interpreter::quickened::{apply, Kind, Slot};
 use crate::interpreter::{is_plan_valid, CompiledPlan, Interpreter};
@@ -67,6 +71,9 @@ pub(crate) enum SegOp {
     PushWord(bool),
     /// A scalar Word: a step, and what `quickened::apply` charges.
     Word(Kind),
+    /// A Word run by its plain law (`fusion_contract`): a step, and what the
+    /// law reports. A result that is not a machine-word value ends the run.
+    Kernel(&'static crate::interpreter::fusion_contract::PlainKernel),
     /// `'NAME' BIND` into a slot: a step.
     Bind(u32),
     /// A bound name read: free, as a binding read is.
@@ -170,6 +177,17 @@ impl Segment {
                     let answer = apply(kind, &stack[at..])?;
                     stack.truncate(at);
                     stack.push(answer.value);
+                    work += answer.work;
+                    fastpath += answer.fastpath;
+                    checked_below = Some(stack.len());
+                }
+                SegOp::Kernel(kernel) => {
+                    let at = stack.len().checked_sub(kernel.arity)?;
+                    let operands: SmallVec<[Plain; 3]> =
+                        stack[at..].iter().map(|slot| slot.plain()).collect();
+                    let answer = (kernel.apply)(&operands, interp)?;
+                    stack.truncate(at);
+                    stack.push(Slot::of_plain(&answer.value)?);
                     work += answer.work;
                     fastpath += answer.fastpath;
                     checked_below = Some(stack.len());

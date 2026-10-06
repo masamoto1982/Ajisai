@@ -1,6 +1,7 @@
 //! The Words that run by their plain law (`fusion_contract`) — `GCD`, `NIL?`,
 //! `DEPTH` — on each route that runs them, against the route that does not:
-//! fused against interpreted, and quickened against dispatched, compared on
+//! fused against interpreted, quickened against dispatched, and typed
+//! segments against the dispatch they replace, compared on
 //! everything a run leaves behind (`route_observation`), under step, work and
 //! size ceilings. These are what hold each kernel to its Word's dispatch.
 
@@ -29,6 +30,10 @@ fn quickened(source: &str, on: bool, limits: Limits) -> Observation {
     )
 }
 
+fn segmented(source: &str, on: bool, limits: Limits) -> Observation {
+    observe(source, |interp| interp.set_segments_enabled(on), limits)
+}
+
 fn assert_routes_agree(source: &str, limits: Limits) {
     assert_eq!(
         fused(source, true, limits),
@@ -39,6 +44,11 @@ fn assert_routes_agree(source: &str, limits: Limits) {
         quickened(source, true, limits),
         quickened(source, false, limits),
         "quickened and dispatched disagree on `{source}` under {limits:?}"
+    );
+    assert_eq!(
+        segmented(source, true, limits),
+        segmented(source, false, limits),
+        "segmented and dispatched disagree on `{source}` under {limits:?}"
     );
 }
 
@@ -75,6 +85,14 @@ const PROGRAMS: &[&str] = &[
     "[ [ 1 ] [ 2 ] ] [ DEPTH ] MAP",
     "[ 1 TRUE 3 ] [ 4 GCD ] MAP",
     "[ 4611686018427387904 9223372036854775807 ] [ 4611686018427387904 GCD ] MAP",
+    // In segments: a User Word body, and a block that does not fuse (it
+    // leaves a Vector).
+    "[ 'X' BIND X 6 GCD X ADD ] 'F' DEF 5 F 12 F 1/2 F",
+    "[ 'X' BIND X NIL? NOT X DEPTH X 4 GCD ADD SELECT ] 'F' DEF 9 F",
+    "[ 2 MUL 9223372036854775807 GCD ] 'F' DEF 5 F",
+    "[ 12 GCD 'Y' BIND Y Y ADD [ 1 ] ] 'B' DEF 1 9 RANGE [ B ] MAP",
+    "1 9 RANGE [ 12 GCD 'Y' BIND Y Y ADD [ 1 ] ] MAP",
+    "[ GCD ] 'G2' DEF [ 3 G2 4 G2 ] 'F' DEF 60 F",
     // Through User Words.
     "[ 30 GCD ] 'G' DEF 1 60 RANGE [ G ] MAP",
     "[ 'X' BIND X 6 GCD X NIL? NOT SELECT ] 'H' DEF 1 60 RANGE [ H ] MAP 5 H",
@@ -137,6 +155,26 @@ fn the_kernel_words_take_the_fast_routes() {
     assert_eq!(quickened_calls("7 DEPTH"), 1);
     assert_eq!(quickened_calls("1/2 4 GCD"), 0);
     assert_eq!(quickened_calls("NIL NIL?"), 0);
+
+    let segment_runs = |source: &str| {
+        let before = crate::interpreter::segment::segment_runs_on_this_thread();
+        let _ = segmented(source, true, Limits::default());
+        crate::interpreter::segment::segment_runs_on_this_thread() - before
+    };
+    assert_eq!(
+        segment_runs("[ 'X' BIND X 6 GCD X ADD ] 'F' DEF 5 F 12 F"),
+        2
+    );
+    assert_eq!(segment_runs("[ 'X' BIND X NIL? X DEPTH ] 'F' DEF 9 F"), 1);
+    assert_eq!(
+        segment_runs("1 9 RANGE [ 12 GCD 'Y' BIND Y Y ADD [ 1 ] ] MAP"),
+        9
+    );
+    // A result past a machine word ends the run: dispatched instead.
+    assert_eq!(
+        segment_runs("[ 'X' BIND X X GCD 1 ADD ] 'F' DEF 9223372036854775807 F"),
+        0
+    );
 }
 
 fn literal() -> impl Strategy<Value = String> {
@@ -168,7 +206,7 @@ proptest! {
         code in prop::collection::vec(token(), 1..7).prop_map(|t| t.join(" ")),
         elements in prop::collection::vec(literal(), 0..10).prop_map(|t| t.join(" ")),
         seed in literal(),
-        walk in 0usize..5,
+        walk in 0usize..6,
         steps in prop::option::of(0usize..60),
         work in prop::option::of(0u64..100),
         bits in prop::option::of(1u64..130),
@@ -178,7 +216,9 @@ proptest! {
             1 => format!("[ {elements} ] [ {code} ] FILTER"),
             2 => format!("[ {elements} ] {seed} [ {code} ] FOLD"),
             3 => format!("[ {elements} ] {seed} [ {code} ] SCAN"),
-            _ => format!("{elements} {code}"),
+            4 => format!("{elements} {code}"),
+            // A User Word body: the typed-segment route.
+            _ => format!("[ {code} ] 'F' DEF {elements} F"),
         };
         let limits = Limits { steps, work, bits };
         prop_assert_eq!(
@@ -190,6 +230,11 @@ proptest! {
             quickened(&source, true, limits),
             quickened(&source, false, limits),
             "quickened and dispatched disagree on `{}` under {:?}", source, limits
+        );
+        prop_assert_eq!(
+            segmented(&source, true, limits),
+            segmented(&source, false, limits),
+            "segmented and dispatched disagree on `{}` under {:?}", source, limits
         );
     }
 }
