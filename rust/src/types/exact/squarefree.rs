@@ -37,6 +37,67 @@ pub struct FactorBudgetExhausted;
 const TRIAL_BOUND: u64 = 1 << 12;
 const MR_BASES: [u64; 13] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41];
 
+/// The primes below `TRIAL_BOUND`, packed in ascending order into groups whose
+/// product fits one word — the binary counterpart of testing a decimal number
+/// for 3 and 9 at once by its digit sum: one wide remainder by a group's
+/// product answers divisibility by every prime in it, by word remainders.
+struct TrialGroups {
+    /// The group of each prime below `TRIAL_BOUND`; `NOT_PRIME` elsewhere.
+    group_of: [u16; TRIAL_BOUND as usize],
+    /// The product of each group's primes; unused entries past the last are 0.
+    products: [u64; TRIAL_BOUND as usize],
+}
+
+const NOT_PRIME: u16 = u16::MAX;
+
+static TRIAL_GROUPS: TrialGroups = trial_groups();
+
+const fn trial_groups() -> TrialGroups {
+    let mut groups = TrialGroups {
+        group_of: [NOT_PRIME; TRIAL_BOUND as usize],
+        products: [0; TRIAL_BOUND as usize],
+    };
+    let mut group = 0usize;
+    let mut product: u64 = 1;
+    let mut d = 2u64;
+    while d < TRIAL_BOUND {
+        let mut prime = true;
+        let mut k = 2u64;
+        while k * k <= d {
+            if d.is_multiple_of(k) {
+                prime = false;
+                break;
+            }
+            k += 1;
+        }
+        if prime {
+            if product.checked_mul(d).is_none() {
+                groups.products[group] = product;
+                group += 1;
+                product = 1;
+            }
+            product *= d;
+            groups.group_of[d as usize] = group as u16;
+        }
+        d += 1;
+    }
+    groups.products[group] = product;
+    groups
+}
+
+/// `|n| mod m`: on `u128` when `n` fits, else by reciprocal.
+fn residue_mod(n: &BigInt, m: u64) -> u64 {
+    match n.magnitude().to_u128() {
+        Some(v) => (v % u128::from(m)) as u64,
+        None => crate::types::small_divisor::rem_word(n, m),
+    }
+}
+
+/// `d² > rest`, for `d < TRIAL_BOUND`, without building `d` wide.
+fn square_exceeds(d: u64, rest: &BigInt) -> bool {
+    rest.to_u64().is_some_and(|r| d * d > r)
+}
+
 /// What one factoring step costs, in the `numericWork` limb-multiply unit, on
 /// top of its limb count squared. A step is a bignum multiply, a remainder, a
 /// subtraction and the allocations between them — about as much as the
@@ -74,19 +135,36 @@ pub fn squarefree_split(
     let mut rest = n.clone();
 
     let mut d: u64 = 2;
+    // The residue of `rest` modulo the current group's product, once per
+    // group rather than one wide remainder per candidate; dropped whenever a
+    // factor comes out of `rest`.
+    let mut residue: Option<(usize, u64)> = None;
     while d < TRIAL_BOUND {
-        let big_d = BigInt::from(d);
-        if &big_d * &big_d > rest {
+        if square_exceeds(d, &rest) {
             break;
         }
         meter.charge(&rest)?;
-        let mut exponent = 0;
-        while (&rest % &big_d).is_zero() {
-            rest /= &big_d;
-            exponent += 1;
-        }
-        if exponent > 0 {
-            primes.push((big_d, exponent));
+        let group = TRIAL_GROUPS.group_of[d as usize];
+        if group != NOT_PRIME {
+            let group = usize::from(group);
+            let r = match residue {
+                Some((g, r)) if g == group => r,
+                _ => {
+                    let r = residue_mod(&rest, TRIAL_GROUPS.products[group]);
+                    residue = Some((group, r));
+                    r
+                }
+            };
+            if r % d == 0 {
+                let big_d = BigInt::from(d);
+                let mut exponent = 0;
+                while (&rest % &big_d).is_zero() {
+                    rest /= &big_d;
+                    exponent += 1;
+                }
+                primes.push((big_d, exponent));
+                residue = None;
+            }
         }
         d += if d == 2 { 1 } else { 2 };
     }
@@ -267,5 +345,57 @@ mod tests {
             squarefree_split(&BigInt::from(p * p * q), &mut budget),
             Err(FactorBudgetExhausted)
         );
+    }
+
+    /// The grouped residues find every small prime the one-by-one remainder
+    /// did: a wide radicand built from primes at each group's edges, and every
+    /// radicand below a bound checked against a naive split.
+    #[test]
+    fn grouped_trial_division_agrees_with_one_remainder_per_prime() {
+        let naive = |mut n: u128| {
+            let (mut s, mut m, mut d) = (1u128, 1u128, 2u128);
+            while d * d <= n {
+                let mut e = 0;
+                while n.is_multiple_of(d) {
+                    n /= d;
+                    e += 1;
+                }
+                s *= d.pow(e / 2);
+                if e % 2 == 1 {
+                    m *= d;
+                }
+                d += 1;
+            }
+            (s, m * n)
+        };
+        for n in 1..20_000u128 {
+            assert_eq!(split(n), naive(n), "{n}");
+        }
+        // The first and last prime of every group.
+        let group_of = &TRIAL_GROUPS.group_of;
+        let primes: Vec<usize> = (2..TRIAL_BOUND as usize)
+            .filter(|&d| group_of[d] != NOT_PRIME)
+            .collect();
+        let edges: Vec<u64> = primes
+            .iter()
+            .enumerate()
+            .filter(|&(i, &p)| {
+                let before = i.checked_sub(1).map(|j| group_of[primes[j]]);
+                let after = primes.get(i + 1).map(|&q| group_of[q]);
+                before != Some(group_of[p]) || after != Some(group_of[p])
+            })
+            .map(|(_, &p)| p as u64)
+            .collect();
+        assert!(edges.len() > 10);
+        let mut wide = BigInt::from(1_000_003u64);
+        let mut square = BigInt::one();
+        for (i, &p) in edges.iter().enumerate() {
+            let e = 1 + (i % 3) as u32;
+            wide *= num_traits::pow(BigInt::from(p), e as usize);
+            square *= num_traits::pow(BigInt::from(p), (e / 2) as usize);
+        }
+        let mut budget = u64::MAX;
+        let (s, _) = squarefree_split(&wide, &mut budget).unwrap();
+        assert_eq!(s, square);
     }
 }
