@@ -83,4 +83,14 @@ fn edge_operands() {
         &((BigInt::from(1) << 600) - 1),
     );
     agrees(&(&wide * 10), &(BigInt::from(10).pow(200)));
+    // Top words of all ones on both sides, equal lengths: the widest window
+    // the certainty test reads, where its bound once overflowed `i128`.
+    let ones = (BigInt::from(1) << 1000) - 1;
+    agrees(&ones, &(&ones - (BigInt::from(1) << 500)));
+    agrees(&ones, &((BigInt::from(1) << 999) - 1));
+    // The minimal input CI's debug build found it with.
+    let a: BigInt = "6277101735386680763835789423207666416083908700390324961280"
+        .parse()
+        .unwrap();
+    agrees(&a, &(BigInt::from(1) << 128));
 }

@@ -73,7 +73,7 @@ fn finish(x: &[u64], y: &[u64]) -> BigUint {
 }
 
 /// The matrix `[[a, b], [c, d]]` of Euclid steps whose quotients the top
-/// 127 bits of `x` and `y` determine, so that `(a·x + b·y, c·x + d·y)` is `x`
+/// 126 bits of `x` and `y` determine, so that `(a·x + b·y, c·x + d·y)` is `x`
 /// and `y` after those steps. `b == 0` when no step was certain. Every entry's
 /// magnitude stays below 2^63 (the steps stop before one would not), so one
 /// round takes about 63 bits off each number; `a`, `b` (likewise `c`, `d`)
@@ -82,8 +82,9 @@ fn top_steps(x: &[u64], y: &[u64]) -> (i128, i128, i128, i128) {
     const CAP: i128 = 1 << 63;
     let n = x.len();
     let shift = x[n - 1].leading_zeros();
-    // The top 127 bits at the position of `x`'s leading bit, for both: a
-    // truncation of each at one scale, which is all Knuth's test needs.
+    // The top 126 bits at the position of `x`'s leading bit, for both: a
+    // truncation of each at one scale, which is all Knuth's test needs. Two
+    // bits short of `i128`, so `xh + a` (|a| < 2^63) cannot overflow.
     let top = |v: &[u64]| -> i128 {
         let word = |i: usize| v.get(i).copied().unwrap_or(0);
         let high = (u128::from(word(n - 1)) << 64) | u128::from(word(n - 2));
@@ -92,7 +93,7 @@ fn top_steps(x: &[u64], y: &[u64]) -> (i128, i128, i128, i128) {
         } else {
             (high << shift) | u128::from(word(n - 3) >> (64 - shift))
         };
-        (bits >> 1) as i128
+        (bits >> 2) as i128
     };
     let (mut xh, mut yh) = (top(x), top(y));
     let (mut a, mut b, mut c, mut d) = (1i128, 0i128, 0i128, 1i128);
