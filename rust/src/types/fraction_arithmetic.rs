@@ -8,7 +8,7 @@
 use super::fraction::{compute_gcd_i64, Fraction, FractionRepr};
 use num_bigint::BigInt;
 use num_integer::Integer;
-use num_traits::{One, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 
 impl Fraction {
     /// The pair as `BigInt`s, a `Big` half borrowed and a `Small` one built.
@@ -455,6 +455,13 @@ pub(crate) fn balanced_bigint_gcd(a: &BigInt, b: &BigInt) -> BigInt {
     }
     if b.is_zero() {
         return a.gcd(b);
+    }
+    // Both within two machine words: the binary gcd on `u128`, with none of
+    // the `BigInt` shifts the gcd below makes per bit. This is the `GCD` Word
+    // on ordinary integers, and the reduction of every fraction a little past
+    // a machine word.
+    if let (Some(x), Some(y)) = (a.magnitude().to_u128(), b.magnitude().to_u128()) {
+        return BigInt::from(x.gcd(&y));
     }
     let (wide, narrow) = if a.bits() >= b.bits() { (a, b) } else { (b, a) };
     // A one-word narrow side, against a wide one: the remainder by reciprocal
