@@ -310,10 +310,7 @@ fn factor_into(
 }
 
 fn is_probable_prime(n: &BigInt, meter: &mut Meter) -> Result<bool, FactorBudgetExhausted> {
-    match n.to_u64() {
-        Some(word) => is_probable_prime_word(word, n, meter),
-        None => is_probable_prime_wide(n, meter),
-    }
+    is_probable_prime_word(n, meter).unwrap_or_else(|| is_probable_prime_wide(n, meter))
 }
 
 fn is_probable_prime_wide(n: &BigInt, meter: &mut Meter) -> Result<bool, FactorBudgetExhausted> {
@@ -352,10 +349,7 @@ fn is_probable_prime_wide(n: &BigInt, meter: &mut Meter) -> Result<bool, FactorB
 /// A non-trivial factor of the composite `n`, by Pollard's rho with Brent's
 /// cycle detection, trying successive polynomial constants.
 fn pollard_brent(n: &BigInt, meter: &mut Meter) -> Result<BigInt, FactorBudgetExhausted> {
-    match n.to_u64() {
-        Some(word) => pollard_brent_word(word, n, meter).map(BigInt::from),
-        None => pollard_brent_wide(n, meter),
-    }
+    pollard_brent_word(n, meter).unwrap_or_else(|| pollard_brent_wide(n, meter))
 }
 
 fn pollard_brent_wide(n: &BigInt, meter: &mut Meter) -> Result<BigInt, FactorBudgetExhausted> {
