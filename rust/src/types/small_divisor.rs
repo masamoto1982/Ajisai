@@ -102,7 +102,7 @@ pub(crate) fn div_word(a: &BigInt, d: u64) -> BigInt {
 }
 
 /// `gcd(a, b)` of two machine words, by the binary algorithm.
-fn gcd_word(mut a: u64, mut b: u64) -> u64 {
+pub(crate) fn gcd_word(mut a: u64, mut b: u64) -> u64 {
     if a == 0 {
         return b;
     }
