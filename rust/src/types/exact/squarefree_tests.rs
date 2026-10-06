@@ -90,31 +90,49 @@ fn grouped_trial_division_agrees_with_one_remainder_per_prime() {
 
 /// The word routes answer what the wide ones do and charge the same work,
 /// over primes, composites with and without small factors, squares of
-/// primes and numbers near the top of the word.
+/// primes and numbers near the top of each word.
 #[test]
 fn word_routes_match_the_wide_routes_answer_and_work() {
-    let mut odd: Vec<u64> = vec![
+    let p61: u128 = (1 << 61) - 1;
+    let mut odd: Vec<u128> = vec![
         16_777_259,                    // prime just above TRIAL_BOUND²
         2_147_483_647 * 1_000_003,     // two primes
-        4_294_967_291 * 4_294_967_279, // near the top of the word
+        4_294_967_291 * 4_294_967_279, // near the top of the 64-bit word
         1_000_003 * 1_000_003,         // a prime's square
-        (1 << 61) - 1,                 // a Mersenne prime
-        u64::MAX,                      // 3·5·17·257·641·65537·6700417
+        p61,                           // a Mersenne prime
+        u64::MAX as u128,              // 3·5·17·257·641·65537·6700417
         18_446_744_073_709_551_557,    // the largest prime below 2⁶⁴
         3_215_031_751,                 // a strong pseudoprime to 2, 3, 5, 7
+        (1 << 64) + 1,                 // 274177·67280421310721, just past 2⁶⁴
+        (1 << 89) - 1,                 // a Mersenne prime past 2⁶⁴
+        (1 << 127) - 1,                // a Mersenne prime near the top
+        u128::MAX - 158,               // the largest prime below 2¹²⁸
+        u128::MAX,                     // 3·5·17·257·641·65537·274177·…
+        2_147_483_647 * p61,           // two primes past 2⁶⁴
+        1_000_003 * ((1 << 89) - 1),   // a small prime and a wide one
+        p61 * p61,                     // a prime's square past 2⁶⁴
     ];
     let mut x: u64 = 0x9e37_79b9_7f4a_7c15;
-    for _ in 0..200 {
+    let mut next = || {
         x ^= x << 13;
         x ^= x >> 7;
         x ^= x << 17;
-        odd.push((x >> (x % 40)) | (1 << 25) | 1);
+        x
+    };
+    for _ in 0..200 {
+        let x = next();
+        odd.push(u128::from((x >> (x % 40)) | (1 << 25) | 1));
+    }
+    // Past 2⁶⁴, a factor below 2²⁰ keeps Pollard's rho short.
+    for _ in 0..100 {
+        let small = u128::from(next() >> 44 | 1);
+        let large = (u128::from(next()) << 36 | u128::from(next() >> 28)) | 1;
+        odd.push(small * large);
     }
     for n in odd {
         let wide = BigInt::from(n);
         let (mut word_budget, mut wide_budget) = (u64::MAX, u64::MAX);
         let word_prime = is_probable_prime_word(
-            n,
             &wide,
             &mut Meter {
                 budget: &mut word_budget,
@@ -126,11 +144,10 @@ fn word_routes_match_the_wide_routes_answer_and_work() {
                 budget: &mut wide_budget,
             },
         );
-        assert_eq!(word_prime, wide_prime, "{n}");
+        assert_eq!(word_prime, Some(wide_prime), "{n}");
         assert_eq!(word_budget, wide_budget, "{n}");
-        if word_prime == Ok(false) && exact_sqrt(&wide).is_none() {
+        if wide_prime == Ok(false) && exact_sqrt(&wide).is_none() {
             let word_factor = pollard_brent_word(
-                n,
                 &wide,
                 &mut Meter {
                     budget: &mut word_budget,
@@ -142,10 +159,22 @@ fn word_routes_match_the_wide_routes_answer_and_work() {
                     budget: &mut wide_budget,
                 },
             );
-            assert_eq!(word_factor.map(BigInt::from), wide_factor, "{n}");
+            assert_eq!(word_factor, Some(wide_factor), "{n}");
             assert_eq!(word_budget, wide_budget, "{n}");
         }
     }
+}
+
+/// Past 128 bits the word routes decline, leaving the radicand to `BigInt`.
+#[test]
+fn word_routes_decline_past_128_bits() {
+    let wide = BigInt::from(u128::MAX) + 2u8;
+    let mut budget = u64::MAX;
+    let mut meter = Meter {
+        budget: &mut budget,
+    };
+    assert!(is_probable_prime_word(&wide, &mut meter).is_none());
+    assert!(pollard_brent_word(&wide, &mut meter).is_none());
 }
 
 /// The residue screen never turns a square away, and what passes it is
