@@ -10,6 +10,7 @@
 //! (Same construction as the LANG.VALUES.EXACT comparison pre-pass this module's
 //! type grew out of.)
 
+use crate::types::exact::squarefree::exact_sqrt;
 use crate::types::fraction_arithmetic::balanced_bigint_gcd;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
@@ -61,13 +62,8 @@ impl Basis {
         // another element would divide b too) and keeps every input a
         // product of basis-element powers.
         for e in &mut elems {
-            loop {
-                let root = e.sqrt();
-                if &(&root * &root) == e {
-                    *e = root;
-                } else {
-                    break;
-                }
+            while let Some(root) = exact_sqrt(e) {
+                *e = root;
             }
         }
         elems.sort();

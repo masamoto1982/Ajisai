@@ -37,52 +37,121 @@ pub struct FactorBudgetExhausted;
 const TRIAL_BOUND: u64 = 1 << 12;
 const MR_BASES: [u64; 13] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41];
 
+const fn is_prime(d: u64) -> bool {
+    let mut k = 2u64;
+    while k * k <= d {
+        if d.is_multiple_of(k) {
+            return false;
+        }
+        k += 1;
+    }
+    d >= 2
+}
+
+const fn count_primes() -> usize {
+    let mut count = 0;
+    let mut d = 2;
+    while d < TRIAL_BOUND {
+        if is_prime(d) {
+            count += 1;
+        }
+        d += 1;
+    }
+    count
+}
+
+const PRIME_COUNT: usize = count_primes();
+
+/// A prime below `TRIAL_BOUND`, with what tests a word for it without a
+/// division: for odd `p`, `p | r` exactly when `r·p⁻¹ mod 2⁶⁴ ≤ ⌊(2⁶⁴−1)/p⌋`,
+/// because multiplying by `p⁻¹` maps the multiples of `p` onto `0..=limit`
+/// and everything else above it (Granlund and Montgomery, "Division by
+/// invariant integers using multiplication", 1994, §9).
+#[derive(Clone, Copy)]
+struct TrialPrime {
+    p: u64,
+    /// `p⁻¹ mod 2⁶⁴` (unused for 2).
+    inverse: u64,
+    /// `⌊(2⁶⁴−1)/p⌋`.
+    limit: u64,
+    /// The group whose product `p` is in.
+    group: u16,
+}
+
+impl TrialPrime {
+    #[inline]
+    fn divides(&self, r: u64) -> bool {
+        if self.p == 2 {
+            r & 1 == 0
+        } else {
+            r.wrapping_mul(self.inverse) <= self.limit
+        }
+    }
+}
+
 /// The primes below `TRIAL_BOUND`, packed in ascending order into groups whose
 /// product fits one word — the binary counterpart of testing a decimal number
 /// for 3 and 9 at once by its digit sum: one wide remainder by a group's
-/// product answers divisibility by every prime in it, by word remainders.
-struct TrialGroups {
-    /// The group of each prime below `TRIAL_BOUND`; `NOT_PRIME` elsewhere.
-    group_of: [u16; TRIAL_BOUND as usize],
+/// product leaves a word that every prime of the group then tests.
+struct TrialTable {
+    primes: [TrialPrime; PRIME_COUNT],
     /// The product of each group's primes; unused entries past the last are 0.
-    products: [u64; TRIAL_BOUND as usize],
+    products: [u64; PRIME_COUNT],
 }
 
-const NOT_PRIME: u16 = u16::MAX;
+static TRIAL_TABLE: TrialTable = trial_table();
 
-static TRIAL_GROUPS: TrialGroups = trial_groups();
-
-const fn trial_groups() -> TrialGroups {
-    let mut groups = TrialGroups {
-        group_of: [NOT_PRIME; TRIAL_BOUND as usize],
-        products: [0; TRIAL_BOUND as usize],
+const fn trial_table() -> TrialTable {
+    let blank = TrialPrime {
+        p: 0,
+        inverse: 0,
+        limit: 0,
+        group: 0,
     };
+    let mut table = TrialTable {
+        primes: [blank; PRIME_COUNT],
+        products: [0; PRIME_COUNT],
+    };
+    let mut index = 0;
     let mut group = 0usize;
     let mut product: u64 = 1;
     let mut d = 2u64;
     while d < TRIAL_BOUND {
-        let mut prime = true;
-        let mut k = 2u64;
-        while k * k <= d {
-            if d.is_multiple_of(k) {
-                prime = false;
-                break;
-            }
-            k += 1;
-        }
-        if prime {
+        if is_prime(d) {
             if product.checked_mul(d).is_none() {
-                groups.products[group] = product;
+                table.products[group] = product;
                 group += 1;
                 product = 1;
             }
             product *= d;
-            groups.group_of[d as usize] = group as u16;
+            // Newton's iteration doubles the correct low bits each step.
+            let mut inverse = d;
+            let mut step = 0;
+            while step < 5 {
+                inverse = inverse.wrapping_mul(2u64.wrapping_sub(d.wrapping_mul(inverse)));
+                step += 1;
+            }
+            table.primes[index] = TrialPrime {
+                p: d,
+                inverse,
+                limit: u64::MAX / d,
+                group: group as u16,
+            };
+            index += 1;
         }
         d += 1;
     }
-    groups.products[group] = product;
-    groups
+    table.products[group] = product;
+    table
+}
+
+/// How many trial candidates — 2, then every odd number — are at most `x`.
+fn candidates_through(x: u64) -> u64 {
+    if x < 2 {
+        0
+    } else {
+        1 + (x - 1) / 2
+    }
 }
 
 /// `|n| mod m`: on `u128` when `n` fits, else by reciprocal.
@@ -91,11 +160,6 @@ fn residue_mod(n: &BigInt, m: u64) -> u64 {
         Some(v) => (v % u128::from(m)) as u64,
         None => crate::types::small_divisor::rem_word(n, m),
     }
-}
-
-/// `d² > rest`, for `d < TRIAL_BOUND`, without building `d` wide.
-fn square_exceeds(d: u64, rest: &BigInt) -> bool {
-    rest.to_u64().is_some_and(|r| d * d > r)
 }
 
 /// What one factoring step costs, in the `numericWork` limb-multiply unit, on
@@ -114,8 +178,16 @@ struct Meter<'a> {
 
 impl Meter<'_> {
     fn charge(&mut self, n: &BigInt) -> Result<(), FactorBudgetExhausted> {
+        self.charge_units(Self::units(n))
+    }
+
+    /// What one step on `n` costs.
+    fn units(n: &BigInt) -> u64 {
         let limbs = n.bits().div_ceil(64).max(1);
-        let units = limbs.saturating_mul(limbs).saturating_mul(STEP_UNITS);
+        limbs.saturating_mul(limbs).saturating_mul(STEP_UNITS)
+    }
+
+    fn charge_units(&mut self, units: u64) -> Result<(), FactorBudgetExhausted> {
         if *self.budget < units {
             *self.budget = 0;
             return Err(FactorBudgetExhausted);
@@ -134,39 +206,57 @@ pub fn squarefree_split(
     let mut primes: Vec<(BigInt, u32)> = Vec::new();
     let mut rest = n.clone();
 
-    let mut d: u64 = 2;
+    // Each candidate below `TRIAL_BOUND` — 2, then every odd number, until
+    // its square passes `rest` — is charged one step on `rest`, as when each
+    // was divided in turn. Only the primes are tested; the composites between
+    // them are charged together, which runs out of budget exactly when
+    // charging them one by one would.
+    let mut charged: u64 = 0;
     // The residue of `rest` modulo the current group's product, once per
     // group rather than one wide remainder per candidate; dropped whenever a
     // factor comes out of `rest`.
-    let mut residue: Option<(usize, u64)> = None;
-    while d < TRIAL_BOUND {
-        if square_exceeds(d, &rest) {
+    let mut residue: Option<(u16, u64)> = None;
+    // What a step costs, `rest` as a word and the last candidate its square
+    // root admits, all fixed until a factor comes out of `rest`.
+    let mut units = Meter::units(&rest);
+    let mut rest_word = rest.to_u64();
+    let mut last = rest_word.map_or(u64::MAX, u64::isqrt);
+    for prime in TRIAL_TABLE
+        .primes
+        .iter()
+        .map(Some)
+        .chain(std::iter::once(None))
+    {
+        let through = prime.map_or(TRIAL_BOUND - 1, |prime| prime.p);
+        let reach = through.min(last);
+        let due = candidates_through(reach).saturating_sub(charged);
+        meter.charge_units(units.saturating_mul(due))?;
+        charged += due;
+        let Some(prime) = prime.filter(|prime| prime.p == reach) else {
             break;
-        }
-        meter.charge(&rest)?;
-        let group = TRIAL_GROUPS.group_of[d as usize];
-        if group != NOT_PRIME {
-            let group = usize::from(group);
-            let r = match residue {
-                Some((g, r)) if g == group => r,
-                _ => {
-                    let r = residue_mod(&rest, TRIAL_GROUPS.products[group]);
-                    residue = Some((group, r));
-                    r
-                }
-            };
-            if r % d == 0 {
-                let big_d = BigInt::from(d);
-                let mut exponent = 0;
-                while (&rest % &big_d).is_zero() {
-                    rest /= &big_d;
-                    exponent += 1;
-                }
-                primes.push((big_d, exponent));
-                residue = None;
+        };
+        let r = match (rest_word, residue) {
+            (Some(word), _) => word,
+            (None, Some((group, r))) if group == prime.group => r,
+            (None, _) => {
+                let r = residue_mod(&rest, TRIAL_TABLE.products[usize::from(prime.group)]);
+                residue = Some((prime.group, r));
+                r
             }
+        };
+        if prime.divides(r) {
+            let big_d = BigInt::from(prime.p);
+            let mut exponent = 0;
+            while (&rest % &big_d).is_zero() {
+                rest /= &big_d;
+                exponent += 1;
+            }
+            primes.push((big_d, exponent));
+            residue = None;
+            units = Meter::units(&rest);
+            rest_word = rest.to_u64();
+            last = rest_word.map_or(u64::MAX, u64::isqrt);
         }
-        d += if d == 2 { 1 } else { 2 };
     }
     factor_into(&rest, 1, &mut primes, &mut meter)?;
 
@@ -206,9 +296,8 @@ fn factor_into(
         primes.push((n.clone(), multiplicity));
         return Ok(());
     }
-    let root = n.sqrt();
     meter.charge(n)?;
-    if &root * &root == *n {
+    if let Some(root) = exact_sqrt(n) {
         return factor_into(&root, multiplicity * 2, primes, meter);
     }
     if is_probable_prime(n, meter)? {
@@ -221,6 +310,13 @@ fn factor_into(
 }
 
 fn is_probable_prime(n: &BigInt, meter: &mut Meter) -> Result<bool, FactorBudgetExhausted> {
+    match n.to_u64() {
+        Some(word) => is_probable_prime_word(word, n, meter),
+        None => is_probable_prime_wide(n, meter),
+    }
+}
+
+fn is_probable_prime_wide(n: &BigInt, meter: &mut Meter) -> Result<bool, FactorBudgetExhausted> {
     let one = BigInt::one();
     let n_minus_1 = n - &one;
     let mut d = n_minus_1.clone();
@@ -256,6 +352,13 @@ fn is_probable_prime(n: &BigInt, meter: &mut Meter) -> Result<bool, FactorBudget
 /// A non-trivial factor of the composite `n`, by Pollard's rho with Brent's
 /// cycle detection, trying successive polynomial constants.
 fn pollard_brent(n: &BigInt, meter: &mut Meter) -> Result<BigInt, FactorBudgetExhausted> {
+    match n.to_u64() {
+        Some(word) => pollard_brent_word(word, n, meter).map(BigInt::from),
+        None => pollard_brent_wide(n, meter),
+    }
+}
+
+fn pollard_brent_wide(n: &BigInt, meter: &mut Meter) -> Result<BigInt, FactorBudgetExhausted> {
     let one = BigInt::one();
     for c in 1u64.. {
         let c = BigInt::from(c);
@@ -307,95 +410,49 @@ fn pollard_brent(n: &BigInt, meter: &mut Meter) -> Result<BigInt, FactorBudgetEx
     unreachable!("the constant loop only exits by returning")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn split(n: u128) -> (u128, u128) {
-        let mut budget = u64::MAX;
-        let (s, m) = squarefree_split(&BigInt::from(n), &mut budget).unwrap();
-        (s.to_u128().unwrap(), m.to_u128().unwrap())
+/// Which residues modulo `m` are squares.
+const fn squares_mod<const M: usize>() -> [bool; M] {
+    let mut table = [false; M];
+    let mut i = 0;
+    while i < M {
+        table[(i * i) % M] = true;
+        i += 1;
     }
-
-    #[test]
-    fn small_radicands_split_into_square_and_square_free_parts() {
-        assert_eq!(split(8), (2, 2));
-        assert_eq!(split(12), (2, 3));
-        assert_eq!(split(72), (6, 2));
-        assert_eq!(split(30), (1, 30));
-        assert_eq!(split(1), (1, 1));
-        assert_eq!(split(49), (7, 1));
-    }
-
-    #[test]
-    fn large_square_factors_are_found_past_trial_division() {
-        let p: u128 = 1_000_003; // prime above the trial bound
-        let q: u128 = 998_244_353; // prime
-        assert_eq!(split(p * p * q), (p, q));
-        assert_eq!(split(p * q), (1, p * q));
-        assert_eq!(split(p * p * p), (p, p));
-    }
-
-    #[test]
-    fn an_exhausted_budget_refuses_rather_than_guessing() {
-        let p: u128 = 1_000_003;
-        let q: u128 = 998_244_353;
-        let mut budget = 10;
-        assert_eq!(
-            squarefree_split(&BigInt::from(p * p * q), &mut budget),
-            Err(FactorBudgetExhausted)
-        );
-    }
-
-    /// The grouped residues find every small prime the one-by-one remainder
-    /// did: a wide radicand built from primes at each group's edges, and every
-    /// radicand below a bound checked against a naive split.
-    #[test]
-    fn grouped_trial_division_agrees_with_one_remainder_per_prime() {
-        let naive = |mut n: u128| {
-            let (mut s, mut m, mut d) = (1u128, 1u128, 2u128);
-            while d * d <= n {
-                let mut e = 0;
-                while n.is_multiple_of(d) {
-                    n /= d;
-                    e += 1;
-                }
-                s *= d.pow(e / 2);
-                if e % 2 == 1 {
-                    m *= d;
-                }
-                d += 1;
-            }
-            (s, m * n)
-        };
-        for n in 1..20_000u128 {
-            assert_eq!(split(n), naive(n), "{n}");
-        }
-        // The first and last prime of every group.
-        let group_of = &TRIAL_GROUPS.group_of;
-        let primes: Vec<usize> = (2..TRIAL_BOUND as usize)
-            .filter(|&d| group_of[d] != NOT_PRIME)
-            .collect();
-        let edges: Vec<u64> = primes
-            .iter()
-            .enumerate()
-            .filter(|&(i, &p)| {
-                let before = i.checked_sub(1).map(|j| group_of[primes[j]]);
-                let after = primes.get(i + 1).map(|&q| group_of[q]);
-                before != Some(group_of[p]) || after != Some(group_of[p])
-            })
-            .map(|(_, &p)| p as u64)
-            .collect();
-        assert!(edges.len() > 10);
-        let mut wide = BigInt::from(1_000_003u64);
-        let mut square = BigInt::one();
-        for (i, &p) in edges.iter().enumerate() {
-            let e = 1 + (i % 3) as u32;
-            wide *= num_traits::pow(BigInt::from(p), e as usize);
-            square *= num_traits::pow(BigInt::from(p), (e / 2) as usize);
-        }
-        let mut budget = u64::MAX;
-        let (s, _) = squarefree_split(&wide, &mut budget).unwrap();
-        assert_eq!(s, square);
-    }
+    table
 }
+
+static SQUARES_MOD_64: [bool; 64] = squares_mod::<64>();
+static SQUARES_MOD_63: [bool; 63] = squares_mod::<63>();
+static SQUARES_MOD_65: [bool; 65] = squares_mod::<65>();
+static SQUARES_MOD_11: [bool; 11] = squares_mod::<11>();
+
+/// `√n` when the non-negative `n` is a perfect square.
+///
+/// Like ruling out a multiple of 3 by its digit sum before dividing, a number
+/// whose last six bits, or whose residue modulo 63, 65 or 11, no square can
+/// have is turned away by table lookups — all but about one non-square in 120
+/// — before the square root is taken (the screen GMP's `mpz_perfect_square_p`
+/// uses).
+pub(crate) fn exact_sqrt(n: &BigInt) -> Option<BigInt> {
+    let low = n.magnitude().iter_u64_digits().next().unwrap_or(0);
+    if !SQUARES_MOD_64[(low & 63) as usize] {
+        return None;
+    }
+    let r = residue_mod(n, 63 * 65 * 11);
+    if !SQUARES_MOD_63[(r % 63) as usize]
+        || !SQUARES_MOD_65[(r % 65) as usize]
+        || !SQUARES_MOD_11[(r % 11) as usize]
+    {
+        return None;
+    }
+    let root = n.sqrt();
+    (&root * &root == *n).then_some(root)
+}
+
+#[path = "squarefree_word.rs"]
+mod word;
+use word::{is_probable_prime_word, pollard_brent_word};
+
+#[cfg(test)]
+#[path = "squarefree_tests.rs"]
+mod tests;
