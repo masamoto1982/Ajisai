@@ -3,7 +3,6 @@
 //! `RATIO` (LANG.VALUES.EXACT).
 
 use num_bigint::BigInt;
-use num_integer::Integer;
 use num_traits::Signed;
 
 use crate::error::{AjisaiError, NilReason, Result};
@@ -303,7 +302,7 @@ fn gcd_scalar(a: &Value, b: &Value) -> Result<Value> {
     }
     match (integer_of(a), integer_of(b)) {
         (Ok(x), Ok(y)) => Ok(Value::from_fraction(Fraction::new(
-            x.gcd(&y).abs(),
+            crate::types::fraction_arithmetic::balanced_bigint_gcd(&x, &y),
             BigInt::from(1),
         ))),
         (Err(projection), _) | (_, Err(projection)) => Ok(projection),

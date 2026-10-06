@@ -243,12 +243,12 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
 
 /// A rational scalar, reduced and sign-normalized the same way
 /// `impl Hash for Fraction` (`types/fraction.rs`) is: divide out the gcd, then
-/// flip both signs if the denominator came out negative. Uses
-/// `num_integer::Integer::gcd` rather than `Fraction`'s own
-/// `balanced_bigint_gcd` fast path, which lives in `types/fraction_arithmetic` — Phase
-/// 1 reads `rust/src/types/` but does not edit it — but both compute the same
-/// canonical reduced pair, so an unreduced and a reduced fraction still land
-/// on identical bytes (Step 1.4's `unreduced_fraction_matches_reduced`).
+/// flip both signs if the denominator came out negative. The gcd is
+/// `Fraction`'s own `balanced_bigint_gcd` (Lehmer's method on wide pairs): a
+/// wide stack value's digest is one gcd of its full width, which `num-bigint`'s
+/// binary gcd made as costly as the computation that produced it. Any gcd
+/// gives the same canonical reduced pair, so an unreduced and a reduced
+/// fraction still land on identical bytes (`unreduced_fraction_matches_reduced`).
 fn encode_rational(bytes: &mut Vec<u8>, f: &Fraction) {
     // A pair held in two machine words is reduced and spelled in place: the
     // same lowest terms, sign and radix-16 digits the `BigInt` route below
@@ -269,7 +269,7 @@ fn encode_rational(bytes: &mut Vec<u8>, f: &Fraction) {
         }
     }
     let (mut n, mut d) = f.to_bigint_pair();
-    let g = n.gcd(&d);
+    let g = crate::types::fraction_arithmetic::balanced_bigint_gcd(&n, &d);
     if !g.is_zero() {
         n /= &g;
         d /= &g;
