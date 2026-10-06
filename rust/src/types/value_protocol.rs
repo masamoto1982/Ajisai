@@ -109,6 +109,14 @@ fn termwise_approximation(er: &crate::types::exact::ExactReal) -> Fraction {
 }
 
 fn number_protocol_value(f: &Fraction) -> ProtocolValue {
+    // The decimal spelling of each half as held; a pair in two machine words
+    // is spelled from the words, not through two `BigInt` copies.
+    if let crate::types::fraction::FractionRepr::Small(n, d) = f.repr {
+        return ProtocolValue::Number {
+            numerator: n.to_string(),
+            denominator: d.to_string(),
+        };
+    }
     ProtocolValue::Number {
         numerator: f.numerator().to_string(),
         denominator: f.denominator().to_string(),

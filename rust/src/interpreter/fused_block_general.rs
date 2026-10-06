@@ -127,8 +127,22 @@ fn run_block(
 ) -> Option<Plain> {
     for op in &block.ops {
         let value = match op {
-            Op::Push(p) => p.clone(),
+            Op::Push(p) | Op::Const(p) => p.clone(),
             Op::PushWord(b) => Plain::Bool(*b),
+            Op::Pow => {
+                let b = stack.pop()?;
+                let a = stack.pop()?;
+                let (Plain::Num(x), Plain::Num(y)) = (&a, &b) else {
+                    return None;
+                };
+                let r = crate::interpreter::quickened::small_power(
+                    x.extract_i64_pair()?,
+                    y.extract_i64_pair()?,
+                )?;
+                Plain::Num(Fraction::from_repr(
+                    crate::types::fraction::FractionRepr::Small(r.0, r.1),
+                ))
+            }
             Op::Load(slot) => slots[*slot].clone()?,
             Op::Bind(slot) => {
                 slots[*slot] = Some(stack.pop()?);

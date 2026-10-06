@@ -74,6 +74,8 @@ pub(crate) enum IntOp {
     Not,
     And,
     Select,
+    /// `POW` on two integers, as `quickened::small_power` answers it.
+    Pow,
 }
 
 /// The block checked against `inputs`, with what one run charges.
@@ -154,11 +156,15 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
     let mut i = 0;
     while i < block.ops.len() {
         let (op, ty) = match &block.ops[i] {
-            Op::Push(p) => {
+            Op::Push(p) | Op::Const(p) => {
                 let (ty, n) = plain_int(p)?;
                 (IntOp::Push(n), ty)
             }
             Op::PushWord(b) => (IntOp::Push(i64::from(*b)), Ty::Bool),
+            Op::Pow => {
+                (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;
+                (IntOp::Pow, Ty::Int)
+            }
             Op::Load(slot) => (IntOp::Load(*slot), slots[*slot]?),
             Op::Bind(slot) => {
                 slots[*slot] = Some(stack.pop()?);

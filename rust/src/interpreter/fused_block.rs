@@ -16,6 +16,9 @@
 //!   in a frame the block can see;
 //! - `ADD` `SUB` `MUL` `DIV`, `LT` `GT` `EQ`, `MIN` `MAX`, `FLOOR` `ROUND`,
 //!   `NOT` `AND` `SELECT`, and `'NAME' BIND`;
+//! - `POW` on a plain base and a non-negative integer exponent whose answer
+//!   stays in a machine word, and `[ ... ] LENGTH` on a literal Vector (a
+//!   constant): each one step and nothing else, as `quickened` charges them;
 //! - User Words whose bodies are made of these (`fused_block_lower`).
 //!
 //! Such a block is lowered here and run against the elements directly, in one
@@ -106,6 +109,15 @@ pub(crate) enum Op {
     /// A name the block bound earlier in the same run: free, as a binding
     /// read is (`execute_word_core` answers it before charging).
     Load(usize),
+    /// A Word whose answer is a constant — `[ ... ] LENGTH` on a literal
+    /// Vector. A step (the LENGTH), no work, no fast-path hit, as
+    /// `quickened` charges it.
+    Const(Plain),
+    /// `POW` on plain operands (`quickened::small_power`): a step, no work,
+    /// no fast-path hit; any power that function declines — a negative or
+    /// fractional exponent, an answer past a machine word, an exponent the
+    /// dispatch refuses as too large — declines the walk.
+    Pow,
 }
 
 impl Op {
@@ -282,7 +294,7 @@ impl FusedBlock {
         let mut mixed = 0;
         for op in &self.ops {
             match op {
-                Op::Push(_) | Op::PushWord(_) => stack.push(false),
+                Op::Push(_) | Op::PushWord(_) | Op::Const(_) => stack.push(false),
                 Op::Load(slot) => stack.push(slots[*slot]),
                 Op::Bind(slot) => slots[*slot] = stack.pop()?,
                 Op::Arith(_) => {
@@ -290,7 +302,7 @@ impl FusedBlock {
                     mixed += u64::from(a != b);
                     stack.push(a || b);
                 }
-                Op::Compare(_) | Op::And | Op::Extremum { .. } => {
+                Op::Compare(_) | Op::And | Op::Extremum { .. } | Op::Pow => {
                     let (b, a) = (stack.pop()?, stack.pop()?);
                     if a || b {
                         return None;

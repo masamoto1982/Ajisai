@@ -269,6 +269,7 @@ mod tests {
         let mut err = Vec::new();
         let opts = Opts {
             json: true,
+            compact: false,
             contract: false,
             step_limit: None,
             limits: crate::agent::LimitProfile::Agent,

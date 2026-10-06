@@ -174,10 +174,15 @@ fn runs_are_segments() {
     assert_eq!(segment_runs("[ 2 ADD ] 'F' DEF 5 F"), 0);
     // Declined, then dispatched.
     assert_eq!(segment_runs("[ 0 DIV 2 ADD ] 'F' DEF 5 F"), 0);
-    // A block's run, once per element.
+    // A block's run, once per element, where the whole body does not fuse
+    // (it leaves a Vector); a body that does fuse runs no segment.
+    assert_eq!(
+        segment_runs("1 10 RANGE [ [ 7 ] LENGTH ADD 'X' BIND X 2 MUL X ADD [ 1 ] ] MAP"),
+        10
+    );
     assert_eq!(
         segment_runs("1 10 RANGE [ [ 7 ] LENGTH ADD 'X' BIND X 2 MUL X ADD ] MAP"),
-        10
+        0
     );
 }
 
@@ -251,6 +256,7 @@ fn word() -> impl Strategy<Value = &'static str> {
         Just("MIN"),
         Just("MAX"),
         Just("AND"),
+        Just("POW"),
     ]
 }
 

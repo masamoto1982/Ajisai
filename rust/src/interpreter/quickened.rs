@@ -110,6 +110,8 @@ pub(crate) enum Kind {
     Not,
     And,
     Select,
+    /// `POW` on plain operands (`small_power`): a step, nothing else.
+    Pow,
 }
 
 impl Kind {
@@ -129,6 +131,7 @@ impl Kind {
             WordId::Not => Kind::Not,
             WordId::And => Kind::And,
             WordId::Select => Kind::Select,
+            WordId::Pow => Kind::Pow,
             _ => return None,
         })
     }
@@ -224,6 +227,10 @@ pub(crate) fn apply(kind: Kind, operands: &[Slot]) -> Option<Answer> {
         // Either candidate may be a number or a truth value; anything else
         // would be lifted over, which is the dispatch's to do.
         Kind::Select => answered(if x(2).truth()? { x(0) } else { x(1) }, 0, 0),
+        Kind::Pow => {
+            let (a, b) = (x(0).num()?, x(1).num()?);
+            answered(Slot::Num(small_power(a, b)?), 0, 0)
+        }
     }
 }
 
@@ -234,7 +241,7 @@ pub(crate) fn apply(kind: Kind, operands: &[Slot]) -> Option<Answer> {
 /// exponent. `x⁰` is 1, `0ⁿ` is 0 and `0⁰` is 1, as `power_by_integer` has it.
 /// Negative and fractional exponents, and every overflow, are the dispatch's.
 #[inline]
-fn small_power(base: Pair, exponent: Pair) -> Option<Pair> {
+pub(crate) fn small_power(base: Pair, exponent: Pair) -> Option<Pair> {
     let ((n, d), (e, one)) = (base, exponent);
     if one != 1 || e < 0 || d <= 0 {
         return None;
@@ -264,48 +271,22 @@ fn small_power(base: Pair, exponent: Pair) -> Option<Pair> {
     Some((num, den))
 }
 
-/// The two Words that cost one step and nothing else on a plain operand: they
-/// charge no work and no fast-path hit, and mint no NIL.
-///
-/// `POW` on a plain base and a plain non-negative integer exponent whose
-/// answer stays in a machine word; `LENGTH` of a non-NIL Vector or Tensor.
-/// Both read their operands without a copy and decline, touching nothing, for
-/// anything else.
-fn try_single_step_call(interp: &mut Interpreter, word: WordId) -> bool {
-    let slots = interp.stack.as_slice();
-    let (pops, value) = match word {
-        WordId::Pow => {
-            let Some(base) = slots.len().checked_sub(2) else {
-                return false;
-            };
-            let (Some(Slot::Num(b)), Some(Slot::Num(e))) =
-                (Slot::of(&slots[base]), Slot::of(&slots[base + 1]))
-            else {
-                return false;
-            };
-            match small_power(b, e) {
-                Some(r) => (2, Slot::Num(r).into_value()),
-                None => return false,
-            }
-        }
-        WordId::Length => {
-            let Some(target) = slots.last() else {
-                return false;
-            };
-            if target.absence.is_some() || !target.is_vector() || target.is_nil() {
-                return false;
-            }
-            let len = Fraction::from(target.len() as i64);
-            (1, Value::from_fraction(len))
-        }
-        _ => return false,
+/// `LENGTH` of a non-NIL Vector or Tensor: one step and nothing else — no
+/// work, no fast-path hit, no NIL minted. It reads its operand without a copy
+/// and declines, touching nothing, for anything else.
+fn try_length_call(interp: &mut Interpreter) -> bool {
+    let Some(target) = interp.stack.as_slice().last() else {
+        return false;
     };
+    if target.absence.is_some() || !target.is_vector() || target.is_nil() {
+        return false;
+    }
+    let value = Value::from_fraction(Fraction::from(target.len() as i64));
     if interp.execution_step_count >= interp.max_execution_steps {
         return false;
     }
-    let base = interp.stack.len() - pops;
     interp.execution_step_count += 1;
-    interp.stack.truncate(base);
+    interp.stack.pop();
     interp.stack.push(value);
     interp
         .check_fresh_nesting()
@@ -321,8 +302,8 @@ pub(crate) fn try_scalar_call(interp: &mut Interpreter, word: WordId) -> bool {
     if !interp.quickening_enabled || !interp.scalar_fastpath_enabled {
         return false;
     }
-    if matches!(word, WordId::Pow | WordId::Length) {
-        return try_single_step_call(interp, word);
+    if word == WordId::Length {
+        return try_length_call(interp);
     }
     let Some(kind) = Kind::of(word) else {
         return false;

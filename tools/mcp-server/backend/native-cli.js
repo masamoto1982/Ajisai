@@ -90,7 +90,13 @@ export class NativeCliBackend {
   }
 
   async #runAgent(source, operation, extraArgs) {
-    const stdout = await this.#exec(["agent", operation, "-", "--json", ...extraArgs], source);
+    // `--compact`: the envelope as the WASM entry points return it, byte for
+    // byte. The CLI's default is indented for a reader, about twice the bytes
+    // for a large stack, so the same result used to pass the `responseBytes`
+    // ceiling on the WASM backend and fail it here (a 7,000-element MAP:
+    // 608 KB compact against over 1 MB indented). Measuring the same bytes is
+    // what makes the ceiling one limit rather than two.
+    const stdout = await this.#exec(["agent", operation, "-", "--json", "--compact", ...extraArgs], source);
     // The child's own `maxBuffer` bounds what it may write, but a backend must
     // not depend on a limit only one of the two implementations enforces.
     if (Buffer.byteLength(stdout, "utf8") > this.responseBytes) {

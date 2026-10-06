@@ -124,6 +124,12 @@ impl AgentResponse {
         self.report.to_json()
     }
 
+    /// [`AgentResponse::to_json`], consuming the response so the stack's JSON
+    /// is moved into the envelope rather than copied.
+    pub fn into_json(self) -> serde_json::Value {
+        self.report.into_json()
+    }
+
     pub(crate) fn report(&self) -> &Report {
         &self.report
     }

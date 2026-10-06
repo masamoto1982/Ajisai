@@ -65,6 +65,7 @@ enum Kind {
     Not,
     And,
     Select,
+    Pow,
 }
 
 /// `dst = kind(a, b, c)`, each value written to a register of its own.
@@ -105,10 +106,16 @@ fn compile(block: &FusedBlock, inputs: &[Ty]) -> Option<Program> {
     let none = Src::Const((0, 1));
     for op in &block.ops {
         let (kind, a, b, c, ty) = match op {
-            Op::Push(p) => {
+            Op::Push(p) | Op::Const(p) => {
                 let (ty, pair) = plain_pair(p)?;
                 stack.push((Src::Const(pair), ty));
                 continue;
+            }
+            Op::Pow => {
+                let (b, b_ty) = stack.pop()?;
+                let (a, a_ty) = stack.pop()?;
+                (a_ty == Ty::Num && b_ty == Ty::Num).then_some(())?;
+                (Kind::Pow, a, b, none, Ty::Num)
             }
             Op::PushWord(b) => {
                 stack.push((Src::Const((i64::from(*b), 1)), Ty::Bool));
@@ -211,6 +218,7 @@ impl Program {
                 Kind::Sub => add(a, b, true)?,
                 Kind::Mul => mul(a, b)?,
                 Kind::Div => div(a, b)?,
+                Kind::Pow => crate::interpreter::quickened::small_power(a, b)?,
                 // The left operand on a tie, as MIN and MAX keep it.
                 Kind::Min if order(b, a) == Ordering::Less => b,
                 Kind::Max if order(a, b) == Ordering::Less => b,

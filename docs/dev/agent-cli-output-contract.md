@@ -10,7 +10,7 @@ only commands and fields emitted by the current native CLI.
 ajisai run <file.ajisai> [--step-limit <N>]
 ajisai check <file.ajisai> [--contract]
 ajisai contract <file.ajisai>
-ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|-> [--limits <agent|trusted>] [--step-limit <N>]
+ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|-> [--limits <agent|trusted>] [--step-limit <N>] [--compact]
 ajisai test <file-or-dir> [--json]
 ajisai repl [--json]
 ajisai version [--json]
@@ -50,6 +50,13 @@ the default is the host's derived step budget
 (`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 12,180,000 — see
 `docs/dev/mcp-host-profiles.md`, re-derived per-container and not a value to
 hard-code elsewhere). `--contract` applies only to `check`.
+
+`agent` writes its document indented for a reader by default. `--compact`
+(only with `agent`) writes the same document as compact JSON with no trailing
+newline: byte for byte what the WASM entry points (`agent_compute` and its
+siblings) return. A host that caps a response by its size, as the MCP server's
+`responseBytes` does, passes `--compact` so that the native and WASM backends
+measure the same bytes and reject at the same result.
 
 ## `agent compute` and `agent check`
 

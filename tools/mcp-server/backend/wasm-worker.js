@@ -44,17 +44,45 @@ export class WasmWorkerBackend {
     return existsSync(wasmModulePath);
   }
 
+  // A Worker that has already started and loaded the WASM module, waiting
+  // for the one operation it will run. Starting a Worker is most of a call's
+  // cost (~50 ms of a ~85 ms `1 2 ADD` on the reference VM; the operation
+  // itself is well under a millisecond), so the next call's Worker is started
+  // as soon as the current one is handed out, off the caller's critical path.
+  // Isolation is unchanged: every call still gets a Worker of its own that has
+  // run nothing before and is terminated after it answers.
+  #spare = null;
+
+  #spawn() {
+    const worker = new Worker(entryPath, {
+      workerData: { wasmModulePath: this.wasmModulePath },
+    });
+    // An idle spare must neither keep the process alive nor bring it down: a
+    // failure surfaces on the call that takes it (the `exit` / `error`
+    // handlers below), and a spare that died before being taken is replaced.
+    worker.unref();
+    const onIdleFailure = () => {
+      if (this.#spare === worker) this.#spare = null;
+    };
+    worker.on("error", onIdleFailure);
+    worker.on("exit", onIdleFailure);
+    worker.ajisaiIdleFailure = onIdleFailure;
+    return worker;
+  }
+
+  #take() {
+    const worker = this.#spare ?? this.#spawn();
+    worker.off("error", worker.ajisaiIdleFailure);
+    worker.off("exit", worker.ajisaiIdleFailure);
+    worker.ref();
+    this.#spare = this.#spawn();
+    return worker;
+  }
+
   #run(op, source, extra = {}) {
     return new Promise((resolve, reject) => {
-      const worker = new Worker(entryPath, {
-        workerData: {
-          op,
-          source,
-          wasmModulePath: this.wasmModulePath,
-          responseBytes: this.responseBytes,
-          ...extra,
-        },
-      });
+      const worker = this.#take();
+      worker.postMessage({ op, source, responseBytes: this.responseBytes, ...extra });
       let settled = false;
       const finish = (fn, value) => {
         if (settled) return;
@@ -63,8 +91,16 @@ export class WasmWorkerBackend {
         worker.removeAllListeners();
         // `terminate()` resolves once the thread is actually gone. Not
         // awaiting it let a timed-out Worker keep running while the server
-        // treated its execution slot as free.
-        worker.terminate().finally(() => fn(value));
+        // treated its execution slot as free. A Worker that has posted its
+        // answer has nothing left to run (`wasm-worker-entry.js` posts once,
+        // as its last act), so a success is handed back at once and the
+        // thread is torn down behind it; every other outcome still waits.
+        if (fn === resolve) {
+          worker.terminate();
+          fn(value);
+        } else {
+          worker.terminate().finally(() => fn(value));
+        }
       };
       const timer = setTimeout(() => {
         finish(

@@ -33,6 +33,8 @@ enum Item {
     Bind(String),
     Name(String),
     Call(String),
+    /// `[ ... ] LENGTH` on a literal Vector: a constant, a step.
+    Const(Slot),
 }
 
 fn op_item(interp: &Interpreter, ops: &[CompiledOp], i: usize) -> Option<(Item, usize)> {
@@ -58,7 +60,18 @@ fn op_item(interp: &Interpreter, ops: &[CompiledOp], i: usize) -> Option<(Item, 
             Item::Name(crate::word_name::canonical_word_name(name).into_owned()),
             1,
         ),
-        CompiledOp::PushVectorLiteral(_) | CompiledOp::FallbackToken(_) => return None,
+        CompiledOp::PushVectorLiteral(value) => match ops.get(i + 1) {
+            Some(CompiledOp::CallBuiltin(call))
+                if call.word.map(|w| w.id) == Some(crate::kernel::generated::WordId::Length)
+                    && value.absence.is_none()
+                    && value.is_vector()
+                    && !value.is_nil() =>
+            {
+                (Item::Const(Slot::Num((value.len() as i64, 1))), 2)
+            }
+            _ => return None,
+        },
+        CompiledOp::FallbackToken(_) => return None,
     })
 }
 
@@ -139,6 +152,11 @@ impl<'a> Builder<'a> {
             }
             Item::WordLiteral(b) => {
                 self.ops.push(SegOp::PushWord(b));
+                self.depth += 1;
+                self.steps += 1;
+            }
+            Item::Const(slot) => {
+                self.ops.push(SegOp::Const(slot));
                 self.depth += 1;
                 self.steps += 1;
             }
