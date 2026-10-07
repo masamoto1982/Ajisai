@@ -93,7 +93,7 @@ const outputs = [...sources.map(([source, target]) => [readFileSync(source), tar
  * must agree — a registry entry naming a version npm does not hold points
  * installers at nothing. Returns the disagreements, empty when there are none.
  */
-export function serverJsonMismatches() {
+function serverJsonMismatches() {
   const pkg = JSON.parse(readFileSync(join(here, "package.json"), "utf8"));
   const server = JSON.parse(readFileSync(join(here, "server.json"), "utf8"));
   const npm = (server.packages ?? []).filter((entry) => entry.registryType === "npm");

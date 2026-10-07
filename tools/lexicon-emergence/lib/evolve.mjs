@@ -51,7 +51,7 @@ export async function classify(ajisai, words) {
 }
 
 /** Uses per class: how many correct solutions reached it, and by which agents. */
-export function usage(graded, classes) {
+function usage(graded, classes) {
   const byClass = new Map();
   for (const g of graded) {
     for (const r of g.results) {

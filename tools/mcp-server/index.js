@@ -31,8 +31,10 @@ const resultSchemaPath = join(here, "result.schema.json");
 // (`result.schema.json`) carries one version: the backend's report
 // (`rust/src/agent/report.rs::SCHEMA_VERSION`), which the adapter's own
 // envelopes — a host error, a `word_contract` answer — repeat rather than
-// numbering separately. The selftest checks the two agree.
-export const ENVELOPE_SCHEMA_VERSION = 3;
+// numbering separately. The selftest compares a `word_contract` envelope
+// against a backend report, not this constant, so a bump in report.rs is
+// mirrored here by hand.
+const ENVELOPE_SCHEMA_VERSION = 3;
 
 export const LIMITS = Object.freeze({
   sourceBytes: 64 * 1024,
@@ -70,7 +72,7 @@ export const CAPACITY_WAIT_MS = 1_000;
  * `tools/mcp-server` (not a copy under `node_modules`) and the parent is an
  * Ajisai source tree. `AJISAI_REPO` names a checkout explicitly.
  */
-export function checkoutRoot() {
+function checkoutRoot() {
   if (process.env.AJISAI_REPO) return resolve(process.env.AJISAI_REPO);
   let self;
   try {

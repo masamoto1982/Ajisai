@@ -11,7 +11,7 @@ export function loadFamilies(dir) {
 }
 
 /** Every definition a submission can call: the lexicon it was given, then its own. */
-export function definitionsOf(submission, lexicon) {
+function definitionsOf(submission, lexicon) {
   const byName = new Map();
   for (const entry of lexicon?.entries ?? []) byName.set(norm(entry.name), entry);
   for (const definition of submission.definitions ?? []) byName.set(norm(definition.name), definition);

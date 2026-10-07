@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 export const MODELS = { large: 'claude-opus-5', medium: 'claude-sonnet-5', small: 'claude-haiku-4-5' };
 
 /** Base rates in USD per million tokens. Cache writes cost 1.25× input, cache reads 0.1×. */
-export const PRICES = {
+const PRICES = {
   'claude-opus-5': { input: 5, output: 25 },
   'claude-sonnet-5': { input: 2, output: 10 },
   'claude-haiku-4-5': { input: 1, output: 5 },
