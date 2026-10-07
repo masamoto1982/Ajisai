@@ -21,6 +21,8 @@
 //!   constant): each one step and nothing else, as `quickened` charges them;
 //! - any other Word whose contract admits it to a fused block and that has a
 //!   plain law there (`fusion_contract`): `GCD`, `NIL?`, `DEPTH`;
+//! - in a `MAP` block, one-lane Vector literals (`[ 1 ]`) that meet only
+//!   `ADD` `SUB` `MUL` `DIV` and `BIND`, walked as their lane (`lane_flow`);
 //! - User Words whose bodies are made of these (`fused_block_lower`).
 //!
 //! Such a block is lowered here and run against the elements directly, in one
@@ -163,6 +165,10 @@ pub(crate) struct FusedBlock {
     /// Whether a name bound outside the block was read into it as a
     /// constant (`Op::Push`), which ties the lowering to that binding.
     pub(crate) reads_outer: bool,
+    /// The `ops` indices of one-lane Vector literals (`[ 1 ]`), pushed as
+    /// their lane: the walk computes on the lane and accounts for each as a
+    /// one-lane Tensor (`lane_flow`).
+    pub(crate) lane_pushes: Vec<usize>,
     /// The integer tier's compiled forms of the block.
     pub(crate) int_programs: crate::interpreter::fused_block_int::IntPrograms,
 }
@@ -205,7 +211,21 @@ impl FusedBlock {
         }
         // A one-lane seed (`[ 0 ]`) is walked as its lane; `lane_mixed` is
         // what that changes in the charges (`one_lane_seed`).
+        //
+        // A block that pushes one-lane literals is walked the same way, for
+        // `MAP` alone: each run then starts from a plain element, so what
+        // the lanes change is the same in every run, and a lane answer is
+        // one per element.
         let mut lane_mixed: Option<u64> = None;
+        let mut lane_answer = false;
+        if !self.lane_pushes.is_empty() {
+            if walk != FusedWalk::Map || !interp.dense_kernels_enabled {
+                return None;
+            }
+            let (mixed, answer) = self.lane_flow(&[false])?;
+            lane_mixed = Some(mixed);
+            lane_answer = answer;
+        }
         let seed = match walk {
             FusedWalk::Map | FusedWalk::Filter => None,
             FusedWalk::Fold | FusedWalk::Scan => {
@@ -214,7 +234,12 @@ impl FusedBlock {
                     Some(plain) => Some(plain),
                     None => {
                         let lane = one_lane_seed(interp, seed)?;
-                        lane_mixed = Some(self.lane_mixed_per_run()?);
+                        let (mixed, answer) = self.lane_flow(&[true, false])?;
+                        if !answer {
+                            return None;
+                        }
+                        lane_mixed = Some(mixed);
+                        lane_answer = true;
                         Some(lane)
                     }
                 }
@@ -244,6 +269,8 @@ impl FusedBlock {
             charges.fastpath = charges
                 .fastpath
                 .checked_sub(mixed.checked_mul(charges.runs)?)?;
+        }
+        if lane_answer {
             value = rewrap_one_lane(walk, &value)?;
         }
 
@@ -279,10 +306,12 @@ impl FusedBlock {
         Some(value)
     }
 
-    /// For a walk whose accumulator is a one-lane Tensor: how many of each
-    /// run's arithmetic Words pair that lane with a plain scalar, or `None`
-    /// when the lane reaches anything but `ADD`/`SUB`/`MUL`/`DIV`, `BIND` and
-    /// a bound name, or the run's result is not the lane.
+    /// For a walk that holds one-lane Tensors — a one-lane accumulator, or
+    /// one-lane literals the block pushes — how many of each run's arithmetic
+    /// Words pair a lane with a plain scalar, and whether the run's result is
+    /// a lane; `None` when a lane reaches anything but `ADD`/`SUB`/`MUL`/
+    /// `DIV`, `BIND` and a bound name. `inputs` says which of the values the
+    /// run starts from are lanes, bottom first.
     ///
     /// Those four Words lift over the lane and answer a one-lane Tensor, so
     /// the walk computes on the lane alone. What differs is the route each
@@ -293,14 +322,14 @@ impl FusedBlock {
     /// one limb (`measure_operand`). Every other Word treats a one-lane
     /// Tensor differently from its lane — `EQ` compares whole values, `LT`
     /// answers a Vector of Booleans — so the walk declines it.
-    fn lane_mixed_per_run(&self) -> Option<u64> {
-        // The accumulator, then the element.
-        let mut stack = vec![true, false];
+    fn lane_flow(&self, inputs: &[bool]) -> Option<(u64, bool)> {
+        let mut stack = inputs.to_vec();
         let mut slots = vec![false; self.slots];
         let mut mixed = 0;
-        for op in &self.ops {
+        for (at, op) in self.ops.iter().enumerate() {
             match op {
-                Op::Push(_) | Op::PushWord(_) | Op::Const(_) => stack.push(false),
+                Op::Push(_) => stack.push(self.lane_pushes.contains(&at)),
+                Op::PushWord(_) | Op::Const(_) => stack.push(false),
                 Op::Load(slot) => stack.push(slots[*slot]),
                 Op::Bind(slot) => slots[*slot] = stack.pop()?,
                 Op::Arith(_) => {
@@ -338,7 +367,7 @@ impl FusedBlock {
                 }
             }
         }
-        stack.last().copied()?.then_some(mixed)
+        Some((mixed, stack.last().copied()?))
     }
 
     /// The steps `runs` runs take, if the step ceiling lets all of them run.
@@ -354,10 +383,19 @@ impl FusedBlock {
 /// machine-word rational, which is what `[ 0 ]` is — when the column kernels
 /// that answer the interpreted walk's lane arithmetic are on.
 fn one_lane_seed(interp: &Interpreter, seed: &Value) -> Option<Plain> {
-    if !interp.dense_kernels_enabled || seed.absence.is_some() {
+    if !interp.dense_kernels_enabled {
         return None;
     }
-    let ValueData::Tensor { data, shape } = &seed.data else {
+    one_lane_of(seed)
+}
+
+/// The lane of `value` when it is a one-lane Tensor holding a machine-word
+/// rational, as `[ 0 ]` is.
+pub(crate) fn one_lane_of(value: &Value) -> Option<Plain> {
+    if value.absence.is_some() {
+        return None;
+    }
+    let ValueData::Tensor { data, shape } = &value.data else {
         return None;
     };
     if shape.as_slice() != [1] || data.len() != 1 || data.absences().next().is_some() {
@@ -389,8 +427,9 @@ fn one_lane(lane: Fraction) -> Option<Value> {
 }
 
 /// The answer of a lane walk, as the interpreted walk gives it: `FOLD`'s
-/// last accumulator a one-lane Tensor, `SCAN`'s every accumulator one, in a
-/// Vector built as `higher_order_fold` builds it.
+/// last accumulator a one-lane Tensor; `SCAN`'s every accumulator one, in a
+/// Vector built as `higher_order_fold` builds it; `MAP`'s every result one,
+/// promoted as `op_map` promotes a list of answers that are not all scalars.
 fn rewrap_one_lane(walk: FusedWalk, value: &Value) -> Option<Value> {
     let lane = |v: &Value| match Plain::of(v)? {
         Plain::Num(f) => one_lane(f),
@@ -404,7 +443,37 @@ fn rewrap_one_lane(walk: FusedWalk, value: &Value) -> Option<Value> {
                 .collect::<Option<Vec<_>>>()?;
             Some(Value::from_vector(lanes))
         }
-        FusedWalk::Map | FusedWalk::Filter => None,
+        FusedWalk::Map => {
+            // Every result a lane of two machine words, as the tiers hold
+            // them: `from_vector_promoted` stacks such one-lane Tensors into
+            // their columns under the shape `[n, 1]`, so those columns are
+            // the tiers' own.
+            if let ValueData::Tensor { data, shape } = &value.data {
+                if shape.len() == 1 && data.absences().next().is_none() {
+                    let dims = vec![shape[0], 1];
+                    let integer = data.denominators.iter().all(|&d| d == 1);
+                    let tensor = crate::types::DenseTensor::from_columns(
+                        data.numerators.clone(),
+                        data.denominators.clone(),
+                        dims.clone(),
+                        integer,
+                        Default::default(),
+                    );
+                    return Some(Value::new(
+                        ValueData::Tensor {
+                            data: std::sync::Arc::new(tensor),
+                            shape: std::sync::Arc::new(dims),
+                        },
+                        None,
+                    ));
+                }
+            }
+            let lanes = (0..value.len())
+                .map(|i| lane(&value.child(i)?))
+                .collect::<Option<Vec<_>>>()?;
+            Some(Value::from_vector_promoted(lanes))
+        }
+        FusedWalk::Filter => None,
     }
 }
 

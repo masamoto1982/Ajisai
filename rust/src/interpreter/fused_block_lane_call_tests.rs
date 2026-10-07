@@ -178,3 +178,66 @@ fn pow_and_literal_length_programs_agree() {
         }
     }
 }
+
+/// A one-lane literal in a `MAP` block (`[ 1 ] ADD`) is walked as its lane:
+/// beside a scalar (no fast-path hit) and beside another lane (a hit), on
+/// the integer and small-rational tiers, bound and read back, dead, inside a
+/// User Word, past a machine word; and declined where a lane meets a zero
+/// divisor or a Word that does not treat it as its value, and outside `MAP`.
+#[test]
+fn one_lane_literals_in_map_agree() {
+    let fused = [
+        "1 600 RANGE [ [ 1 ] ADD ] MAP",
+        "1 600 RANGE [ 'X' BIND [ 7 ] X SUB ] MAP",
+        "1 600 RANGE [ [ 2 ] [ 3 ] MUL ADD ] MAP",
+        "1 600 RANGE [ [ 1/3 ] ADD 2 MUL ] MAP",
+        "1 600 RANGE [ [ 2 ] 'L' BIND L MUL L ADD ] MAP",
+        "1 600 RANGE [ [ 1 ] 'L' BIND 2 MUL ] MAP",
+        "1 600 RANGE [ 3 DIV [ 1 ] ADD ] MAP",
+        "[ [ 1 ] ADD ] 'INC1' DEF 1 600 RANGE [ INC1 ] MAP",
+        // Past a machine word: the general tier, and the lift's Vector.
+        "[ 9223372036854775807 1 ] [ [ 1 ] ADD ] MAP",
+    ];
+    let declined = [
+        "[ 1 0 2 ] [ 'X' BIND [ 1 ] X DIV ] MAP",
+        "1 20 RANGE [ [ 5 ] LT ] MAP",
+        "1 20 RANGE [ [ 5 ] EQ ] MAP",
+        "1 20 RANGE [ [ 1 ] ADD FLOOR ] MAP",
+        "1 20 RANGE [ [ 1 2 ] ADD ] MAP",
+        "1 20 RANGE [ [ [ 1 ] ] ADD ] MAP",
+        "1 20 RANGE [ [ 1 ] ADD 5 GT ] FILTER",
+        "1 20 RANGE 0 [ [ 1 ] ADD ADD ] FOLD",
+        "1 20 RANGE [ 0 ] [ [ 1 ] ADD ] SCAN",
+        "[ ] [ [ 1 ] ADD ] MAP",
+    ];
+    for source in fused.iter().chain(&declined) {
+        for steps in [None, Some(0), Some(3), Some(700)] {
+            for work in [None, Some(0), Some(5), Some(700)] {
+                assert_same(
+                    source,
+                    Limits {
+                        steps,
+                        work,
+                        bits: None,
+                    },
+                );
+            }
+        }
+        for bits in [8, 32, 63, 64, 65] {
+            assert_same(
+                source,
+                Limits {
+                    steps: None,
+                    work: None,
+                    bits: Some(bits),
+                },
+            );
+        }
+    }
+    for source in fused {
+        assert!(fused_runs(source) > 0, "`{source}` was not fused");
+    }
+    for source in &declined[..7] {
+        assert_eq!(fused_runs(source), 0, "`{source}` was fused");
+    }
+}

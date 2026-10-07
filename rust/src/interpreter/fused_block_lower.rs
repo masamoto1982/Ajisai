@@ -77,6 +77,8 @@ struct Lowering<'a> {
     calls: u64,
     builds: Vec<(String, Arc<CompiledPlan>)>,
     reads_outer: bool,
+    /// The `ops` indices of one-lane Vector literals pushed as their lane.
+    lane_pushes: Vec<usize>,
 }
 
 /// Lower `plan` for a walk that starts the block on `inputs` values, or
@@ -101,6 +103,7 @@ pub(crate) fn lower(
         calls: 0,
         builds: Vec::new(),
         reads_outer: false,
+        lane_pushes: Vec::new(),
     };
     lowering.line(&plan.line.ops, &mut HashMap::new(), true, interp.call_depth)?;
     if lowering.depth == 0 {
@@ -114,6 +117,7 @@ pub(crate) fn lower(
         calls_per_run: lowering.calls,
         builds: lowering.builds,
         reads_outer: lowering.reads_outer,
+        lane_pushes: lowering.lane_pushes,
         int_programs: Default::default(),
     })
 }
@@ -189,20 +193,27 @@ impl Lowering<'_> {
                 // `[ ... ] LENGTH` on a literal Vector is the
                 // constant `quickened::try_length_call` answers, for one
                 // step and nothing else.
-                CompiledOp::PushVectorLiteral(value) => {
-                    let CompiledOp::CallBuiltin(call) = source.get(i + 1)? else {
-                        return None;
-                    };
-                    if call.word?.id != WordId::Length
-                        || value.absence.is_some()
-                        || !value.is_vector()
-                        || value.is_nil()
-                    {
+                CompiledOp::PushVectorLiteral(value)
+                    if matches!(
+                        source.get(i + 1),
+                        Some(CompiledOp::CallBuiltin(call))
+                            if call.word.is_some_and(|word| word.id == WordId::Length)
+                    ) =>
+                {
+                    if value.absence.is_some() || !value.is_vector() || value.is_nil() {
                         return None;
                     }
                     let len = crate::types::fraction::Fraction::from(value.len() as i64);
                     i += 1;
                     (Op::Const(Plain::Num(len)), 0, 1)
+                }
+                // Any other literal is free to push, as on the interpreted
+                // route; a one-lane one (`[ 1 ]`) is pushed as its lane, and
+                // the walk accounts for it as a lane (`FusedBlock::lane_flow`).
+                CompiledOp::PushVectorLiteral(value) => {
+                    let lane = crate::interpreter::fused_block::one_lane_of(value)?;
+                    self.lane_pushes.push(self.ops.len());
+                    (Op::Push(lane), 0, 1)
                 }
                 _ => return None,
             };

@@ -177,7 +177,7 @@ fn runs_are_segments() {
     // A block's run, once per element, where the whole body does not fuse
     // (it leaves a Vector); a body that does fuse runs no segment.
     assert_eq!(
-        segment_runs("1 10 RANGE [ [ 7 ] LENGTH ADD 'X' BIND X 2 MUL X ADD [ 1 ] ] MAP"),
+        segment_runs("1 10 RANGE [ [ 7 ] LENGTH ADD 'X' BIND X 2 MUL X ADD [ 1 2 ] ] MAP"),
         10
     );
     assert_eq!(
