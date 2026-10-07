@@ -20,9 +20,8 @@
 
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
-import { walk } from './lib/common.mjs';
+import { repoRoot, walk } from './lib/common.mjs';
 
-const ROOT = process.cwd();
 const SKIP_DIRS = new Set(['node_modules', 'target', '.git', 'dist', 'build']);
 const EXTENSIONS = /\.(rs|ts|js|mjs|cjs|css|html|json|md|sh|yml|yaml)$/;
 const CITATION = /SPEC\s*§\s*[0-9]+(?:\.[0-9]+)*/g;
@@ -70,8 +69,8 @@ const DISCUSSES_RATHER_THAN_CITES = new Map([
 ]);
 
 const findings = [];
-for (const file of walk(ROOT, EXTENSIONS, (name) => SKIP_DIRS.has(name))) {
-  const rel = relative(ROOT, file);
+for (const file of walk(repoRoot, EXTENSIONS, (name) => SKIP_DIRS.has(name))) {
+  const rel = relative(repoRoot, file);
   const exempt = DISCUSSES_RATHER_THAN_CITES.get(rel);
   let text;
   try {

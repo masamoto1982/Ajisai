@@ -347,30 +347,17 @@ impl Interpreter {
                         acc.note_unresolved_word();
                         continue;
                     };
-                    let dep_contract = if dep_def.is_builtin {
-                        Arc::new(static_word_contract(&dep_name, &dep_def))
-                    } else if visiting.contains(dep_name.as_ref()) {
-                        complete = false;
-                        acc.gaps.push(GapCode::RecursiveDependency);
-                        // Cleared, not merged: incompleteness here is
-                        // attributed above, not the placeholder's own seed.
-                        let mut placeholder = WordContract::conservative(
-                            self.contract_cache_key(&dep_name, &dep_def),
-                        );
-                        placeholder.gaps.clear();
-                        Arc::new(placeholder)
-                    } else {
-                        match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
-                            Some(contract) => contract,
-                            None => {
-                                complete = false;
-                                flow.abandon();
-                                sim.abandon();
-                                cost_sim.abandon();
-                                acc.gaps.push(GapCode::DependencyUnknown);
-                                continue 'body;
-                            }
-                        }
+                    let Some(dep_contract) = self.dependency_contract(
+                        &dep_name,
+                        &dep_def,
+                        visiting,
+                        &mut acc,
+                        &mut complete,
+                    ) else {
+                        flow.abandon();
+                        sim.abandon();
+                        cost_sim.abandon();
+                        continue 'body;
                     };
                     flow.feed_word(&dep_contract.flow);
                     let builtin = dep_def.is_builtin;

@@ -331,26 +331,49 @@ impl Interpreter {
             acc.note_unresolved_word();
             return;
         };
-        let dep_contract = if dep_def.is_builtin {
-            Arc::new(static_word_contract(&dep_name, &dep_def))
-        } else if visiting.contains(dep_name.as_ref()) {
+        if let Some(dep_contract) =
+            self.dependency_contract(&dep_name, &dep_def, visiting, acc, complete)
+        {
+            acc.widen_with(&dep_contract);
+        }
+    }
+
+    /// The contract a resolved dependency contributes to the Word being
+    /// inferred: a Core Word's static contract; for a User Word already on
+    /// the inference path, a conservative placeholder with a
+    /// `RecursiveDependency` gap recorded on `acc` (cleared on the
+    /// placeholder, not merged — incompleteness is attributed here, not as
+    /// the placeholder's own seed); otherwise its inferred contract, or
+    /// `None` with a `DependencyUnknown` gap when inference failed. The
+    /// body-level walk and the code-operand walk resolve a name through this
+    /// one step; each used to carry a copy of the three-way choice.
+    pub(crate) fn dependency_contract(
+        &mut self,
+        dep_name: &Arc<str>,
+        dep_def: &Arc<WordDefinition>,
+        visiting: &mut HashSet<String>,
+        acc: &mut AccumulatedContract,
+        complete: &mut bool,
+    ) -> Option<Arc<WordContract>> {
+        if dep_def.is_builtin {
+            return Some(Arc::new(static_word_contract(dep_name, dep_def)));
+        }
+        if visiting.contains(dep_name.as_ref()) {
             *complete = false;
             acc.gaps.push(GapCode::RecursiveDependency);
             let mut placeholder =
-                WordContract::conservative(self.contract_cache_key(&dep_name, &dep_def));
+                WordContract::conservative(self.contract_cache_key(dep_name, dep_def));
             placeholder.gaps.clear();
-            Arc::new(placeholder)
-        } else {
-            match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
-                Some(contract) => contract,
-                None => {
-                    *complete = false;
-                    acc.gaps.push(GapCode::DependencyUnknown);
-                    return;
-                }
+            return Some(Arc::new(placeholder));
+        }
+        match self.infer_word_contract_inner(dep_name, dep_def, visiting) {
+            Some(contract) => Some(contract),
+            None => {
+                *complete = false;
+                acc.gaps.push(GapCode::DependencyUnknown);
+                None
             }
-        };
-        acc.widen_with(&dep_contract);
+        }
     }
 
     /// Widen `acc` for a code operand this walk never read

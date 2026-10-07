@@ -5,11 +5,7 @@ import { families, fatal, readJson, readText, words as wordsDocument, writeOrChe
 const words = wordsDocument();
 const fail = (message) => fatal('word-reference', message);
 
-const names = new Set();
-for (const entry of words.entries) {
-  if (names.has(entry.name)) fail(`duplicate canonical Word ${entry.name}`);
-  names.add(entry.name);
-}
+const names = new Set(words.entries.map((entry) => entry.name));
 
 function stackArity(value) {
   return typeof value === 'number' ? String(value) : value;

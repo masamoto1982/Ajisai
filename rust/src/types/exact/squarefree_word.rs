@@ -159,26 +159,16 @@ impl Montgomery for Montgomery128 {
     }
 }
 
-/// `gcd(a, b)` of two words, by the binary algorithm.
-fn gcd<W: PrimInt>(mut a: W, mut b: W) -> W {
-    if a.is_zero() {
-        return b;
-    }
-    if b.is_zero() {
-        return a;
-    }
-    let shift = (a | b).trailing_zeros();
-    a = a >> a.trailing_zeros() as usize;
-    loop {
-        b = b >> b.trailing_zeros() as usize;
-        if a > b {
-            std::mem::swap(&mut a, &mut b);
-        }
-        b = b - a;
-        if b.is_zero() {
-            return a << shift as usize;
-        }
-    }
+/// `gcd(a, b)` of two words: `fraction`'s Stein gcd (the 128-bit form
+/// hands a pair that fits 64 bits to the 64-bit one), which this module
+/// used to carry a generic copy of. A word converts to `u128` and the gcd
+/// of two words back to a word without loss.
+fn gcd<W: PrimInt>(a: W, b: W) -> W {
+    let wide = crate::types::fraction::binary_gcd_u128(
+        a.to_u128().expect("a word fits u128"),
+        b.to_u128().expect("a word fits u128"),
+    );
+    <W as num_traits::NumCast>::from(wide).expect("the gcd of two words fits a word")
 }
 
 fn abs_diff<W: PrimInt>(a: W, b: W) -> W {

@@ -30,9 +30,7 @@ const cloneEmptyData = (): StoredData => ({
 });
 
 async function readStoredData(): Promise<StoredData> {
-    const [{ readTextFile, exists, BaseDirectory }] = await Promise.all([
-        dynamicImport('@tauri-apps/plugin-fs')
-    ]);
+    const { readTextFile, exists, BaseDirectory } = await dynamicImport('@tauri-apps/plugin-fs');
 
     const fileExists = await exists(STATE_FILE, { baseDir: BaseDirectory.AppData });
     if (!fileExists) {
@@ -48,9 +46,7 @@ async function readStoredData(): Promise<StoredData> {
 }
 
 async function writeStoredData(data: StoredData): Promise<void> {
-    const [{ writeTextFile, BaseDirectory }] = await Promise.all([
-        dynamicImport('@tauri-apps/plugin-fs')
-    ]);
+    const { writeTextFile, BaseDirectory } = await dynamicImport('@tauri-apps/plugin-fs');
 
     await writeTextFile(STATE_FILE, formatJsonDocument(data), { baseDir: BaseDirectory.AppData });
 }
@@ -63,9 +59,7 @@ export class TauriPersistence implements Persistence {
             return;
         }
 
-        const [{ exists, BaseDirectory }] = await Promise.all([
-            dynamicImport('@tauri-apps/plugin-fs')
-        ]);
+        const { exists, BaseDirectory } = await dynamicImport('@tauri-apps/plugin-fs');
 
         const alreadyExists = await exists(STATE_FILE, { baseDir: BaseDirectory.AppData });
         if (!alreadyExists) {

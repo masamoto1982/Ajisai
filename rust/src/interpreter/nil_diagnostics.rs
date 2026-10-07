@@ -205,6 +205,29 @@ impl Interpreter {
         }
     }
 
+    /// One Word dispatch with the records it owes: the NIL it answered
+    /// (`trace_nil_outcome`), or the failure, attributed to this Word
+    /// (`record_word_dispatch_failure`) before it propagates.
+    ///
+    /// `name` is already canonical. The interpreted token walk, a compiled
+    /// User Word call and a compiled fallback Symbol all dispatch through
+    /// here, so the three record the same thing rather than each its own —
+    /// compiling is required to be unobservable (LANG.AUTHORITY.FREEDOM), and
+    /// a diagnosis is observable.
+    pub(crate) fn dispatch_word(&mut self, name: &str) -> crate::error::Result<()> {
+        let witness = self.begin_dispatch();
+        match self.execute_word_core(name) {
+            Ok(()) => {
+                self.trace_nil_outcome(name, &witness);
+                Ok(())
+            }
+            Err(err) => {
+                self.record_word_dispatch_failure(name, &err, witness.stack_len_before);
+                Err(err)
+            }
+        }
+    }
+
     /// Record what a Word that returned normally did about absence, if
     /// anything — the same thing whichever route dispatched it, since a
     /// diagnosis is observable and compiling a body is not

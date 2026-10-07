@@ -121,22 +121,7 @@ impl Interpreter {
                 }
                 Token::Symbol(s) => {
                     let canonical = crate::word_name::canonical_word_name(s);
-                    {
-                        let upper = canonical;
-
-                        let witness = self.begin_dispatch();
-                        match self.execute_word_core(upper.as_ref()) {
-                            Ok(()) => self.trace_nil_outcome(upper.as_ref(), &witness),
-                            Err(err) => {
-                                self.record_word_dispatch_failure(
-                                    upper.as_ref(),
-                                    &err,
-                                    witness.stack_len_before,
-                                );
-                                return Err(err);
-                            }
-                        }
-                    }
+                    self.dispatch_word(canonical.as_ref())?;
                 }
                 Token::Value(value) => {
                     // A value the Vector-as-code bridge carried in whole: it

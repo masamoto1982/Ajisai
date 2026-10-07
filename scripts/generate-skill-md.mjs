@@ -78,7 +78,6 @@ function buildWordTable() {
   const manifest = readJson('docs/word-manifest.json');
   const { entries } = words();
   const contracts = new Map(entries.map((entry) => [entry.name, entry]));
-  if (contracts.size !== entries.length) fail('spec/words.json contains duplicate canonical names');
   const rows = [];
   for (const entry of manifest.entries) {
     if (entry.kind === 'coreword') {

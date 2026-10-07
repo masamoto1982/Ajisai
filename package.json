@@ -18,7 +18,6 @@
     "test:mcp": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run selftest",
     "test:mcp-backends": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run test:backends",
     "test:mcp-pack": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run test:pack",
-    "eval:mcp": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval",
     "eval:mcp-traces": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval:traces",
     "eval:mcp-repairs": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval:repairs",
     "check:mcp-assets": "npm --prefix tools/mcp-server run check:assets",

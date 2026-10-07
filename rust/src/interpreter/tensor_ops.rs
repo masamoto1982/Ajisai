@@ -228,17 +228,40 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 /// because `shape()` collapses them to a top-level count that disagrees with
 /// the recursively flattened element count.
 pub(crate) fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
+    // The logical Unknown (U — `Nil` carrying the `TruthValue` hint) has no
+    // dedicated variant, so it is a rectangular nil lane here too, same as an
+    // operational NIL.
+    rectangular_shape_by(value, |leaf| {
+        matches!(
+            leaf.data,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil
+        )
+    })
+}
+
+/// The shape of a rectangular nesting whose leaves `is_leaf` admits, or
+/// `None` for a ragged one or a leaf it does not.
+///
+/// A leaf has the empty shape; an empty Vector has the shape `[0]`; a Vector
+/// whose children all share one shape prefixes its own length to theirs; a
+/// dense `Tensor` is rectangular by construction and already knows its
+/// shape. The numeric broadcast admits numeric leaves only
+/// ([`rectangular_shape`]); `SHAPE` admits every leaf
+/// (`shape_words::rectangular_shape`). The walk is the same, and used to be
+/// written twice.
+pub(crate) fn rectangular_shape_by(
+    value: &Value,
+    is_leaf: impl Fn(&Value) -> bool + Copy,
+) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
-        ValueData::Text(_) => None,
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) => {
             if items.is_empty() {
                 return Some(vec![0]);
             }
-            let first: Vec<usize> = rectangular_shape(&items[0])?;
+            let first: Vec<usize> = rectangular_shape_by(&items[0], is_leaf)?;
             for item in items.iter().skip(1) {
-                if rectangular_shape(item)? != first {
+                if rectangular_shape_by(item, is_leaf)? != first {
                     return None;
                 }
             }
@@ -247,10 +270,8 @@ pub(crate) fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
             shape.extend(first);
             Some(shape)
         }
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
-        // has no dedicated variant, so it takes the `Nil` arm above too and
-        // is a rectangular nil lane, same as an operational NIL.
-        ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
+        _ if is_leaf(value) => Some(Vec::new()),
+        _ => None,
     }
 }
 

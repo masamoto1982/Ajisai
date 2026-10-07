@@ -35,7 +35,7 @@
 use crate::interpreter::Interpreter;
 use crate::kernel::generated::WordId;
 use crate::types::fraction::{Fraction, FractionRepr};
-use crate::types::small_rational::{add, div, mul, order, Pair};
+use crate::types::small_rational::{self, add, div, mul, order, Pair};
 use crate::types::{Value, ValueData};
 use std::cmp::Ordering;
 
@@ -237,10 +237,11 @@ pub(crate) fn apply(kind: Kind, operands: &[Slot]) -> Option<Answer> {
         }
         Kind::Round => {
             let (n, d) = x(0).num()?;
-            let (n, d) = (i128::from(n), i128::from(d));
-            let magnitude = (2 * n.abs() + d) / (2 * d);
-            let rounded = i64::try_from(if n < 0 { -magnitude } else { magnitude }).ok()?;
-            answered(Slot::Num((rounded, 1)), 0, 0)
+            answered(
+                Slot::Num((small_rational::round_half_away_from_zero(n, d), 1)),
+                0,
+                0,
+            )
         }
         Kind::Not => answered(Slot::Bool(!x(0).truth()?), 0, 0),
         // Both operands are read before either decides: a FALSE beside a

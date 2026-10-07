@@ -55,7 +55,6 @@
     "selftest": "node tool-description.test.js && node word-candidates.test.js && node tool-consistency.test.js && node selftest.js",
     "test:pack": "node pack-smoke.js",
     "eval:validate": "node validate-evaluation.js && node evaluation-contract.test.js && node capture-traces.test.js && node capture-repairs.test.js",
-    "eval": "node score-traces.js --reference --require-perfect",
     "eval:capture": "node capture-traces.js",
     "eval:capture-repairs": "node capture-repairs.js",
     "eval:performance": "node benchmark.js --require-budget",

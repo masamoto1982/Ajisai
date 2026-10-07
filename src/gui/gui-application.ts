@@ -386,21 +386,6 @@ export interface GUI {
 }
 
 export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
-    // The full word list only changes when the vocabulary changes (after an
-    // execution). Without this cache the whole set — including a WASM
-    // round-trip per query — would be rebuilt on every keystroke.
-    let autocompleteWordsCache: string[] | null = null;
-
-    const collectAutocompleteWords = (): string[] => {
-        if (autocompleteWordsCache) return autocompleteWordsCache;
-        // Canonical names only: the Core list carries no alias, and a User
-        // Word is addressed by its bare name.
-        const coreWords = interpreter.collect_core_words_info().map(([name]) => name);
-        const userWords = interpreter.collect_user_words_info().map(([name]) => name);
-        autocompleteWordsCache = [...new Set([...coreWords, ...userWords])].sort((a, b) => a.localeCompare(b));
-        return autocompleteWordsCache;
-    };
-
     const init = async (): Promise<void> => {
         console.log('[GUI] Initializing GUI...');
 
@@ -408,6 +393,12 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         const layoutState = createLayoutState();
         const display = createDisplay(elements);
         display.init();
+
+        // The Output area is where persistence, the vocabulary manager and
+        // the execution controller all report; each is handed the same two
+        // functions rather than its own copy of them.
+        const showInfo = (text: string, append: boolean): void => display.renderInfo(text, append);
+        const showError = (error: Error): void => display.renderError(error);
 
         // The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), so the
         // sheet list is fixed — Core and User — and is a plain <select>, like
@@ -433,6 +424,23 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         const layoutDeps: ApplyAreaStateDeps = { elements, state: layoutState, mobile, showDictionarySheet };
         const layoutController = createLayoutController(layoutDeps);
 
+        // The full word list only changes when the vocabulary changes (after an
+        // execution). Without this cache the whole set — including a WASM
+        // round-trip per query — would be rebuilt on every keystroke. The Core
+        // half is the vocabulary manager's one permanent fetch; only the User
+        // half is read again when the dictionary is redrawn.
+        let autocompleteWordsCache: string[] | null = null;
+
+        const collectAutocompleteWords = (): string[] => {
+            if (autocompleteWordsCache) return autocompleteWordsCache;
+            // Canonical names only: the Core list carries no alias, and a User
+            // Word is addressed by its bare name.
+            const coreWords = vocabulary.collectCoreWordNames();
+            const userWords = interpreter.collect_user_words_info().map(([name]) => name);
+            autocompleteWordsCache = [...new Set([...coreWords, ...userWords])].sort((a, b) => a.localeCompare(b));
+            return autocompleteWordsCache;
+        };
+
         // Redraw the Stack and Dictionary panels. With no arguments both are
         // drawn from the interpreter; a run passes the view it has already
         // read back and what it changed, so only the changed panel is rebuilt
@@ -451,9 +459,9 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         };
 
         const persistence = createPersistence(interpreter, {
-            showError: (error) => display.renderError(error),
+            showError,
             updateDisplays: updateAllDisplays,
-            showInfo: (text, append) => display.renderInfo(text, append),
+            showInfo,
             readActiveDictionarySheet: () => sheetSelect.value
         });
         await persistence.init();
@@ -471,8 +479,8 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             onBackgroundDoubleClick: () => editor.removeLastWord(),
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text, append) => display.renderInfo(text, append),
-            showError: (error) => display.renderError(error)
+            showInfo,
+            showError
         });
 
         // Clearing the stack keeps the dictionary — that is what separates it
@@ -515,7 +523,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             // other text.
             extractEditorValue: () => { editor.format(); return editor.extractValue(); },
             clearEditor: (switchView) => { editor.clear(switchView); },
-            showInfo: (text, append) => display.renderInfo(text, append),
+            showInfo,
             showFoldedInfo: (label, text) => display.renderFoldedInfo(label, text),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
             showDocumentation: (text) => display.renderDocumentation(text),

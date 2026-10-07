@@ -4,10 +4,6 @@
     "spec/words.json",
     "rust/src/surface_forms.rs"
   ],
-  "implementationCatalogValidatedAgainst": [
-    "spec/words.json",
-    "rust/src/kernel/generated/word_registry.rs"
-  ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "canonicalWords": 78,

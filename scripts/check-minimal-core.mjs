@@ -61,7 +61,6 @@ const report = reporter('minimal-core');
 const fail = report.fail;
 const setDifference = (left, right) => [...left].filter((item) => !right.has(item));
 
-if (words.length !== wordNames.size) fail('canonical inventory contains duplicate names');
 for (const entry of entries) {
   if (bySurface.has(entry.surface)) fail(`duplicate Core Word witness: ${entry.surface}`);
   bySurface.set(entry.surface, entry);

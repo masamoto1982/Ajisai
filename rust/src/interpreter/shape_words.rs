@@ -22,29 +22,11 @@ use crate::types::{Value, ValueData};
 
 /// The shape of a rectangular nesting, or `None` for a ragged one.
 ///
-/// A leaf — anything that is not a Vector, a Text included — has the empty
-/// shape; an empty Vector has the shape `[0]`; a Vector whose children all
-/// share one shape prefixes its own length to theirs. A dense `Tensor` is
-/// rectangular by construction and already knows its shape.
+/// Every non-Vector — a Text included — is a leaf here, where the numeric
+/// broadcast's `tensor_ops::rectangular_shape` admits numeric leaves only;
+/// the walk itself is `rectangular_shape_by`'s.
 fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
-    if let ValueData::Tensor { shape, .. } = &value.data {
-        return Some(shape.to_vec());
-    }
-    let Some(children) = value.as_vector_view() else {
-        return Some(Vec::new());
-    };
-    let mut shape = vec![children.len()];
-    let Some(first) = children.first() else {
-        return Some(shape);
-    };
-    let inner = rectangular_shape(first)?;
-    for child in children.iter().skip(1) {
-        if rectangular_shape(child)? != inner {
-            return None;
-        }
-    }
-    shape.extend(inner);
-    Some(shape)
+    crate::interpreter::tensor_ops::rectangular_shape_by(value, |_| true)
 }
 
 /// How deeply a value nests: a leaf is 0, a Vector one more than its deepest

@@ -101,7 +101,7 @@ impl Interpreter {
             // report `UnknownWord` rather than silently doing nothing.
             return match def.generated {
                 Some(word) => self.execute_generated_word(word),
-                None => self.execute_builtin(name),
+                None => self.execute_builtin_direct(name),
             }
             .and_then(|()| self.check_fresh_nesting());
         }
@@ -151,11 +151,6 @@ impl Interpreter {
         }
 
         result
-    }
-
-    pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        let canonical = crate::word_name::canonical_word_name(name);
-        self.execute_builtin_direct(canonical.as_ref())
     }
 
     pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {

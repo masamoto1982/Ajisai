@@ -353,32 +353,12 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
             // interpreted route makes for it, and owes the same records: the
             // NIL it answered, or the frame it encloses when the failure or the
             // NIL is a Word's inside its body.
-            CompiledOp::CallUserWord(name) => {
-                let witness = interp.begin_dispatch();
-                match interp.execute_word_core(name) {
-                    Ok(()) => interp.trace_nil_outcome(name, &witness),
-                    Err(err) => {
-                        interp.record_word_dispatch_failure(name, &err, witness.stack_len_before);
-                        return Err(err);
-                    }
-                }
-            }
+            CompiledOp::CallUserWord(name) => interp.dispatch_word(name)?,
             // A name dispatched where it stands, as the token walk's Symbol
             // arm dispatches it.
             CompiledOp::FallbackToken(Token::Symbol(symbol)) => {
                 let name = crate::word_name::canonical_word_name(symbol);
-                let witness = interp.begin_dispatch();
-                match interp.execute_word_core(name.as_ref()) {
-                    Ok(()) => interp.trace_nil_outcome(name.as_ref(), &witness),
-                    Err(err) => {
-                        interp.record_word_dispatch_failure(
-                            name.as_ref(),
-                            &err,
-                            witness.stack_len_before,
-                        );
-                        return Err(err);
-                    }
-                }
+                interp.dispatch_word(name.as_ref())?;
             }
             // Unreachable: a line holding any other fallback token is
             // re-interpreted whole, above.
@@ -420,27 +400,20 @@ impl CompiledCall {
     }
 }
 
-/// Run a pre-resolved builtin call site. Mirrors `execute_builtin` exactly —
-/// declared NIL contract, then executor dispatch — but
-/// consumes the decisions `CompiledCall::resolve` already made instead of
-/// re-scanning the registry table.
+/// Run a pre-resolved builtin call site: the same gates and dispatch as a
+/// direct call (`execute_generated_word` — declared NIL contract, declared
+/// lift, then the executor), consuming the decision `CompiledCall::resolve`
+/// already made instead of re-scanning the registry table.
 ///
-/// "Mirrors `execute_builtin` exactly" is the whole contract of this function,
-/// and the NIL guard is part of what it has to mirror: a compiled body that
-/// skipped the guard would let a Word behave one way when called directly and
-/// another when called from inside a user word, which is precisely the
-/// unobservability that compiling a body is required to preserve
-/// (LANG.AUTHORITY.FREEDOM).
+/// Going through the one shared route is the whole contract of this function:
+/// a compiled body that skipped a gate would let a Word behave one way when
+/// called directly and another when called from inside a user word, which is
+/// precisely the unobservability that compiling a body is required to
+/// preserve (LANG.AUTHORITY.FREEDOM). It used to carry its own copy of those
+/// gates, kept in step by hand.
 pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCall) -> Result<()> {
-    let Some(word) = call.word else {
-        return interp.execute_builtin_direct(&call.name);
-    };
-    let result = match interp.apply_declared_nil_contract(word) {
-        Some(decided) => decided,
-        None => match interp.apply_declared_lift(word) {
-            Some(lifted) => lifted,
-            None => interp.execute_builtin_by_id(word.id),
-        },
-    };
-    result.map_err(|err| err.attributed_to(word.name))
+    match call.word {
+        Some(word) => interp.execute_generated_word(word),
+        None => interp.execute_builtin_direct(&call.name),
+    }
 }

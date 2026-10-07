@@ -73,6 +73,20 @@ impl crate::interpreter::Interpreter {
         ) {
             return;
         }
+        self.push_word_error_event(word, err, stack_len_before);
+    }
+
+    /// The `WordError` event a failed dispatch of `word` leaves, with its
+    /// diagnosis: built here once for the User Word frame and the general
+    /// dispatch record, so the two cannot drift in what a reader is told.
+    ///
+    /// The position is the top-level token that reached this failure. A block
+    /// and a Word body are each their own token stream with no source of
+    /// their own, so the position a reader is sent to is the top-level token
+    /// they actually wrote. A misspelled *user* Word is only knowable here:
+    /// the compiled-in registry has never heard of it, and this is the frame
+    /// that holds the live dictionary.
+    fn push_word_error_event(&mut self, word: &str, err: &AjisaiError, stack_len_before: usize) {
         let mut diagnosis =
             DebugDiagnosis::from_error(err, Some(word), stack_len_before, self.stack.len())
                 .with_source_position(self.current_source_span);
@@ -105,36 +119,13 @@ impl crate::interpreter::Interpreter {
         err: &AjisaiError,
         stack_len_before: usize,
     ) {
-        let category = ErrorCategory::from_error(err);
-        let error_text = err.to_string();
         // A failure raised inside a block this Word applied, or inside a User
         // Word's body, is already recorded under the name of the Word that
         // raised it. This frame is the one it happened *inside*, so it adds
         // itself as context and leaves the answer to "which Word failed" alone.
-        if self.attribute_enclosing_word(word, &error_text) {
+        if self.attribute_enclosing_word(word, &err.to_string()) {
             return;
         }
-        // The top-level token that reached this failure. A block and a Word body
-        // are each their own token stream with no source of their own, so the
-        // position a reader is sent to is the top-level token they actually
-        // wrote.
-        let mut diagnosis =
-            DebugDiagnosis::from_error(err, Some(word), stack_len_before, self.stack.len())
-                .with_source_position(self.current_source_span);
-        // A misspelled *user* Word is only knowable here: the compiled-in
-        // registry has never heard of it, and this is the frame that holds the
-        // live dictionary.
-        diagnosis.with_user_vocabulary(self.user_words.keys().map(String::as_str));
-        self.push_error_flow_trace(ErrorFlowEvent {
-            kind: ErrorFlowEventKind::WordError,
-            word: Some(word.to_string()),
-            error_category: category,
-            absence: None,
-            stack_len_before,
-            stack_len_after: self.stack.len(),
-            message: format!("word error word={} error={}", word, err),
-            diagnosis: Some(EventDiagnosis::built(diagnosis)),
-            error_text,
-        });
+        self.push_word_error_event(word, err, stack_len_before);
     }
 }

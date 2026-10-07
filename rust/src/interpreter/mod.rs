@@ -2,6 +2,7 @@ pub mod arithmetic;
 pub(crate) mod arithmetic_meter;
 pub(crate) mod bindings;
 mod body_symbols;
+pub(crate) mod broadcast_tree;
 pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;

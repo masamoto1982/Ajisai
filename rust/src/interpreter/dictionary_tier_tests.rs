@@ -1,7 +1,7 @@
 //! Test suite for what the Core vocabulary admits.
 
-use crate::builtins::builtin_specs;
 use crate::interpreter::Interpreter;
+use crate::kernel::generated::GENERATED_WORDS;
 
 #[tokio::test]
 async fn core_vocabulary_holds_words_and_not_surface_forms() {
@@ -24,6 +24,6 @@ async fn def_registers_a_user_word() {
 }
 
 #[test]
-fn now_is_not_in_builtin_specs() {
-    assert!(builtin_specs().iter().all(|s| s.name != "NOW"));
+fn now_is_not_a_core_word() {
+    assert!(GENERATED_WORDS.iter().all(|word| word.name != "NOW"));
 }

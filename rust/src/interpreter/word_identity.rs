@@ -107,24 +107,14 @@ fn structural_atom(tag: u8) -> Atom {
     Atom::Raw(vec![tag])
 }
 
+/// A number literal's atom: the bytes `encode_token` writes for it, so the
+/// body shape and the identity encoding cannot spell a number two ways. (An
+/// unparseable literal falls back to its raw spelling there, so the shape
+/// stays total and deterministic.)
 fn number_atom(literal: &crate::types::NumberLiteral) -> Atom {
-    match literal.value() {
-        Some(frac) => {
-            let (num, den) = frac.to_bigint_pair();
-            let mut b = vec![b'N'];
-            b.extend_from_slice(num.to_str_radix(16).as_bytes());
-            b.push(b'/');
-            b.extend_from_slice(den.to_str_radix(16).as_bytes());
-            Atom::Raw(b)
-        }
-        // Unparseable numeric literal: fall back to the raw spelling so the
-        // shape is still total and deterministic.
-        None => {
-            let mut b = vec![b'n'];
-            b.extend_from_slice(literal.lexeme().as_bytes());
-            Atom::Raw(b)
-        }
-    }
+    let mut bytes = Vec::new();
+    encode_token(&mut bytes, &Token::Number(literal.clone()));
+    Atom::Raw(bytes)
 }
 
 /// Serialize a body shape to bytes, encoding each user-word reference with the

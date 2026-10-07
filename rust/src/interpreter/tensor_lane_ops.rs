@@ -14,9 +14,10 @@
 //! [`tensor_ops`]: crate::interpreter::tensor_ops
 
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
 use crate::interpreter::tensor_ops::{
-    broadcast_children, broadcast_leaf, broadcast_shape, compute_strides, project_broadcast_index,
-    ravel_index, rectangular_shape, unravel_index,
+    broadcast_leaf, broadcast_shape, compute_strides, project_broadcast_index, ravel_index,
+    rectangular_shape, unravel_index,
 };
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
@@ -75,45 +76,15 @@ pub(crate) fn lane_nil_passthrough(a: &Value, b: &Value) -> Option<Value> {
 }
 
 /// The tree-walking half of [`apply_lane_wise_broadcast`], for ragged or
-/// nested-mixed operands. Mirrors [`apply_recursive_broadcast`] exactly; only
-/// the leaf's return type differs. Every caller (ADD/SUB/MUL/DIV, directly or
-/// through DIV's own division-by-zero fallback)
-/// declares `nonNumeric` uniformly, same as `FlatTensor::from_value`.
+/// nested-mixed operands: [`broadcast_tree`]'s walk with [`apply_lane_law`]
+/// at the leaves. Every caller (ADD/SUB/MUL/DIV, directly or through DIV's
+/// own division-by-zero fallback) declares `nonNumeric` uniformly, same as
+/// `FlatTensor::from_value`.
 fn apply_lane_wise_recursive<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
 {
-    match (broadcast_children(a), broadcast_children(b)) {
-        (None, None) => apply_lane_law(a, b, op),
-        (Some(children), None) => {
-            let out: Vec<Value> = children
-                .iter()
-                .map(|child| apply_lane_wise_recursive(child, b, op))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-        (None, Some(children)) => {
-            let out: Vec<Value> = children
-                .iter()
-                .map(|child| apply_lane_wise_recursive(a, child, op))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-        (Some(a_children), Some(b_children)) => {
-            if a_children.len() != b_children.len() {
-                return Err(AjisaiError::length_mismatch(
-                    a_children.len(),
-                    b_children.len(),
-                ));
-            }
-            let out: Vec<Value> = a_children
-                .iter()
-                .zip(b_children.iter())
-                .map(|(x, y)| apply_lane_wise_recursive(x, y, op))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-    }
+    broadcast_tree(a, b, UnequalAxes::Refuse, &|x, y| apply_lane_law(x, y, op))
 }
 
 /// Element-wise broadcast whose leaf law answers with a whole `Value`.
