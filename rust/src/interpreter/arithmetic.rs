@@ -6,7 +6,7 @@ use crate::interpreter::arithmetic_meter::{
 use crate::interpreter::record_ops;
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_lane_ops::lane_nil_passthrough;
-use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
+use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::interpreter::value_extraction_helpers::{
     exact_real_of, extract_operands, nil_passthrough_binary,
 };
@@ -617,8 +617,7 @@ where
     let a_val = &operands[0];
     let b_val = &operands[1];
 
-    let computed =
-        apply_binary_broadcast_with_metrics(a_val, b_val, op, Some(&mut interp.runtime_metrics));
+    let computed = apply_binary_broadcast(a_val, b_val, op);
     let computed = computed.and_then(|result| {
         check_result_size(interp, &result)?;
         Ok(result)

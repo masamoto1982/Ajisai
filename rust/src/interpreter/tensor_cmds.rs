@@ -16,7 +16,7 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
-use super::tensor_ops::{apply_unary_flat_with_metrics, build_nested_value};
+use super::tensor_ops::{apply_unary_flat, build_nested_value};
 
 fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G) -> Result<()>
 where
@@ -82,7 +82,7 @@ where
     }
 
     if val.is_vector() {
-        match apply_unary_flat_with_metrics(&val, op, Some(&mut interp.runtime_metrics)) {
+        match apply_unary_flat(&val, op) {
             Ok(result) => {
                 interp.stack.push(result);
                 return Ok(());

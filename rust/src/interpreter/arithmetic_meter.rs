@@ -25,7 +25,7 @@ use crate::interpreter::runtime_limits::{
     ALGEBRAIC_PAIR_UNITS,
 };
 use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
-use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
+use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
@@ -236,18 +236,13 @@ pub(crate) fn apply_division_schema(
     let a_val = &operands[0];
     let b_val = &operands[1];
 
-    let computed = apply_binary_broadcast_with_metrics(
-        a_val,
-        b_val,
-        |a, b| schema.fraction(a, b),
-        Some(&mut interp.runtime_metrics),
-    )
-    // Bound accumulation before the result is pushed; on a refusal the
-    // operands go back, exactly as for any other failure of this arm.
-    .and_then(|result| {
-        check_result_size(interp, &result)?;
-        Ok(result)
-    });
+    let computed = apply_binary_broadcast(a_val, b_val, |a, b| schema.fraction(a, b))
+        // Bound accumulation before the result is pushed; on a refusal the
+        // operands go back, exactly as for any other failure of this arm.
+        .and_then(|result| {
+            check_result_size(interp, &result)?;
+            Ok(result)
+        });
 
     // `LANG.COLLECTIONS.LIFT`: "Each lane preserves the exactness, truth, NIL,
     // and ERROR distinctions of the scalar law." A zero divisor empties its own
@@ -366,7 +361,7 @@ mod tests {
     //! Behavioral coverage for the ExactScalar path of `op_div` (LANG.VALUES.EXACT).
     //!
     //! Regression guard for the ordering bug where the generic broadcast block
-    //! (`apply_binary_broadcast_with_metrics`) ran *before* the ExactScalar
+    //! (`apply_binary_broadcast`) ran *before* the ExactScalar
     //! block and unconditionally `return`ed on the `FlatTensor::from_value`
     //! error for exact irrationals, making the ExactScalar `DIV` path dead code.
     //! `op_add`/`op_sub`/`op_mul` place the ExactScalar block before broadcast;
