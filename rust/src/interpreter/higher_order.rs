@@ -193,115 +193,133 @@ pub(crate) fn execute_executable_code(
 }
 
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
-    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
-
-    let executable = match extract_executable_code(interp, &code_val) {
-        Ok(exec) => exec,
-        Err(e) => {
-            interp.stack.push(code_val);
-            return Err(e);
-        }
-    };
-
-    let target_val: Value = interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(code_val.clone());
-        AjisaiError::stack_underflow()
-    })?;
-
-    if target_val.is_nil() {
-        interp
-            .stack
-            .push(Value::nil_inheriting_absence_from(&target_val));
-        return Ok(());
-    }
-
-    if !target_val.is_vector() {
-        let got = target_val.domain_name();
-        interp.stack.push(target_val);
-        interp.stack.push(code_val);
-        return Err(AjisaiError::declared(
-            "nonVector",
-            format!("expected a Vector, got {got}"),
-        ));
-    }
-
-    let n_elements: usize = target_val.len();
-    if n_elements == 0 {
-        interp.stack.push(Value::from_vector(Vec::new()));
-        return Ok(());
-    }
-
-    if let Some(result) = executable.fused(interp, 1).and_then(|block| {
-        block.run(
-            interp,
-            crate::interpreter::fused_block::FusedWalk::Filter,
-            &target_val,
-            None,
-        )
-    }) {
-        interp.stack.push(result);
-        return Ok(());
-    }
-
-    let mut results: Vec<Value> = Vec::with_capacity(n_elements);
-    let mut saved_stack: Stack = Stack::new();
-    std::mem::swap(&mut interp.stack, &mut saved_stack);
-    let saved_no_change_check: bool = interp.disable_no_change_check;
-    interp.disable_no_change_check = true;
-
-    let mut error: Option<AjisaiError> = None;
-    for i in 0..n_elements {
-        let elem: Value = target_val
-            .child(i)
-            .expect("FILTER: child index in 0..len must be valid");
-        interp.stack.clear();
-        interp.stack.push(elem.clone());
-        match execute_executable_code(interp, &executable) {
-            Ok(_) => {
-                let condition_result: Value = match interp.stack.pop() {
-                    Some(r) => r,
-                    None => {
-                        error = Some(AjisaiError::declared(
-                            "blockContractViolation",
-                            "expected the predicate block to leave one truth value, and it left none",
-                        ));
-                        break;
-                    }
-                };
-
-                let is_true: bool = match extract_predicate_boolean(condition_result) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
-                };
-
-                if is_true {
-                    results.push(elem);
-                }
-            }
-            Err(e) => {
-                error = Some(e);
-                break;
-            }
-        }
-    }
-    interp.disable_no_change_check = saved_no_change_check;
-    interp.stack = saved_stack;
-
-    if let Some(e) = error {
-        interp.stack.push(target_val);
-        interp.stack.push(code_val);
-        return Err(e);
-    }
-
-    interp.stack.push(Value::from_vector_promoted(results));
-
-    Ok(())
+    run_element_walk::<FilterWalk>(
+        interp,
+        "FILTER",
+        crate::interpreter::fused_block::FusedWalk::Filter,
+    )
 }
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
+    run_element_walk::<MapWalk>(
+        interp,
+        "MAP",
+        crate::interpreter::fused_block::FusedWalk::Map,
+    )
+}
+
+/// What one element-wise walk does with each element's answer, and what it
+/// answers at the end. `MAP` and `FILTER` differ in nothing else: the operand
+/// handling, the NIL passthrough, the empty case, the fused attempt and the
+/// per-element scratch-stack loop are `run_element_walk`'s, as `FOLD`/`SCAN`
+/// share `run_accumulator_walk`. The two used to carry a copy each of that
+/// sixty-line frame.
+trait ElementWalk {
+    /// What a block that answered nothing is told it owed.
+    const EMPTY_RESULT_MESSAGE: &'static str;
+
+    /// A walk over `n_elements` elements, with room for its answers.
+    fn with_capacity(n_elements: usize) -> Self;
+
+    /// Called with the element the block was given (by its index in `target`)
+    /// and the one value the block left.
+    fn visit(&mut self, target: &Value, index: usize, result: Value) -> Result<()>;
+
+    /// The Word's answer once every element has been visited.
+    fn finish(self) -> Value;
+}
+
+struct FilterWalk {
+    kept: Vec<Value>,
+}
+
+impl ElementWalk for FilterWalk {
+    const EMPTY_RESULT_MESSAGE: &'static str =
+        "expected the predicate block to leave one truth value, and it left none";
+
+    fn with_capacity(n_elements: usize) -> Self {
+        FilterWalk {
+            kept: Vec::with_capacity(n_elements),
+        }
+    }
+
+    fn visit(&mut self, target: &Value, index: usize, result: Value) -> Result<()> {
+        if extract_predicate_boolean(result)? {
+            self.kept.push(
+                target
+                    .child(index)
+                    .expect("FILTER: child index in 0..len must be valid"),
+            );
+        }
+        Ok(())
+    }
+
+    fn finish(self) -> Value {
+        Value::from_vector_promoted(self.kept)
+    }
+}
+
+/// The answers, as columns while every one is a plain scalar (a block that
+/// answers numbers does, almost always) and as a list from the first that is
+/// not: the Tensor is the one `from_vector_promoted` builds from the list.
+struct MapWalk {
+    n_elements: usize,
+    columns: Option<ScalarColumns>,
+    results: Vec<Value>,
+}
+
+impl ElementWalk for MapWalk {
+    const EMPTY_RESULT_MESSAGE: &'static str =
+        "expected the block to leave one value, and it left none";
+
+    fn with_capacity(n_elements: usize) -> Self {
+        MapWalk {
+            n_elements,
+            columns: Some(ScalarColumns::with_capacity(n_elements)),
+            results: Vec::new(),
+        }
+    }
+
+    // The block's one result *is* the mapped element, whatever its shape. A
+    // one-element Vector used to be unwrapped here, back when a scalar was
+    // itself a one-element Vector and the two were indistinguishable. They
+    // are separate domains now (LANG.VALUES.DISJOINT), and the unwrapping
+    // outlived its reason: `[ 1 2 ] { 1 COLLECT } MAP` answered `[ 1/1 2/1 ]`,
+    // so a block asking in as many words for a Vector of one got a scalar,
+    // and there was no way at all to map to singletons. Worse, it was silent
+    // and unequal — `[ [ 1 ] ] { REVERSE } MAP 0 GET 5 ADD` answered `6/1`
+    // where `[ 6/1 ]` is the answer, which is exactly the quiet wrong result
+    // LANG.FAILURE.TRICHOTOMY exists to rule out.
+    fn visit(&mut self, _target: &Value, _index: usize, result: Value) -> Result<()> {
+        match self.columns.as_mut() {
+            Some(columns) => {
+                if !columns.push(&result) {
+                    self.results = self
+                        .columns
+                        .take()
+                        .expect("checked above")
+                        .into_values(self.n_elements);
+                    self.results.push(result);
+                }
+            }
+            None => self.results.push(result),
+        }
+        Ok(())
+    }
+
+    fn finish(self) -> Value {
+        match self.columns {
+            Some(columns) => columns.finish(),
+            None => Value::from_vector_promoted(self.results),
+        }
+    }
+}
+
+fn run_element_walk<W: ElementWalk>(
+    interp: &mut Interpreter,
+    word: &'static str,
+    fused_walk: crate::interpreter::fused_block::FusedWalk,
+) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let executable = match extract_executable_code(interp, &code_val) {
@@ -340,23 +358,15 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    if let Some(result) = executable.fused(interp, 1).and_then(|block| {
-        block.run(
-            interp,
-            crate::interpreter::fused_block::FusedWalk::Map,
-            &target_val,
-            None,
-        )
-    }) {
+    if let Some(result) = executable
+        .fused(interp, 1)
+        .and_then(|block| block.run(interp, fused_walk, &target_val, None))
+    {
         interp.stack.push(result);
         return Ok(());
     }
 
-    // The answers, as columns while every one is a plain scalar (a block that
-    // answers numbers does, almost always) and as a list from the first that
-    // is not: the Tensor is the one `from_vector_promoted` builds from the list.
-    let mut columns: Option<ScalarColumns> = Some(ScalarColumns::with_capacity(n_elements));
-    let mut results: Vec<Value> = Vec::new();
+    let mut walk = W::with_capacity(n_elements);
     let mut saved_stack: Stack = Stack::new();
     std::mem::swap(&mut interp.stack, &mut saved_stack);
     let saved_no_change_check: bool = interp.disable_no_change_check;
@@ -366,40 +376,21 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     for i in 0..n_elements {
         let elem: Value = target_val
             .child(i)
-            .expect("MAP: child index in 0..len must be valid");
+            .unwrap_or_else(|| panic!("{word}: child index in 0..len must be valid"));
         interp.stack.clear();
         interp.stack.push(elem);
         match execute_executable_code(interp, &executable) {
             Ok(_) => match interp.stack.pop() {
-                // The block's one result *is* the mapped element, whatever its
-                // shape. A one-element Vector used to be unwrapped here, back
-                // when a scalar was itself a one-element Vector and the two
-                // were indistinguishable. They are separate domains now
-                // (LANG.VALUES.DISJOINT), and the unwrapping outlived its
-                // reason: `[ 1 2 ] { 1 COLLECT } MAP` answered `[ 1/1 2/1 ]`,
-                // so a block asking in as many words for a Vector of one got a
-                // scalar, and there was no way at all to map to singletons.
-                // Worse, it was silent and unequal — `[ [ 1 ] ] { REVERSE } MAP
-                // 0 GET 5 ADD` answered `6/1` where `[ 6/1 ]` is the
-                // answer, which is exactly the quiet wrong result
-                // LANG.FAILURE.TRICHOTOMY exists to rule out.
-                Some(result_val) => {
-                    if let Some(taken) = columns.as_mut() {
-                        if !taken.push(&result_val) {
-                            results = columns
-                                .take()
-                                .expect("checked above")
-                                .into_values(n_elements);
-                            results.push(result_val);
-                        }
-                    } else {
-                        results.push(result_val);
+                Some(result) => {
+                    if let Err(e) = walk.visit(&target_val, i, result) {
+                        error = Some(e);
+                        break;
                     }
                 }
                 None => {
                     error = Some(AjisaiError::declared(
                         "blockContractViolation",
-                        "expected the block to leave one value, and it left none",
+                        W::EMPTY_RESULT_MESSAGE,
                     ));
                     break;
                 }
@@ -419,11 +410,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
 
-    interp.stack.push(match columns {
-        Some(taken) => taken.finish(),
-        None => Value::from_vector_promoted(results),
-    });
-
+    interp.stack.push(walk.finish());
     Ok(())
 }
 
