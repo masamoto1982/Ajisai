@@ -334,7 +334,6 @@ cd tools/mcp-server
 npm install
 npm run selftest       # uses the packaged WASM backend unless AJISAI_BIN is set
 npm run test:pack
-npm run eval
 npm run eval:validate
 npm run eval:performance
 npm run eval:number-baseline
@@ -352,11 +351,10 @@ runs `backend/parity-test.js`) runs every golden case and every declared limit
 boundary against both backends and asserts they agree.
 
 `eval/cases.json` is the agent-evaluation corpus: 78 cases (58 positive, 20
-negative), each asked in English and Japanese, so 156 prompts. `npm run eval` (the same run as
-`npm run eval:traces`) scores the corpus answering itself — `score-traces.js --reference` —
-which executes every case's expected tool call against the real backend. It measures backend
-semantic correctness only; model tool selection and source generation require captured
-model traces and are not claimed by this score.
+negative), each asked in English and Japanese, so 156 prompts. `npm run eval:traces` scores the
+corpus answering itself — `score-traces.js --reference` — which executes every case's expected
+tool call against the real backend. It measures backend semantic correctness only; model tool
+selection and source generation require captured model traces and are not claimed by this score.
 
 Every case is bilingual because Ajisai is a Japanese-authored language with an
 English tool surface, so "does a Japanese prompt reach the same tool with the
