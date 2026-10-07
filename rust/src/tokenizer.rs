@@ -30,8 +30,15 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 /// from `REFLECT` data were never written anywhere, and inventing a position
 /// for them would be worse than having none.
 pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>), String> {
-    let mut tokens = Vec::new();
-    let mut spans: Vec<SourceSpan> = Vec::new();
+    // Sized once from a count of the words: growing a Vec of 40-byte tokens
+    // by doubling copied every token about twice more.
+    let words = ascii_word_count(input);
+    let mut tokens = Vec::with_capacity(words);
+    let mut spans: Vec<SourceSpan> = Vec::with_capacity(words);
+    // A name written again shares the text of its first spelling: a program
+    // names a few Words and bindings many times, and each fresh `Arc<str>`
+    // was an allocation here and a free when the tokens were dropped.
+    let mut names: crate::fast_hash::FastMap<&str, std::sync::Arc<str>> = Default::default();
 
     // One pass over the text, by character: `pos` is the byte offset of the
     // next character and `here` its line and column, so a token's span is the
@@ -90,9 +97,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // (`spec/grammar.json`, characterClasses.nameCharacter).
         let span = cursor.here;
         let start = cursor.pos;
-        while cursor.peek().is_some_and(|c| !c.is_whitespace()) {
-            cursor.bump();
-        }
+        cursor.skip_word();
         let token_str = &input[start..cursor.pos];
 
         // The two structural words of `spec/grammar.json`'s one delimiter
@@ -134,7 +139,8 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
             continue;
         }
 
-        tokens.push(Token::Symbol(token_str.into()));
+        let name = names.entry(token_str).or_insert_with(|| token_str.into());
+        tokens.push(Token::Symbol(name.clone()));
         spans.push(span);
     }
 
@@ -153,6 +159,21 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
     Ok((tokens, spans))
 }
 
+/// How many runs of non-whitespace bytes `input` holds, ASCII whitespace
+/// only: about the number of tokens it reads as. Only a capacity — a string
+/// or comment holding spaces makes it more, other whitespace makes it fewer,
+/// and neither changes what is read.
+fn ascii_word_count(input: &str) -> usize {
+    let mut count = 0;
+    let mut in_word = false;
+    for &byte in input.as_bytes() {
+        let space = byte.is_ascii_whitespace();
+        count += usize::from(!space && !in_word);
+        in_word = !space;
+    }
+    count
+}
+
 /// A position in the source being tokenized, advanced one character at a
 /// time so that its line and column stay those of the next character.
 struct Cursor<'a> {
@@ -169,6 +190,29 @@ impl Cursor<'_> {
         match *self.input.as_bytes().get(self.pos)? {
             byte if byte.is_ascii() => Some(char::from(byte)),
             _ => self.input[self.pos..].chars().next(),
+        }
+    }
+
+    /// Advance to the next whitespace character or the end of input. A word
+    /// holds no newline, so only the column moves; its ASCII bytes are taken
+    /// a byte at a time, and anything else falls back to `peek`/`bump`.
+    #[inline]
+    fn skip_word(&mut self) {
+        let bytes = self.input.as_bytes();
+        while let Some(&byte) = bytes.get(self.pos) {
+            if byte.is_ascii() {
+                // `char::is_whitespace` on ASCII, vertical tab included.
+                if matches!(byte, b' ' | b'\t' | b'\n' | b'\x0B' | b'\x0C' | b'\r') {
+                    return;
+                }
+                self.pos += 1;
+                self.here.column += 1;
+            } else {
+                match self.peek() {
+                    Some(c) if !c.is_whitespace() => self.bump(),
+                    _ => return,
+                }
+            }
         }
     }
 

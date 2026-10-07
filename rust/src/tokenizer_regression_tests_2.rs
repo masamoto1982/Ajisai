@@ -396,3 +396,39 @@ proptest::proptest! {
         );
     }
 }
+
+/// The ASCII fast path through a word, its fallback to characters, and the
+/// sizing and name sharing around it must not move a token or its span:
+/// a vertical tab and a no-break space still separate words, a multi-byte
+/// character inside one still counts one column, and a repeated name still
+/// reads as the same name.
+#[test]
+fn spans_survive_the_word_fast_path() {
+    let (tokens, spans) =
+        crate::tokenizer::tokenize_with_spans("ab\u{0B}1 é漢x\n  X X\na\u{A0}b").unwrap();
+    assert_eq!(
+        tokens,
+        vec![
+            Token::Symbol("ab".into()),
+            Token::number("1"),
+            Token::Symbol("é漢x".into()),
+            Token::Symbol("X".into()),
+            Token::Symbol("X".into()),
+            Token::Symbol("a".into()),
+            Token::Symbol("b".into()),
+        ]
+    );
+    let at = |line, column| crate::tokenizer::SourceSpan { line, column };
+    assert_eq!(
+        spans,
+        vec![
+            at(1, 1),
+            at(1, 4),
+            at(1, 6),
+            at(2, 3),
+            at(2, 5),
+            at(3, 1),
+            at(3, 3)
+        ]
+    );
+}
