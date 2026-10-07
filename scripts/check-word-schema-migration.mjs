@@ -48,7 +48,6 @@ for (const word of words.entries) {
   if (word.partiality !== derivedPartiality(word)) {
     fail(`${word.name} declares partiality ${word.partiality}, but its outcomes derive ${derivedPartiality(word)}`);
   }
-  if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
   names.add(word.name);
   for (const field of required) if (!(field in word)) fail(`${word.name} lacks required field ${field}`);
   if (!familyIds.has(word.family)) fail(`${word.name} references unknown family ${word.family}`);

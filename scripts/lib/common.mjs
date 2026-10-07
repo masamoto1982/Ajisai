@@ -21,9 +21,23 @@ export const readText = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
 export const readJson = (path) => JSON.parse(readText(path));
 
 let wordsDocument;
-/** spec/words.json, parsed once per process. */
+/**
+ * spec/words.json, parsed once per process. A Word's name is its identity
+ * everywhere downstream (the registry, the manifest, the reference, the
+ * gates), so the one thing asserted here, for every reader at once, is that
+ * no name appears twice: a duplicate throws instead of letting each script
+ * discover it on its own.
+ */
 export function words() {
-  wordsDocument ??= readJson('spec/words.json');
+  if (wordsDocument === undefined) {
+    const document = readJson('spec/words.json');
+    const seen = new Set();
+    for (const { name } of document.entries) {
+      if (seen.has(name)) throw new Error(`spec/words.json names the Word ${name} twice`);
+      seen.add(name);
+    }
+    wordsDocument = document;
+  }
   return wordsDocument;
 }
 

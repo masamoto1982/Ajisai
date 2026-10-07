@@ -63,10 +63,7 @@ if (clauseIds.size === 0) fail('no language clause IDs found');
 const familyIds = new Set(families().map((family) => family.id));
 if (familyIds.size > 12) fail(`${familyIds.size} semantic families (maximum 12)`);
 
-const names = new Set();
 for (const word of words.entries) {
-  if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
-  names.add(word.name);
   for (const clause of word.clauses) {
     if (!clauseIds.has(clause)) fail(`Word ${word.name} references missing clause ${clause}`);
   }

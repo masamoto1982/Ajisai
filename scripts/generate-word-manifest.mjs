@@ -183,7 +183,6 @@ const entries = [
 
 const contracts = words();
 const contractNames = new Set(contracts.entries.map((entry) => entry.name));
-if (contractNames.size !== contracts.entries.length) fail('duplicate canonical name in spec/words.json');
 const generatedCanonicalNames = new Set(entries
   .filter((entry) => entry.kind === 'coreword')
   .map((entry) => entry.surface));
