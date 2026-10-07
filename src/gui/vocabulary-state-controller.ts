@@ -140,6 +140,8 @@ export interface VocabularyCallbacks {
 
 export interface VocabularyManager {
     readonly renderCoreWords: () => void;
+    /** Every Core word's canonical name, read from WASM once per page load. */
+    readonly collectCoreWordNames: () => string[];
     readonly updateUserWords: (userWordsInfo: UserWordInfo[]) => void;
     readonly updateSearchFilter: (filter: string) => void;
 }
@@ -226,6 +228,10 @@ export const createVocabularyManager = (
             .sort((a, b) => compareWordName(a[0], b[0]));
         return sortedCoreWordsCache;
     };
+
+    // The Core half of the autocomplete list. Core words never change, so
+    // the one fetch behind `getSortedCoreWords` serves this too.
+    const collectCoreWordNames = (): string[] => getSortedCoreWords().map(([name]) => name);
 
     // A referenced word is not deletable, and there is no way to override that:
     // the only route is to delete the dependents first. The interpreter names
@@ -345,6 +351,7 @@ export const createVocabularyManager = (
 
     return {
         renderCoreWords,
+        collectCoreWordNames,
         updateUserWords,
         updateSearchFilter
     };
