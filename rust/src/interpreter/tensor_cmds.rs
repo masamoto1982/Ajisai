@@ -16,6 +16,7 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
+use super::tensor_lane_ops::contains_absent_lane;
 use super::tensor_ops::{apply_unary_flat, build_nested_value};
 
 fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G) -> Result<()>
@@ -56,7 +57,7 @@ where
     // A NIL lane passes through carrying its reason (LANG.FAILURE.PASSTHROUGH).
     // The flat route below works on bare fractions and would keep the lane
     // absent but drop why, so a vector holding one takes the lane-wise route.
-    if val.is_vector() && holds_nil_lane(&val) {
+    if val.is_vector() && contains_absent_lane(&val) {
         let scalar_op = |lane: &Value| -> Result<Value> {
             if let Some(f) = lane.as_scalar() {
                 return Ok(Value::from_fraction(op(f)));
@@ -103,13 +104,6 @@ where
         "nonNumeric",
         format!("expected a Scalar or a Vector, got {got}"),
     ))
-}
-
-fn holds_nil_lane(value: &Value) -> bool {
-    match value.as_vector_view() {
-        Some(items) => items.iter().any(holds_nil_lane),
-        None => value.is_nil(),
-    }
 }
 
 /// `dense_kernels::rounded` on the operand, when it answers.

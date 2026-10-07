@@ -14,9 +14,10 @@
 //! [`tensor_ops`]: crate::interpreter::tensor_ops
 
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
 use crate::interpreter::tensor_ops::{
-    broadcast_leaf, broadcast_shape, broadcast_tree, compute_strides, project_broadcast_index,
-    ravel_index, rectangular_shape, unravel_index, UnequalAxes,
+    broadcast_leaf, broadcast_shape, compute_strides, project_broadcast_index, ravel_index,
+    rectangular_shape, unravel_index,
 };
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};

@@ -12,7 +12,7 @@
 //! The declared-effect guard below is here for the same reason: it keeps the
 //! LOOKUP "Side Effects" prose total over what `spec/words.json` declares.
 
-use super::{builtin_specs, effect_sentence, lookup_builtin_detail, lookup_builtin_spec};
+use super::{effect_sentence, lookup_builtin_detail, lookup_builtin_spec};
 use crate::interpreter::Interpreter;
 use crate::kernel::generated::GENERATED_WORDS;
 use crate::tokenizer::tokenize;
@@ -44,7 +44,7 @@ fn every_hover_syntax_is_a_well_formed_snippet() {
     // tokenize makes well-formedness a build-time guarantee. Only tokenization
     // is sound to require of all of them — some are deliberate modifier fragments
     // (`. ADD`); symbol resolution is the sibling check below (item 10).
-    for spec in builtin_specs() {
+    for spec in GENERATED_WORDS {
         if spec.hover_syntax.is_empty() {
             continue;
         }
@@ -63,7 +63,7 @@ async fn every_hover_syntax_calls_its_word_and_runs() {
     // and it runs on a fresh interpreter. FAIL's one correct call is the
     // ERROR it exists to raise.
     let mut ran = 0u32;
-    for spec in builtin_specs() {
+    for spec in GENERATED_WORDS {
         if spec.hover_syntax.is_empty() {
             continue;
         }
@@ -163,7 +163,7 @@ fn fixed_stack_effect_prose_matches_the_machine_mass() {
     // machine-checkable subset, so this never raises a false mismatch; it only
     // fires when the two descriptions provably disagree.
     let mut compared = 0u32;
-    for spec in builtin_specs() {
+    for spec in GENERATED_WORDS {
         let Some((mass_consumes, mass_produces)) =
             crate::coreword_registry::mass_contract(spec.name).fixed()
         else {
@@ -220,7 +220,7 @@ async fn every_summary_example_holds() {
     // executed: every "`code` is `value`" in it must leave exactly the stack
     // `value` leaves, and every Word whose call leaves a value states at
     // least one. PRINT and FAIL leave none — one writes, the other raises.
-    for word in builtin_specs() {
+    for word in GENERATED_WORDS {
         let examples = stated_examples(word.summary);
         if !matches!(word.name, "PRINT" | "FAIL") {
             assert!(
@@ -252,7 +252,7 @@ const DERIVED_SECTIONS: &[&str] = &["Examples:", "Failure:", "Side Effects:", "V
 
 #[test]
 fn every_builtin_renders_the_derived_sections() {
-    for spec in builtin_specs() {
+    for spec in GENERATED_WORDS {
         let body = lookup_builtin_detail(spec.name);
         for section in REQUIRED_SECTIONS.iter().chain(DERIVED_SECTIONS) {
             assert!(
@@ -283,7 +283,7 @@ fn lookup_reports_the_vocabulary_tier() {
         "FILTER LOOKUP body must name its Standard kind:\n{}",
         standard
     );
-    for word in builtin_specs() {
+    for word in GENERATED_WORDS {
         let body = lookup_builtin_detail(word.name);
         assert!(
             body.contains("Vocabulary:"),
@@ -335,7 +335,7 @@ fn lookup_for_add_contains_four_required_sections() {
 
 #[test]
 fn every_builtin_lookup_contains_all_four_sections() {
-    for spec in crate::builtins::builtin_specs() {
+    for spec in GENERATED_WORDS {
         let body = lookup_builtin_detail(spec.name);
         for section in REQUIRED_SECTIONS {
             assert!(
@@ -370,7 +370,7 @@ fn comparison_words_have_uniform_stack_effect() {
     const EXPECTED: &str = "[ a ] [ b ] -> [ TRUE | FALSE ]";
     for name in &["EQ", "LT", "GT"] {
         let spec =
-            lookup_builtin_spec(name).unwrap_or_else(|| panic!("{} must have a BuiltinSpec", name));
+            lookup_builtin_spec(name).unwrap_or_else(|| panic!("{} must be a Core Word", name));
         assert_eq!(
             spec.stack_effect, EXPECTED,
             "{} stack_effect deviates from the comparison-word standard",

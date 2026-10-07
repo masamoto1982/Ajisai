@@ -379,7 +379,7 @@ fn apply_exact_real_recursive_broadcast(
     b: &Value,
     schema: ExactArithmeticSchema,
 ) -> Result<Value> {
-    use crate::interpreter::tensor_ops::{broadcast_tree, UnequalAxes};
+    use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
 
     broadcast_tree(a, b, UnequalAxes::Refuse, &|x, y| {
         exact_real_lane(x, y, schema)

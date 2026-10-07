@@ -1,5 +1,5 @@
-//! The Core Words' runtime view: registration into the dictionary, the
-//! projected [`BuiltinSpec`], and the host lookup text rendered from it.
+//! The Core Words' runtime view: registration into the dictionary, lookup
+//! by name, and the host lookup text rendered from the registry entry.
 //!
 //! Everything here is read from the generated registry
 //! (`kernel::generated`, projected from `spec/words.json`); nothing is a
@@ -7,7 +7,7 @@
 
 use crate::coreword_registry::Partiality;
 use crate::kernel::generated::{
-    generated_word, Family, OperandRole, VocabularyTier, GENERATED_WORDS,
+    generated_word, GeneratedWord, OperandRole, VocabularyTier, GENERATED_WORDS,
 };
 use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};
@@ -41,48 +41,15 @@ pub fn register_builtins<S: std::hash::BuildHasher>(
     }
 }
 
-/// Runtime view of a canonical Core Word.
+/// The registry entry for a Core Word named in any accepted spelling, or
+/// `None` for a name the registry does not know.
 ///
-/// Documentation, presentation and partiality are all projected from the
-/// generated registry. This type assembles those projections for existing GUI
-/// and reference consumers and owns no parallel source of language facts.
-#[derive(Clone, Copy, Debug)]
-pub struct BuiltinSpec {
-    pub name: &'static str,
-    pub family: Family,
-    pub summary: &'static str,
-    #[allow(dead_code)]
-    pub hover_summary: &'static str,
-    pub hover_syntax: &'static str,
-    pub stack_effect: &'static str,
-    pub partiality: Partiality,
-}
-
-/// Complete projected Core Word view.
-///
-/// It is assembled once from the generated registry for runtime consumers and
-/// invariant tests.
-pub fn builtin_specs() -> &'static [BuiltinSpec] {
-    static SPECS: std::sync::OnceLock<Vec<BuiltinSpec>> = std::sync::OnceLock::new();
-    SPECS.get_or_init(|| {
-        GENERATED_WORDS
-            .iter()
-            .map(|word| BuiltinSpec {
-                name: word.name,
-                family: word.family,
-                summary: word.summary,
-                hover_summary: word.hover_summary,
-                hover_syntax: word.hover_syntax,
-                stack_effect: word.stack_effect,
-                partiality: word.partiality,
-            })
-            .collect()
-    })
-}
-
-pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
-    let canonical = crate::word_name::canonical_word_name(name);
-    builtin_specs().iter().find(|spec| spec.name == canonical)
+/// There used to be a `BuiltinSpec` here: seven of the entry's fields copied
+/// one for one into a second `OnceLock`'d table, scanned linearly, with a
+/// test asserting every field equal to the generated one. The entry is the
+/// view.
+pub fn lookup_builtin_spec(name: &str) -> Option<&'static GeneratedWord> {
+    generated_word(&crate::word_name::canonical_word_name(name))
 }
 
 /// WASM/GUI tuple shape: `(name, hover_summary, hover_syntax)`.
@@ -93,9 +60,9 @@ pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
 /// Consumed only by the wasm bindings (feature = "wasm").
 #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
 pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
-    builtin_specs()
+    GENERATED_WORDS
         .iter()
-        .map(|spec| (spec.name, spec.hover_summary, spec.hover_syntax))
+        .map(|word| (word.name, word.hover_summary, word.hover_syntax))
         .collect()
 }
 
@@ -105,17 +72,18 @@ pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'
 /// Effects, Vocabulary) — derived so they can never drift from the
 /// registry. See docs/dev/three-layer-documentation-model.md §3.
 pub fn lookup_builtin_detail(name: &str) -> String {
-    let canonical = crate::word_name::canonical_word_name(name);
-
-    let Some(spec) = lookup_builtin_spec(&canonical) else {
-        return format!("# {}\n\nNo documentation found for this word.\n", canonical);
+    let Some(word) = lookup_builtin_spec(name) else {
+        return format!(
+            "# {}\n\nNo documentation found for this word.\n",
+            crate::word_name::canonical_word_name(name)
+        );
     };
 
     let mut out = render_sections(
-        spec.name,
-        spec.family.as_spec_str(),
-        spec.summary,
-        spec.stack_effect,
+        word.name,
+        word.family.as_spec_str(),
+        word.summary,
+        word.stack_effect,
     );
 
     // One source for what a Word does: the summary above, from
@@ -123,19 +91,19 @@ pub fn lookup_builtin_detail(name: &str) -> String {
     // example here is the one correct call a diagnosis quotes.
     out.push('\n');
     out.push_str("Examples:\n");
-    push_indented(&mut out, spec.hover_syntax, "  ");
+    push_indented(&mut out, word.hover_syntax, "  ");
 
     out.push('\n');
     out.push_str("Failure:\n");
-    push_indented(&mut out, &derive_failure_text(spec, &canonical), "  ");
+    push_indented(&mut out, &derive_failure_text(word), "  ");
 
     out.push('\n');
     out.push_str("Side Effects:\n");
-    push_indented(&mut out, &derive_side_effects_text(&canonical), "  ");
+    push_indented(&mut out, &derive_side_effects_text(word), "  ");
 
     out.push('\n');
     out.push_str("Vocabulary:\n");
-    push_indented(&mut out, &derive_vocabulary_text(&canonical), "  ");
+    push_indented(&mut out, &derive_vocabulary_text(word), "  ");
 
     out
 }
@@ -144,10 +112,7 @@ pub fn lookup_builtin_detail(name: &str) -> String {
 /// Core is one flat sealed dictionary, so this states a design classification
 /// and never a namespace: a Standard Word is reached by its plain name exactly
 /// as a Semantic Kernel Word is, and carries the same contract detail.
-fn derive_vocabulary_text(canonical: &str) -> String {
-    let Some(word) = generated_word(canonical) else {
-        return "Core Word.".to_string();
-    };
+fn derive_vocabulary_text(word: &GeneratedWord) -> String {
     match (word.vocabulary_tier, word.standard_kind) {
         (VocabularyTier::Kernel, _) => {
             "Core Word, Semantic Kernel: it builds or observes a value domain,\nor is the one explicit operation for its capability.".to_string()
@@ -167,9 +132,9 @@ fn derive_vocabulary_text(canonical: &str) -> String {
 /// The NIL sentence is derived from the *declared* policy in
 /// `spec/words.json`, so what a reader is told about NIL and what the dispatch
 /// guard enforces are the same fact read twice, not two claims that can drift.
-fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
+fn derive_failure_text(word: &GeneratedWord) -> String {
     let mut lines: Vec<&str> = Vec::new();
-    match spec.partiality {
+    match word.partiality {
         Partiality::Total => lines.push(
             "Total: an operand of the kind it reads always produces a result;\nan operand of another kind raises the error its contract names.",
         ),
@@ -180,32 +145,28 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
             "May raise even on operands of the right kind: the block it runs,\nor the dictionary it changes, can refuse.",
         ),
     }
-    if let Some(word) = generated_word(canonical) {
-        // One line per role the Word has (LANG.FAILURE.PASSTHROUGH), so the
-        // hover says what a NIL does in each operand, not a single summary
-        // that is true of some of them.
-        let has = |role: OperandRole| word.operand_roles.contains(&role);
-        if has(OperandRole::Data) || has(OperandRole::Leaf) {
-            lines.push("A NIL data operand passes through as the result, keeping its reason.");
-        }
-        if has(OperandRole::Element) {
-            lines.push(
-                "A NIL it only carries (a stored, bound or compared value) is an ordinary value.",
-            );
-        }
-        if has(OperandRole::Control) {
-            lines.push("A NIL where a block, name or message belongs is an error.");
-        }
-        if has(OperandRole::Leaf) || has(OperandRole::Truth) {
-            lines.push(
-                "A Vector or Record where one value is read applies the word to each element.",
-            );
-        }
-        if has(OperandRole::Truth) {
-            lines.push(
-                "A dominating definite operand (FALSE for AND) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
-            );
-        }
+    // One line per role the Word has (LANG.FAILURE.PASSTHROUGH), so the
+    // hover says what a NIL does in each operand, not a single summary that
+    // is true of some of them.
+    let has = |role: OperandRole| word.operand_roles.contains(&role);
+    if has(OperandRole::Data) || has(OperandRole::Leaf) {
+        lines.push("A NIL data operand passes through as the result, keeping its reason.");
+    }
+    if has(OperandRole::Element) {
+        lines.push(
+            "A NIL it only carries (a stored, bound or compared value) is an ordinary value.",
+        );
+    }
+    if has(OperandRole::Control) {
+        lines.push("A NIL where a block, name or message belongs is an error.");
+    }
+    if has(OperandRole::Leaf) || has(OperandRole::Truth) {
+        lines.push("A Vector or Record where one value is read applies the word to each element.");
+    }
+    if has(OperandRole::Truth) {
+        lines.push(
+            "A dominating definite operand (FALSE for AND) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
+        );
     }
     lines.join("\n")
 }
@@ -215,10 +176,7 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
 /// `effect_sentence` returns `None` for a name it does not know, which
 /// `builtin_word_details_tests.rs` turns into a failure rather than letting the
 /// raw protocol name reach a reader.
-fn derive_side_effects_text(canonical: &str) -> String {
-    let Some(word) = generated_word(canonical) else {
-        return "None.".to_string();
-    };
+fn derive_side_effects_text(word: &GeneratedWord) -> String {
     if word.effects.is_empty() {
         return "None.".to_string();
     }
@@ -278,11 +236,11 @@ mod tests {
             "!", "'", "|", "?", "^",
         ];
 
-        for spec in super::builtin_specs() {
+        for word in crate::kernel::generated::GENERATED_WORDS {
             assert!(
-                !forbidden.contains(&spec.name),
-                "builtin spec must not contain symbol/helper word: {}",
-                spec.name
+                !forbidden.contains(&word.name),
+                "the Core vocabulary must not contain a symbol/helper word: {}",
+                word.name
             );
         }
     }
@@ -300,36 +258,9 @@ mod tests {
         }
     }
 
-    /// Every field of a spec must be the generated value, verbatim, in the
-    /// registry's own order.
-    ///
-    /// `check:runtime-metadata` proves the same thing syntactically — that each
-    /// field is written as `word.<field>` — but only this asserts it of the
-    /// values actually observed at runtime, so a projection that compiled while
-    /// transforming or substituting prose would still be caught here.
-    #[test]
-    fn builtin_specs_preserve_the_generated_registry() {
-        let generated = crate::kernel::generated::GENERATED_WORDS;
-        assert_eq!(generated.len(), super::builtin_specs().len());
-
-        for (word, spec) in generated.iter().zip(super::builtin_specs()) {
-            assert_eq!(word.name, spec.name);
-            assert_eq!(word.family, spec.family, "{} family", word.name);
-            assert_eq!(word.summary, spec.summary, "{} summary", word.name);
-            assert_eq!(
-                word.stack_effect, spec.stack_effect,
-                "{} stack_effect",
-                word.name
-            );
-            assert_eq!(word.hover_summary, spec.hover_summary);
-            assert_eq!(word.hover_syntax, spec.hover_syntax);
-            assert_eq!(word.partiality, spec.partiality, "{} partiality", word.name);
-        }
-    }
-
     #[test]
     fn builtin_specs_have_required_lookup_content() {
-        for spec in super::builtin_specs() {
+        for spec in crate::kernel::generated::GENERATED_WORDS {
             assert!(!spec.summary.is_empty(), "{} missing summary", spec.name);
             assert!(
                 !spec.family.as_spec_str().is_empty(),
@@ -346,7 +277,7 @@ mod tests {
 
     #[test]
     fn builtin_specs_stack_effect_grammar() {
-        for spec in super::builtin_specs() {
+        for spec in crate::kernel::generated::GENERATED_WORDS {
             let s = spec.stack_effect;
             let is_literal_no_op =
                 s == "no values popped or pushed" || s == "operands preserved; result pushed";
@@ -373,7 +304,7 @@ mod tests {
                 text
             );
         };
-        for spec in super::builtin_specs() {
+        for spec in crate::kernel::generated::GENERATED_WORDS {
             check("summary", spec.name, spec.summary);
             check("stack_effect", spec.name, spec.stack_effect);
             check("family", spec.name, spec.family.as_spec_str());
@@ -396,7 +327,7 @@ mod tests {
     /// `the multiquadratic \u{221a}d` verbatim.
     #[test]
     fn no_lookup_text_leaks_a_rust_unicode_escape() {
-        for word in crate::builtins::builtin_specs() {
+        for word in crate::kernel::generated::GENERATED_WORDS {
             let text = lookup_builtin_detail(word.name);
             assert!(
                 !text.contains("\\u{"),

@@ -9,8 +9,9 @@
 //! `spec/words.json` is the only place those facts are written down.
 //!
 //! The documentation prose (summary, stack effect, hover text) is projected
-//! here too; `BuiltinSpec` is a view assembled from these rows for the GUI and
-//! reference consumers. No canonical fact is written down twice.
+//! here too, and the GUI and reference consumers read it from these rows
+//! directly (`builtins::lookup_builtin_spec`). No canonical fact is written
+//! down twice.
 
 mod word_registry;
 
@@ -67,13 +68,13 @@ serialize_as_spec_str!(
 #[cfg(test)]
 mod tests {
     use super::{generated_word, GENERATED_WORDS};
-    use crate::builtins::builtin_specs;
     use std::collections::BTreeSet;
 
     #[test]
     fn generated_inventory_matches_the_runtime_builtin_registration() {
         let generated: BTreeSet<&str> = GENERATED_WORDS.iter().map(|word| word.name).collect();
-        let runtime: BTreeSet<&str> = builtin_specs().iter().map(|spec| spec.name).collect();
+        let interp = crate::interpreter::Interpreter::new();
+        let runtime: BTreeSet<&str> = interp.core_vocabulary.keys().map(String::as_str).collect();
         assert_eq!(generated, runtime);
     }
 

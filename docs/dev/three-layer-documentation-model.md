@@ -40,7 +40,7 @@ Reference covers:
 4. **Module reference** — per-module pages.
 5. **Developer notes** — debugging model, runtime invariants, version/stability notes.
 
-Items 1, 2, 4, 5 are hand-authored Markdown (or HTML). Item 3 is **derived from `BuiltinSpec`** (see §5) plus optional concept text. Sharing the data source between Reference word pages and LOOKUP is mandatory: a divergence between the two is a documentation bug.
+Items 1, 2, 4, 5 are hand-authored Markdown (or HTML). Item 3 is **derived from the generated registry entry** (`GeneratedWord`, the struct §5 proposed as `BuiltinSpec`; the separate copy has since been removed) plus optional concept text. Sharing the data source between Reference word pages and LOOKUP is mandatory: a divergence between the two is a documentation bug.
 
 ### 2.2 Tone
 
@@ -341,7 +341,7 @@ The existing rule that LOOKUP output is **Markdown with Japanese permitted** is 
 - Reference site → Markdown, translations allowed.
 - User-word LOOKUP → unchanged (still inserts the original source).
 
-The phrase "`rust/src/builtins/detail-lookup-*.rs` の raw string literal" in the current writing-style doc is aspirational; those files do not exist yet. With this model the per-word LOOKUP text is constructed by `lookup_builtin_detail` from `BuiltinSpec` fields, not from per-file raw literals. The amendment should reflect that.
+The phrase "`rust/src/builtins/detail-lookup-*.rs` の raw string literal" in the current writing-style doc is aspirational; those files do not exist yet. With this model the per-word LOOKUP text is constructed by `lookup_builtin_detail` from the generated registry entry's fields, not from per-file raw literals. The amendment should reflect that.
 
 ---
 

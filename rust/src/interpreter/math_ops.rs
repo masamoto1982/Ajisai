@@ -62,7 +62,7 @@ pub(crate) fn lift_binary_numeric(
     b: &Value,
     leaf_op: &dyn Fn(&Value, &Value) -> Result<Value>,
 ) -> Result<Value> {
-    use crate::interpreter::tensor_ops::{broadcast_tree, UnequalAxes};
+    use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
 
     broadcast_tree(a, b, UnequalAxes::StretchSingleton, &|x, y| {
         if x.is_nil() {
