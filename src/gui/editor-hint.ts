@@ -192,7 +192,7 @@ const renderHow = (doc: Document, entry: HintEntry): HTMLElement => {
 };
 
 /** Replace `container`'s contents with the sheet, keys drawn as keycaps. */
-export const renderHintSheet = (container: HTMLElement, sheet: HintSheet): void => {
+const renderHintSheet = (container: HTMLElement, sheet: HintSheet): void => {
     const doc = container.ownerDocument;
     const lead = doc.createElement('p');
     lead.className = 'editor-hint-lead';
