@@ -12,7 +12,7 @@ impl DenseTensor {
     /// read one by one (`fraction_or_nil`): the pairs as stored, an absent
     /// lane as the `(0, 0)` its NIL reads as, purity recomputed over the
     /// slice, and the reasons of the absent lanes inside it moved with them.
-    pub fn lanes(&self, start: usize, len: usize, shape: Vec<usize>) -> Self {
+    pub fn lanes(&self, start: usize, len: usize, shape: &[usize]) -> Self {
         let end = start + len;
         let mut numerators = Column::with_capacity(len);
         let mut denominators = Column::with_capacity(len);

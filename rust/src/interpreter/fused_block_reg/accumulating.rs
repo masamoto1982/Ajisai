@@ -145,8 +145,11 @@ impl RegProgram {
         // A row is a chunk wide, or as wide as the walk when that is shorter:
         // a walk of three elements need not clear a 256-lane row per register.
         let width = elements.len().clamp(1, CHUNK);
-        let mut regs = vec![0i64; self.regs * width];
-        let mut scalars = vec![0i64; self.regs];
+        // A short walk's registers fit on the stack: a nested `FOLD` runs
+        // this once per row, and two heap buffers a call were a fair share
+        // of a three-element walk.
+        let mut regs: smallvec::SmallVec<[i64; 64]> = smallvec::smallvec![0i64; self.regs * width];
+        let mut scalars: smallvec::SmallVec<[i64; 16]> = smallvec::smallvec![0i64; self.regs];
         let mut acc = seed;
         for chunk in elements.chunks(width) {
             let len = chunk.len();

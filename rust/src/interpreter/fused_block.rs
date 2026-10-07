@@ -169,6 +169,11 @@ pub(crate) struct FusedBlock {
     /// their lane: the walk computes on the lane and accounts for each as a
     /// one-lane Tensor (`lane_flow`).
     pub(crate) lane_pushes: Vec<usize>,
+    /// `lane_flow` for a run that starts from a plain element (`MAP` with
+    /// lane literals) and from a lane accumulator beside one (a one-lane
+    /// seed): fixed by the ops, so worked out once when the block is lowered.
+    pub(crate) lanes_from_element: Option<(u64, bool)>,
+    pub(crate) lanes_from_seed: Option<(u64, bool)>,
     /// The integer tier's compiled forms of the block.
     pub(crate) int_programs: crate::interpreter::fused_block_int::IntPrograms,
 }
@@ -222,7 +227,7 @@ impl FusedBlock {
             if walk != FusedWalk::Map || !interp.dense_kernels_enabled {
                 return None;
             }
-            let (mixed, answer) = self.lane_flow(&[false])?;
+            let (mixed, answer) = self.lanes_from_element?;
             lane_mixed = Some(mixed);
             lane_answer = answer;
         }
@@ -234,7 +239,7 @@ impl FusedBlock {
                     Some(plain) => Some(plain),
                     None => {
                         let lane = one_lane_seed(interp, seed)?;
-                        let (mixed, answer) = self.lane_flow(&[true, false])?;
+                        let (mixed, answer) = self.lanes_from_seed?;
                         if !answer {
                             return None;
                         }
@@ -322,7 +327,7 @@ impl FusedBlock {
     /// one limb (`measure_operand`). Every other Word treats a one-lane
     /// Tensor differently from its lane — `EQ` compares whole values, `LT`
     /// answers a Vector of Booleans — so the walk declines it.
-    fn lane_flow(&self, inputs: &[bool]) -> Option<(u64, bool)> {
+    pub(crate) fn lane_flow(&self, inputs: &[bool]) -> Option<(u64, bool)> {
         let mut stack = inputs.to_vec();
         let mut slots = vec![false; self.slots];
         let mut mixed = 0;

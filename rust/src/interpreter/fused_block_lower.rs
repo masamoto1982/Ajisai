@@ -110,7 +110,7 @@ pub(crate) fn lower(
         return None;
     }
     let words = lowering.ops.iter().filter(|op| op.is_word()).count() as u64;
-    Some(FusedBlock {
+    let mut block = FusedBlock {
         ops: lowering.ops,
         slots: lowering.slots,
         steps_per_run: words + lowering.calls,
@@ -118,8 +118,13 @@ pub(crate) fn lower(
         builds: lowering.builds,
         reads_outer: lowering.reads_outer,
         lane_pushes: lowering.lane_pushes,
+        lanes_from_element: None,
+        lanes_from_seed: None,
         int_programs: Default::default(),
-    })
+    };
+    block.lanes_from_element = block.lane_flow(&[false]);
+    block.lanes_from_seed = block.lane_flow(&[true, false]);
+    Some(block)
 }
 
 impl Lowering<'_> {

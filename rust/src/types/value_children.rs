@@ -33,8 +33,7 @@ impl Value {
                 let stride: usize = shape[1..].iter().product();
                 let mut sliced_shape = shape.to_vec();
                 sliced_shape[0] = end - start;
-                let lanes =
-                    data.lanes(start * stride, (end - start) * stride, sliced_shape.clone());
+                let lanes = data.lanes(start * stride, (end - start) * stride, &sliced_shape);
                 Self::from_dense_tensor(lanes, sliced_shape)
             }
             ValueData::Vector(children) => Self::from_vector(children[start..end].to_vec()),
