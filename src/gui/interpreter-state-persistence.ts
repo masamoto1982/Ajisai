@@ -123,16 +123,10 @@ const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, str
 // is nothing to filter by.
 export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument => {
     const identities = collectWordIdentityMap(interpreter);
-    const words: ExportWord[] = interpreter.collect_user_words_info()
-        .map(([name]) => {
-            const id = identities.get(buildWordKey(name));
-            return {
-                name,
-                definition: interpreter.lookup_word_definition(name),
-                description: interpreter.lookup_word_description(name),
-                ...(id ? { id } : {})
-            };
-        });
+    const words: ExportWord[] = collectUserWords(interpreter).map((word) => {
+        const id = identities.get(buildWordKey(word.name));
+        return id ? { ...word, id } : word;
+    });
     return { formatVersion: EXPORT_FORMAT_VERSION, words };
 };
 
@@ -256,7 +250,7 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
         for (const raw of rawWords) {
             const word = normalizeWordEntry(raw);
             if (!word) continue;
-            if (word.id) embeddedIds.set(word.name.toUpperCase(), word.id);
+            if (word.id) embeddedIds.set(buildWordKey(word.name), word.id);
             words.push({ name: word.name, definition: word.definition, description: word.description });
         }
         return { words, embeddedIds: embeddedIds.size > 0 ? embeddedIds : null };
