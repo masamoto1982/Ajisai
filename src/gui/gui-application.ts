@@ -394,6 +394,12 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         const display = createDisplay(elements);
         display.init();
 
+        // The Output area is where persistence, the vocabulary manager and
+        // the execution controller all report; each is handed the same two
+        // functions rather than its own copy of them.
+        const showInfo = (text: string, append: boolean): void => display.renderInfo(text, append);
+        const showError = (error: Error): void => display.renderError(error);
+
         // The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), so the
         // sheet list is fixed — Core and User — and is a plain <select>, like
         // the two area selectors beside it.
@@ -453,9 +459,9 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         };
 
         const persistence = createPersistence(interpreter, {
-            showError: (error) => display.renderError(error),
+            showError,
             updateDisplays: updateAllDisplays,
-            showInfo: (text, append) => display.renderInfo(text, append),
+            showInfo,
             readActiveDictionarySheet: () => sheetSelect.value
         });
         await persistence.init();
@@ -473,8 +479,8 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             onBackgroundDoubleClick: () => editor.removeLastWord(),
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text, append) => display.renderInfo(text, append),
-            showError: (error) => display.renderError(error)
+            showInfo,
+            showError
         });
 
         // Clearing the stack keeps the dictionary — that is what separates it
@@ -517,7 +523,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             // other text.
             extractEditorValue: () => { editor.format(); return editor.extractValue(); },
             clearEditor: (switchView) => { editor.clear(switchView); },
-            showInfo: (text, append) => display.renderInfo(text, append),
+            showInfo,
             showFoldedInfo: (label, text) => display.renderFoldedInfo(label, text),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
             showDocumentation: (text) => display.renderDocumentation(text),
