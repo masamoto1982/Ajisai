@@ -223,18 +223,6 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
     }
 }
 
-/// `schema(a, b)` over two rationals. The caller already charged, checks the
-/// result size, and gave us rationals; division by zero is the one refusal.
-fn rational_schema(schema: ExactArithmeticSchema, a: &Fraction, b: &Fraction) -> Result<Fraction> {
-    Ok(match schema {
-        ExactArithmeticSchema::Add => a.add(b),
-        ExactArithmeticSchema::Sub => a.sub(b),
-        ExactArithmeticSchema::Mul => a.mul(b),
-        ExactArithmeticSchema::Div if b.is_zero() => return Err(AjisaiError::DivisionByZero),
-        ExactArithmeticSchema::Div => a.div(b),
-    })
-}
-
 fn push_scalar_fastpath_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
@@ -256,7 +244,7 @@ fn push_scalar_fastpath_result(
 
     // The work of this operation was charged at the dispatch entry, before any
     // route was chosen — see `charge_binary_schema`.
-    let result = match rational_schema(schema, &a.fraction, &b.fraction) {
+    let result = match schema.fraction(&a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
         Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.wrap),
         Err(error) => return Err(error),
@@ -379,81 +367,54 @@ fn value_contains_exact_scalar(val: &Value) -> bool {
 /// Element-wise binary broadcast over operands that may contain irrational
 /// `ExactScalar` leaves, computed lane-by-lane through exact-real arithmetic.
 ///
-/// This mirrors the rational `apply_recursive_broadcast` in `tensor_ops`
-/// (same shape rules: scalar broadcasts across a vector; equal-length vectors
-/// combine pairwise; unequal lengths raise `VectorLengthMismatch`) but keeps
-/// each lane exact. `Value::from_exact_real` renormalizes any lane that lands
-/// back on a rational to a plain `Scalar`, so an all-rational result is
-/// byte-identical to the rational path. Per-lane division by zero becomes a
-/// reasoned `NIL` — the same NIL Projection Rule the scalar `√x 0 /` path
-/// uses (LANG.FAILURE.PROJECT) — rather than aborting the whole vector.
+/// The shape rules are the rational lift's — one `broadcast_tree` walk, with
+/// [`exact_real_lane`] at the leaves — but each lane stays exact.
+/// `Value::from_exact_real` renormalizes any lane that lands back on a
+/// rational to a plain `Scalar`, so an all-rational result is byte-identical
+/// to the rational path. Per-lane division by zero becomes a reasoned `NIL`
+/// — the same NIL Projection Rule the scalar `√x 0 /` path uses
+/// (LANG.FAILURE.PROJECT) — rather than aborting the whole vector.
 fn apply_exact_real_recursive_broadcast(
     a: &Value,
     b: &Value,
     schema: ExactArithmeticSchema,
 ) -> Result<Value> {
-    use crate::interpreter::tensor_ops::broadcast_children;
+    use crate::interpreter::tensor_ops::{broadcast_tree, UnequalAxes};
 
-    match (broadcast_children(a), broadcast_children(b)) {
-        (None, None) => {
-            // Absence before arithmetic, for the reason the rational lift
-            // gives (`tensor_lane_ops::lane_nil_passthrough`) and one more:
-            // `ExactReal::from_fraction(Fraction::nil())` is a *number* whose
-            // denominator happens to be zero, so the exact law answered a NIL
-            // lane with an observable `0/0` scalar — an absence that had
-            // stopped being one.
-            if let Some(nil) = lane_nil_passthrough(a, b) {
-                return Ok(nil);
-            }
-            let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
-                // Reached only through ADD/SUB/MUL/DIV's own
-                // binary dispatch, which all declare `nonNumeric` uniformly.
-                return Err(AjisaiError::declared(
-                    "nonNumeric",
-                    format!(
-                        "expected a Scalar or a Vector, got {}",
-                        if exact_broadcast_leaf(a).is_none() {
-                            a.domain_name()
-                        } else {
-                            b.domain_name()
-                        }
-                    ),
-                ));
-            };
-            Ok(match schema.exact_real(&ea, &eb) {
-                Some(result) => Value::from_exact_real(result),
-                None => division_by_zero_projection(),
-            })
-        }
-        (Some(children), None) => {
-            let out = children
-                .iter()
-                .map(|child| apply_exact_real_recursive_broadcast(child, b, schema))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-        (None, Some(children)) => {
-            let out = children
-                .iter()
-                .map(|child| apply_exact_real_recursive_broadcast(a, child, schema))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-        (Some(a_children), Some(b_children)) => {
-            if a_children.len() != b_children.len() {
-                return Err(AjisaiError::length_mismatch(
-                    a_children.len(),
-                    b_children.len(),
-                ));
-            }
-            let out = a_children
-                .iter()
-                .zip(b_children.iter())
-                .map(|(x, y)| apply_exact_real_recursive_broadcast(x, y, schema))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
+    broadcast_tree(a, b, UnequalAxes::Refuse, &|x, y| {
+        exact_real_lane(x, y, schema)
+    })
+}
+
+/// One lane of the exact-real lift: the passthrough law, then `schema`.
+fn exact_real_lane(a: &Value, b: &Value, schema: ExactArithmeticSchema) -> Result<Value> {
+    // Absence before arithmetic, for the reason the rational lift gives
+    // (`tensor_lane_ops::lane_nil_passthrough`) and one more:
+    // `ExactReal::from_fraction(Fraction::nil())` is a *number* whose
+    // denominator happens to be zero, so the exact law answered a NIL lane
+    // with an observable `0/0` scalar — an absence that had stopped being one.
+    if let Some(nil) = lane_nil_passthrough(a, b) {
+        return Ok(nil);
     }
+    let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
+        // Reached only through ADD/SUB/MUL/DIV's own binary dispatch, which
+        // all declare `nonNumeric` uniformly.
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            format!(
+                "expected a Scalar or a Vector, got {}",
+                if exact_broadcast_leaf(a).is_none() {
+                    a.domain_name()
+                } else {
+                    b.domain_name()
+                }
+            ),
+        ));
+    };
+    Ok(match schema.exact_real(&ea, &eb) {
+        Some(result) => Value::from_exact_real(result),
+        None => division_by_zero_projection(),
+    })
 }
 
 /// Exact-real value of a broadcast leaf (`Scalar`, `ExactScalar`, or `NIL`).

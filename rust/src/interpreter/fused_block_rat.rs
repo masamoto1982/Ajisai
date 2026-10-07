@@ -28,7 +28,7 @@ use crate::interpreter::fused_block_general::promote;
 use crate::interpreter::runtime_limits::binary_numeric_work;
 use crate::interpreter::Interpreter;
 use crate::types::fraction::{Fraction, FractionRepr};
-use crate::types::small_rational::{add, div, fit, mul, order};
+use crate::types::small_rational::{self, add, div, mul, order};
 use crate::types::{DenseTensor, Value, ValueData};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -226,11 +226,7 @@ impl Program {
                 Kind::Max if order(a, b) == Ordering::Less => b,
                 Kind::Min | Kind::Max => a,
                 Kind::Floor => (a.0.div_euclid(a.1), 1),
-                Kind::Round => {
-                    let (n, d) = (i128::from(a.0), i128::from(a.1));
-                    let magnitude = (2 * n.abs() + d) / (2 * d);
-                    fit(if n < 0 { -magnitude } else { magnitude }, 1)?
-                }
+                Kind::Round => (small_rational::round_half_away_from_zero(a.0, a.1), 1),
                 Kind::Lt => truth(order(a, b) == Ordering::Less),
                 Kind::Gt => truth(order(a, b) == Ordering::Greater),
                 Kind::Eq => truth(a == b),

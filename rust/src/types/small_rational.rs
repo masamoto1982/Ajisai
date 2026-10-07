@@ -13,11 +13,25 @@
 //! denominator is unique, so these agree with `Fraction` wherever they
 //! answer; `fraction_gcd_tests` holds them to it.
 
-use crate::types::fraction::{binary_gcd_u128, binary_gcd_u64};
+use crate::types::fraction::{binary_gcd_u128, binary_gcd_u64, compute_gcd_i64};
 use std::cmp::Ordering;
 
 /// A rational in lowest terms with a positive denominator.
 pub(crate) type Pair = (i64, i64);
+
+/// `n/d` rounded to the nearest integer, halves away from zero, for a pair
+/// in lowest terms with `d > 0`: `⌊(2|n| + d) / 2d⌋` with the sign put back.
+///
+/// The answer always fits: for `d ≥ 2` its magnitude is at most `|n|/d + ½`,
+/// and for `d = 1` it is `|n|` itself, so `i64::MIN` comes back as it went
+/// in. The quickened scalar tier, the fused rational tier and the dense
+/// kernels each used to spell this formula out.
+#[inline]
+pub(crate) fn round_half_away_from_zero(n: i64, d: i64) -> i64 {
+    let (wide_n, wide_d) = (i128::from(n), i128::from(d));
+    let magnitude = (2 * wide_n.abs() + wide_d) / (2 * wide_d);
+    (if n < 0 { -magnitude } else { magnitude }) as i64
+}
 
 /// `a * b` with an overflow flag, as `i64::overflowing_mul` answers it.
 ///
@@ -127,11 +141,11 @@ fn add_in_words((an, ad): Pair, (bn, bd): Pair, subtract: bool) -> Option<Option
     Some(Some((t / g2, checked_mul(s, bd / g2)?)))
 }
 
-/// `gcd(|a|, b)` for `b > 0`, in machine words.
+/// `gcd(|a|, b)` for `b > 0`, in machine words: `b` is a positive
+/// denominator, so the gcd divides it and fits.
 #[inline]
 fn gcd64(a: i64, b: i64) -> i64 {
-    // `b` is a positive denominator, so the gcd divides it and fits.
-    binary_gcd_u64(a.unsigned_abs(), b.unsigned_abs()) as i64
+    compute_gcd_i64(a, b)
 }
 
 /// `a × b` with the cross gcds divided out first, so the product is already

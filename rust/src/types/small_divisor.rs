@@ -101,26 +101,11 @@ pub(crate) fn div_word(a: &BigInt, d: u64) -> BigInt {
     BigInt::from_biguint(a.sign(), BigUint::new(halves))
 }
 
-/// `gcd(a, b)` of two machine words, by the binary algorithm.
-pub(crate) fn gcd_word(mut a: u64, mut b: u64) -> u64 {
-    if a == 0 {
-        return b;
-    }
-    if b == 0 {
-        return a;
-    }
-    let shift = (a | b).trailing_zeros();
-    a >>= a.trailing_zeros();
-    loop {
-        b >>= b.trailing_zeros();
-        if a > b {
-            std::mem::swap(&mut a, &mut b);
-        }
-        b -= a;
-        if b == 0 {
-            return a << shift;
-        }
-    }
+/// `gcd(a, b)` of two machine words: `fraction`'s Stein gcd, which this
+/// module used to carry its own copy of.
+#[inline]
+pub(crate) fn gcd_word(a: u64, b: u64) -> u64 {
+    crate::types::fraction::binary_gcd_u64(a, b)
 }
 
 /// `gcd(wide, d)` for a one-word `d`, when `wide` is wide enough to be worth

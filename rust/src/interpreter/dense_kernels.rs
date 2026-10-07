@@ -329,11 +329,7 @@ fn rounded_lanes(rounding: Rounding, value: &Value) -> Option<Value> {
         .zip(dens)
         .map(|(&n, &d)| match rounding {
             Rounding::Floor => n.div_euclid(d),
-            Rounding::Round => {
-                let (n, d) = (i128::from(n), i128::from(d));
-                let magnitude = (2 * n.abs() + d) / (2 * d);
-                (if n < 0 { -magnitude } else { magnitude }) as i64
-            }
+            Rounding::Round => small_rational::round_half_away_from_zero(n, d),
         })
         .collect::<Column>();
     let ones = smallvec::smallvec![1; out.len()];
