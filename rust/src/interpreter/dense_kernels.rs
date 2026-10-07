@@ -175,10 +175,24 @@ fn integer_lanes(
     (!bad).then_some(out)
 }
 
+/// The largest scalar divisor whose residue gcds `integer_quotients` tables:
+/// a gcd of it fits a `u16`, and the table is a few kilobytes at most.
+const GCD_TABLE_MAX: u64 = 4096;
+
 /// `a / b` on integer lanes: each quotient reduced by one gcd, with the sign
 /// carried by the numerator. `None` for a zero divisor (a NIL lane) or the
 /// one quotient a machine word cannot hold, `i64::MIN / -1`.
 fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
+    use crate::types::fraction::binary_gcd_u64;
+    // A Tensor divided by one small integer (`7 DIV`, the common case) meets
+    // only `|y|` residues, so their gcds are read from a table built once.
+    let residue_gcds: Option<Vec<u16>> = match b {
+        Lanes::Splat(y, _) if (1..=GCD_TABLE_MAX).contains(&y.unsigned_abs()) => {
+            let m = y.unsigned_abs();
+            (m as usize <= n).then(|| (0..m).map(|r| binary_gcd_u64(m, r) as u16).collect())
+        }
+        _ => None,
+    };
     let mut nums = Column::with_capacity(n);
     let mut dens = Column::with_capacity(n);
     let mut integer = true;
@@ -187,9 +201,22 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         if y == 0 {
             return None;
         }
-        let g = crate::types::fraction::binary_gcd_u64(x.unsigned_abs(), y.unsigned_abs());
-        let g = i64::try_from(g).ok()?;
-        let (q, d) = (x / g, y / g);
+        // gcd(x, y) = gcd(y, x mod y): one division brings both operands
+        // below the divisor, where Stein's loop takes a few steps rather than
+        // one per bit of `x`. Most quotients are already in lowest terms, and
+        // those need no further division.
+        let m = y.unsigned_abs();
+        let r = x.unsigned_abs() % m;
+        let g = match &residue_gcds {
+            Some(table) => u64::from(table[r as usize]),
+            None => binary_gcd_u64(m, r),
+        };
+        let (q, d) = if g == 1 {
+            (x, y)
+        } else {
+            let g = i64::try_from(g).ok()?;
+            (x / g, y / g)
+        };
         let (q, d) = if d < 0 {
             (q.checked_neg()?, d.checked_neg()?)
         } else {

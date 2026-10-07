@@ -63,6 +63,16 @@ fn hand_picked_programs_agree() {
         "1 1 100 RANGE DIV 1 1 100 RANGE DIV SUB",
         "-3 3 RANGE 2 DIV",
         "1/2 1 10 RANGE DIV",
+        // A scalar divisor's residue-gcd table: built (divisor at most the
+        // lane count), not built (more residues than lanes, a divisor past
+        // the table), and a negative divisor that builds it.
+        "-50 50 RANGE 12 DIV",
+        "-50 50 RANGE -12 DIV",
+        "1 10 RANGE 360 DIV",
+        "-5000 5000 RANGE 4096 DIV",
+        "-5000 5000 RANGE 4097 DIV",
+        "[ -9223372036854775808 9223372036854775807 6 4 ] 2 DIV",
+        "[ -9223372036854775808 9223372036854775807 6 4 ] -2 DIV",
         // A zero divisor lane, a NIL lane, a mismatch, a one-lane Tensor.
         "1 -3 3 RANGE DIV",
         "1 [ 1 0 2 ] DIV",
