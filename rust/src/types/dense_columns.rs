@@ -17,8 +17,9 @@
 //! rectangular walk, and purity recomputed over every lane. Whatever that
 //! route would not have stored densely — a lane wider than a machine word,
 //! a Boolean, a String, an irrational, a Record, a ragged or empty
-//! Vector — answers `None` here, and the caller takes the two-step route,
-//! which declines it too. `dense_columns_tests` holds the two equal.
+//! Vector — answers `None` here, and the caller keeps the nested form; the
+//! two-step route would have declined it too, which is why the caller no
+//! longer retries through it. `dense_columns_tests` holds the two equal.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
