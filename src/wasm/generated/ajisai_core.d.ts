@@ -188,8 +188,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number];
     readonly bench_execute: (a: number, b: number) => any;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen_eb1483cba5378563___convert__closures_____invoke___wasm_bindgen_eb1483cba5378563___JsValue__core_608f92abc48d28da___result__Result_____wasm_bindgen_eb1483cba5378563___JsError___true_: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen_eb1483cba5378563___convert__closures_____invoke___js_sys_91b1031c9d8ec47e___Function_fn_wasm_bindgen_eb1483cba5378563___JsValue_____wasm_bindgen_eb1483cba5378563___sys__Undefined___js_sys_91b1031c9d8ec47e___Function_fn_wasm_bindgen_eb1483cba5378563___JsValue_____wasm_bindgen_eb1483cba5378563___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___wasm_bindgen_413a9fa07f7179f1___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_413a9fa07f7179f1___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___js_sys_402f77b0a9aba5cd___Function_fn_wasm_bindgen_413a9fa07f7179f1___JsValue_____wasm_bindgen_413a9fa07f7179f1___sys__Undefined___js_sys_402f77b0a9aba5cd___Function_fn_wasm_bindgen_413a9fa07f7179f1___JsValue_____wasm_bindgen_413a9fa07f7179f1___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
