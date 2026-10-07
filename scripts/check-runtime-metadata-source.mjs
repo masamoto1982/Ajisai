@@ -21,38 +21,18 @@
 // `word-registry:check` (the generated registry matches spec/words.json) this
 // closes the path from the canonical source to the runtime view.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { matchBrace, readText, reporter } from './lib/common.mjs';
 
-const repoRoot = resolve(import.meta.dirname, '..');
 const DEFINITIONS = 'rust/src/builtins.rs';
 const CONTRACT = 'rust/src/kernel/generated/word_registry.rs';
 
-const errors = [];
-const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
+const report = reporter('runtime-metadata');
+const fail = report.fail;
 
-// Rust source is scanned with a brace matcher rather than a regex: field
-// initializers contain nested calls and generics, so a non-greedy match would
-// stop at the first `}` inside the body.
-function matchBrace(source, openIndex) {
-  let depth = 0;
-  let inString = false;
-  for (let i = openIndex; i < source.length; i += 1) {
-    const char = source[i];
-    if (inString) {
-      if (char === '\\') i += 1;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === '{') depth += 1;
-    else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-}
+// Rust source is scanned with a brace matcher (scripts/lib/common.mjs
+// `matchBrace`) rather than a regex: field initializers contain nested calls
+// and generics, so a non-greedy match would stop at the first `}` inside the
+// body.
 
 // Split `a: x, b: f(y, z)` on top-level commas only, so an argument list does
 // not read as a field boundary.
@@ -88,7 +68,7 @@ function splitTopLevel(body) {
 function structFields(source, declaration, label) {
   const at = source.indexOf(declaration);
   if (at === -1) {
-    errors.push(`${label}: could not find \`${declaration}\``);
+    fail(`${label}: could not find \`${declaration}\``);
     return [];
   }
   const open = source.indexOf('{', at);
@@ -102,27 +82,27 @@ function structFields(source, declaration, label) {
     .filter(Boolean);
 }
 
-const definitions = read(DEFINITIONS);
-const contract = read(CONTRACT);
+const definitions = readText(DEFINITIONS);
+const contract = readText(CONTRACT);
 
 // The registry must actually be generator output. If it were hand-editable,
 // "sourced from `word.x`" would guarantee nothing.
 if (!contract.startsWith('// @generated')) {
-  errors.push(`${CONTRACT}: missing \`// @generated\` banner; it must be generator output`);
+  fail(`${CONTRACT}: missing \`// @generated\` banner; it must be generator output`);
 }
 
 const specFields = structFields(definitions, 'pub struct BuiltinSpec', DEFINITIONS);
 const contractFields = new Set(structFields(contract, 'pub struct GeneratedWord', CONTRACT));
 
-if (specFields.length === 0) errors.push(`${DEFINITIONS}: BuiltinSpec declares no fields`);
-if (contractFields.size === 0) errors.push(`${CONTRACT}: GeneratedWord declares no fields`);
+if (specFields.length === 0) fail(`${DEFINITIONS}: BuiltinSpec declares no fields`);
+if (contractFields.size === 0) fail(`${CONTRACT}: GeneratedWord declares no fields`);
 
 // `builtin_specs()` must iterate the generated registry. Iterating anything
 // else would mean the inventory has a second source, even if every field
 // checked out.
 const assembler = definitions.slice(definitions.indexOf('fn builtin_specs('));
 if (!/GENERATED_WORDS\s*\n?\s*\.iter\(\)/.test(assembler)) {
-  errors.push(`${DEFINITIONS}: builtin_specs() must iterate GENERATED_WORDS`);
+  fail(`${DEFINITIONS}: builtin_specs() must iterate GENERATED_WORDS`);
 }
 
 // Every construction of BuiltinSpec, anywhere in the crate. More than one means
@@ -137,7 +117,7 @@ for (const match of definitions.matchAll(pattern)) {
 }
 
 if (sites.length !== 1) {
-  errors.push(
+  fail(
     `${DEFINITIONS}: expected exactly 1 BuiltinSpec construction site, found ${sites.length}. ` +
       'A second site means Core Word metadata is assembled in more than one place.',
   );
@@ -148,7 +128,7 @@ for (const site of sites) {
   const seen = new Set();
   for (const entry of splitTopLevel(site.body.replace(/\/\/[^\n]*/g, ''))) {
     if (entry.startsWith('..')) {
-      errors.push(
+      fail(
         `${DEFINITIONS}:${line}: struct-update syntax \`${entry}\` is not allowed; ` +
           'every field must name its canonical source explicitly.',
       );
@@ -156,7 +136,7 @@ for (const site of sites) {
     }
     const field = entry.match(/^([a-z_][a-z0-9_]*)\s*:/)?.[1];
     if (!field) {
-      errors.push(`${DEFINITIONS}:${line}: could not parse field initializer \`${entry}\``);
+      fail(`${DEFINITIONS}:${line}: could not parse field initializer \`${entry}\``);
       continue;
     }
     seen.add(field);
@@ -165,7 +145,7 @@ for (const site of sites) {
     const fromContract = value.match(/^word\.([a-z_][a-z0-9_]*)$/);
     if (fromContract) {
       if (!contractFields.has(fromContract[1])) {
-        errors.push(
+        fail(
           `${DEFINITIONS}:${line}: ${field} reads \`word.${fromContract[1]}\`, ` +
             `which is not a field of GeneratedWord in ${CONTRACT}`,
         );
@@ -173,7 +153,7 @@ for (const site of sites) {
       continue;
     }
 
-    errors.push(
+    fail(
       `${DEFINITIONS}:${line}: ${field} is set from \`${value}\`, which is not ` +
         'the generated registry (`word.<field>`). BuiltinSpec is a projection of spec/words.json, ' +
         'not a place to author Core Word metadata.',
@@ -183,17 +163,10 @@ for (const site of sites) {
   // A field that is declared but never initialized here cannot have come from a
   // canonical source, so the whitelist above would not have seen it.
   for (const field of specFields) {
-    if (!seen.has(field)) errors.push(`${DEFINITIONS}:${line}: BuiltinSpec.${field} is never assigned`);
+    if (!seen.has(field)) fail(`${DEFINITIONS}:${line}: BuiltinSpec.${field} is never assigned`);
   }
 }
 
-if (errors.length > 0) {
-  console.error('[runtime-metadata] BuiltinSpec must be projected from canonical sources only:');
-  for (const error of errors) console.error(`  - ${error}`);
-  process.exit(1);
-}
-
-console.log(
-  `[runtime-metadata] BuiltinSpec projects ${specFields.length} fields from the generated ` +
-    `registry; no authored metadata table.`,
-);
+// Each failure above names the canonical source BuiltinSpec must be
+// projected from; `done` exits 1 when there was any.
+report.done(`BuiltinSpec projects ${specFields.length} fields from the generated registry; no authored metadata table.`);
