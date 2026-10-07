@@ -1,6 +1,5 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { readJson, words, writeOrCheck } from './lib/common.mjs';
 
 // Project spec/words.json into a checked-in Rust Word registry — the single
 // source of truth for the Word inventory, executor keys, static contract
@@ -8,11 +7,9 @@ import { spawnSync } from 'node:child_process';
 // Phase 3). Run with `--check` in CI to fail on
 // drift; run without it to regenerate.
 
-const check = process.argv.includes('--check');
 const outputPath = 'rust/src/kernel/generated/word_registry.rs';
-const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
-const entries = words.entries;
-const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
+const entries = words().entries;
+const schema = readJson('spec/words.schema.json');
 
 // The contract vocabularies are generated from the schema's own `enum` lists
 // rather than hand-written on the Rust side. That is what makes a narrower
@@ -446,16 +443,15 @@ const formatted = (() => {
   return result.stdout;
 })();
 
-if (check) {
-  const current = readFileSync(outputPath, 'utf8');
-  if (current !== formatted) {
-    console.error(`[word-registry] ${outputPath} is stale. Run npm run word-registry:generate.`);
-    process.exitCode = 1;
-  } else {
-    console.log(`[word-registry] ${entries.length} Words are current.`);
-  }
-} else {
-  mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, formatted);
-  console.log(`[word-registry] wrote ${entries.length} Words to ${outputPath}.`);
-}
+writeOrCheck(
+  'word-registry',
+  [{
+    path: outputPath,
+    content: formatted,
+    stale: `${outputPath} is stale. Run npm run word-registry:generate.`,
+  }],
+  {
+    current: `${entries.length} Words are current.`,
+    wrote: `wrote ${entries.length} Words to ${outputPath}.`,
+  },
+);
