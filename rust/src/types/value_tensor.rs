@@ -153,17 +153,17 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
         // the reason it was stored with, not as "no such index".
         return Some(Value::from_dense_lane(data, index));
     }
-    let rest: Vec<usize> = shape[1..].to_vec();
+    let rest = &shape[1..];
     let stride: usize = rest.iter().product();
     // The sub-tensor's lanes are re-indexed from the slice's start, so its
     // absences are too (`DenseTensor::lanes`). Dropping that rebase was the
     // whole bug one level down: the child kept the holes and lost the reasons
     // for them.
-    let tensor = data.lanes(index * stride, stride, rest.clone());
+    let tensor = data.lanes(index * stride, stride, rest);
     Some(Value::new(
         ValueData::Tensor {
             data: Arc::new(tensor),
-            shape: Arc::new(rest),
+            shape: Arc::new(rest.to_vec()),
         },
         None,
     ))

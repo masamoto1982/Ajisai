@@ -322,7 +322,8 @@ pub(crate) fn run(
         Some(p) => Some(plain_int(p)?),
         None => None,
     };
-    let inputs: Vec<Ty> = seed.iter().map(|(t, _)| *t).chain([elem_ty]).collect();
+    let inputs: smallvec::SmallVec<[Ty; 2]> =
+        seed.iter().map(|(t, _)| *t).chain([elem_ty]).collect();
     let compiled = block.int_programs.get(block, &inputs)?;
     let (typed, program) = (&compiled.typed, &compiled.program);
     match walk {
