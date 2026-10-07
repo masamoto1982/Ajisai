@@ -124,8 +124,6 @@ impl Interpreter {
 
         let compiled_plan = self.get_compiled_plan(name, &def);
 
-        self.call_stack.push(name.to_string());
-
         // A Word call is a barrier frame: its body names its own locals and
         // reads none of the caller's, so what a Word means depends on its
         // operands and its dictionary and nothing else.
@@ -141,7 +139,6 @@ impl Interpreter {
 
         self.close_binding_scope();
 
-        self.call_stack.pop();
         self.call_depth -= 1;
 
         // Attribution stops at a User Word — see `record_user_word_failure`

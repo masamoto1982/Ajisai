@@ -89,28 +89,6 @@ pub(crate) fn compute_gcd_i64(a: i64, b: i64) -> i64 {
     a as i64
 }
 
-#[inline]
-pub(crate) fn create_bigint_from_i128(n: i128) -> BigInt {
-    if n >= i64::MIN as i128 && n <= i64::MAX as i128 {
-        BigInt::from(n as i64)
-    } else {
-        let sign = n.signum();
-        let abs_n = n.unsigned_abs();
-        let high = (abs_n >> 64) as u64;
-        let low = abs_n as u64;
-        let result = if high == 0 {
-            BigInt::from(low)
-        } else {
-            BigInt::from(high) * BigInt::from(1u128 << 64) + BigInt::from(low)
-        };
-        if sign < 0 {
-            -result
-        } else {
-            result
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) enum FractionRepr {
     Small(i64, i64),
@@ -504,7 +482,7 @@ impl Fraction {
             };
         }
         Fraction {
-            repr: FractionRepr::big(create_bigint_from_i128(n), create_bigint_from_i128(d)),
+            repr: FractionRepr::big(BigInt::from(n), BigInt::from(d)),
         }
     }
 
@@ -616,11 +594,6 @@ impl Fraction {
     #[inline]
     pub fn lt(&self, other: &Fraction) -> bool {
         self.cmp(other) == std::cmp::Ordering::Less
-    }
-
-    #[inline]
-    pub fn le(&self, other: &Fraction) -> bool {
-        self.cmp(other) != std::cmp::Ordering::Greater
     }
 
     #[inline]

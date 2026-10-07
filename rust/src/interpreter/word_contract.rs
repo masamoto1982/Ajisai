@@ -302,7 +302,6 @@ impl Interpreter {
                 Token::Number(_) | Token::String(_) | Token::Value(_) => {
                     flow.feed_literal();
                     sim.feed_literal();
-                    cost_sim.feed_literal();
                 }
                 // A vector-literal interior pushes one opaque value as
                 // far as arity/space/cost are concerned, whatever it
@@ -313,7 +312,6 @@ impl Interpreter {
                 Token::Symbol(symbol) if contexts[idx].in_vector_literal() => {
                     flow.feed_literal();
                     sim.feed_literal();
-                    cost_sim.feed_literal();
                     if contexts[idx] == LiteralContext::Code {
                         let canonical = crate::word_name::canonical_word_name(symbol);
                         if runs_unread_code(&def.body, &contexts, idx, &canonical) {
@@ -331,7 +329,6 @@ impl Interpreter {
                 Token::Symbol(symbol) if bound.contains(&symbol.to_uppercase()) => {
                     flow.feed_literal();
                     sim.feed_bound();
-                    cost_sim.feed_literal();
                 }
                 Token::Symbol(symbol) => {
                     let canonical = crate::word_name::canonical_word_name(symbol);
@@ -375,7 +372,6 @@ impl Interpreter {
                 Token::VectorStart | Token::VectorEnd => {
                     flow.feed_structural(token);
                     sim.feed_structural(token);
-                    cost_sim.feed_structural(token);
                 }
             }
         }

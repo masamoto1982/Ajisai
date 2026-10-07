@@ -208,14 +208,12 @@ fn comparison_is_total_and_budget_free() {
 }
 
 #[test]
-fn floor_ceil_round_are_exact() {
+fn floor_and_round_are_exact() {
     let sqrt2 = sqrt_irr(2, 1);
     assert_eq!(sqrt2.floor_int(), BigInt::from(1));
-    assert_eq!(sqrt2.ceil_int(), BigInt::from(2));
     assert_eq!(sqrt2.round_int(), BigInt::from(1));
     let neg = sqrt2.neg();
     assert_eq!(neg.floor_int(), BigInt::from(-2));
-    assert_eq!(neg.ceil_int(), BigInt::from(-1));
     assert_eq!(neg.round_int(), BigInt::from(-1));
     // √3 ≈ 1.732 rounds up.
     assert_eq!(sqrt_irr(3, 1).round_int(), BigInt::from(2));
@@ -246,7 +244,7 @@ fn enclosures_narrow_monotonically_around_the_value() {
     let (lo1, hi1) = sqrt2.bounds(8);
     assert!(lo1.lt(&hi1), "irrational enclosure is not a point");
     let (lo2, hi2) = sqrt2.bounds(32);
-    assert!(lo1.le(&lo2) && hi2.le(&hi1), "deeper bounds nest");
+    assert!(lo1 <= lo2 && hi2 <= hi1, "deeper bounds nest");
     assert!(hi2.sub(&lo2).lt(&hi1.sub(&lo1)), "deeper bounds narrow");
     // The enclosure straddles the true value: lo < √2 < hi ⇔ lo² < 2 < hi².
     assert!(lo2.mul(&lo2).lt(&frac(2, 1)));

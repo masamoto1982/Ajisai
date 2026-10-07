@@ -476,11 +476,6 @@ impl SparseTensor {
         ))
     }
 
-    pub fn fraction_or_zero(&self, index: usize) -> Fraction {
-        self.get_small_fraction(index)
-            .unwrap_or_else(|| Fraction::new(0.into(), 1.into()))
-    }
-
     pub fn nonzero_count(&self) -> usize {
         self.indices.len()
     }

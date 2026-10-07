@@ -164,8 +164,10 @@ fn fixed_stack_effect_prose_matches_the_machine_mass() {
     // fires when the two descriptions provably disagree.
     let mut compared = 0u32;
     for spec in GENERATED_WORDS {
-        let Some((mass_consumes, mass_produces)) =
-            crate::coreword_registry::mass_contract(spec.name).fixed()
+        let crate::coreword_registry::MassContract::Fixed {
+            consumes: mass_consumes,
+            produces: mass_produces,
+        } = crate::coreword_registry::mass_contract(spec.name)
         else {
             continue; // Dynamic mass: no fixed arity to check against
         };

@@ -172,11 +172,6 @@ impl Algebraic {
         }
     }
 
-    /// ⌈self⌉ = ⌊self⌋ + 1 (an irrational is never an integer).
-    pub fn ceil_int(&self) -> BigInt {
-        self.floor_int() + BigInt::one()
-    }
-
     /// Round to the nearest integer. An irrational is never a half-integer,
     /// so the tie rule (away from zero, matching `Fraction::round`) can
     /// never fire; the order against ⌊self⌋ + 1/2 decides exactly.

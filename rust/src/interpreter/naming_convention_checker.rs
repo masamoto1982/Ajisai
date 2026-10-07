@@ -4,8 +4,6 @@ const AMBIGUOUS_NAMES: &[&str] = &[
     "CALC", "RUN", "EXEC2", "TEMP", "MAIN", "TEST", "STUFF", "THING",
 ];
 
-const SHORT_NAME_MAX_LENGTH: usize = 6;
-
 pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
     let upper = name.to_uppercase();
 
@@ -28,18 +26,6 @@ pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
              See: §DEV-NAMING-INDEX",
             upper
         ));
-    }
-
-    if !upper.contains('-') && upper.len() <= SHORT_NAME_MAX_LENGTH {
-        return None;
-    }
-
-    if upper.starts_with("IS-") || upper.starts_with("HAS-") {
-        return None;
-    }
-
-    if upper.contains('-') {
-        return None;
     }
 
     None
