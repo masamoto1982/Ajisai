@@ -43,7 +43,10 @@ export interface ExecutionCallbacks {
     readonly showDocumentation: (text: string) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
-    readonly updateDisplays: () => void;
+    // Redraw the surfaces `changes` names, from `after` — the post-run view
+    // the controller has already read back, so the stack is not collected a
+    // second time for the drawing.
+    readonly updateDisplays: (after: ExecutionStateView, changes: ExecutionSurfaceChanges) => void;
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
     readonly updateView: (mode: ViewMode) => void;
@@ -178,12 +181,19 @@ export const createExecutionController = (
     // like-for-like with the snapshot the run was handed. Comparing against the
     // worker's `result` instead skews the dictionary comparison across
     // instances and misfires on every run.
+    //
+    // The redraw and the save follow that comparison: a surface the run did
+    // not change is not drawn again, and a run that changed neither the stack
+    // nor the dictionary — a failed one, whose state `syncInterpreterState`
+    // never applied, or one that only printed — has nothing to save. Every
+    // run used to rebuild both panels and serialize the session regardless.
     const applyExecutionResult = async (
         context: string,
         outcome: ExecutionOutcome,
         clearEditorOnSuccess: boolean
     ): Promise<boolean> => {
         let changes: ExecutionSurfaceChanges = OUTPUT_ONLY_CHANGE;
+        let after: ExecutionStateView | null = null;
         let succeeded = false;
 
         try {
@@ -195,7 +205,7 @@ export const createExecutionController = (
                 console.error(`[${context}] Failed to sync state:`, error);
                 showError(toError(error));
             }
-            const after: ExecutionStateView = {
+            after = {
                 stack: interpreter.collect_stack(),
                 userWords: collectUserWords(interpreter)
             };
@@ -207,9 +217,11 @@ export const createExecutionController = (
             resolveExecutionException(context, error, showInfo, showError);
         }
 
-        updateDisplays();
+        if (after && (changes.stackChanged || changes.dictionaryChanged)) {
+            updateDisplays(after, changes);
+            await saveState();
+        }
         updateAfterExecution(changes);
-        await saveState();
         return succeeded;
     };
 
@@ -223,8 +235,15 @@ export const createExecutionController = (
         let outcome: ExecutionOutcome;
         showRunStatus(RUN_STATUS_TEXT);
         try {
-            const before = createExecutionSnapshot(interpreter);
-            outcome = { before, result: await WORKER_MANAGER.execute(code, before) };
+            // The main thread's own view of the run's start, for the
+            // before/after comparison; the worker is handed the lossless
+            // snapshot instead, and the dictionary is read once for both.
+            const before: ExecutionStateView = {
+                stack: interpreter.collect_stack(),
+                userWords: collectUserWords(interpreter)
+            };
+            const snapshot = createExecutionSnapshot(interpreter, before.userWords);
+            outcome = { before, result: await WORKER_MANAGER.execute(code, snapshot) };
         } catch (error) {
             outcome = { error };
         } finally {

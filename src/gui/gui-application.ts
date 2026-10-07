@@ -4,6 +4,7 @@ import { createVocabularyManager, type VocabularyManager } from './vocabulary-st
 import { createEditor, createEditorHistory, type Editor } from './code-input-editor';
 import { createPersistence, type Persistence } from './interpreter-state-persistence';
 import { createExecutionController, type ExecutionController } from './execution-controller';
+import type { ExecutionStateView } from './interpreter-execution-utils';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import {
     applyExecutionAreaState,
@@ -16,6 +17,7 @@ import {
     updateEditorPlaceholder,
     type ApplyAreaStateDeps,
     type DictionarySheetId,
+    type ExecutionSurfaceChanges,
     type GesturePoint,
     type GUIElements,
     type LayoutController,
@@ -431,11 +433,17 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         const layoutDeps: ApplyAreaStateDeps = { elements, state: layoutState, mobile, showDictionarySheet };
         const layoutController = createLayoutController(layoutDeps);
 
-        const updateAllDisplays = (): void => {
-            autocompleteWordsCache = null;
+        // Redraw the Stack and Dictionary panels. With no arguments both are
+        // drawn from the interpreter; a run passes the view it has already
+        // read back and what it changed, so only the changed panel is rebuilt
+        // and the stack is not collected a second time for the drawing.
+        const updateAllDisplays = (after?: ExecutionStateView, changes?: ExecutionSurfaceChanges): void => {
+            const redrawStack = changes?.stackChanged ?? true;
+            const redrawDictionary = changes?.dictionaryChanged ?? true;
+            if (redrawDictionary) autocompleteWordsCache = null;
             try {
-                display.renderStack(interpreter.collect_stack());
-                vocabulary.updateUserWords(interpreter.collect_user_words_info());
+                if (redrawStack) display.renderStack(after?.stack ?? interpreter.collect_stack());
+                if (redrawDictionary) vocabulary.updateUserWords(interpreter.collect_user_words_info());
             } catch (error) {
                 console.error('Failed to update display:', error);
                 display.renderError(new Error('Failed to update display.'));
@@ -513,7 +521,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             showDocumentation: (text) => display.renderDocumentation(text),
             showError: (error, precedingOutput) => display.renderError(error, precedingOutput),
             showExecutionResult: (result) => display.renderExecutionResult(result),
-            updateDisplays: updateAllDisplays,
+            updateDisplays: (after, changes) => updateAllDisplays(after, changes),
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
             updateView: (mode) => layoutController.setArea(mode),

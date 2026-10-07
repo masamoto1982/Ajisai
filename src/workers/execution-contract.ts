@@ -8,7 +8,7 @@
 // should have to construct a worker pool, and none of which runs in a browser
 // during the tests.
 
-import type { AjisaiInterpreter, UserWord, Value } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 
 // Per-task wall-clock cap on worker execution. The recursion guard returns an
 // AjisaiError immediately for blown-stack programs; this is the second line of
@@ -46,12 +46,16 @@ export class ExecutionAbortedError extends Error {
 }
 
 export interface InterpreterSnapshot {
-    // The observation-format stack, carried for display on the main thread.
-    readonly stack: Value[];
     // The lossless snapshot (opaque string from `snapshot_stack`) and the only
     // format the worker round-trip restores from. Reusing the lossy observation
     // format silently changed exact values on every execution — a CodeBlock
     // came back as nil, √2 as its rational approximation. See LANG.OBSERVATION.FIREWALL.
+    //
+    // The observation-format stack used to travel beside it "for display on
+    // the main thread", and the worker never read it: the main thread keeps
+    // its own view of the stack (`ExecutionStateView`) for the before/after
+    // comparison, so the copy only cost a structured clone of every value on
+    // the stack per run.
     readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
     /**
