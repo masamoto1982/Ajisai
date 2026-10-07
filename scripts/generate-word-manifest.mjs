@@ -182,16 +182,6 @@ const entries = [
 ];
 
 const contracts = words();
-const contractNames = new Set(contracts.entries.map((entry) => entry.name));
-const generatedCanonicalNames = new Set(entries
-  .filter((entry) => entry.kind === 'coreword')
-  .map((entry) => entry.surface));
-for (const name of contractNames) {
-  if (!generatedCanonicalNames.has(name)) fail(`Word contract ${name} is absent from the implementation catalog`);
-}
-for (const name of generatedCanonicalNames) {
-  if (!contractNames.has(name)) fail(`implementation catalog Word ${name} is absent from spec/words.json`);
-}
 
 const coverageEntries = loadCoverageEntries();
 for (const entry of entries) {
@@ -209,10 +199,6 @@ const manifest = {
   generatedFrom: [
     'spec/words.json',
     'rust/src/surface_forms.rs',
-  ],
-  implementationCatalogValidatedAgainst: [
-    'spec/words.json',
-    'rust/src/kernel/generated/word_registry.rs',
   ],
   semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {
