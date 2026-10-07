@@ -38,8 +38,8 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
 }
 
 /**
- * Label the `Playground` badge, matching the Reference header's own
- * `リファレンス` badge, and state which build is deployed.
+ * State which build is deployed. (The `Playground` badge itself is written
+ * in index.html, matching the Reference header's own `リファレンス` badge.)
  *
  * Which build matters because the Playground is a separately deployed
  * artifact and a deploy can be stranded (see the `workflow_dispatch` note in
@@ -53,12 +53,6 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  * not need to keep spending its brand row on a stamp nobody reads twice.
  */
 function setBuildVersionLabel(): void {
-    // Capitalized to match the other names the site gives its own surfaces:
-    // the header's `Reference` button, and the Reference's own
-    // 「Playgroundで開く」 links back here.
-    setLabelForAll(['.version'], (el) => {
-        el.textContent = 'Playground';
-    });
     // Until the interpreter is up this is all there is to tell; the host
     // profile rewrites this tooltip with its ceilings appended.
     setPlaygroundBadgeTooltip(buildDetailLines());
