@@ -15,16 +15,8 @@ pub(crate) fn is_string_value(val: &Value) -> bool {
     val.is_text()
 }
 
-pub(crate) fn is_boolean_value(val: &Value) -> bool {
-    matches!(val.data, ValueData::Boolean(_))
-}
-
 pub(crate) fn is_number_value(val: &Value) -> bool {
     val.is_scalar()
-}
-
-pub(crate) fn is_datetime_value(_val: &Value) -> bool {
-    false
 }
 
 pub(crate) fn apply_unary_cast(
@@ -58,24 +50,8 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
         return "NIL".to_string();
     }
 
-    if is_boolean_value(value) {
-        if let Some(f) = value.as_scalar() {
-            return if !f.is_zero() {
-                "TRUE".to_string()
-            } else {
-                "FALSE".to_string()
-            };
-        }
-    }
-
     if let Some(text) = value.as_text() {
         return text.to_string();
-    }
-
-    if is_datetime_value(value) {
-        if let Some(f) = value.as_scalar() {
-            return format!("@{}", format_fraction_to_string(f));
-        }
     }
 
     if is_number_value(value) {

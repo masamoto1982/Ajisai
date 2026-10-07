@@ -41,7 +41,7 @@ export interface ParallelCapability {
     recommendedThreads: number;
 }
 
-export interface DetectOptions {
+interface DetectOptions {
     /** Upper bound on `recommendedThreads`; omit for no cap. */
     maxThreads?: number;
 }

@@ -67,15 +67,6 @@ impl RecordData {
         })
     }
 
-    /// The empty Record.
-    pub fn empty() -> Self {
-        Self {
-            keys: Vec::new(),
-            values: Vec::new(),
-            index: HashMap::new(),
-        }
-    }
-
     /// How many keys the Record holds.
     pub fn len(&self) -> usize {
         self.keys.len()

@@ -41,11 +41,10 @@ const withObjectStore = <T>(
     db: IDBDatabase,
     storeName: string,
     mode: IDBTransactionMode,
-    action: (store: IDBObjectStore, transaction: IDBTransaction) => Promise<T>
+    action: (store: IDBObjectStore) => Promise<T>
 ): Promise<T> => {
-    const transaction = db.transaction([storeName], mode);
-    const store = transaction.objectStore(storeName);
-    return action(store, transaction);
+    const store = db.transaction([storeName], mode).objectStore(storeName);
+    return action(store);
 };
 
 // One record, under one key, in one object store. A second store, `tables`,

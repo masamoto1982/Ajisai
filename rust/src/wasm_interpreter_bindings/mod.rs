@@ -347,7 +347,7 @@ pub fn agent_predict_outcomes(source: &str, step_limit: Option<u32>) -> String {
         .to_string()
 }
 
-/// Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+/// Benchmark hook for `scripts/bench/speed-bench-wasm.mjs`: run `source` on a fresh
 /// interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
 /// the same one `rust/examples/speed_bench.rs` times natively) and answer the
 /// final stack depth. Nothing is converted to JS, so the caller's clock sees

@@ -40,8 +40,6 @@ struct ExpectedEffect {
 #[derive(Debug)]
 struct Case {
     id: String,
-    #[allow(dead_code)]
-    category: String,
     source: String,
     expect_result: String,
     expect_error: Option<String>,
@@ -238,9 +236,11 @@ fn parse_cases() -> Vec<Case> {
 
         let id = attr_value(&section.attrs, "id")
             .expect("ajisai-case section is missing required `id` attribute");
-        let category = attr_value(&section.attrs, "data-category").unwrap_or_else(|| {
-            panic!("ajisai-case `{id}` is missing required `data-category` attribute")
-        });
+        // Required by the suite's structure, though no assertion reads it:
+        // a case without a category is malformed and fails loudly here.
+        if attr_value(&section.attrs, "data-category").is_none() {
+            panic!("ajisai-case `{id}` is missing required `data-category` attribute");
+        }
 
         let inner = &section.inner;
 
@@ -273,7 +273,6 @@ fn parse_cases() -> Vec<Case> {
 
         cases.push(Case {
             id,
-            category,
             source,
             expect_result,
             expect_error,

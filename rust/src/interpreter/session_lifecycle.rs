@@ -105,12 +105,9 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear();
         self.host_effects.clear();
-        self.pending_tokens = None;
-        self.pending_token_index = 0;
         self.pending_def_body_tokens = None;
         self.pending_word_descriptions.clear();
         self.runtime_scratch.clear();
-        self.call_stack.clear();
         self.call_depth = 0;
         self.source_spans.clear();
         self.section_depth = 0;
@@ -119,8 +116,6 @@ impl Interpreter {
         self.body_store.clear();
         self.defer_identity_recompute = false;
         self.next_registration_order = 1;
-        self.monitor_notifications.clear();
-        self.next_supervisor_id = 1;
         self.runtime_metrics = RuntimeMetrics::default();
         self.error_flow_trace_log.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);

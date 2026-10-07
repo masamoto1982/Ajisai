@@ -18,7 +18,6 @@
 //! directions.
 
 use crate::kernel::generated::{generated_word_by_id, CostAxis, WordId};
-use crate::types::Token;
 
 use super::word_contract::WordContract;
 use super::word_space::{OperandProfile, SpaceClass};
@@ -238,27 +237,13 @@ fn refine_axis(
 /// it, never unrolled at the `DEF` site.
 pub(crate) struct CostSim {
     bound: CostBound,
-    block_depth: u32,
 }
 
 impl CostSim {
     pub(crate) fn new() -> Self {
         CostSim {
             bound: CostBound::IDENTITY,
-            block_depth: 0,
         }
-    }
-
-    /// A `Number`/`String` literal: pushes a value, calls no word, costs
-    /// nothing on any axis.
-    pub(crate) fn feed_literal(&mut self) {}
-
-    pub(crate) fn feed_structural(&mut self, token: &Token) {
-        // Nothing structural changes the bound any more. `|` went with
-        // `COND` and `OR-NIL`'s lazy fallback unit went with `OR-NIL`; both
-        // branched along a path this linear walk could not follow, and no
-        // token does now.
-        let _ = token;
     }
 
     pub(crate) fn feed_unresolved(&mut self) {
@@ -290,7 +275,6 @@ impl CostSim {
     /// conservative top, same as `SpaceSim`.
     pub(crate) fn abandon(&mut self) {
         self.bound.join(CostBound::CONSERVATIVE);
-        self.block_depth = 0;
     }
 
     pub(crate) fn finish(self) -> CostBound {

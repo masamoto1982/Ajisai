@@ -134,16 +134,6 @@ pub enum MassContract {
     Dynamic,
 }
 
-impl MassContract {
-    /// `(consumes, produces)` when the contract is statically fixed.
-    pub fn fixed(self) -> Option<(u8, u8)> {
-        match self {
-            MassContract::Fixed { consumes, produces } => Some((consumes, produces)),
-            MassContract::Dynamic => None,
-        }
-    }
-}
-
 /// The mass contract implied by a Word's declared stack arity.
 ///
 /// `MassContract` is the analyzers' vocabulary — they need one bit, "is this

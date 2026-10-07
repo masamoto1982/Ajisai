@@ -3,6 +3,6 @@
 // layout switches ... is tuning"), and must agree with the `768px` media
 // queries in src/styles.
 
-export const MOBILE_BREAKPOINT_PX = 768;
+const MOBILE_BREAKPOINT_PX = 768;
 
 export const isMobileViewport = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT_PX;

@@ -21,7 +21,7 @@ function distanceCeiling(length) {
 }
 
 /** Levenshtein distance, two rows at a time. */
-export function editDistance(left, right) {
+function editDistance(left, right) {
   const a = [...left];
   const b = [...right];
   if (a.length === 0) return b.length;

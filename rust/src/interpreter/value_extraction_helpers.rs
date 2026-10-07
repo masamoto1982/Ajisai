@@ -136,11 +136,7 @@ pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result
         return Err(AjisaiError::stack_underflow());
     }
 
-    let values: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-    if values.len() != count {
-        return Err(AjisaiError::stack_underflow());
-    }
-    Ok(values)
+    Ok(interp.stack.drain(interp.stack.len() - count..).collect())
 }
 
 /// Exact-real view of a numeric operand: a rational `Scalar` lifts to

@@ -67,7 +67,7 @@ fn sparse_tensor_round_trips_dense_values_and_shape() {
     assert_eq!(sparse.indices, vec![2, 4]);
     assert_eq!(sparse.nonzero_count(), 2);
     assert!(sparse.indices.windows(2).all(|w| w[0] < w[1]));
-    assert_eq!(sparse.fraction_or_zero(0), Fraction::from(0_i64));
+    assert_eq!(sparse.get_small_fraction(0), None);
     assert_eq!(sparse.get_small_fraction(2), Some(Fraction::from(3_i64)));
     assert_eq!(sparse.to_dense(), dense);
 }

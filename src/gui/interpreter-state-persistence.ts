@@ -30,7 +30,7 @@ export const EXAMPLE_USER_WORDS: UserWord[] = [
     },
 ];
 
-export type Result<T, E = Error> =
+type Result<T, E = Error> =
     | { ok: true; value: T }
     | { ok: false; error: E };
 
@@ -43,10 +43,7 @@ export type Result<T, E = Error> =
 // inside the stack snapshot changed shape), never to record that a key went
 // away — an abandoned key beside the ones a reader looks at is simply never
 // read.
-export const STATE_FORMAT_VERSION = 5;
-
-// The document itself is the shape both stores write (`InterpreterStateSnapshot`).
-export type InterpreterState = InterpreterStateSnapshot;
+const STATE_FORMAT_VERSION = 5;
 
 // Whether a saved session carries a dictionary of its own — including an
 // empty one. An empty dictionary is a choice the user made by deleting every
@@ -55,10 +52,10 @@ export type InterpreterState = InterpreterStateSnapshot;
 // reload, the words the user had just deleted. The Example Words seed a
 // session that has no saved dictionary at all — a first visit, or a document
 // of another format — and Reset, which asks for them.
-export const checkHasSavedDictionary = (state: Pick<InterpreterState, 'userWords'>): boolean =>
+export const checkHasSavedDictionary = (state: Pick<InterpreterStateSnapshot, 'userWords'>): boolean =>
     Array.isArray(state.userWords);
 
-export interface RestoredSelection {
+interface RestoredSelection {
     readonly activeDictionarySheet?: string;
 }
 
@@ -82,7 +79,7 @@ export interface Persistence {
 const collectCurrentState = (
     interpreter: AjisaiInterpreter,
     activeDictionarySheet: string | undefined
-): InterpreterState => ({
+): InterpreterStateSnapshot => ({
     stateVersion: STATE_FORMAT_VERSION,
     // The lossless snapshot is what restore reads. The observation-format
     // stack used to be saved beside it "for display", and nothing ever read
@@ -162,7 +159,7 @@ export interface ImportSummary {
     readonly idMismatches: string[];
 }
 
-export const toSkippedWords = (
+const toSkippedWords = (
     skipped: ReadonlyArray<readonly [name: string, reason: string]>
 ): SkippedWord[] => skipped.map(([name, reason]) => ({ name, reason }));
 

@@ -1,6 +1,5 @@
 use crate::error::Result;
-use crate::types::{Stack, Token, Value, WordDefinition};
-use smallvec::SmallVec;
+use crate::types::{Stack, Value, WordDefinition};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -137,11 +136,8 @@ pub struct Interpreter {
     /// `Unknown word`. Cleared at the start of each top-level run.
     pub(crate) dictionary_changes_this_run: Vec<String>,
     pub(crate) disable_no_change_check: bool,
-    pub(crate) pending_tokens: Option<Vec<Token>>,
-    pub(crate) pending_token_index: usize,
     /// Type-erased caches owned by runtime subsystems.
     pub(crate) runtime_scratch: HashMap<String, Box<dyn std::any::Any + Send>>,
-    pub(crate) call_stack: SmallVec<[String; 5]>,
     /// User-word call depth. Incremented on entry to a user-word body in
     /// `execute_word_core`, decremented on exit. Compared against
     /// `MAX_USER_WORD_DEPTH` to prevent a deep recursion from blowing the
@@ -170,9 +166,6 @@ pub struct Interpreter {
     pub(crate) global_epoch: u64,
     pub(crate) dictionary_epoch: u64,
     pub(crate) execution_epoch: u64,
-
-    pub(crate) monitor_notifications: Vec<Vec<Value>>,
-    pub(crate) next_supervisor_id: u64,
 
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
@@ -273,10 +266,7 @@ impl Interpreter {
             spare_binding_maps: Vec::new(),
             dictionary_changes_this_run: Vec::new(),
             disable_no_change_check: true,
-            pending_tokens: None,
-            pending_token_index: 0,
             runtime_scratch: HashMap::new(),
-            call_stack: SmallVec::new(),
             call_depth: 0,
             execution_step_count: 0,
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
@@ -287,8 +277,6 @@ impl Interpreter {
             global_epoch: 0,
             dictionary_epoch: 0,
             execution_epoch: 0,
-            monitor_notifications: Vec::new(),
-            next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
             error_flow_trace_log: Vec::new(),
 

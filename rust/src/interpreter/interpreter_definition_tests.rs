@@ -385,7 +385,7 @@ async fn test_call_chain_state_resets_after_completion() {
     let result2 = interp.execute("A").await;
     assert!(
         result2.is_ok(),
-        "Second call should succeed (call_stack should reset)"
+        "Second call should succeed (call depth should reset)"
     );
 }
 

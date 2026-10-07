@@ -61,8 +61,6 @@ export interface FileIO {
 export type RuntimeKind = 'web' | 'tauri';
 
 export interface Runtime {
-    readonly kind: RuntimeKind;
-    readonly buildTimestamp: string;
     onReady(callback: () => void): void;
 }
 
@@ -95,7 +93,6 @@ export interface PlatformAdapter {
 }
 
 declare const __AJISAI_TARGET__: RuntimeKind;
-declare const __AJISAI_BUILD_TIMESTAMP__: string;
 
 export function detectRuntimeKind(): RuntimeKind {
     if (typeof __AJISAI_TARGET__ !== 'undefined' && __AJISAI_TARGET__ === 'tauri') {
@@ -110,7 +107,6 @@ export function detectRuntimeKind(): RuntimeKind {
 }
 
 const createPlatformAdapter = (
-    kind: RuntimeKind,
     persistence: Persistence,
     fileIO: FileIO
 ): PlatformAdapter => ({
@@ -121,8 +117,6 @@ const createPlatformAdapter = (
     // store) fills in e.g. stepLimit here.
     executionConfig: {},
     runtime: {
-        kind,
-        buildTimestamp: __AJISAI_BUILD_TIMESTAMP__,
         onReady(callback: () => void): void {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', callback, { once: true });
@@ -141,8 +135,8 @@ export function getPlatform(): PlatformAdapter {
     }
 
     cachedPlatform = detectRuntimeKind() === 'tauri'
-        ? createPlatformAdapter('tauri', new TauriPersistence(), new TauriFileIO())
-        : createPlatformAdapter('web', WEB_PERSISTENCE, new WebFileIO());
+        ? createPlatformAdapter(new TauriPersistence(), new TauriFileIO())
+        : createPlatformAdapter(WEB_PERSISTENCE, new WebFileIO());
 
     return cachedPlatform;
 }

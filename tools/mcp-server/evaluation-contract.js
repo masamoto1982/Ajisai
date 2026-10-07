@@ -44,7 +44,7 @@ export function callsOf(trace) {
  * — as a model result, which is the single claim this evaluation harness is
  * least entitled to make. The scorers now refuse to blur them.
  */
-export const TRACE_SOURCES = Object.freeze(["referenceFixture", "model"]);
+const TRACE_SOURCES = Object.freeze(["referenceFixture", "model"]);
 
 /**
  * What a `model` trace must record to be re-runnable and comparable.

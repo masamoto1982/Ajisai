@@ -314,7 +314,7 @@ impl Interpreter {
     /// widen.rs`) — a fixed-position code operand the enclosing call (`MAP`,
     /// `EXEC`, ...) will actually run, unlike an ordinary data literal. Only
     /// `acc` is touched: arity/space/cost already treated the whole literal
-    /// as one opaque value (the caller's `flow`/`sim`/`cost_sim.feed_literal`
+    /// as one opaque value (the caller's `flow`/`sim` `feed_literal`
     /// calls), and stay attributed at that Word's own call site rather than
     /// unrolled here, exactly as for a ordinary body-level dependency's own
     /// internal cost.
