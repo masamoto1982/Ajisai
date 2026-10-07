@@ -228,7 +228,23 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // the caller's only route is to delete the dependents first. A word's own
     // self-reference does not lock it: see `collect_external_dependents`.
     if interp.user_words.contains_key(&upper_name) {
-        let dependents = interp.collect_external_dependents(&upper_name);
+        let dependents = if interp.defer_identity_recompute {
+            // In a bulk restore the reverse index is rebuilt once at the end
+            // (`rebuild_dependencies`) rather than kept current per word, so
+            // the bodies' own references are the ground truth here. Same
+            // answer as the index gives outside a restore: a word that names
+            // this one has the edge the moment both exist.
+            interp
+                .user_words
+                .iter()
+                .filter(|(referrer, def)| {
+                    *referrer != &upper_name && def.text_references.contains(&upper_name)
+                })
+                .map(|(referrer, _)| referrer.clone())
+                .collect()
+        } else {
+            interp.collect_external_dependents(&upper_name)
+        };
         if !dependents.is_empty() {
             return Err(AjisaiError::declared(
                 "definitionConflict",
@@ -248,24 +264,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         ));
     }
 
-    // Every name the body holds, a Symbol inside a Record it carries whole
-    // included (`body_symbols`): one it could reach at run time is one this
-    // check has to see. `text_references` keeps every one, resolved or not —
-    // the acyclicity check needs to see a forward reference to a word that
-    // does not exist yet, which `dependencies` cannot represent.
-    let mut new_dependencies = HashSet::new();
-    let mut new_text_references = HashSet::new();
-    for s in crate::interpreter::body_symbols::body_symbol_names(tokens) {
-        let upper_s = crate::word_name::canonical_word_name(&s);
-        new_text_references.insert(upper_s.to_string());
-        if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
-            // Only User Words are dependencies: Core is sealed, so nothing
-            // can invalidate a reference to it.
-            if !resolved_def.is_builtin {
-                new_dependencies.insert(resolved_name.to_string());
-            }
-        }
-    }
+    // The edges this body draws (`body_edges`): `text_references` is what
+    // the acyclicity check below walks, since it alone sees a forward
+    // reference to a word that does not exist yet.
+    let (new_dependencies, new_text_references) = interp.body_edges(tokens);
 
     // LANG.DICTIONARY.ACYCLIC: the User dictionary's reference graph is
     // acyclic — no Word may name itself, directly or through any chain of
@@ -340,39 +342,50 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         .user_words
         .insert(upper_name.clone(), Arc::new(new_def));
 
-    // A name resolves at call time against the dictionary as it is then, so
-    // a word written before this one and naming it calls it from now on: that
-    // word depends on this one. Its `text_references` kept the name while it
-    // resolved to nothing; the dependency and the reverse edge are recorded
-    // now, or `DEL` would delete a word still called and the caller's
-    // identity would not see what it calls (LANG.DICTIONARY.MUTATION).
-    let referrers: Vec<String> = interp
-        .user_words
-        .iter()
-        .filter(|(referrer, def)| {
-            *referrer != &upper_name && def.text_references.contains(&upper_name)
-        })
-        .map(|(referrer, _)| referrer.clone())
-        .collect();
-    for referrer in referrers {
-        if let Some(def) = interp.user_words.get_mut(&referrer) {
-            Arc::make_mut(def).dependencies.insert(upper_name.clone());
+    // A bulk restore (`restore_user_word_definitions`) defers everything a
+    // single DEF does for the dictionary as a whole: the referrer scan below
+    // is a pass over every word, so running it per restored word made the
+    // restore quadratic, and `rebuild_dependencies` derives every edge, every
+    // identity and the epoch once at the end anyway. `recompute_word_identities`
+    // and `gc_body_store` already stand down under the same flag.
+    if !interp.defer_identity_recompute {
+        // A name resolves at call time against the dictionary as it is then,
+        // so a word written before this one and naming it calls it from now
+        // on: that word depends on this one. Its `text_references` kept the
+        // name while it resolved to nothing; the dependency and the reverse
+        // edge are recorded now, or `DEL` would delete a word still called
+        // and the caller's identity would not see what it calls
+        // (LANG.DICTIONARY.MUTATION).
+        let referrers: Vec<String> = interp
+            .user_words
+            .iter()
+            .filter(|(referrer, def)| {
+                *referrer != &upper_name && def.text_references.contains(&upper_name)
+            })
+            .map(|(referrer, _)| referrer.clone())
+            .collect();
+        for referrer in referrers {
+            if let Some(def) = interp.user_words.get_mut(&referrer) {
+                Arc::make_mut(def).dependencies.insert(upper_name.clone());
+            }
+            interp
+                .dependents
+                .entry(upper_name.clone())
+                .or_default()
+                .insert(referrer);
         }
-        interp
-            .dependents
-            .entry(upper_name.clone())
-            .or_default()
-            .insert(referrer);
-    }
 
-    interp.recompute_word_identities();
-    interp.gc_body_store();
+        interp.recompute_word_identities();
+        interp.gc_body_store();
+    }
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}\n", upper_name));
     interp.dictionary_changes_this_run.push(upper_name.clone());
 
-    interp.bump_dictionary_epoch();
+    if !interp.defer_identity_recompute {
+        interp.bump_dictionary_epoch();
+    }
     Ok(())
 }
 

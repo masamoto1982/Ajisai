@@ -59,10 +59,13 @@ impl Interpreter {
     {
         let mut skipped = Vec::new();
 
-        // Defer per-word identity recomputation during the bulk restore and
-        // recompute once below via rebuild_dependencies. This turns O(N^2)
-        // identity hashing on import into O(N). The flag is always cleared,
-        // even on error, so later interactive definitions recompute normally.
+        // Defer the whole-dictionary work a DEF does — the referrer scan, the
+        // identity recomputation, the body-store sweep and the epoch bump —
+        // during the bulk restore, and do each once below via
+        // `rebuild_dependencies`. Per restored word that work is a pass over
+        // every word, so running it inline made the restore O(N^2). The flag
+        // is always cleared, even on error, so later interactive definitions
+        // do it inline again.
         self.defer_identity_recompute = true;
         for (name, definition, description) in words {
             if definition.is_empty() {
