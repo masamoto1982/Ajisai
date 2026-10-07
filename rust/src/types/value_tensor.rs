@@ -4,7 +4,6 @@
 //! values; all other vectors retain their ordinary nested representation.
 
 use super::fraction::Fraction;
-use super::value_absence::try_collect_dense;
 use super::{DenseTensor, Value, ValueData};
 use crate::semantic::AbsenceMetadata;
 use std::collections::BTreeMap;
@@ -114,26 +113,20 @@ impl Value {
     /// Build a Vector value, promoted to a dense `Tensor` when every leaf is
     /// a Fraction scalar and the shape is rectangular. Otherwise the nested
     /// form is preserved.
+    ///
+    /// `try_promote_columns` is the one promotion walk. It used to be
+    /// followed by a second attempt through `value_absence::try_collect_dense`
+    /// and `DenseTensor::from_fractions_with_absences`, but the two accept
+    /// exactly the same inputs (`dense_columns_tests` holds that route as the
+    /// oracle and checks the agreement), so the second walk could only ever
+    /// repeat the first one's refusal — a full tree walk, with a `Fraction`
+    /// clone per lane, paid by every Vector that holds a String, a Boolean, a
+    /// Record or a ragged child before it fell back to the nested form.
     pub fn from_vector_promoted(values: Vec<Value>) -> Self {
-        if let Some(promoted) = super::dense_columns::try_promote_columns(&values) {
-            return promoted;
+        match super::dense_columns::try_promote_columns(&values) {
+            Some(promoted) => promoted,
+            None => Self::from_vector(values),
         }
-        if let Some(collected) = try_collect_dense(&values) {
-            if let Some(tensor) = DenseTensor::from_fractions_with_absences(
-                collected.data,
-                collected.shape.clone(),
-                collected.absences,
-            ) {
-                return Self::new(
-                    ValueData::Tensor {
-                        data: Arc::new(tensor),
-                        shape: Arc::new(collected.shape),
-                    },
-                    None,
-                );
-            }
-        }
-        Self::from_vector(values)
     }
 }
 

@@ -50,11 +50,18 @@ pub(crate) fn engine_version() -> &'static str {
 /// bytes untouched — the two are the whole "which vocabulary, which outcome
 /// space" fact a verifier needs, and this is a digest of exactly those bytes
 /// and nothing derived from them.
-pub(crate) fn registry_digest() -> String {
-    let mut bytes = Vec::with_capacity(WORDS_JSON.len() + OUTCOMES_JSON.len());
-    bytes.extend_from_slice(WORDS_JSON.as_bytes());
-    bytes.extend_from_slice(OUTCOMES_JSON.as_bytes());
-    content_digest(&bytes)
+///
+/// Both inputs are compile-time constants, so the digest is one too: it is
+/// computed on first use and kept. Every `compute` builds a receipt, and
+/// hashing 150 KB of embedded JSON per run was the receipt's whole cost.
+pub(crate) fn registry_digest() -> &'static str {
+    static DIGEST: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    DIGEST.get_or_init(|| {
+        let mut bytes = Vec::with_capacity(WORDS_JSON.len() + OUTCOMES_JSON.len());
+        bytes.extend_from_slice(WORDS_JSON.as_bytes());
+        bytes.extend_from_slice(OUTCOMES_JSON.as_bytes());
+        content_digest(&bytes)
+    })
 }
 
 fn write_str(bytes: &mut Vec<u8>, s: &str) {
@@ -96,7 +103,7 @@ pub(crate) fn build_receipt(
     bytes.extend_from_slice(RECEIPT_SCHEMA_TAG);
     write_str(&mut bytes, source);
     write_str(&mut bytes, engine_version);
-    write_str(&mut bytes, &registry_digest);
+    write_str(&mut bytes, registry_digest);
     write_limit_profile(&mut bytes, limits, step_limit);
     write_str(&mut bytes, status);
     write_str(&mut bytes, observation_digest);

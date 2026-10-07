@@ -121,8 +121,13 @@ const setup = () => {
             log.push(`error: ${error instanceof Error ? error.message : error}`);
         },
         showExecutionResult: () => { log.push('result'); },
-        updateDisplays: () => { /* not observed */ },
-        saveState: async () => { /* not observed */ },
+        updateDisplays: (_after, changes) => {
+            log.push(`redraw: ${[
+                changes.stackChanged ? 'stack' : null,
+                changes.dictionaryChanged ? 'dictionary' : null
+            ].filter(Boolean).join('+')}`);
+        },
+        saveState: async () => { log.push('save'); },
         fullReset: async () => { /* not observed */ },
         updateView: (mode) => { views.push(mode); },
         updateAfterExecution: (changes) => { surfaces.push(changes); },
@@ -253,6 +258,64 @@ describe('a run that never answered', () => {
 
         expect(page.log).toContain('info+: Execution aborted');
         expect(page.surfaces.at(-1)?.outputChanged).toBe(true);
+    });
+});
+
+// The redraw and the save follow what the run changed: both panels used to
+// be rebuilt and the session serialized on every run, including a failed one
+// whose state was never applied.
+describe('Redraw and save', () => {
+    it('redraws only the stack and saves after a pure stack op', async () => {
+        const page = setup();
+        answerWith(async () => ok([num(1)]));
+
+        await page.controller.executeCode('1');
+
+        expect(page.log).toContain('redraw: stack');
+        expect(page.log).toContain('save');
+    });
+
+    it('redraws the dictionary too when a word is defined', async () => {
+        const page = setup();
+        answerWith(async () => ok([], {
+            output: 'Defined word: G\n',
+            userWords: [{ name: 'G', definition: '2 MUL' }]
+        }));
+
+        await page.controller.executeCode("[ 2 MUL ] 'G' DEF");
+
+        expect(page.log).toContain('redraw: dictionary');
+        expect(page.log).toContain('save');
+    });
+
+    it('neither redraws nor saves after a failed run, whose state was not applied', async () => {
+        const page = setup();
+        answerWith(async () => ok([num(1)], { status: 'ERROR', error: true, message: 'boom' }));
+
+        await page.controller.executeCode('1 NOPE');
+
+        expect(page.log.some(line => line.startsWith('redraw'))).toBe(false);
+        expect(page.log).not.toContain('save');
+    });
+
+    it('neither redraws nor saves after a run that only printed', async () => {
+        const page = setup();
+        answerWith(async () => ok([], { output: 'hello\n' }));
+
+        await page.controller.executeCode("'hello' PRINT");
+
+        expect(page.log.some(line => line.startsWith('redraw'))).toBe(false);
+        expect(page.log).not.toContain('save');
+    });
+
+    it('neither redraws nor saves after a run the wall-clock guard stopped', async () => {
+        const page = setup();
+        answerWith(async () => { throw new ExecutionTimeoutError(5000); });
+
+        await page.controller.executeCode('loop');
+
+        expect(page.log.some(line => line.startsWith('redraw'))).toBe(false);
+        expect(page.log).not.toContain('save');
     });
 });
 

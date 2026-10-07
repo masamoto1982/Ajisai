@@ -12,11 +12,18 @@
 //! could not be read back as the value that went in is exactly how a
 //! representation loses information — so the arms here and the arms there
 //! are meant to be read as a pair.
+//!
+//! `try_collect_dense` is now test-only: `dense_columns::try_promote_columns`
+//! writes the same lanes straight into the tensor's columns and is the one
+//! promotion route the runtime takes, while this walk remains as the
+//! independently written oracle `dense_columns_tests` checks it against.
 
+#[cfg(test)]
 use super::fraction::Fraction;
 use super::{Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
+#[cfg(test)]
 use std::collections::BTreeMap;
 
 /// The single derivation of an absence origin from a NIL reason.
@@ -150,6 +157,7 @@ impl Value {
 /// the program had written it — and it is why a vector holding an absence kept
 /// its nested form. With the reason stored beside the lane the refusal is no
 /// longer needed, so a NIL is an ordinary lane again.
+#[cfg(test)]
 pub(super) struct DenseCollect {
     pub(super) data: Vec<Fraction>,
     pub(super) shape: Vec<usize>,
@@ -167,6 +175,7 @@ pub(super) struct DenseCollect {
 /// from the value to the buffer inside a freshly heap-allocated one-element
 /// `Vec` that was consumed and dropped on the next line. Promoting n scalars
 /// therefore made n allocations whose entire contents were one `Fraction`.
+#[cfg(test)]
 pub(super) fn try_collect_dense(values: &[Value]) -> Option<DenseCollect> {
     let mut data = Vec::with_capacity(values.len());
     let mut absences = BTreeMap::new();
@@ -184,6 +193,7 @@ pub(super) fn try_collect_dense(values: &[Value]) -> Option<DenseCollect> {
 /// A refusal part-way through leaves junk in the buffers, which is sound
 /// because the only caller owns them and drops them on `None`; nothing reads a
 /// buffer this returned `None` for.
+#[cfg(test)]
 fn append_dense_values(
     values: &[Value],
     data: &mut Vec<Fraction>,
@@ -207,6 +217,7 @@ fn append_dense_values(
 }
 
 /// Append one value's lanes, answering with its own shape (empty for a leaf).
+#[cfg(test)]
 fn append_dense_value(
     value: &Value,
     data: &mut Vec<Fraction>,

@@ -133,12 +133,7 @@ impl ExactReal {
     /// Negation. Preserves nil.
     pub fn neg(&self) -> Self {
         match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return Self::Rational(Fraction::nil());
-                }
-                Self::Rational(Fraction::new(-f.numerator(), f.denominator()))
-            }
+            Self::Rational(f) => Self::Rational(f.neg()),
             Self::Algebraic(a) => Self::Algebraic(Box::new(a.neg())),
         }
     }

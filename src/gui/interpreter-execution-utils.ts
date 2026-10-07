@@ -139,13 +139,18 @@ export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] =>
 export const isFailure = (result: ExecuteResult): boolean =>
     result.status !== 'OK' || Boolean(result.error);
 
-export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot => ({
-    stack: interpreter.collect_stack(),
+// What the worker needs to start a run from the main thread's interpreter.
+// `userWords` may be passed in when the caller has just collected them for
+// its own before/after view, so the dictionary is read once per run.
+export const createExecutionSnapshot = (
+    interpreter: AjisaiInterpreter,
+    userWords: UserWord[] = collectUserWords(interpreter)
+): InterpreterSnapshot => ({
     // Carry the lossless snapshot into the worker so exact values on the
     // stack (CodeBlock, ExactScalar) are not flattened by the observation
     // format before this run executes (LANG.OBSERVATION.FIREWALL).
     stackSnapshot: interpreter.snapshot_stack(),
-    userWords: collectUserWords(interpreter),
+    userWords,
     // Host-configured step budget (LANG.MACHINE.LIMITS water level); undefined
     // keeps the interpreter's own default (`DEFAULT_MAX_EXECUTION_STEPS`).
     stepLimit: getPlatform().executionConfig.stepLimit
@@ -252,7 +257,6 @@ export const syncInterpreterState = (
 ): void => {
     if (isFailure(result)) return;
     applyInterpreterSnapshot(interpreter, {
-        stack: result.stack,
         // The worker's lossless snapshot is what restores the post-run stack
         // into the main-thread interpreter, so it keeps its exact values
         // (LANG.OBSERVATION.FIREWALL).
@@ -325,10 +329,19 @@ const checkValuesEqual = (left: unknown, right: unknown): boolean => {
 // set is sorted by name before comparison — otherwise a pure stack op like
 // `2 3 ADD` would look like a dictionary change whenever any user word exists,
 // and wrongly pull the right column to the Words sheet.
+//
+// The description is part of the comparison: a `DEF` under a `#:contract`
+// line can leave the body as it was and change only the text the Dictionary
+// shows for it, and that run still changed the dictionary — the surface is
+// redrawn and the session saved only when this says so.
 const normalizeUserWords = (words: readonly UserWord[]): string =>
     toJson(
         [...words]
-            .map(word => ({ name: word.name, definition: word.definition ?? null }))
+            .map(word => ({
+                name: word.name,
+                definition: word.definition ?? null,
+                description: word.description ?? null
+            }))
             .sort((a, b) => a.name.localeCompare(b.name))
     );
 

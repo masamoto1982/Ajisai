@@ -1,4 +1,4 @@
-use crate::types::WordDefinition;
+use crate::types::{Token, WordDefinition};
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
@@ -75,6 +75,34 @@ impl Interpreter {
         self.resolve_word_entry(name).map(|(_, def)| def)
     }
 
+    /// The edges a body draws in the dictionary graph: the User Words it
+    /// resolves to today (`dependencies`) and every name it holds, resolved
+    /// or not (`text_references`). `DEF` records them for the word it
+    /// defines and `rebuild_dependencies` derives them again for every word,
+    /// so the one walk lives here rather than once in each.
+    ///
+    /// Every name the body holds, a Symbol inside a Record it carries whole
+    /// included (`body_symbols`): one it could reach at run time is one the
+    /// acyclicity check has to see. `text_references` keeps every one,
+    /// resolved or not — the check needs to see a forward reference to a word
+    /// that does not exist yet, which `dependencies` cannot represent. Only
+    /// User Words are dependencies: Core is sealed, so nothing can invalidate
+    /// a reference to it.
+    pub(crate) fn body_edges(&self, tokens: &[Token]) -> (HashSet<String>, HashSet<String>) {
+        let mut dependencies = HashSet::new();
+        let mut text_references = HashSet::new();
+        for s in crate::interpreter::body_symbols::body_symbol_names(tokens) {
+            let upper_s = crate::word_name::canonical_word_name(&s);
+            text_references.insert(upper_s.to_string());
+            if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
+                if !resolved_def.is_builtin {
+                    dependencies.insert(resolved_name.to_string());
+                }
+            }
+        }
+        (dependencies, text_references)
+    }
+
     pub fn rebuild_dependencies(&mut self) -> crate::error::Result<()> {
         // A quiescent recompute point, reached after a bulk restore: every
         // edge is derived again from the bodies, and the epoch moves so no
@@ -90,22 +118,12 @@ impl Interpreter {
             .collect();
 
         for (word_name, word_def) in &all_words {
-            let mut dependencies = HashSet::new();
-            let mut text_references = HashSet::new();
-            for s in crate::interpreter::body_symbols::body_symbol_names(&word_def.body) {
-                let upper_s = crate::word_name::canonical_word_name(&s);
-                text_references.insert(upper_s.to_string());
-                if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
-                    // Only User Words are dependencies: Core is sealed,
-                    // so nothing can invalidate a reference to it.
-                    if !resolved_def.is_builtin {
-                        dependencies.insert(resolved_name.to_string());
-                        self.dependents
-                            .entry(resolved_name.to_string())
-                            .or_default()
-                            .insert(word_name.clone());
-                    }
-                }
+            let (dependencies, text_references) = self.body_edges(&word_def.body);
+            for dependency in &dependencies {
+                self.dependents
+                    .entry(dependency.clone())
+                    .or_default()
+                    .insert(word_name.clone());
             }
             if let Some(def) = self.user_words.get_mut(word_name) {
                 let def = Arc::make_mut(def);

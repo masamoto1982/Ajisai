@@ -319,6 +319,24 @@ impl Fraction {
         Self::create_already_reduced(a_reduced * d_reduced, b_reduced * c_reduced)
     }
 
+    /// Additive inverse: a sign flip on the stored pair (no gcd, no clone); `-i64::MIN` widens as in `abs`.
+    #[inline]
+    pub fn neg(&self) -> Fraction {
+        if self.is_nil() {
+            return self.clone();
+        }
+        match &self.repr {
+            FractionRepr::Small(n, d) => match n.checked_neg() {
+                Some(negated) => Fraction::from_repr(FractionRepr::Small(negated, *d)),
+                None => Fraction::from_repr(FractionRepr::big(-BigInt::from(*n), BigInt::from(*d))),
+            },
+            FractionRepr::Big(big) => Fraction::from_repr(FractionRepr::big(
+                -big.numerator.clone(),
+                big.denominator.clone(),
+            )),
+        }
+    }
+
     #[inline]
     pub fn abs(&self) -> Fraction {
         if self.is_nil() {

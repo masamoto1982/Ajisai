@@ -451,6 +451,18 @@ describe('detectExecutionSurfaceChanges', () => {
         expect(changes.dictionaryChanged).toBe(true);
     });
 
+    it('flags a dictionary change when only a description changed', () => {
+        // `[ 2 MUL ] 'G' DEF` under a new `#:contract G ...` line leaves the
+        // body as it was; the Dictionary's text for G still changed, and the
+        // redraw and the save follow this flag.
+        const changes = detectExecutionSurfaceChanges(
+            view({ userWords: [{ name: 'G', definition: '2 MUL', description: null }] }),
+            view({ userWords: [{ name: 'G', definition: '2 MUL', description: 'doubles' }] }),
+            okResult()
+        );
+        expect(changes.dictionaryChanged).toBe(true);
+    });
+
     it('treats a failed run as an Output change even with no program output', () => {
         const changes = detectExecutionSurfaceChanges(
             view(),

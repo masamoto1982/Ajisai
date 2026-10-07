@@ -1,28 +1,8 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::interpreter_core::RuntimeMetrics;
 use crate::interpreter::tensor_lane_ops::{apply_lane_wise_broadcast, contains_absent_lane};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 use std::sync::Arc;
-
-#[inline]
-fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, _elements: usize) {
-    if let Some(_m) = metrics.as_deref_mut() {}
-}
-
-fn record_sparse_candidate_value(metrics: &mut Option<&mut RuntimeMetrics>, value: &Value) {
-    let ValueData::Tensor { data, .. } = &value.data else {
-        return;
-    };
-    if !data.is_sparse_candidate() {
-        return;
-    }
-
-    if let Some(_m) = metrics.as_deref_mut() {
-        let _nonzero = data.nonzero_count() as u64;
-        let _zero = data.zero_count() as u64;
-    }
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct FlatTensor {
@@ -33,7 +13,7 @@ pub(crate) struct FlatTensor {
 
 impl FlatTensor {
     /// Every caller reaches this only through the arithmetic-broadcast
-    /// machinery (`apply_lane_wise_broadcast`, `apply_binary_broadcast_with_metrics`)
+    /// machinery (`apply_lane_wise_broadcast`, `apply_binary_broadcast`)
     /// on behalf of ADD/SUB/MUL/DIV, which all declare
     /// `nonNumeric` uniformly — so a non-numeric operand's error
     /// is remapped directly here, not at each caller.
@@ -318,18 +298,8 @@ where
     apply_lane_wise_broadcast(a, b, |x, y| op(x, y).map(Value::from_fraction))
 }
 
-/// Metrics-aware tensor broadcast.
-///
-/// When `metrics` is `Some`, observational VTU counters are incremented at
-/// the points where work actually begins, so NIL-rejection and
-/// shape-mismatch errors do not bump them. Pass `None` to skip metrics
-/// accounting (e.g. internal helpers without access to an interpreter).
-pub(crate) fn apply_binary_broadcast_with_metrics<F>(
-    a: &Value,
-    b: &Value,
-    op: F,
-    mut metrics: Option<&mut RuntimeMetrics>,
-) -> Result<Value>
+/// Element-wise binary operation over two values with tensor broadcasting.
+pub(crate) fn apply_binary_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
@@ -361,23 +331,16 @@ where
     }
 
     let tensor_a = FlatTensor::from_value(a)?;
-    record_flatten(&mut metrics, tensor_a.data.len());
     let tensor_b = FlatTensor::from_value(b)?;
-    record_flatten(&mut metrics, tensor_b.data.len());
 
     let out_shape = broadcast_shape(&tensor_a.shape, &tensor_b.shape)?;
-    record_sparse_candidate_value(&mut metrics, a);
-    record_sparse_candidate_value(&mut metrics, b);
     let out_size: usize = if out_shape.is_empty() {
         1
     } else {
         out_shape.iter().product()
     };
 
-    if let Some(_m) = metrics.as_deref_mut() {}
-
     if tensor_a.shape == tensor_b.shape {
-        if let Some(_m) = metrics.as_deref_mut() {}
         // Compute-bound same-shape element-wise op. The per-lane exact-rational
         // arithmetic (num/den cross-multiply + gcd) is the robust parallel
         // scaling target (手4); fan-out is gated by the compute-bound floor and
@@ -392,8 +355,6 @@ where
         let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
         return Ok(out_tensor.to_value());
     }
-
-    if let Some(_m) = metrics {}
 
     let out_strides = compute_strides(&out_shape);
     let mut out_data = Vec::with_capacity(out_size);
@@ -442,13 +403,9 @@ where
     }
 }
 
-/// Metrics-aware unary flat tensor operation. See
-/// [`apply_binary_broadcast_with_metrics`] for the metrics contract.
-pub(crate) fn apply_unary_flat_with_metrics<F>(
-    val: &Value,
-    op: F,
-    mut metrics: Option<&mut RuntimeMetrics>,
-) -> Result<Value>
+/// Element-wise unary operation over a rectangular value, flattened to one
+/// tensor pass.
+pub(crate) fn apply_unary_flat<F>(val: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction) -> Fraction + Copy,
 {
@@ -459,12 +416,6 @@ where
     }
 
     let tensor = FlatTensor::from_value(val)?;
-    let element_count = tensor.data.len();
-    record_flatten(&mut metrics, element_count);
-    record_sparse_candidate_value(&mut metrics, val);
-
-    if let Some(_m) = metrics {}
-
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();
     let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;
     Ok(result_tensor.to_value())
