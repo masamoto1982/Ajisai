@@ -205,7 +205,7 @@ impl Algebraic {
         let terms = self
             .terms
             .iter()
-            .map(|(m, c)| (m.clone(), Fraction::new(-c.numerator(), c.denominator())))
+            .map(|(m, c)| (m.clone(), c.neg()))
             .collect();
         Algebraic {
             basis: self.basis.clone(),
@@ -311,8 +311,7 @@ impl Algebraic {
 
     /// Exact, total three-way comparison with a rational.
     pub fn cmp_fraction(&self, q: &Fraction) -> Ordering {
-        let neg_q = Fraction::new(-q.numerator(), q.denominator());
-        match self.add_fraction(&neg_q) {
+        match self.add_fraction(&q.neg()) {
             AlgebraicResult::Rational(f) => rational_sign(&f),
             AlgebraicResult::Irrational(d) => d.sign(),
         }

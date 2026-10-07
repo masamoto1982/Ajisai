@@ -111,11 +111,7 @@ impl MqTerms {
     fn sub(&self, other: &MqTerms) -> MqTerms {
         let mut out = MqTerms(self.0.clone());
         for (m, c) in &other.0 {
-            merge_term(
-                &mut out.0,
-                m.clone(),
-                Fraction::new(-c.numerator(), c.denominator()),
-            );
+            merge_term(&mut out.0, m.clone(), c.neg());
         }
         out
     }

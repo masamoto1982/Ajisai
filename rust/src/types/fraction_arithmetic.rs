@@ -319,6 +319,32 @@ impl Fraction {
         Self::create_already_reduced(a_reduced * d_reduced, b_reduced * c_reduced)
     }
 
+    /// The additive inverse, read off the stored pair.
+    ///
+    /// Negating does not change a pair's reduction, so this is a sign flip on
+    /// the representation and nothing more. The open-coded form it replaces,
+    /// `Fraction::new(-f.numerator(), f.denominator())`, cloned both `BigInt`
+    /// halves and then ran the gcd normalizer over a pair that was already in
+    /// lowest terms — on every algebraic subtraction and comparison.
+    #[inline]
+    pub fn neg(&self) -> Fraction {
+        if self.is_nil() {
+            return self.clone();
+        }
+        match &self.repr {
+            // `-i64::MIN` does not fit, so that one operand widens to `Big`,
+            // as `abs` does below.
+            FractionRepr::Small(n, d) => match n.checked_neg() {
+                Some(negated) => Fraction::from_repr(FractionRepr::Small(negated, *d)),
+                None => Fraction::from_repr(FractionRepr::big(-BigInt::from(*n), BigInt::from(*d))),
+            },
+            FractionRepr::Big(big) => Fraction::from_repr(FractionRepr::big(
+                -big.numerator.clone(),
+                big.denominator.clone(),
+            )),
+        }
+    }
+
     #[inline]
     pub fn abs(&self) -> Fraction {
         if self.is_nil() {
