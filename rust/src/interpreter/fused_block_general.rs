@@ -6,6 +6,9 @@
 //! - `ADD`/`SUB`/`MUL`/`DIV` on two scalars take the scalar fast path, so a
 //!   fastpath hit and `binary_numeric_work` of the operands' widths, charged
 //!   before the operation runs; the result is held to the size ceiling.
+//! - `POW` that `quickened::small_power` answers is one unit of work, as a
+//!   power whose answer fits a machine word is; under a size ceiling below a
+//!   machine word it is the interpreted route's to refuse.
 //! - `LT`/`GT` on two scalars take the comparison fast path: a fastpath hit
 //!   and no work. `EQ` takes it only for two scalars; any other pair is
 //!   decided by `pairwise_eq`, which counts nothing.
@@ -141,6 +144,13 @@ fn run_block(
                     x.extract_i64_pair()?,
                     y.extract_i64_pair()?,
                 )?;
+                if meter.interp.runtime_limits.max_bigint_bits < 64 {
+                    return None;
+                }
+                meter.work = meter.work.saturating_add(binary_numeric_work(1, 1));
+                if meter.work > meter.work_budget {
+                    return None;
+                }
                 Plain::Num(Fraction::from_repr(
                     crate::types::fraction::FractionRepr::Small(r.0, r.1),
                 ))

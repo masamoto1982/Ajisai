@@ -117,8 +117,8 @@ pub(crate) enum Op {
     /// Vector. A step (the LENGTH), no work, no fast-path hit, as
     /// `quickened` charges it.
     Const(Plain),
-    /// `POW` on plain operands (`quickened::small_power`): a step, no work,
-    /// no fast-path hit; any power that function declines — a negative or
+    /// `POW` on plain operands (`quickened::small_power`): a step, one unit
+    /// of work, no fast-path hit; any power that function declines — a negative or
     /// fractional exponent, an answer past a machine word, an exponent the
     /// dispatch refuses as too large — declines the walk.
     Pow,

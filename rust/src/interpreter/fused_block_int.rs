@@ -165,6 +165,7 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
             Op::Kernel(_) => return None,
             Op::Pow => {
                 (pair(&mut stack)? == (Ty::Int, Ty::Int)).then_some(())?;
+                work += binary_numeric_work(1, 1);
                 (IntOp::Pow, Ty::Int)
             }
             Op::Load(slot) => (IntOp::Load(*slot), slots[*slot]?),

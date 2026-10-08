@@ -1,4 +1,5 @@
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::exact_work::charge_comparison;
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
@@ -117,7 +118,9 @@ fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Resu
     let b_val = interp.stack.pop().unwrap();
     let a_val = interp.stack.pop().unwrap();
 
-    match lift_comparison(&a_val, &b_val, kind) {
+    match charge_comparison(interp, &a_val, &b_val)
+        .and_then(|()| lift_comparison(&a_val, &b_val, kind))
+    {
         Ok(result) => {
             interp.stack.push(result);
             Ok(())
@@ -215,6 +218,11 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
     let b_val = interp.stack.pop().unwrap();
     let a_val = interp.stack.pop().unwrap();
+    if let Err(e) = charge_comparison(interp, &a_val, &b_val) {
+        interp.stack.push(a_val);
+        interp.stack.push(b_val);
+        return Err(e);
+    }
 
     let eq = pairwise_eq(&a_val, &b_val);
     push_boolean_result(interp, if invert { !eq } else { eq });

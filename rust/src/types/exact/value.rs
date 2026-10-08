@@ -150,6 +150,16 @@ impl ExactReal {
         }
     }
 
+    /// Size probe (CS5): how many radicals a Tier 1 value's basis holds —
+    /// the depth of the conjugation that inverts it — or `0` for a rational.
+    /// Used to price a reciprocal before running it.
+    pub fn algebraic_basis_len(&self) -> usize {
+        match self {
+            Self::Rational(_) => 0,
+            Self::Algebraic(a) => a.basis().elements().len(),
+        }
+    }
+
     /// The multiquadratic normal-form terms `(monomial, coefficient)` of a
     /// Tier 1 value, or `None` for a rational. Used by the lossless state
     /// persistence codec (`crate::types::value_persist`) to capture the

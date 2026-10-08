@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::arithmetic::{ExactArithmeticSchema, ScalarFastWrap};
+use crate::interpreter::exact_work::reciprocal_numeric_work;
 use crate::interpreter::runtime_limits::{
     broadcast_numeric_work, exact_work_bits, fraction_result_bits, fraction_work_bits, OperandWork,
     ALGEBRAIC_PAIR_UNITS,
@@ -43,6 +44,7 @@ pub(crate) fn measure_operand(value: &Value) -> OperandWork {
             lanes: 1,
             bits: exact_work_bits(er),
             terms: er.algebraic_term_count() as u64,
+            basis: er.algebraic_basis_len() as u64,
         },
         // A dense tensor's lanes are `i64` numerators and denominators by
         // construction, so each is a single limb and the width is known without
@@ -53,6 +55,7 @@ pub(crate) fn measure_operand(value: &Value) -> OperandWork {
             lanes: data.len() as u64,
             bits: 1,
             terms: 0,
+            basis: 0,
         },
         ValueData::Vector(children) => children
             .iter()
@@ -93,12 +96,11 @@ pub(crate) fn charge_binary_schema(
         let left_terms = left.terms.max(1);
         let right_terms = right.terms.max(1);
         let pairs = match schema {
-            ExactArithmeticSchema::Mul => left_terms.saturating_mul(right_terms),
-            // Division inverts the right operand (conjugation recursion, ~term²
-            // inner products) and multiplies; bound by both.
-            ExactArithmeticSchema::Div => left_terms
-                .saturating_mul(right_terms)
-                .saturating_add(right_terms.saturating_mul(right_terms)),
+            // Division multiplies by the right operand's inverse, which is
+            // charged below.
+            ExactArithmeticSchema::Mul | ExactArithmeticSchema::Div => {
+                left_terms.saturating_mul(right_terms)
+            }
             ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => {
                 left_terms.saturating_add(right_terms)
             }
@@ -107,8 +109,17 @@ pub(crate) fn charge_binary_schema(
     } else {
         1
     };
+    // An irrational divisor is inverted by conjugation first, once per lane.
+    let inverse = if matches!(schema, ExactArithmeticSchema::Div) && right.terms > 0 {
+        reciprocal_numeric_work(right.bits, right.terms, right.basis)
+            .saturating_mul(left.lanes.max(right.lanes).max(1))
+    } else {
+        0
+    };
 
-    interp.charge_numeric_work(broadcast_numeric_work(left, right, pair_units))
+    interp.charge_numeric_work(
+        broadcast_numeric_work(left, right, pair_units).saturating_add(inverse),
+    )
 }
 
 /// The widest lane of a dense tensor. Its lanes are `i64` by construction, so
@@ -308,6 +319,10 @@ pub(crate) fn apply_division_schema(
 // against what the run has left, the work actually spent is charged
 // afterwards, and a radicand the budget cannot factor is the same
 // `resourceLimitExceeded` any other exhausted work meter raises.
+//
+// `POW` takes its products from the same budget: a lifted power takes a root
+// and a power lane by lane, and each is priced against what the run has left
+// before it is taken.
 pub(crate) struct RadicandBudget {
     limit: u64,
     start: u64,
@@ -340,6 +355,21 @@ impl RadicandBudget {
         self.remaining.set(left);
         if exhausted {
             self.exhausted.set(true);
+        }
+    }
+
+    /// Take `units` from the budget for a power's products, or mark it
+    /// exhausted and take nothing when they do not fit.
+    pub(crate) fn charge(&self, units: u64) -> bool {
+        match self.remaining.get().checked_sub(units) {
+            Some(left) => {
+                self.remaining.set(left);
+                true
+            }
+            None => {
+                self.exhausted.set(true);
+                false
+            }
         }
     }
 

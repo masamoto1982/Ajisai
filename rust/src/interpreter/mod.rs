@@ -25,6 +25,7 @@ pub mod error_flow_trace;
 mod error_message_format_tests;
 #[cfg(test)]
 mod error_operand_restore_tests;
+pub(crate) mod exact_work;
 pub mod execute_def;
 #[cfg(test)]
 mod format_json_tests;

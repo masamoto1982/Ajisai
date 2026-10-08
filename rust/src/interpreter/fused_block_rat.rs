@@ -117,6 +117,7 @@ fn compile(block: &FusedBlock, inputs: &[Ty]) -> Option<Program> {
                 let (b, b_ty) = stack.pop()?;
                 let (a, a_ty) = stack.pop()?;
                 (a_ty == Ty::Num && b_ty == Ty::Num).then_some(())?;
+                work += binary_numeric_work(1, 1);
                 (Kind::Pow, a, b, none, Ty::Num)
             }
             Op::PushWord(b) => {
