@@ -48,6 +48,24 @@ pub(crate) fn violation_report(
     check: &ContractDeclCheck,
     source: Option<&str>,
 ) -> Report {
+    let (message, diagnosis) = violation_diagnosis(check);
+    let mut report = super::error_report(
+        interp,
+        &diagnosis,
+        Some(&ErrorCategory::ContractViolation),
+        message,
+        Vec::new(),
+        Vec::new(),
+        source,
+    );
+    report.contract_decls = Some(check.to_json());
+    report
+}
+
+/// The message and diagnosis a violated declaration answers with, shared by
+/// every host that refuses to run it: the agent report above and the
+/// playground's `execute`.
+pub(crate) fn violation_diagnosis(check: &ContractDeclCheck) -> (String, DebugDiagnosis) {
     let violations: Vec<&DeclFinding> = check
         .findings
         .iter()
@@ -88,15 +106,5 @@ pub(crate) fn violation_report(
             .evidence
             .push(format!("violation={}", finding.message));
     }
-    let mut report = super::error_report(
-        interp,
-        &diagnosis,
-        Some(&category),
-        message,
-        Vec::new(),
-        Vec::new(),
-        source,
-    );
-    report.contract_decls = Some(check.to_json());
-    report
+    (message, diagnosis)
 }
