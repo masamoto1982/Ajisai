@@ -16,6 +16,18 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
+/// How many elements building a value of `shape` materializes: the leaf count,
+/// or — when an axis is 0 and there are no leaves — the Vectors built above
+/// that axis, which the leaf count misses (`[ 9 0 ]` is nine empty Vectors).
+/// This is what the materialization ceiling bounds and the meter charges.
+/// `None` on overflow, as [`checked_shape_product`].
+pub(super) fn checked_materialized_count(shape: &[usize]) -> Option<usize> {
+    match shape.iter().position(|&dim| dim == 0) {
+        Some(first_zero) => checked_shape_product(&shape[..first_zero]),
+        None => checked_shape_product(shape),
+    }
+}
+
 use super::arithmetic::value_contains_exact_scalar;
 use super::tensor_lane_ops::contains_absent_lane;
 use super::tensor_ops::{apply_unary_flat, build_nested_value};
@@ -202,8 +214,8 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     // (folded), so tests can fire this guard with a tiny limit; same behavior
     // and message as before.
     let max_materialized = interp.runtime_limits.max_materialized_elements;
-    let total_size = match checked_shape_product(&shape) {
-        Some(size) if size <= max_materialized => size,
+    let materialized = match checked_materialized_count(&shape) {
+        Some(count) if count <= max_materialized => count,
         _ => {
             // Phase 3 (structural-memory-safety roadmap): a well-formed shape
             // whose element product exceeds the space water level (or overflows
@@ -216,16 +228,20 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
                     "FILL",
                     max_materialized,
-                    checked_shape_product(&shape).map(|size| size as u128),
+                    checked_materialized_count(&shape).map(|count| count as u128),
                 ));
             return Ok(());
         }
     };
-    if let Err(e) = crate::interpreter::collection_meter::charge_materialization(interp, total_size)
+    if let Err(e) =
+        crate::interpreter::collection_meter::charge_materialization(interp, materialized)
     {
         restore(interp, shape_val, value_val);
         return Err(e);
     }
+
+    // Within the ceiling just checked, so the leaf product cannot overflow.
+    let total_size: usize = shape.iter().product();
 
     // Any leaf fills: a number, a text, a truth or a Symbol (a Vector or a
     // Record has already lifted, and a NIL has already passed through). A

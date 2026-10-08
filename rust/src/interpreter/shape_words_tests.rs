@@ -56,6 +56,39 @@ async fn an_over_budget_reshape_projects_space_exhausted() {
     );
 }
 
+/// A zero-length axis makes the leaf count 0, but the Vectors above it are
+/// still built — `[ 9 0 ]` is nine empty Vectors — so they are what the
+/// ceiling bounds. Counting leaves alone let `[ 20000000 0 ] 0 FILL` allocate
+/// twenty million rows past a one-million ceiling.
+#[tokio::test]
+async fn a_zero_length_axis_does_not_slip_under_the_ceiling() {
+    for (code, over) in [
+        ("[ ] [ 9 0 ] RESHAPE", true),
+        ("[ 9 0 ] 0 FILL", true),
+        ("[ 9 0 ] 'a' FILL", true),
+        ("[ 3 3 0 ] 0 FILL", true),
+        ("[ 8 0 ] 0 FILL", false),
+        ("[ ] [ 2 4 0 ] RESHAPE", false),
+        ("[ 0 9 ] 0 FILL", false),
+    ] {
+        let mut interp = Interpreter::new();
+        interp.set_runtime_limits(RuntimeLimits {
+            max_materialized_elements: 8,
+            ..RuntimeLimits::default()
+        });
+        interp
+            .execute(code)
+            .await
+            .unwrap_or_else(|e| panic!("`{code}` must not raise, got {e}"));
+        let answer = interp.stack.last().cloned().expect("an answer");
+        let exhausted = answer
+            .absence_metadata()
+            .and_then(|absence| absence.reason.as_ref())
+            .is_some_and(|reason| reason.as_protocol_str() == "spaceExhausted");
+        assert_eq!(exhausted, over, "`{code}` answered {answer:?}");
+    }
+}
+
 /// A shape whose product is not the leaf count is the program being wrong,
 /// so it raises rather than padding or truncating.
 #[tokio::test]

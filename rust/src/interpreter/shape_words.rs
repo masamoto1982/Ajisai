@@ -12,7 +12,7 @@
 //! cannot be written as user definitions at any cost.
 
 use super::ordering_ops::{elements_of, restore, take_operand};
-use super::tensor_cmds::checked_shape_product;
+use super::tensor_cmds::checked_materialized_count;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::charge_materialization;
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
@@ -190,8 +190,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     let max_materialized = interp.runtime_limits.max_materialized_elements;
-    let total = match checked_shape_product(&shape) {
-        Some(total) if total <= max_materialized => total,
+    let materialized = match checked_materialized_count(&shape) {
+        Some(count) if count <= max_materialized => count,
         _ => {
             // The same projection FILL makes for the same reason: a
             // well-formed request the host declines (LANG.COLLECTIONS.BUDGET).
@@ -200,11 +200,14 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
                     "RESHAPE",
                     max_materialized,
-                    checked_shape_product(&shape).map(|size| size as u128),
+                    checked_materialized_count(&shape).map(|count| count as u128),
                 ));
             return Ok(());
         }
     };
+
+    // Within the ceiling just checked, so the leaf product cannot overflow.
+    let total: usize = shape.iter().product();
 
     let mut leaves = Vec::new();
     for child in &children {
@@ -221,7 +224,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
             ),
         ));
     }
-    if let Err(e) = charge_materialization(interp, total) {
+    if let Err(e) = charge_materialization(interp, materialized) {
         put_back(interp, target, shape_val);
         return Err(e);
     }
