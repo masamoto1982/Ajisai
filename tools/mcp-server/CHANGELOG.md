@@ -6,7 +6,7 @@ beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
-## Unreleased
+## 0.7.2
 
 Documentation and engine speed: what the server says about `DIV` is extended, and vector programs that meet a zero divisor or an absent lane run faster on the packaged engine. No tool, envelope field or computed answer changes.
 
