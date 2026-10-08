@@ -311,7 +311,7 @@ pub struct RuntimeLimits {
     /// Max bit length of a BigInt arithmetic result. Consumed by the work meter
     /// in the CS5 follow-up.
     pub max_bigint_bits: u64,
-    /// Max algebraic-term count of a single continued-fraction / polynomial
+    /// Max algebraic-term count of a single algebraic (normal-form)
     /// value. Consumed by the work meter in the CS5 follow-up.
     pub max_algebraic_terms: usize,
     /// Max container nesting of one value (`Value::nesting`). Every walk

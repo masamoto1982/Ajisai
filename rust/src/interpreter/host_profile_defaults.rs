@@ -258,8 +258,8 @@ pub const DEFAULT_MAX_COLLECTION_WORK: u64 =
 /// unmeasured.
 pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
 
-/// Default cap on the number of algebraic terms a single continued-fraction /
-/// polynomial value may carry.
+/// Default cap on the number of algebraic terms a single algebraic (normal-form)
+/// value may carry.
 ///
 /// Lowered from 100,000 on 2026-08-14. That value predates
 /// [`DEFAULT_MAX_NUMERIC_WORK`]'s re-derivation and stopped being live once the
