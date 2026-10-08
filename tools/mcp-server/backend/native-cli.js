@@ -16,6 +16,10 @@
 import { execFile } from "node:child_process";
 import { HostError } from "../host-error.js";
 
+// A timed-out child that ignores SIGTERM would keep the slot the execution
+// gate already counts as released, so the deadline kills outright.
+const KILL_SIGNAL = "SIGKILL";
+
 export class NativeCliBackend {
   static kind = "nativeCli";
 
@@ -38,17 +42,26 @@ export class NativeCliBackend {
         {
           encoding: "utf8",
           timeout: this.wallTimeMs,
-          // A timed-out child that ignores SIGTERM would keep the slot the
-          // execution gate already counts as released.
-          killSignal: "SIGKILL",
+          killSignal: KILL_SIGNAL,
           maxBuffer: this.responseBytes,
         },
         (error, stdout) => {
           if (!error) return resolve(stdout);
-          if (error.killed || error.signal) {
+          // Only the deadline's own kill is a timeout: `killed` is set when
+          // node sent the signal, and the deadline sends SIGKILL. A child that
+          // dies of any other signal (a crash, an abort) crashed; retrying it
+          // would crash again, and no wall time was exceeded.
+          if (error.killed && error.signal === KILL_SIGNAL) {
             return reject(
               new HostError("timeout", `Execution exceeded the ${this.wallTimeMs} ms wall-time limit.`, {
-                detail: `signal=${error.signal ?? "none"}`,
+                detail: `signal=${error.signal}`,
+              }),
+            );
+          }
+          if (error.signal) {
+            return reject(
+              new HostError("backendFailure", `The Ajisai backend was terminated by ${error.signal}.`, {
+                detail: `bin=${this.bin} signal=${error.signal}`,
               }),
             );
           }
