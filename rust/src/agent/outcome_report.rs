@@ -125,6 +125,27 @@ impl OutcomeReport {
 mod tests {
     use crate::agent::api::{predict_outcomes, ComputeOptions};
 
+    /// Each Word calls the one before it twice, so walking every call site
+    /// anew visits `W0` 2^40 times; the walk visits each Word once. Run on a
+    /// thread so a regression fails here instead of hanging the suite.
+    #[test]
+    fn prediction_is_not_exponential_in_the_call_graph() {
+        let mut source = "[ 1 ] 'W0' DEF\n".to_string();
+        for i in 1..=40 {
+            source.push_str(&format!("[ W{0} W{0} ] 'W{1}' DEF\n", i - 1, i));
+        }
+        source.push_str("W40");
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let report = predict_outcomes(&source, ComputeOptions::agent(None));
+            let _ = done.send(report.to_json()["outcomes"].clone());
+        });
+        let outcomes = finished
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .expect("prediction must finish");
+        assert!(outcomes.as_array().unwrap().iter().any(|id| id == "value"));
+    }
+
     /// One comment line past `sourceBytes` holds no token, and the run
     /// refuses it all the same.
     #[test]

@@ -48,7 +48,7 @@
 //! reach. That is the allowed direction (pitfall A), and `exact` reports
 //! it.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::{Arc, OnceLock};
 
 use crate::error::{ErrorCategory, NilReason};
@@ -200,6 +200,12 @@ pub(crate) struct Reachability {
     /// universe and `names` is no longer a complete account of what runs.
     /// Every gated category stays in while this holds.
     unresolved: bool,
+    /// Each User Word's vocabulary, once walked. The dictionary is fixed for
+    /// one prediction, and everything a walk adds to the fields above stays
+    /// added, so a second call site needs only the set: without this, a
+    /// Word calling its dependency twice walked it twice, and a chain of
+    /// such Words took time exponential in its length.
+    walked: HashMap<String, BTreeSet<String>>,
 }
 
 impl Reachability {
@@ -267,6 +273,9 @@ pub(crate) fn outcome_vocabulary_for_word(
     if def.is_builtin {
         return builtin_outcomes_for(name);
     }
+    if let Some(outcomes) = reach.walked.get(name) {
+        return outcomes.clone();
+    }
     if !visiting.insert(name.to_string()) {
         return conservative_outcomes();
     }
@@ -304,6 +313,7 @@ pub(crate) fn outcome_vocabulary_for_word(
     }
     visiting.remove(name);
     outcomes.insert("value".to_string());
+    reach.walked.insert(name.to_string(), outcomes.clone());
     outcomes
 }
 
