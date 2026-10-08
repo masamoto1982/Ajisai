@@ -196,7 +196,9 @@ async fn a_text_no_literal_spells_is_joined_from_its_pieces() {
         .await
         .unwrap();
     let shown = format!("{}", interp.get_stack().last().expect("a result"));
-    assert_eq!(shown, "'a' b'");
+    // The display is source too, so it writes the same phrase the
+    // definition does (`types/display.rs`).
+    assert_eq!(shown, "[ 'a'' ' b' ] JOIN");
     let text = definition_text(&interp, "Q");
     assert_eq!(text, "[ 'a'' ' b' ] JOIN");
 
@@ -217,7 +219,7 @@ async fn a_text_no_literal_spells_is_joined_from_its_pieces() {
     fresh.execute("S").await.expect("the restored Word runs");
     assert_eq!(
         format!("{}", fresh.get_stack().last().expect("a result")),
-        "'' x'"
+        "[ ''' ' x' ] JOIN"
     );
 }
 

@@ -13,7 +13,9 @@
 //! A Record has no literal — only `[ ]` delimits — so it renders as the phrase
 //! that builds it, `[ keys ] [ values ] RECORD`, and a Vector holding one as
 //! its elements followed by `n COLLECT`; both are source, and both are held to
-//! the law below.
+//! the law below. So does a String holding a quote right before whitespace,
+//! which no literal spells (the quote would close it): it renders as the
+//! literals that do spell its pieces, joined, `[ 'a''' ' b' ] JOIN`.
 //!
 //! Three kinds of value are deliberately out of scope, because the display
 //! does not claim to round-trip them and `types/display.rs` says so:
@@ -161,4 +163,27 @@ async fn a_record_renders_as_the_phrase_that_builds_it() {
     // of an unknown Word, not a Record.
     let mut interpreter = Interpreter::new();
     assert!(interpreter.execute("{ 'x' 1/1 }").await.is_err());
+}
+
+/// A quote right before whitespace closes a String literal, so no literal
+/// holds that pair: `'a'' b'` reads as the String `a'` and the name `b'`. Such
+/// a String renders as the phrase that builds it, cut after each such quote,
+/// and a Vector or Record holding one renders as a phrase too, since inside
+/// `[ ]` the phrase would be data.
+#[tokio::test]
+async fn a_string_no_literal_spells_renders_as_the_phrase_that_builds_it() {
+    for program in [
+        "[ 'a''' ' b' ] JOIN",
+        "[ 'a''' ' ' ] JOIN",
+        "[ 'x''' ' y''' ' z' ] JOIN",
+        "[ 'k' ] [ 'a''' ' b' ] JOIN 2 COLLECT",
+        "[ 'a''' ' b' ] JOIN 1 COLLECT [ 1 ] RECORD",
+        "[ 1 ] [ 'a''' ' b' ] JOIN 1 COLLECT RECORD",
+    ] {
+        assert_round_trips(program).await;
+    }
+    assert_eq!(run("[ 'a''' ' b' ] JOIN").await, ["[ 'a''' ' b' ] JOIN"]);
+    // A quote that is not followed by whitespace is content, and the literal
+    // still spells it.
+    assert_eq!(run("'It's fine'").await, ["'It's fine'"]);
 }

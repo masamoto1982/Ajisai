@@ -34,7 +34,10 @@ impl fmt::Display for Value {
 /// name characters — so it renders as the phrase that builds it,
 /// `[ keys ] [ values ] RECORD`, and a Vector holding one renders as its
 /// elements followed by `n COLLECT`, since inside `[ ]` that phrase would be
-/// data. This is the same writing `value_as_code.rs` gives a definition body.
+/// data. Neither has a String holding a quote right before whitespace, which
+/// would close the literal there: it renders as the literals of its pieces,
+/// joined, `[ 'a''' ' b' ] JOIN`. This is the same writing `value_as_code.rs`
+/// gives a definition body.
 ///
 /// A Symbol on its own renders as its bare name, which *calls* a Word rather
 /// than pushing the name, and is not claimed to round-trip; inside a
@@ -42,8 +45,9 @@ impl fmt::Display for Value {
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
-        // A String renders quoted at every depth, from its domain alone.
-        ValueData::Text(s) => format!("'{}'", s),
+        // A String renders quoted at every depth, from its domain alone, or
+        // as the phrase that joins its pieces when no literal spells it.
+        ValueData::Text(s) => format_text(s),
         // UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it takes the `Nil` arm
         // above. A Boolean renders as TRUE/FALSE however it was produced.
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
@@ -71,24 +75,49 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     }
 }
 
-/// Whether a value holds a Record anywhere inside it, so that no bracket
-/// literal denotes it and the Vector around it must be built by a phrase.
-fn holds_record(data: &ValueData) -> bool {
+/// Whether `text` has a String literal: one with no quote always does, and
+/// one with a quote unless that quote comes right before whitespace.
+fn text_has_literal(text: &str) -> bool {
+    !text.contains('\'') || crate::tokenizer::is_string_token_content(text)
+}
+
+/// A String as its literal, or — when a quote right before whitespace would
+/// close that literal early — as the literals of its pieces, cut after each
+/// such quote, joined: the whitespace that would have closed one piece opens
+/// the next instead.
+fn format_text(text: &str) -> String {
+    if text_has_literal(text) {
+        return format!("'{text}'");
+    }
+    let pieces = crate::tokenizer::string_literal_pieces(text);
+    if !pieces.iter().all(|piece| text_has_literal(piece)) {
+        return format!("'{text}'");
+    }
+    let literals: Vec<String> = pieces.iter().map(|piece| format!("'{piece}'")).collect();
+    format!("{} JOIN", render_delimited("[", "]", &literals))
+}
+
+/// Whether a value holds a Record, or a String no literal spells, anywhere
+/// inside it, so that no bracket literal denotes it and the Vector around it
+/// must be built by a phrase.
+fn holds_phrase(data: &ValueData) -> bool {
     match data {
         ValueData::Record(_) => true,
-        ValueData::Vector(children) => children.iter().any(|child| holds_record(&child.data)),
+        ValueData::Text(text) => !text_has_literal(text),
+        ValueData::Vector(children) => children.iter().any(|child| holds_phrase(&child.data)),
         _ => false,
     }
 }
 
 /// A Vector renders as its literal, `[ … ]`, when every element has a
-/// literal; one that holds a Record renders as the phrase that builds it, its
+/// literal; one that holds a Record or a String no literal spells renders as
+/// the phrase that builds it, its
 /// elements followed by `n COLLECT`, because inside `[ ]` the Record's own
 /// phrase would be read as data. A Symbol inside that phrase is written
 /// `[ NAME ] 0 GET`, which reads the name out of a literal rather than
 /// calling it.
 fn render_vector(children: &[&Value], depth: usize) -> String {
-    if children.iter().any(|child| holds_record(&child.data)) {
+    if children.iter().any(|child| holds_phrase(&child.data)) {
         let elements: Vec<String> = children
             .iter()
             .map(|child| match &child.data {
