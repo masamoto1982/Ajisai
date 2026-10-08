@@ -3,7 +3,7 @@
 
 use crate::interpreter::runtime_limits::RuntimeLimits;
 use crate::interpreter::Interpreter;
-use crate::test_support::{reason, top};
+use crate::test_support::{error_of, reason, top, top_of};
 
 /// A ragged Vector has no shape: the question does not fit the data, which
 /// is the trichotomy's middle case, not a malformed program.
@@ -107,6 +107,41 @@ async fn a_mismatched_shape_raises_invalid_shape() {
         assert!(
             message.contains("RESHAPE"),
             "`{code}` must name RESHAPE in its diagnosis, got: {message}"
+        );
+    }
+}
+
+/// A shape axis or a `COLLECT` count past `u32::MAX` is well-formed and too
+/// large — `spaceExhausted`, `stackUnderflow` — never malformed, and the
+/// observed element count is the product of the axes as written. On wasm32,
+/// where `usize` is 32 bits, the axis used to be declined as `invalidShape`,
+/// the count as `invalidInteger`, and a product past 32 bits reported no
+/// observed count at all; the axes are now read as `u64` on every target.
+#[tokio::test]
+async fn counts_past_32_bits_are_too_large_not_malformed() {
+    for code in [
+        "[ 4294967296 ] 0 FILL",
+        "[ 1 ] [ 4294967297 ] RESHAPE",
+        "[ 2 ] 0 FILL [ 4294967296 ] RESHAPE",
+        "[ 99999 99999 ] 0 FILL",
+    ] {
+        assert_eq!(
+            reason(code).await.as_deref(),
+            Some("spaceExhausted"),
+            "`{code}`"
+        );
+    }
+    assert_eq!(error_of("1 2 3 4294967299 COLLECT").await, "stackUnderflow");
+    for (shape, observed) in [
+        ("[ 4294967296 ]", Some(4_294_967_296u128)),
+        ("[ 99999 99999 ]", Some(9_999_800_001)),
+        ("[ 2 2147483648 ]", Some(4_294_967_296)),
+        ("[ 4294967296 4294967296 4294967296 ]", None),
+    ] {
+        assert_eq!(
+            super::shape_words::shape_observed_size(&top_of(shape).await),
+            observed,
+            "`{shape}`"
         );
     }
 }

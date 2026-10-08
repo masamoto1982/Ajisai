@@ -228,7 +228,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
                     "FILL",
                     max_materialized,
-                    checked_materialized_count(&shape).map(|count| count as u128),
+                    super::shape_words::shape_observed_size(&shape_val),
                 ));
             return Ok(());
         }

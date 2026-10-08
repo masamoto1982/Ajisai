@@ -18,6 +18,7 @@ use crate::interpreter::collection_meter::charge_materialization;
 use crate::interpreter::value_extraction_helpers::{extract_position_from_value, normalize_index};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
+use crate::types::fraction::saturating_narrow;
 use crate::types::{Value, ValueData};
 
 /// The shape of a rectangular nesting, or `None` for a ragged one.
@@ -75,12 +76,41 @@ pub(super) fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
 /// A shape operand: a Vector of non-negative integers — exactly what `SHAPE`
 /// answers, the empty shape of a leaf and a zero-length axis included — or
 /// `None` for anything else (`invalidShape`).
+///
+/// Each axis is read as a `u64` on every target and narrowed saturating. An
+/// axis a 32-bit `usize` cannot hold is still a well-formed axis, too long to
+/// build, so it reaches the size check as one: declining it here made
+/// `[ 4294967296 ] 0 FILL` an `invalidShape` on wasm32 and `spaceExhausted`
+/// natively.
 pub(super) fn parse_shape(shape_val: &Value) -> Option<Vec<usize>> {
+    Some(
+        shape_axes(shape_val)?
+            .into_iter()
+            .map(saturating_narrow)
+            .collect(),
+    )
+}
+
+fn shape_axes(shape_val: &Value) -> Option<Vec<u64>> {
     shape_val
         .as_vector_view()?
         .iter()
-        .map(|dim| dim.as_usize())
+        .map(|dim| dim.as_scalar()?.as_u64())
         .collect()
+}
+
+/// The element count a shape names, as a `spaceExhausted` diagnosis reports
+/// it: the product of the axes as written, in `u64` on every target (`None`
+/// past it), so the observed size is one number on wasm32 and natively. The
+/// product of `parse_shape`'s saturated axes is not that number on wasm32.
+/// Past a zero-length axis it counts the Vectors built above that axis, as
+/// [`checked_materialized_count`] does for the ceiling itself.
+pub(super) fn shape_observed_size(shape_val: &Value) -> Option<u128> {
+    shape_axes(shape_val)?
+        .iter()
+        .take_while(|&&axis| axis != 0)
+        .try_fold(1u64, |acc, &axis| acc.checked_mul(axis))
+        .map(u128::from)
 }
 
 /// `SHAPE ( [ vec ] -> [ shape ] )`: the axis lengths of a rectangular Vector,
@@ -200,7 +230,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
                     "RESHAPE",
                     max_materialized,
-                    checked_materialized_count(&shape).map(|count| count as u128),
+                    shape_observed_size(&shape_val),
                 ));
             return Ok(());
         }

@@ -727,4 +727,34 @@ mod machine_word_edges {
             usize::try_from(u32::MAX as i64 + 2).ok()
         );
     }
+
+    /// `as_u64` reads a count past `u32::MAX` the same on every target, and
+    /// declines exactly what is not a non-negative integer of 64 bits.
+    #[test]
+    fn as_u64_reads_counts_past_32_bits_on_every_target() {
+        assert_eq!(small(u32::MAX as i64 + 2, 1).as_u64(), Some(4_294_967_297));
+        assert_eq!(small(i64::MAX, 1).as_u64(), Some(i64::MAX as u64));
+        assert_eq!(small(-1, 1).as_u64(), None);
+        assert_eq!(small(7, 2).as_u64(), None);
+        let two_to_64 = Fraction::new(BigInt::from(u64::MAX) + 1, BigInt::from(1));
+        assert_eq!(two_to_64.as_u64(), None);
+        let u64_max = Fraction::new(BigInt::from(u64::MAX), BigInt::from(1));
+        assert_eq!(u64_max.as_u64(), Some(u64::MAX));
+    }
+
+    /// Narrowing to 32 bits — what wasm32's `usize` is — saturates instead of
+    /// failing or truncating, so a count of `2^32 + 1` stays larger than
+    /// anything a 32-bit host holds rather than becoming `1` or malformed.
+    #[test]
+    fn saturating_narrow_to_32_bits_keeps_a_large_count_large() {
+        use crate::types::fraction::saturating_narrow;
+        assert_eq!(saturating_narrow::<u32>(7), 7);
+        assert_eq!(saturating_narrow::<u32>(u32::MAX as u64), u32::MAX);
+        assert_eq!(saturating_narrow::<u32>(u32::MAX as u64 + 2), u32::MAX);
+        assert_eq!(saturating_narrow::<u32>(u64::MAX), u32::MAX);
+        assert_eq!(
+            saturating_narrow::<usize>(u32::MAX as u64 + 2),
+            usize::try_from(u32::MAX as u64 + 2).unwrap_or(usize::MAX)
+        );
+    }
 }

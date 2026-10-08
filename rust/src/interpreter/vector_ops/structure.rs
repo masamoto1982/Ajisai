@@ -2,6 +2,7 @@ use super::{extract_vector_elements, with_stacktop_vector_target_no_arg};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_bigint_from_value;
 use crate::interpreter::Interpreter;
+use crate::types::fraction::saturating_narrow;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_bigint::BigInt;
@@ -293,8 +294,12 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let count: usize = match count_bigint.to_usize() {
-        Some(c) => c,
+    // Read as a `u64` on every target. A count a 32-bit `usize` cannot hold is
+    // still a count — more values than any stack holds — so it saturates into
+    // the underflow below instead of being declined as `invalidInteger` on
+    // wasm32 alone.
+    let count: usize = match count_bigint.to_u64() {
+        Some(c) => saturating_narrow(c),
         None => {
             let got = crate::types::display::describe_operand(&count_val);
             interp.stack.push(count_val);
