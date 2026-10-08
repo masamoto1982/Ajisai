@@ -129,7 +129,9 @@ fn format_tensor_recursive(data: &DenseTensor, shape: &[usize], _depth: usize) -
     let outer = shape[0];
     let rest = &shape[1..];
     let stride: usize = rest.iter().product();
-    if outer == 0 || stride == 0 {
+    // A zero-length inner axis still has `outer` rows, each empty: only an
+    // empty outer axis is the empty Vector.
+    if outer == 0 {
         return "[ ]".to_string();
     }
     let flat = data.to_fractions();
@@ -155,7 +157,9 @@ fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usi
     let outer = shape[0];
     let rest = &shape[1..];
     let stride: usize = rest.iter().product();
-    if outer == 0 || stride == 0 {
+    // A zero-length inner axis still has `outer` rows, each empty: only an
+    // empty outer axis is the empty Vector.
+    if outer == 0 {
         return "[ ]".to_string();
     }
     let inner: Vec<String> = (0..outer)
@@ -287,5 +291,15 @@ mod tests {
         assert_eq!(format_exact_real(&sqrt_of(8, 1)), "2/1*sqrt(2)");
         // A perfect square collapses to the exact rational form.
         assert_eq!(format_exact_real(&sqrt_of(4, 1)), "2/1");
+    }
+
+    /// A dense Tensor with a zero-length inner axis displays its rows, as the
+    /// boxed Vector of the same value does; it used to collapse to `[ ]`.
+    #[tokio::test]
+    async fn dense_tensor_with_an_empty_inner_axis_keeps_its_rows() {
+        use crate::test_support::top;
+        assert_eq!(top("[ [ ] [ ] ]").await, "[ [ ] [ ] ]");
+        assert_eq!(top("[ [ ] [ ] ] 2 ADD").await, "[ [ ] [ ] ]");
+        assert_eq!(top("[ [ ] [ ] ] [ 2 ADD ] MAP").await, "[ [ ] [ ] ]");
     }
 }
