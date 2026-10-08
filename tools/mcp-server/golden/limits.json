@@ -46,14 +46,14 @@
       "declared": 100000,
       "under": {
         "kind": "source",
-        "source": "1 20 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+        "source": "1 20 RANGE 0 [ ADD 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
         "expect": {
           "/status": "ok"
         }
       },
       "over": {
         "kind": "source",
-        "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+        "source": "1 200 RANGE 0 [ ADD 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",

@@ -734,7 +734,7 @@ The union of two Records, the right one winning: `[ 'x' 'y' ] [ 1 2 ] RECORD [ '
 
 ## `MAP`
 
-A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is whatever it leaves on top, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves nothing `blockContractViolation`.
+A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
@@ -749,7 +749,7 @@ A block applied to each element of a Vector, in order, answering a Vector of the
 
 ## `FILTER`
 
-The elements of a Vector for which a predicate block answers TRUE, in order: `[ 1 2 3 4 ] [ 2 GT ] FILTER` is `[ 3 4 ]`. The block's answer is read as a truth value, and an UNKNOWN drops the element like FALSE does. A non-Vector is `nonVector`, a non-block `notExecutable`, a block that leaves nothing `blockContractViolation`, and an answer that is not a truth value `nonTruthValue`.
+The elements of a Vector for which a predicate block answers TRUE, in order: `[ 1 2 3 4 ] [ 2 GT ] FILTER` is `[ 3 4 ]`. The block's answer is read as a truth value, and an UNKNOWN drops the element like FALSE does. A non-Vector is `nonVector`, a non-block `notExecutable`, a block that leaves other than exactly one value `blockContractViolation`, and an answer that is not a truth value `nonTruthValue`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
@@ -764,7 +764,7 @@ The elements of a Vector for which a predicate block answers TRUE, in order: `[ 
 
 ## `FOLD`
 
-A Vector reduced to one value by a block that combines the accumulator with each element in turn, starting from a seed: `[ 1 2 3 ] 0 [ ADD ] FOLD` is `6`, and `[ 1 2 3 ] 10 [ SUB ] FOLD` is `4`. An empty Vector answers the seed: `[ ] 0 [ ADD ] FOLD` is `0`. SCAN answers every accumulator instead of the last. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves nothing `blockContractViolation`.
+A Vector reduced to one value by a block that combines the accumulator with each element in turn, starting from a seed: `[ 1 2 3 ] 0 [ ADD ] FOLD` is `6`, and `[ 1 2 3 ] 10 [ SUB ] FOLD` is `4`. An empty Vector answers the seed: `[ ] 0 [ ADD ] FOLD` is `0`. SCAN answers every accumulator instead of the last. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value `blockContractViolation`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
@@ -779,7 +779,7 @@ A Vector reduced to one value by a block that combines the accumulator with each
 
 ## `SCAN`
 
-Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence.
+Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and the one value it leaves is both the next accumulator and that lane's answer; a block that leaves other than exactly one value is `blockContractViolation`. An empty Vector answers an empty Vector, and an absent Vector answers that same absence.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`

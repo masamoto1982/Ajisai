@@ -274,7 +274,7 @@ fn pow_and_length_are_quickened_where_they_apply() {
     assert_eq!(quickened("[ 0 POW ] 'P' DEF 1/2 P"), 1);
     assert_eq!(quickened("[ LENGTH ] 'L' DEF [ 1 2 3 ] L"), 1);
     // A body that does not fuse (it leaves a Vector) is quickened per element.
-    assert_eq!(quickened("[ 1 2 3 ] [ [ ] LENGTH ADD [ 1 2 ] ] MAP"), 6);
+    assert_eq!(quickened("[ 1 2 3 ] [ [ ] LENGTH ADD 1 COLLECT ] MAP"), 6);
     assert_eq!(quickened("[ -1 POW ] 'P' DEF 5 P"), 0);
     assert_eq!(quickened("[ 63 POW ] 'P' DEF 3 P"), 0);
     assert_eq!(quickened("[ 2 POW ] 'P' DEF NIL P"), 0);

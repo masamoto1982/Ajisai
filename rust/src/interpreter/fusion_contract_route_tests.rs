@@ -167,7 +167,7 @@ fn the_kernel_words_take_the_fast_routes() {
     );
     assert_eq!(segment_runs("[ 'X' BIND X NIL? X DEPTH ] 'F' DEF 9 F"), 1);
     assert_eq!(
-        segment_runs("1 9 RANGE [ 12 GCD 'Y' BIND Y Y ADD [ 1 2 ] ] MAP"),
+        segment_runs("1 9 RANGE [ 12 GCD 'Y' BIND Y Y ADD 1 COLLECT ] MAP"),
         9
     );
     // A result past a machine word ends the run: dispatched instead.

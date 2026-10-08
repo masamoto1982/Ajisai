@@ -43,6 +43,8 @@ mod fused_block_reg;
 mod fused_block_tests;
 pub mod higher_order;
 pub mod higher_order_fold;
+#[cfg(test)]
+mod higher_order_tests;
 pub mod host;
 mod quickened;
 #[cfg(test)]

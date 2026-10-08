@@ -925,13 +925,13 @@ FILTER</code></td>
                             <tbody>
                                 <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
-                                                                <tr><td><code>MAP</code> <code>FILTER</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または<code>FILTER</code>の場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
-                                <tr><td><code>FOLD</code> <code>SCAN</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                                                                <tr><td><code>MAP</code> <code>FILTER</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または<code>FILTER</code>の場合は真偽値。何も残さない、または2つ以上残せばエラー(<code>blockContractViolation</code>)</td></tr>
+                                <tr><td><code>FOLD</code> <code>SCAN</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さない、または2つ以上残せばエラー(<code>blockContractViolation</code>)</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <p>したがって<code>[ ADD ] 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 [ ADD ] EXEC</code>も同様です。どちらもスタック全体を見るからです。しかし<code>100 [ 1 2 ] [ ADD ] MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
-                    <p class="ref-note">「最上位より下にあるものは捨てられる」は読み返しておいてください。これが静かに起こるからです。2つの値を残す述語もそのまま通ります。<code>[ 1 2 3 ] [ 1 GT TRUE ] FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
+                    <p class="ref-note">「ちょうど1つ」は前提ではなく検査されます。2つの値を残す述語は拒否されます。<code>[ 1 2 3 ] [ 1 GT TRUE ] FILTER</code>は、ブロックが2つ残したと告げる<code>blockContractViolation</code>であり、本来の比較の上に書かれた<code>TRUE</code>を答えと見てすべてを残す述語ではありません。途中で計算した値はブロックが終わる前に消費するか、<code>BIND</code>で名前を付けます。<code>BIND</code>はスタックに何も残しません。<code>[ 'X' BIND X X MUL ]</code>は1つ残し、<code>[ 'X' BIND X X ]</code>は2つ残します。</p>
                     <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] [ 'x' 1 ADD ] MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。自分で定義したワードのところで、この掘り下げは止まります。その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
                     <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。ただしこれは評価の話であって、参照の話ではありません。定義しようとしているワード自身の名前が、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>の内側にしか書かれていなくても、<code>DEF</code>の<a href="#acyclic">非循環規則</a>はそれを検出し、定義そのものを拒否します。</p>
 
@@ -3525,7 +3525,7 @@ SELECT</code></td>
                     <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>SCAN</code>)</h3>
                     <p>コードブロック<code>[ ]</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
                     <p class="ref-note">この4つが反復のすべてです。ワードが自分自身を呼び出して繰り返す書き方はありません。<code>DEF</code>が<a href="#acyclic">循環する定義を拒否する</a>からです。したがって反復の回数は、必ず手元にある有限なベクトルの長さとして書かれており、ブロックを読む前から見えています。</p>
-                    <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません。点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
+                    <p class="ref-note">ブロックが残したちょうど1つの値が、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません。点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3735,7 +3735,7 @@ SELECT</code></td>
 <h3 id="family-higherOrder">契約: 反復</h3>
 <div class="word-entry" id="word-MAP">
 <h4><code>MAP</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。<code>[ 1 2 3 ] [ 2 MUL ] MAP</code>は<code>[ 2 4 6 ]</code>。ブロックの結果は、ベクトルを含め、最上位に残したもの(LANG.COLLECTIONS.HIGHER)。<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1 ] [ 2 ] ]</code>。不在のベクトルはその不在を答える。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、何も残さないブロックは<code>blockContractViolation</code>。</p>
+<p>ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。<code>[ 1 2 3 ] [ 2 MUL ] MAP</code>は<code>[ 2 4 6 ]</code>。ブロックの結果は、ベクトルを含め、ブロックが残したちょうど1つの値(LANG.COLLECTIONS.HIGHER)。<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1 ] [ 2 ] ]</code>。不在のベクトルはその不在を答える。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロック——何も残さない、または<code>[ 2 MUL 7 ]</code>のように余分に残す——は<code>blockContractViolation</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 ] [ 2 MUL ] MAP</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ body ] -&gt; [ mapped ]</span></dd>
@@ -3751,7 +3751,7 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-FILTER">
 <h4><code>FILTER</code> <span class="word-tier">Standard · operational</span></h4>
-<p>述語ブロックがTRUEと答えるベクトルの要素を、順に答える。<code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code>は<code>[ 3 4 ]</code>。ブロックの答えは真偽値として読まれ、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、何も残さないブロックは<code>blockContractViolation</code>、真偽値でない答えは<code>nonTruthValue</code>。</p>
+<p>述語ブロックがTRUEと答えるベクトルの要素を、順に答える。<code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code>は<code>[ 3 4 ]</code>。ブロックの答えは真偽値として読まれ、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロックは<code>blockContractViolation</code>、真偽値でない答えは<code>nonTruthValue</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 ] [ 2 EQ ] FILTER</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ pred ] -&gt; [ kept ]</span></dd>
@@ -3767,7 +3767,7 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-FOLD">
 <h4><code>FOLD</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>種から始め、累積値と各要素を順に組み合わせるブロックで、ベクトルを1つの値に畳む。<code>[ 1 2 3 ] 0 [ ADD ] FOLD</code>は<code>6</code>、<code>[ 1 2 3 ] 10 [ SUB ] FOLD</code>は<code>4</code>。空のベクトルは種を答える。<code>[ ] 0 [ ADD ] FOLD</code>は<code>0</code>。最後の累積値ではなくすべての累積値を答えるのはSCAN。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、何も残さないブロックは<code>blockContractViolation</code>。</p>
+<p>種から始め、累積値と各要素を順に組み合わせるブロックで、ベクトルを1つの値に畳む。<code>[ 1 2 3 ] 0 [ ADD ] FOLD</code>は<code>6</code>、<code>[ 1 2 3 ] 10 [ SUB ] FOLD</code>は<code>4</code>。空のベクトルは種を答える。<code>[ ] 0 [ ADD ] FOLD</code>は<code>0</code>。最後の累積値ではなくすべての累積値を答えるのはSCAN。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロックは<code>blockContractViolation</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 ] 0 [ ADD ] FOLD</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ init ] [ combine ] -&gt; [ result ]</span></dd>
@@ -3783,7 +3783,7 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-SCAN">
 <h4><code>SCAN</code> <span class="word-tier">Standard · operational</span></h4>
-<p>ベクトルを一歩ずつ畳み、最後の累積値だけでなく各要素の後の累積値を答える。<code>[ 1 2 3 4 ] 0 [ ADD ] SCAN</code>は<code>[ 1/1 3/1 6/1 10/1 ]</code>。答えは入力のレーン1本につき1本のレーンを持つ。初期累積値は種であってレーンではないので含まれない。これがあるから、SCANの結果を元のベクトルと組にできる。ブロックが見るのはFOLDと同じく累積値と現在の要素で、残したものが次の累積値であり、そのレーンの答えでもある。空のベクトルは空のベクトルを、不在のベクトルはその同じ不在を答える。</p>
+<p>ベクトルを一歩ずつ畳み、最後の累積値だけでなく各要素の後の累積値を答える。<code>[ 1 2 3 4 ] 0 [ ADD ] SCAN</code>は<code>[ 1/1 3/1 6/1 10/1 ]</code>。答えは入力のレーン1本につき1本のレーンを持つ。初期累積値は種であってレーンではないので含まれない。これがあるから、SCANの結果を元のベクトルと組にできる。ブロックが見るのはFOLDと同じく累積値と現在の要素で、残したちょうど1つの値が次の累積値であり、そのレーンの答えでもある。ちょうど1つ以外の値を残すブロックは<code>blockContractViolation</code>。空のベクトルは空のベクトルを、不在のベクトルはその同じ不在を答える。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 4 ] 0 [ ADD ] SCAN</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ init ] [ combine ] -&gt; [ steps ]</span></dd>

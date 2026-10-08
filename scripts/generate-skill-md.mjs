@@ -176,6 +176,11 @@ const commonErrors = [
     fix: 'FOLD is `vector init [ op ] FOLD`: `[ 1 2 3 ] 0 [ ADD ] FOLD`.',
   },
   {
+    title: 'A block that leaves more than its one result',
+    code: '[ 1 2 3 ] [ 2 MUL 7 ] MAP',
+    fix: 'A MAP / FILTER / FOLD / SCAN block leaves exactly one value — its result. A surplus is not discarded, it is this error. Consume what you computed before the block ends, or name it with `BIND`, which leaves nothing: `[ 2 MUL ]`, or `[ \'X\' BIND X X MUL ]`.',
+  },
+  {
     title: 'A `#:contract` declaration the body contradicts',
     code: "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE",
     fix: 'The declaration is checked before anything runs, and a violated one stops the run (`contractDecls.findings` lists every finding). Fix the body or the line; `ajisai agent infer-contracts` answers a paste-ready `suggested` line for the Word as written.',
@@ -465,7 +470,7 @@ ${renderContractDeclarations()}
 ## 3. Control and iteration
 
 - Branch: the two candidates, then the truth that chooses between them, then \`SELECT\`: \`${canonicalExampleCode('select-basic')}\` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: \`${canonicalExampleCode('select-lanes')}\`. An absent truth chooses neither and answers that same absence.
-- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial value: \`${canonicalExampleCode('fold')}\`.
+- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial value: \`${canonicalExampleCode('fold')}\`. The block leaves **exactly one** value — the mapped element, the truth, the next accumulator; leaving none or a surplus is a \`blockContractViolation\` (§7).
 - Budget: a block iteration is one step per element, so under the MCP profile's 100,000-step budget \`MAP\` / \`FILTER\` / \`FOLD\` walk tens of thousands of elements, not more. Beyond that, write the operation on whole vectors — \`V V ADD\` over 100,000 lanes is a few steps — and leave no large intermediate on the stack.
 - No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 

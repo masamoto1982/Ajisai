@@ -129,7 +129,7 @@
     },
     {
       "name": "execution budget exhaustion is a language ERROR",
-      "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+      "source": "1 200 RANGE 0 [ ADD 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "resourceLimit",
@@ -284,6 +284,18 @@
         "/diagnosis/nextChecks/0/code": "checkCharacterWidth",
         "/diagnosis/candidates/0": "LENGTH"
       }
+    },
+    {
+      "name": "a block that leaves more than its one result is a contract violation",
+      "source": "[ 1 2 3 ] [ 2 MUL 7 ] MAP",
+      "expect": {
+        "/status": "error",
+        "/outcome": "error:blockContractViolation",
+        "/aiDiagnostic/category": "blockContractViolation",
+        "/diagnosis/why": "contractViolation",
+        "/message": "MAP: expected the block to leave one value, and it left 2"
+      },
+      "comment": "The surplus used to be discarded and the top taken, so this answered `[ 7 7 7 ]` without a word about the `2 MUL` it threw away (LANG.COLLECTIONS.HIGHER). A block owes exactly one value; none and a surplus are the one violation."
     }
   ]
 }
