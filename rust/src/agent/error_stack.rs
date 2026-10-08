@@ -30,7 +30,8 @@
 //! make either case honest:
 //!
 //! 1. **Values are dropped, never reasons.** `diagnosis`, `aiDiagnostic`,
-//!    `errorFlowTrace`, `message` and `output` are never touched.
+//!    `errorFlowTrace`, `message` and `output` are never touched here (the
+//!    trace has a byte budget of its own, `report::bounded_error_flow_trace_json`).
 //! 2. **Every slot stays in place.** An elided slot keeps its index, `type`,
 //!    `semantics` (less an algebraic value's `exactTerms`), and gains an
 //!    `elided` record naming what was dropped. Positions stay meaningful, so a

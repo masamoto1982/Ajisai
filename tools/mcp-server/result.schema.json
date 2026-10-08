@@ -228,6 +228,33 @@
   "errorFlowTrace": {
    "type": "array"
   },
+  "errorFlowTraceElided": {
+   "type": "object",
+   "description": "Present when the trace's events did not all fit its byte budget (the same 64 KiB an error report's stack gets): the first events that fit half of it and the last that fit the other half are sent in `errorFlowTrace`, in order, and this record says how many between them were dropped. Absent whenever the whole trace was sent.",
+   "properties": {
+    "reason": {
+     "type": "string",
+     "enum": [
+      "errorFlowTraceBudget"
+     ]
+    },
+    "events": {
+     "type": "integer"
+    },
+    "omittedFrom": {
+     "type": "integer"
+    },
+    "omitted": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "reason",
+    "events",
+    "omittedFrom",
+    "omitted"
+   ]
+  },
   "aiDiagnostic": {
    "type": [
     "object",

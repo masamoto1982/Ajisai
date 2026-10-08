@@ -143,11 +143,6 @@ impl Report {
             "output": self.output,
             "message": self.message,
             "diagnosis": self.diagnosis.as_ref().map(diagnosis_json),
-            "errorFlowTrace": self
-                .error_flow_trace
-                .iter()
-                .map(error_flow_event_json)
-                .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "resourceUsage": resource_usage_json(&self.resource_usage),
@@ -157,6 +152,11 @@ impl Report {
             "receipt": self.receipt,
         });
         doc["stack"] = stack;
+        let (trace, trace_elided) = bounded_error_flow_trace_json(&self.error_flow_trace);
+        doc["errorFlowTrace"] = trace;
+        if let Some(elided) = trace_elided {
+            doc["errorFlowTraceElided"] = elided;
+        }
         if let Some(outcome) = &self.outcome {
             doc["outcome"] = json!(outcome);
         }
@@ -252,6 +252,70 @@ fn absence_json(absence: &AbsenceMetadata) -> Json {
         obj.insert("diagnosis".into(), diagnosis_json(diagnosis));
     }
     Json::Object(obj)
+}
+
+/// Byte budget for the rendered `errorFlowTrace`: the same sixteenth of the
+/// MCP host profile's 1 MiB `responseBytes` an error report's stack gets
+/// (`error_stack::MAX_ERROR_STACK_BYTES`).
+///
+/// The trace grows with the run, not with the source: every reasoned NIL is
+/// an event carrying its own diagnosis, so `0 45000 RANGE [ 0 DIV ] MAP` —
+/// 45,004 steps, well inside the step budget — rendered 45,001 events into a
+/// 76 MB response that took 9 s to build. The step budget bounds how many
+/// events a run records; this bounds how many are sent.
+const MAX_ERROR_FLOW_TRACE_BYTES: usize = super::error_stack::MAX_ERROR_STACK_BYTES;
+
+/// The `errorFlowTrace` array, and the `errorFlowTraceElided` record when the
+/// events did not all fit [`MAX_ERROR_FLOW_TRACE_BYTES`]. The first events
+/// that fit half the budget and the last that fit the other half are kept in
+/// order — where the absences started, and what the run did last, the
+/// failing Word's event among them — and the record says how many between
+/// them were dropped. Only the kept events are rendered, so the time spent
+/// is bounded too. A trace that fits is sent whole, with no record.
+pub(crate) fn bounded_error_flow_trace_json(events: &[ErrorFlowEvent]) -> (Json, Option<Json>) {
+    let half = MAX_ERROR_FLOW_TRACE_BYTES / 2;
+    let rendered = |event: &ErrorFlowEvent| {
+        let json = error_flow_event_json(event);
+        let bytes = serde_json::to_vec(&json).map_or(0, |b| b.len());
+        (json, bytes)
+    };
+    let mut head = Vec::new();
+    let mut spent = 0;
+    let mut front = 0;
+    while front < events.len() {
+        let (json, bytes) = rendered(&events[front]);
+        if spent + bytes > half {
+            break;
+        }
+        spent += bytes;
+        head.push(json);
+        front += 1;
+    }
+    let mut tail = Vec::new();
+    spent = 0;
+    let mut back = events.len();
+    while back > front {
+        let (json, bytes) = rendered(&events[back - 1]);
+        // The last event is kept whatever its size: it is what the run did
+        // last, an error's own event when there is one.
+        if spent + bytes > half && !tail.is_empty() {
+            break;
+        }
+        spent += bytes;
+        tail.push(json);
+        back -= 1;
+    }
+    let omitted = back - front;
+    head.extend(tail.into_iter().rev());
+    let elided = (omitted > 0).then(|| {
+        json!({
+            "reason": "errorFlowTraceBudget",
+            "events": events.len(),
+            "omittedFrom": front,
+            "omitted": omitted,
+        })
+    });
+    (Json::Array(head), elided)
 }
 
 pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {

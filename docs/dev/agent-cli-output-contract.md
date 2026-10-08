@@ -436,7 +436,8 @@ Four rules make this safe to rely on.
   budget; `valueStackBudget` is the agent profile's success budget, and a host
   that sets none never sees it.
 - **Values are dropped, never reasons.** `diagnosis`, `aiDiagnostic`,
-  `errorFlowTrace`, `message`, `output` and `runtimeMetrics` are never elided.
+  `errorFlowTrace`, `message`, `output` and `runtimeMetrics` are never elided
+  by the stack budget. (`errorFlowTrace` has a budget of its own, below.)
 - **Slots keep their index.** A dropped slot is replaced, never removed, so
   `stack` and `stackDisplay` stay the same length as the real stack and a
   diagnosis that points at stack depth still points at the same thing.
@@ -557,6 +558,20 @@ a `MAP` applying the block, the User Word whose body ran `DIV` — is named in
 that event's diagnosis evidence as `insideWords=`, innermost first, the same
 way a `wordError` names the frames a failure happened in. Neither NIL nor an Ajisai
 language `status: error` is a host transport failure.
+
+The trace grows with the run rather than the source — `0 45000 RANGE [ 0 DIV ]
+MAP` records 45,001 `nilProduced` events — so it is sent under a byte budget,
+the same 64 KiB an error report's stack gets. When the events do not all fit,
+the first ones that fit half of it and the last ones that fit the other half
+are sent, in order (the last event always), and a top-level
+`errorFlowTraceElided` record says what was dropped:
+
+```json
+{ "reason": "errorFlowTraceBudget", "events": 45001, "omittedFrom": 15, "omitted": 44971 }
+```
+
+`omittedFrom` is the index, in the full trace, of the first event not sent.
+A trace that fits is sent whole and the record is absent.
 
 ## `contract`
 

@@ -15,6 +15,38 @@ async fn compute_is_source_only_and_returns_the_cli_envelope() {
     );
 }
 
+/// Every reasoned NIL is a trace event with its own diagnosis, so the trace
+/// grows with the run: 5,001 of them rendered 10 MB. The trace is sent under a
+/// byte budget, first and last events kept, and says what it dropped.
+#[tokio::test]
+async fn a_long_error_flow_trace_is_sent_under_a_byte_budget() {
+    let json = compute(
+        "0 5000 RANGE [ 0 DIV ] MAP LENGTH 1 0 DIV",
+        ComputeOptions::agent(None),
+    )
+    .await
+    .to_json();
+    let bytes = serde_json::to_vec(&json).unwrap().len();
+    assert!(bytes < 256 * 1024, "{bytes} bytes");
+    let elided = &json["errorFlowTraceElided"];
+    assert_eq!(elided["reason"], "errorFlowTraceBudget");
+    assert_eq!(elided["events"], 5002);
+    let trace = json["errorFlowTrace"].as_array().unwrap();
+    assert_eq!(
+        trace.len() as u64 + elided["omitted"].as_u64().unwrap(),
+        5002
+    );
+    // The last event — the top-level `DIV` — is kept.
+    assert_eq!(trace.last().unwrap()["stackLenBefore"], 3);
+
+    // A trace that fits is sent whole, with no record.
+    let json = compute("1 0 DIV", ComputeOptions::agent(None))
+        .await
+        .to_json();
+    assert_eq!(json["errorFlowTrace"].as_array().unwrap().len(), 1);
+    assert!(json.get("errorFlowTraceElided").is_none());
+}
+
 #[tokio::test]
 async fn compute_preserves_structured_language_errors() {
     let response = compute("FROBNICATE", ComputeOptions::default()).await;
