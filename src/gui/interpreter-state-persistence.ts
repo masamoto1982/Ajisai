@@ -65,6 +65,8 @@ export interface PersistenceCallbacks {
     readonly showInfo?: (text: string, append: boolean) => void;
     /** The dictionary sheet currently selected, saved with the session. */
     readonly readActiveDictionarySheet?: () => string;
+    // Takes an import in turn with runs, so a run in flight cannot undo it.
+    readonly runExclusive?: <T>(task: () => Promise<T>) => Promise<T>;
 }
 
 export interface Persistence {
@@ -270,6 +272,7 @@ export const createPersistence = (
     callbacks: PersistenceCallbacks = {}
 ): Persistence => {
     const { showError, updateDisplays, showInfo, readActiveDictionarySheet } = callbacks;
+    const runExclusive = callbacks.runExclusive ?? (<T>(task: () => Promise<T>) => task());
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
     const RETRY_DELAY_MS = 1000;
@@ -438,13 +441,17 @@ export const createPersistence = (
         const exportData = createExportData(interpreter);
         const filename = `${requestedName}.json`;
 
+        // Reported under the name the file was saved as: a native save dialog
+        // lets the user pick another one.
         getPlatform().fileIO.saveJson(filename, exportData)
-            .then(() => showInfo?.(`User words exported as ${filename}`, true))
+            .then((saved) => showInfo?.(`User words exported as ${saved.filename}`, true))
             .catch((error) => showError?.(toError(error)));
     };
 
     const importUserWords = (): void => {
-        getPlatform().fileIO.openJsonFile().then(async (openedFile) => {
+        // The file is chosen at once — a file dialog needs the click that asked
+        // for it — and merged in its turn.
+        getPlatform().fileIO.openJsonFile().then((openedFile) => runExclusive(async () => {
             if (!openedFile) {
                 return;
             }
@@ -503,7 +510,7 @@ export const createPersistence = (
             } catch (error) {
                 showError?.(toError(error));
             }
-        }).catch((error) => showError?.(toError(error)));
+        })).catch((error) => showError?.(toError(error)));
     };
 
     const fullReset = async (): Promise<void> => {

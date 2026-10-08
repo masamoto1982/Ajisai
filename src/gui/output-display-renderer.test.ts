@@ -11,12 +11,13 @@
 // named program through `ajisai run`, not one written by hand to match the
 // panel.
 
-import { describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
     describeNilNode,
     formatValue,
     MAX_RENDERED_ELEMENTS_PER_COLLECTION,
     MAX_RENDERED_ELEMENTS_PER_STACK,
+    createDisplay,
     createRenderBudget,
     formatElision,
     planCollectionRender,
@@ -416,5 +417,59 @@ describe('valueToLatex exact normal form', () => {
     test('without a normal form the approximation is still marked', () => {
         const approximated = { ...num(1414213562, 1000000000), semantics: { approximate: true } } as Value;
         expect(valueToLatex(approximated)).toBe('\\approx 1.41421');
+    });
+});
+
+// The budget used to be charged only by the elements inside a collection, so a
+// deep stack — `1 100000 RANGE EXEC`, an ordinary program — drew every value
+// one node each and locked the tab the budget is there to protect. Drawn
+// against a counting stand-in for `document`.
+describe('renderStack', () => {
+    class FakeElement {
+        className = '';
+        textContent = '';
+        title = '';
+        dataset: Record<string, string> = {};
+        children: Array<FakeElement | string> = [];
+        parentElement: FakeElement | null = null;
+        classList = { add() { /* not observed */ }, remove() { /* not observed */ }, toggle() { /* not observed */ } };
+        appendChild(child: FakeElement) { this.children.push(child); return child; }
+        append(...children: Array<FakeElement | string>) { this.children.push(...children); }
+        replaceChildren() { this.children = []; }
+        querySelector() { return null; }
+    }
+    let created = 0;
+    const previousDocument = (globalThis as any).document;
+    beforeAll(() => {
+        (globalThis as any).document = { createElement: () => { created += 1; return new FakeElement(); } };
+    });
+    afterAll(() => { (globalThis as any).document = previousDocument; });
+
+    const draw = (stack: Value[]) => {
+        const stackDisplay = new FakeElement();
+        stackDisplay.parentElement = new FakeElement();
+        const display = createDisplay({ outputDisplay: new FakeElement(), stackDisplay } as any);
+        created = 0;
+        display.renderStack(stack);
+        return (stackDisplay.children[0] as FakeElement).children as FakeElement[];
+    };
+    const textOf = (element: FakeElement | string): string =>
+        typeof element === 'string' ? element : element.textContent + element.children.map(textOf).join('');
+
+    test('a deep stack of scalars draws its top within the budget and counts the rest below', () => {
+        const items = draw(Array.from({ length: 100_000 }, (_, i) => num(i + 1)));
+        expect(created).toBeLessThan(3 * MAX_RENDERED_ELEMENTS_PER_STACK);
+        expect(textOf(items[0]!)).toBe(`${formatElision(100_000 - MAX_RENDERED_ELEMENTS_PER_STACK)} below`);
+        expect(textOf(items.at(-1)!)).toBe('100000/1');
+    });
+
+    test('a deep stack of short vectors stays bounded too', () => {
+        draw(Array.from({ length: 20_000 }, () => vec(num(1), num(2))));
+        expect(created).toBeLessThan(5 * MAX_RENDERED_ELEMENTS_PER_STACK);
+    });
+
+    test('a stack within the budget is drawn whole, with no marker', () => {
+        const items = draw([num(1), num(2)]);
+        expect(items.map(textOf)).toEqual(['1/1', '2/1']);
     });
 });

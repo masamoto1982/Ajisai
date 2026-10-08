@@ -811,7 +811,15 @@ export const createDisplay = (elements: DisplayElements): Display => {
         // amount however the values on it are shaped.
         const budget = createRenderBudget();
 
-        lastStack.forEach((item, index) => {
+        // Spent from the top down, one element per value as a collection's
+        // element costs one in its parent: the top is what the next Word
+        // takes, so it is always drawn, and the values below the budget are
+        // stated as a count under them rather than drawn one node each.
+        const drawn: HTMLElement[] = [];
+        let index = lastStack.length - 1;
+        for (; index >= 0 && budget.remaining > 0; index--) {
+            budget.remaining -= 1;
+            const item = lastStack[index]!;
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
@@ -821,8 +829,23 @@ export const createDisplay = (elements: DisplayElements): Display => {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';
             }
+            drawn.push(elem);
+        }
+
+        const elidedBelow = index + 1;
+        if (elidedBelow > 0) {
+            const elem = document.createElement('span');
+            elem.className = 'stack-item';
+            const marker = document.createElement('span');
+            marker.className = 'stack-elision';
+            marker.textContent = `${formatElision(elidedBelow)} below`;
+            marker.title = `${elidedBelow} more value(s) are on the stack below these but not drawn.`;
+            elem.appendChild(marker);
             container.appendChild(elem);
-        });
+        }
+        for (let drawnIndex = drawn.length - 1; drawnIndex >= 0; drawnIndex--) {
+            container.appendChild(drawn[drawnIndex]!);
+        }
 
         display.appendChild(container);
     };

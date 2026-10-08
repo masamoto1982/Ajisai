@@ -146,14 +146,19 @@ export class WorkerManager {
 
     private resolveWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
         console.error('[WorkerManager] Worker error:', error.message);
+        // Out of the pool before the queue is looked at: completing the task
+        // drains the queue, and a broken worker still in the pool was handed
+        // the next task, which then only answered at the wall-clock guard.
+        const index = this.workers.indexOf(instance);
+        if (index > -1) this.workers.splice(index, 1);
+        instance.worker.terminate();
         if (instance.currentTaskId) {
             const task = this.activeTasks.get(instance.currentTaskId);
             task?.reject(new Error(`Worker error: ${error.message}`));
         }
         this.completeTask(instance);
-        const index = this.workers.indexOf(instance);
-        if (index > -1) this.workers.splice(index, 1);
         this.createWorker();
+        this.processQueue();
     }
 
     private completeTask(instance: WorkerInstance): void {

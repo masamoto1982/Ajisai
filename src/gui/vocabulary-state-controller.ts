@@ -1,7 +1,7 @@
 // The Dictionary panel: the Core and User word sheets, their buttons, the
 // search filter, and deletion of a User word.
 
-import type { AjisaiInterpreter, CoreWordInfo, UserWordInfo } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, CoreWordInfo, ExecuteResult, UserWordInfo } from '../wasm-interpreter-types';
 import { isFailure, toError } from './interpreter-execution-utils';
 
 // ── Element builders ────────────────────────────────────────────────────────
@@ -136,6 +136,8 @@ export interface VocabularyCallbacks {
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (text: string, append: boolean) => void;
     readonly showError?: (error: Error) => void;
+    // Takes the delete in turn with runs, so a run in flight cannot undo it.
+    readonly runExclusive?: <T>(task: () => Promise<T>) => Promise<T>;
 }
 
 export interface VocabularyManager {
@@ -157,6 +159,20 @@ const lookupUserWordTooltip = (interpreter: AjisaiInterpreter, name: string): st
 // DEL's refusal of a Word other Words still reference (spec/outcomes.json).
 // Matched by category, never by the message, which is display text.
 const DEPENDENCY_DELETE_CATEGORY = 'definitionConflict';
+
+// Delete a User word with `DEL`, run on the session interpreter itself. A run
+// that fails is not rolled back by the interpreter, so a refused `DEL` left
+// the name it was handed on the stack, where the next Run picked it up and
+// saved it. A refusal is not a stack edit: the stack is put back as it was.
+export const deleteUserWord = async (
+    interpreter: AjisaiInterpreter,
+    wordName: string
+): Promise<ExecuteResult> => {
+    const stackBefore = interpreter.snapshot_stack();
+    const result = await interpreter.execute(`'${wordName}' DEL`);
+    if (isFailure(result)) interpreter.restore_stack_snapshot(stackBefore);
+    return result;
+};
 
 // A native popover (top-layer placement, light-dismiss on outside click or
 // Escape), positioned at the cursor by `renderDeleteContextMenu`.
@@ -184,13 +200,14 @@ export const createVocabularyManager = (
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo, showError } = callbacks;
+    const runExclusive = callbacks.runExclusive ?? (<T>(task: () => Promise<T>) => task());
     let activeContextWordName: string | null = null;
 
     const deleteContextMenu = createDeleteContextMenuElement(() => {
         if (!activeContextWordName) return;
         const selectedWordName = activeContextWordName;
         hideDeleteContextMenu();
-        void deleteWord(selectedWordName);
+        void runExclusive(() => deleteWord(selectedWordName));
     });
 
     const hideDeleteContextMenu = (): void => {
@@ -238,7 +255,7 @@ export const createVocabularyManager = (
     // the referencing words in its message, so it is surfaced as-is.
     const deleteWord = async (wordName: string): Promise<void> => {
         try {
-            const result = await interpreter.execute(`'${wordName}' DEL`);
+            const result = await deleteUserWord(interpreter, wordName);
             if (isFailure(result)) {
                 const message = result.message || 'Unknown error';
                 if (result.aiDiagnostic?.category === DEPENDENCY_DELETE_CATEGORY) {

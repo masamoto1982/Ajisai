@@ -462,7 +462,8 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             showError,
             updateDisplays: updateAllDisplays,
             showInfo,
-            readActiveDictionarySheet: () => sheetSelect.value
+            readActiveDictionarySheet: () => sheetSelect.value,
+            runExclusive: (task) => executionController.runExclusive(task)
         });
         await persistence.init();
 
@@ -480,20 +481,9 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
             showInfo,
-            showError
+            showError,
+            runExclusive: (task) => executionController.runExclusive(task)
         });
-
-        // Clearing the stack keeps the dictionary — that is what separates it
-        // from Reset — so it is the interpreter's `clear_stack` and nothing
-        // else, followed by a redraw and a save. One definition for both
-        // routes to it: the Stack area's `×` and `Ctrl+Alt+S`. It has no typed
-        // spelling (spec/gui-semantics.md, "Operations without a typed spelling").
-        const clearStack = (): void => {
-            interpreter.clear_stack();
-            updateAllDisplays();
-            display.renderInfo('Stack cleared', false);
-            void persistence.saveCurrentState();
-        };
 
         // Shown only once a run has taken long enough to be noticed, so the
         // everyday run that answers at once does not flash a line over the
@@ -522,6 +512,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             // tokenizer accepts even when the author wrote brackets glued to
             // other text.
             extractEditorValue: () => { editor.format(); return editor.extractValue(); },
+            readEditorValue: () => editor.extractValue(),
             clearEditor: (switchView) => { editor.clear(switchView); },
             showInfo,
             showFoldedInfo: (label, text) => display.renderFoldedInfo(label, text),
@@ -536,6 +527,21 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             updateAfterExecution: (changes) => applyExecutionAreaState(layoutDeps, changes),
             showRunStatus
         });
+
+        // Clearing the stack keeps the dictionary — that is what separates it
+        // from Reset — so it is the interpreter's `clear_stack` and nothing
+        // else, followed by a redraw and a save. One definition for both
+        // routes to it: the Stack area's `×` and `Ctrl+Alt+S`. It has no typed
+        // spelling (spec/gui-semantics.md, "Operations without a typed spelling").
+        // Pressed during a run, it clears the stack that run leaves.
+        const clearStack = (): void => {
+            void executionController.runExclusive(() => {
+                interpreter.clear_stack();
+                updateAllDisplays();
+                display.renderInfo('Stack cleared', false);
+                void persistence.saveCurrentState();
+            });
+        };
 
         const bindingContext: GuiEventBindingContext = {
             elements,
@@ -554,7 +560,10 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         vocabulary.renderCoreWords();
         updateAllDisplays();
 
-        const restored = await persistence.loadDatabaseData();
+        // Taken in turn with every run: the keys are already bound, and a run
+        // issued while the saved session loads must start from it rather
+        // than answer over it.
+        const restored = await executionController.runExclusive(() => persistence.loadDatabaseData());
         updateAllDisplays();
         // A saved id that names no sheet leaves the current one showing.
         if (isDictionarySheetId(restored.activeDictionarySheet)) {
