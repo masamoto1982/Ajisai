@@ -6,6 +6,15 @@ beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## Unreleased
+
+Documentation and engine speed: what the server says about `DIV` is extended, and vector programs that meet a zero divisor or an absent lane run faster on the packaged engine. No tool, envelope field or computed answer changes.
+
+### Changed
+
+- **A zero divisor empties its own lane and no other.** `DIV`'s summary in `assets/words.json` (what `word_contract` answers and the quickstart's Word table shows) says so with the worked example `[ 1 2 3 ] [ 1 0 2 ] DIV` is `[ 1 NIL 3/2 ]`: the lanes beside the absent one are quotients, a Word after it passes the absent lane through while computing the rest (LANG.FAILURE.PASSTHROUGH), and `1 0 DIV 1 ADD NIL-REASON` is `'divisionByZero'`.
+- **Engine: a zero divisor or an absent lane no longer costs a vector its columns.** The packaged WASM backend's column kernels project a zero divisor and carry an absent lane in place, the reason beside it, where they used to hand the whole operation to a route that boxed every lane and left the result boxed for every Word after it. Answers are unchanged. On a million-lane vector with one zero divisor, `DIV` goes from 237 ms to 45 ms and the five Words after it (`1 ADD 2 MUL 3 DIV FLOOR 0 GT`) from 664 ms to 100 ms (`scripts/bench/speed-bench-wasm.mjs`, its two `lane` cases, the previous bundle against this one).
+
 ## 0.7.1
 
 Documentation only: what the server serves about the language is corrected, and no tool, envelope field or computed answer changes.
