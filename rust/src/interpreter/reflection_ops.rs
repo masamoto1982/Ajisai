@@ -19,6 +19,7 @@ use super::ordering_ops::{restore, take_operand};
 use crate::agent::observation_digest::value_digest;
 use crate::builtins::lookup_builtin_spec;
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::collection_meter;
 use crate::interpreter::contract_record::{inferred_contract_record, registered_contract_record};
 use crate::interpreter::word_identity::content_digest;
 use crate::interpreter::Interpreter;
@@ -76,6 +77,11 @@ fn symbol_name(value: &Value) -> Option<String> {
 /// naming one, the denotation digest for every other value.
 pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
+    // Hashing the denotation walks the whole value.
+    if let Err(e) = collection_meter::charge_walk_of(interp, &operand) {
+        restore(interp, operand);
+        return Err(e);
+    }
     let word_identity = symbol_name(&operand).and_then(|name| {
         let canonical = canonical_name(&name);
         match resolve(interp, &canonical)? {
@@ -97,6 +103,13 @@ pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
 /// evaluated); `notFound` for a Symbol naming neither.
 pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
+    // A block's inference walks the whole block, charged before it runs.
+    if operand.is_vector() {
+        if let Err(e) = collection_meter::charge_walk_of(interp, &operand) {
+            restore(interp, operand);
+            return Err(e);
+        }
+    }
     if let Some(elements) = operand.as_vector_view() {
         // A block: the same inference `ajisai check --contract` runs, over
         // the block's tokens, without running one of them.

@@ -354,7 +354,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
 /// below instead. Bare scalar `ExactScalar` operands are already handled by
 /// `push_exact_real_schema_result` upstream; this predicate exists to catch the
 /// *vector/structural* cases that would otherwise hard-error in broadcast.
-fn value_contains_exact_scalar(val: &Value) -> bool {
+pub(crate) fn value_contains_exact_scalar(val: &Value) -> bool {
     match &val.data {
         ValueData::ExactScalar(_) => true,
         ValueData::Vector(items) => items.iter().any(value_contains_exact_scalar),
@@ -379,11 +379,9 @@ fn apply_exact_real_recursive_broadcast(
     b: &Value,
     schema: ExactArithmeticSchema,
 ) -> Result<Value> {
-    use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
+    use crate::interpreter::broadcast_tree::broadcast_tree;
 
-    broadcast_tree(a, b, UnequalAxes::Refuse, &|x, y| {
-        exact_real_lane(x, y, schema)
-    })
+    broadcast_tree(a, b, &|x, y| exact_real_lane(x, y, schema))
 }
 
 /// One lane of the exact-real lift: the passthrough law, then `schema`.

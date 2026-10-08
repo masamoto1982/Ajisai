@@ -446,6 +446,30 @@ impl Fraction {
         }
     }
 
+    /// The value as a `u64` when it is a non-negative integer that fits one.
+    ///
+    /// Unlike [`as_usize`](Self::as_usize), the answer is the same on every
+    /// target. A count or an axis length that a 32-bit `usize` cannot hold is
+    /// still a well-formed count, so a Word reads it here and decides what it
+    /// means (with [`saturating_narrow`]) rather than declining it as
+    /// malformed on wasm32 alone.
+    pub fn as_u64(&self) -> Option<u64> {
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d != 1 {
+                    return None;
+                }
+                u64::try_from(*n).ok()
+            }
+            FractionRepr::Big(big) => {
+                if !big.denominator.is_one() {
+                    return None;
+                }
+                big.numerator.to_u64()
+            }
+        }
+    }
+
     #[inline]
     pub(crate) fn create_from_i128(num: i128, den: i128) -> Self {
         debug_assert!(den != 0);
@@ -722,6 +746,15 @@ impl std::fmt::Display for Fraction {
             }
         }
     }
+}
+
+/// `n` narrowed to `T`, saturating at `T::MAX`, for a count read with
+/// [`Fraction::as_u64`]. A count past `T::MAX` exceeds anything the host can
+/// hold, so the saturated count fails the same size or stack check the exact
+/// one would. Generic in the width so the 32-bit narrowing wasm32 performs
+/// can be exercised on a 64-bit host.
+pub(crate) fn saturating_narrow<T: TryFrom<u64> + num_traits::Bounded>(n: u64) -> T {
+    T::try_from(n).unwrap_or_else(|_| T::max_value())
 }
 
 #[cfg(test)]

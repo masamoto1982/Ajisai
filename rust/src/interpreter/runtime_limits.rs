@@ -112,6 +112,9 @@ pub struct OperandWork {
     /// The largest algebraic term count among the leaves, or 0 when every leaf
     /// is rational.
     pub terms: u64,
+    /// The largest radical basis among the leaves, or 0 when every leaf is
+    /// rational: how deep the conjugation that inverts one goes.
+    pub basis: u64,
 }
 
 impl OperandWork {
@@ -121,6 +124,7 @@ impl OperandWork {
             lanes: 1,
             bits,
             terms: 0,
+            basis: 0,
         }
     }
 
@@ -130,6 +134,7 @@ impl OperandWork {
             lanes: self.lanes.saturating_add(other.lanes),
             bits: self.bits.max(other.bits),
             terms: self.terms.max(other.terms),
+            basis: self.basis.max(other.basis),
         }
     }
 }

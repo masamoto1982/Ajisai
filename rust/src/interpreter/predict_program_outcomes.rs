@@ -72,8 +72,16 @@ impl Interpreter {
     /// build_definitions_interpreter`) so a later call to a `DEF`'d name
     /// resolves against its real body — a name that is `DEF`'d but never
     /// called contributes nothing, which is more precise than assuming
-    /// every definition is reachable.
-    pub(crate) fn predict_program_outcomes(&mut self, tokens: &[Token]) -> OutcomePrediction {
+    /// every definition is reachable. `unsettled` names the Words that
+    /// registration could not bind to one body (defined twice, or by a `DEF`
+    /// it does not read): a call to one is an unknown arity, since the body
+    /// registered is only the last one read. Their vocabulary needs no such
+    /// care — every body is a literal in `tokens`, walked below.
+    pub(crate) fn predict_program_outcomes(
+        &mut self,
+        tokens: &[Token],
+        unsettled: &dyn Fn(&str) -> bool,
+    ) -> OutcomePrediction {
         let mut flow = FlowSim::new();
         let mut visiting: HashSet<String> = HashSet::new();
         let mut outcomes: BTreeSet<String> = BTreeSet::new();
@@ -102,9 +110,13 @@ impl Interpreter {
                         flow.feed_literal();
                     } else {
                         let canonical = crate::word_name::canonical_word_name(symbol);
-                        match self.infer_word_contract(&canonical) {
-                            Some(contract) => flow.feed_word(&contract.flow),
-                            None => flow.go_dynamic(),
+                        if unsettled(&canonical) {
+                            flow.go_dynamic();
+                        } else {
+                            match self.infer_word_contract(&canonical) {
+                                Some(contract) => flow.feed_word(&contract.flow),
+                                None => flow.go_dynamic(),
+                            }
                         }
                     }
                     // Its *outcomes* count either way: a block written here
@@ -118,8 +130,9 @@ impl Interpreter {
         }
 
         let (top_level_flow, flow_unmodelled) = flow.finish();
-        let provably_no_underflow =
-            !flow_unmodelled && matches!(top_level_flow, ContractFlow::Fixed { consumes: 0, .. });
+        let provably_no_underflow = !flow_unmodelled
+            && matches!(top_level_flow, ContractFlow::Fixed { consumes: 0, .. })
+            && !self.a_block_may_underflow(tokens, unsettled);
         if !provably_no_underflow {
             outcomes.insert("error:stackUnderflow".to_string());
         }
@@ -135,6 +148,81 @@ impl Interpreter {
             outcomes: outcomes.into_iter().collect(),
         }
     }
+
+    /// Whether a block a higher-order Word runs can underflow. `MAP`/`FILTER`
+    /// run their block on a scratch stack holding one element, `FOLD`/`SCAN`
+    /// on one holding the accumulator and an element, so the top-level flow
+    /// says nothing about it: `[ 1 2 ] [ ADD ] MAP` balances at the top level
+    /// and underflows inside. Every such call in `tokens` counts, wherever it
+    /// is written — a `DEF`'d body is a literal in `tokens` too, and a block
+    /// pushed as data may run later. A block that is not the literal written
+    /// just before the Word is code this walk never read.
+    fn a_block_may_underflow(
+        &mut self,
+        tokens: &[Token],
+        unsettled: &dyn Fn(&str) -> bool,
+    ) -> bool {
+        for (idx, token) in tokens.iter().enumerate() {
+            let Token::Symbol(symbol) = token else {
+                continue;
+            };
+            let entry: u16 = match &*crate::word_name::canonical_word_name(symbol) {
+                "MAP" | "FILTER" => 1,
+                "FOLD" | "SCAN" => 2,
+                _ => continue,
+            };
+            let Some(open) = idx
+                .checked_sub(1)
+                .and_then(|close| literal_open(tokens, close))
+            else {
+                return true;
+            };
+            let mut block = FlowSim::new();
+            for inner in &tokens[open + 1..idx - 1] {
+                match inner {
+                    Token::Number(_) | Token::String(_) | Token::Value(_) => block.feed_literal(),
+                    Token::VectorStart | Token::VectorEnd => block.feed_structural(inner),
+                    Token::Symbol(name) => {
+                        let canonical = crate::word_name::canonical_word_name(name);
+                        match (!unsettled(&canonical))
+                            .then(|| self.infer_word_contract(&canonical))
+                            .flatten()
+                        {
+                            Some(contract) => block.feed_word(&contract.flow),
+                            None => block.go_dynamic(),
+                        }
+                    }
+                }
+            }
+            match block.finish() {
+                (ContractFlow::Fixed { consumes, .. }, false) if consumes <= entry => {}
+                _ => return true,
+            }
+        }
+        false
+    }
+}
+
+/// The index of the `[` that the `]` at `close` closes, or `None` when the
+/// token at `close` is not a `]` or nothing opens it.
+fn literal_open(tokens: &[Token], close: usize) -> Option<usize> {
+    if tokens.get(close) != Some(&Token::VectorEnd) {
+        return None;
+    }
+    let mut depth = 0usize;
+    for at in (0..=close).rev() {
+        match tokens[at] {
+            Token::VectorEnd => depth += 1,
+            Token::VectorStart => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(at);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -149,7 +237,9 @@ mod tests {
     fn predict(source: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         let tokens = tokenize(source).expect("test source must tokenize");
-        interp.predict_program_outcomes(&tokens).outcomes
+        interp
+            .predict_program_outcomes(&tokens, &|_| false)
+            .outcomes
     }
 
     #[test]
@@ -214,6 +304,33 @@ mod tests {
         );
     }
 
+    /// A higher-order block runs on its own stack, so a top level that
+    /// balances proves nothing about it. Each of these really answers
+    /// `stackUnderflow`.
+    #[test]
+    fn a_block_that_underflows_its_own_stack_predicts_stack_underflow() {
+        for source in [
+            "[ 1 2 ] [ ADD ] MAP",
+            "[ 1 2 ] 0 [ ADD ADD ] FOLD",
+            "[ 1 2 ] [ POW ] FILTER",
+            "[ [ 1 ] [ 2 ] ] [ HAS? ] MAP",
+            "[ [ ADD ] MAP ] 'W' DEF [ 1 2 ] W",
+            "[ ADD ] 'B' BIND [ 1 2 ] B MAP",
+        ] {
+            assert!(
+                predict(source).contains(&"error:stackUnderflow".to_string()),
+                "{source}"
+            );
+        }
+        // A block its entry stack feeds stays precise.
+        for source in ["[ 1 2 ] [ 1 ADD ] MAP", "[ 1 2 ] 0 [ ADD ] FOLD"] {
+            assert!(
+                !predict(source).contains(&"error:stackUnderflow".to_string()),
+                "{source}"
+            );
+        }
+    }
+
     #[test]
     fn a_code_operand_of_a_higher_order_word_contributes_its_vocabulary() {
         assert!(predict("[ 1 2 3 ] [ 1 ADD ] MAP").contains(&"error:nonNumeric".to_string()));
@@ -259,11 +376,14 @@ mod tests {
     }
 
     /// `recursionLimitExceeded` is `execute_builtin`'s call-depth guard, so it
-    /// needs a User-Word activation rather than a named Word.
+    /// needs a User-Word activation or a Word that evaluates a block — a
+    /// chain of blocks bound to one another nests as deep as a call chain.
     #[test]
-    fn the_call_depth_guard_needs_a_user_word_to_be_possible() {
+    fn the_call_depth_guard_needs_a_user_word_or_a_block_to_be_possible() {
         let calls_user_word = predict("[ 1 ADD ] 'INC' DEF 5 INC");
         assert!(calls_user_word.contains(&"error:recursionLimitExceeded".to_string()));
+        let runs_a_block = predict("[ 1 ] 'B' BIND B EXEC");
+        assert!(runs_a_block.contains(&"error:recursionLimitExceeded".to_string()));
         assert!(!predict("1 2 ADD").contains(&"error:recursionLimitExceeded".to_string()));
     }
 

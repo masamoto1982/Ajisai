@@ -35,6 +35,23 @@ pub(crate) fn content_digest(bytes: &[u8]) -> String {
     format!("#{}", blake3::hash(bytes).to_hex())
 }
 
+/// Append a payload so it can never forge a boundary: the separators
+/// (`0x1c`..=`0x1f`) and the escape byte itself (`0x1b`) are written as
+/// `0x1b` followed by the byte. A String or a name may hold any of them
+/// (`nameCharacter` is any non-whitespace), and an unescaped `0x1f` + tag
+/// inside one would read as a token boundary, so two different bodies could
+/// share a key — and the content store hand one Word's body to the other.
+/// A payload holding none of those bytes is written unchanged, so such a
+/// body keeps the identity it always had.
+fn push_payload(bytes: &mut Vec<u8>, payload: &[u8]) {
+    for &b in payload {
+        if (0x1b..=0x1f).contains(&b) {
+            bytes.push(0x1b);
+        }
+        bytes.push(b);
+    }
+}
+
 /// Canonical byte encoding for one token: the tag-byte assignment
 /// `body_content_key` uses (`N`/`n` for a number, parsed or raw; `S` for a
 /// string; `Y` for a canonicalized symbol; `[`/`]`/`{`/`}`/`^`/`|`/`\n` for
@@ -54,16 +71,16 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
             }
             None => {
                 bytes.push(b'n');
-                bytes.extend_from_slice(literal.lexeme().as_bytes());
+                push_payload(bytes, literal.lexeme().as_bytes());
             }
         },
         Token::String(s) => {
             bytes.push(b'S');
-            bytes.extend_from_slice(s.as_bytes());
+            push_payload(bytes, s.as_bytes());
         }
         Token::Symbol(s) => {
             bytes.push(b'Y');
-            bytes.extend_from_slice(canonical_word_name(s).as_bytes());
+            push_payload(bytes, canonical_word_name(s).as_bytes());
         }
         Token::VectorStart => bytes.push(b'['),
         Token::VectorEnd => bytes.push(b']'),
@@ -237,7 +254,7 @@ impl Interpreter {
                 Token::Number(literal) => number_atom(literal),
                 Token::String(s) => {
                     let mut b = vec![b'S'];
-                    b.extend_from_slice(s.as_bytes());
+                    push_payload(&mut b, s.as_bytes());
                     Atom::Raw(b)
                 }
                 Token::Symbol(s) => self.symbol_atom(s, def, user_set),
@@ -279,7 +296,7 @@ impl Interpreter {
                     // Core word: stable global vocabulary,
                     // encoded by its canonical resolved name.
                     let mut b = vec![b'G'];
-                    b.extend_from_slice(resolved.as_bytes());
+                    push_payload(&mut b, resolved.as_bytes());
                     Atom::Raw(b)
                 } else if user_set.contains(resolved.as_ref()) {
                     // A user word not recorded in this definition's
@@ -287,7 +304,7 @@ impl Interpreter {
                     // authored. Keep it as a free symbol so adding an
                     // unrelated word cannot recapture existing content.
                     let mut b = vec![b'F'];
-                    b.extend_from_slice(canon.as_bytes());
+                    push_payload(&mut b, canon.as_bytes());
                     Atom::Raw(b)
                 } else {
                     Atom::Ref(resolved.to_string())
@@ -296,7 +313,7 @@ impl Interpreter {
             // Free / unresolved symbol: encoded by canonical name.
             None => {
                 let mut b = vec![b'F'];
-                b.extend_from_slice(canon.as_bytes());
+                push_payload(&mut b, canon.as_bytes());
                 Atom::Raw(b)
             }
         }

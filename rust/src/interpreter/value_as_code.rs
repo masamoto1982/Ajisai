@@ -179,7 +179,7 @@ fn push_source_expression(value: &Value, out: &mut Vec<Token>) -> Result<()> {
         // instead, and every piece has a literal.
         ValueData::Text(text) if !writes_as_literal(value) => {
             out.push(Token::VectorStart);
-            for piece in string_literal_pieces(text) {
+            for piece in crate::tokenizer::string_literal_pieces(text) {
                 if !crate::tokenizer::is_string_token_content(&piece) {
                     return Err(AjisaiError::declared(
                         "invalidDefinitionBody",
@@ -249,25 +249,6 @@ fn push_source_expression(value: &Value, out: &mut Vec<Token>) -> Result<()> {
 
 fn integer(n: i64) -> Fraction {
     Fraction::new(BigInt::from(n), BigInt::one())
-}
-
-/// `text` cut after every quote that whitespace follows, so that no piece
-/// holds a quote right before whitespace and each piece is one String
-/// literal: `a' b` is `a'` and ` b`.
-fn string_literal_pieces(text: &str) -> Vec<String> {
-    let mut pieces = Vec::new();
-    let mut current = String::new();
-    let mut chars = text.chars().peekable();
-    while let Some(c) = chars.next() {
-        current.push(c);
-        if c == '\'' && chars.peek().is_some_and(|next| next.is_whitespace()) {
-            pieces.push(std::mem::take(&mut current));
-        }
-    }
-    if !current.is_empty() {
-        pieces.push(current);
-    }
-    pieces
 }
 
 /// Every radicand the source written for `elements` takes a root of: each

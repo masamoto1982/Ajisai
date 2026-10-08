@@ -143,11 +143,6 @@ impl Report {
             "output": self.output,
             "message": self.message,
             "diagnosis": self.diagnosis.as_ref().map(diagnosis_json),
-            "errorFlowTrace": self
-                .error_flow_trace
-                .iter()
-                .map(error_flow_event_json)
-                .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "resourceUsage": resource_usage_json(&self.resource_usage),
@@ -157,6 +152,12 @@ impl Report {
             "receipt": self.receipt,
         });
         doc["stack"] = stack;
+        let (trace, trace_elided) =
+            super::error_stack::bounded_error_flow_trace_json(&self.error_flow_trace);
+        doc["errorFlowTrace"] = trace;
+        if let Some(elided) = trace_elided {
+            doc["errorFlowTraceElided"] = elided;
+        }
         if let Some(outcome) = &self.outcome {
             doc["outcome"] = json!(outcome);
         }

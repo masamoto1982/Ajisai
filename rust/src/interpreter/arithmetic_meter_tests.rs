@@ -270,3 +270,65 @@ fn width_and_wide_sums_are_what_the_owned_halves_give() {
         }
     }
 }
+
+// ── what an irrational operand costs beyond a product ────────────────────
+
+/// `2 SQRT 3 SQRT ADD 5 SQRT ADD …`: the sum of the square roots of the
+/// first `k` primes, bound to `X`.
+fn radical_sum(k: usize) -> String {
+    let primes = [2, 3, 5, 7, 11, 13, 17, 19];
+    let mut source = format!("{} SQRT", primes[0]);
+    for p in &primes[1..k] {
+        source.push_str(&format!(" {p} SQRT ADD"));
+    }
+    source + " 'X' BIND"
+}
+
+/// Dividing by a sum of `k` radicals inverts it by conjugation: `k` levels,
+/// each squaring a term map that may hold up to 2^(k-1) terms, so each
+/// radical in the divisor multiplies the work by about four. It was priced
+/// as the divisor's term count squared, which grows by a few percent per
+/// radical, so a twelve-radical divisor ran for forty seconds on a fraction
+/// of the budget that was meant to stop it.
+#[tokio::test]
+async fn dividing_by_an_irrational_is_charged_for_its_conjugation() {
+    let mut charges = Vec::new();
+    for k in [5, 6, 7] {
+        let sum = radical_sum(k);
+        let built = charged_by(&format!("{sum} 1")).await;
+        charges.push(charged_by(&format!("{sum} 1 X DIV")).await - built);
+    }
+    for pair in charges.windows(2) {
+        assert!(
+            pair[1] >= 2 * pair[0],
+            "one more radical in the divisor must cost a multiple, got {charges:?}"
+        );
+    }
+}
+
+/// An order comparison on irrational lanes is a subtraction over a common
+/// refinement of the two bases, then the sign of what it leaves. It was
+/// charged nothing, so `[ 20000 ] X FILL Y LT` ran for a minute on the work
+/// it took to build `X` and `Y`. A rational comparison stays free.
+#[tokio::test]
+async fn an_irrational_comparison_is_charged_as_the_subtraction_it_is() {
+    let operands = "2 SQRT 3 SQRT ADD 'X' BIND 5 SQRT 7 SQRT ADD 'Y' BIND";
+    let built = charged_by(&format!("{operands} 1")).await;
+    for word in ["LT", "GT", "MIN", "MAX", "EQ"] {
+        let one = charged_by(&format!("{operands} X Y {word}")).await - built;
+        let lanes = charged_by(&format!("{operands} [ 8 ] X FILL Y {word}")).await - built;
+        assert!(one > 0, "`X Y {word}` reached the work meter at zero");
+        assert!(
+            lanes >= 8 * one,
+            "`{word}` over 8 lanes: {lanes} < 8 × {one}"
+        );
+    }
+    for source in [
+        "1 2 LT",
+        "[ 1 2 ] 2 GT",
+        "1/2 1/3 MIN",
+        "[ 1 2 ] [ 1 2 ] EQ",
+    ] {
+        assert_eq!(charged_by(source).await, 0, "`{source}`");
+    }
+}

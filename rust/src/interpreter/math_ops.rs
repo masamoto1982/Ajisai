@@ -6,13 +6,16 @@ use num_bigint::BigInt;
 use num_traits::Signed;
 
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::arithmetic_meter::measure_operand;
+use crate::interpreter::exact_work::{charge_comparison, power_work};
 use crate::interpreter::record_ops;
+use crate::interpreter::runtime_limits::{broadcast_numeric_work, RuntimeLimits};
 use crate::interpreter::value_extraction_helpers::{
     exact_real_of, extract_operands, nil_passthrough_binary,
 };
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::exact::{ExactReal, PowOutcome};
+use crate::types::exact::{ExactReal, PowOutcome, PowPlan};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 
@@ -56,8 +59,8 @@ pub(crate) fn lift_unary_numeric(
 /// Apply a binary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
 ///
 /// The shape rules are the ones the arithmetic broadcast already uses: a
-/// scalar pairs with every element of a vector, two vectors of equal length
-/// pair element-wise, and unequal lengths are a shape error. `MIN` and `MAX`
+/// scalar pairs with every element of a vector, and two vectors pair by
+/// shape, aligned at the innermost axis with a length-1 axis reused. `MIN` and `MAX`
 /// used to take scalars only, so `[ -1 2 -3 ] 0 MAX` — a rectifier, and the
 /// most ordinary thing anyone writes with `MAX` — was an ERROR while
 /// `[ -1 2 -3 ] 0 ADD` lifted happily. Same clause, same family, two answers.
@@ -67,9 +70,9 @@ pub(crate) fn lift_binary_numeric(
     b: &Value,
     leaf_op: &dyn Fn(&Value, &Value) -> Result<Value>,
 ) -> Result<Value> {
-    use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
+    use crate::interpreter::broadcast_tree::broadcast_tree;
 
-    broadcast_tree(a, b, UnequalAxes::StretchSingleton, &|x, y| {
+    broadcast_tree(a, b, &|x, y| {
         if x.is_nil() {
             return Ok(x.clone());
         }
@@ -95,6 +98,10 @@ where
         return Ok(());
     }
     let operands = extract_operands(interp, 2)?;
+    if let Err(e) = charge_comparison(interp, &operands[0], &operands[1]) {
+        interp.stack.extend(operands);
+        return Err(e);
+    }
     let select = |a: &Value, b: &Value| -> Result<Value> {
         let ord = compare_for_numeric(a, b)?;
         Ok(if pick_left(ord) { a.clone() } else { b.clone() })
@@ -201,17 +208,41 @@ fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
     Value::nil_with_reason(reason, recoverability)
 }
 
+/// The scalar law of `POW`, lifted by [`lift_binary_numeric`].
+///
+/// A power is sized and priced before it is taken. One past `bigintBits` or
+/// `algebraicTerms` is the `spaceExhausted` projection POW declares for an
+/// exponent past what the machine will materialize, and the products that
+/// take one are charged to `budget` as `MUL` would charge them.
 fn pow_scalar(
     x: &Value,
     y: &Value,
     budget: &crate::interpreter::arithmetic_meter::RadicandBudget,
+    limits: &RuntimeLimits,
 ) -> Result<Value> {
     let (Some(base), Some(exponent)) = (exact_real_of(x), exact_real_of(y)) else {
         return Err(non_numeric(&[x, y]));
     };
     let mut left = budget.take();
-    let outcome = base.pow_within(&exponent, &mut left);
-    budget.spent(left, matches!(outcome, PowOutcome::WorkExhausted));
+    let plan = base.plan_pow_within(&exponent, &mut left);
+    budget.spent(
+        left,
+        matches!(plan, PowPlan::Answered(PowOutcome::WorkExhausted)),
+    );
+    let outcome = match plan {
+        PowPlan::Answered(outcome) => outcome,
+        PowPlan::Integer { base, exponent } => {
+            let size = base.power_size(&exponent);
+            if size.bits > limits.max_bigint_bits || size.terms > limits.max_algebraic_terms as u64
+            {
+                PowOutcome::SpaceExhausted
+            } else if !budget.charge(power_work(&base, &exponent)) {
+                PowOutcome::WorkExhausted
+            } else {
+                base.power_by_integer(&exponent)
+            }
+        }
+    };
     Ok(match outcome {
         PowOutcome::WorkExhausted => return Err(budget.exhausted_error()),
         PowOutcome::Value(er) => Value::from_exact_real(er),
@@ -283,11 +314,18 @@ pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     let budget = crate::interpreter::arithmetic_meter::RadicandBudget::of(interp);
+    let limits = *interp.runtime_limits();
     let operands = extract_operands(interp, 2)?;
     let lifted = lift_binary_numeric(&operands[0], &operands[1], &|x, y| {
-        pow_scalar(x, y, &budget)
+        pow_scalar(x, y, &budget, &limits)
     });
-    match budget.settle(interp).and(lifted) {
+    // What the estimate let through is held to the ceilings as every other
+    // arithmetic result is.
+    let checked = budget.settle(interp).and(lifted).and_then(|result| {
+        crate::interpreter::arithmetic_meter::check_result_size(interp, &result)?;
+        Ok(result)
+    });
+    match checked {
         Ok(result) => {
             interp.stack.push(result);
             Ok(())
@@ -299,9 +337,21 @@ pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+/// `GCD`, charged before it runs at what `ADD` costs on the same operands:
+/// Euclid on two integers walks their limbs at least as often as a rational
+/// sum's cross-multiplication does.
 pub(crate) fn op_gcd(interp: &mut Interpreter) -> Result<()> {
     if record_ops::lift_binary(interp, &op_gcd)? {
         return Ok(());
+    }
+    let len = interp.stack.len();
+    if len >= 2 {
+        let slots = interp.stack.as_slice();
+        let (left, right) = (
+            measure_operand(&slots[len - 2]),
+            measure_operand(&slots[len - 1]),
+        );
+        interp.charge_numeric_work(broadcast_numeric_work(left, right, 1))?;
     }
     binary(interp, &gcd_scalar)
 }

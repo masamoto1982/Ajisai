@@ -43,6 +43,14 @@ impl FlatTensor {
                 let total_size: usize = value.count_fractions();
                 let mut data: Vec<Fraction> = Vec::with_capacity(total_size);
                 value.collect_fractions_flat_into(&mut data);
+                // An irrational lane has no `Fraction` and is skipped by the
+                // collection, so the data would be shorter than the shape.
+                if data.len() != total_size {
+                    return Err(AjisaiError::declared(
+                        "nonNumeric",
+                        "expected a number or vector, got an exact irrational value",
+                    ));
+                }
                 let strides: Vec<usize> = compute_strides(&shape);
                 Ok(Self {
                     data,
@@ -309,8 +317,8 @@ pub(crate) fn broadcast_leaf(value: &Value) -> Option<Fraction> {
 /// instead of a flattened tensor, so it stays correct when scalars and
 /// vectors are mixed as siblings or sub-vectors have differing shapes. A
 /// scalar paired with a vector is broadcast across every element; two vectors
-/// of equal length combine element-wise; unequal lengths raise
-/// `VectorLengthMismatch`. The leaf operation is the same `op` used by the
+/// pair by shape, and a ragged one pairs with no vector
+/// (`broadcast_tree::broadcast_tree`). The leaf operation is the same `op` used by the
 /// flat path, so NIL-lane handling is identical.
 fn apply_recursive_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where

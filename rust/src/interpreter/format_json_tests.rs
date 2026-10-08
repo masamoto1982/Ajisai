@@ -58,6 +58,12 @@ async fn json_decode_lands_each_json_kind_on_its_domain() {
     assert_eq!(top("'0.1' JSON-DECODE").await, "1/10");
     assert_eq!(top("'0.1' JSON-DECODE 10 MUL 1 EQ").await, "TRUE");
     assert_eq!(top("'-1.5e2' JSON-DECODE").await, "-150/1");
+    // Zero is zero at any scale, an exponent past `u32` included.
+    assert_eq!(top("'0e9999999999' JSON-DECODE").await, "0/1");
+    assert_eq!(
+        top("'-0.0E-99999999999999999999999' JSON-DECODE").await,
+        "0/1"
+    );
     assert_eq!(top("'[]' JSON-DECODE").await, "[ ]");
     assert_eq!(top("'{}' JSON-DECODE").await, "[ ] [ ] RECORD");
     assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "'literal'");

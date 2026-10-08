@@ -141,7 +141,9 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
 /// handled by the degrade-on-dynamic path.
 fn space_arity_override(id: WordId) -> Option<(u16, u16)> {
     match id {
-        WordId::Range | WordId::Fill => Some((1, 1)),
+        // Both operands, so a literal on top cannot pin a caller's value
+        // underneath it (`[ 10 RANGE ]` is as unbounded as `[ RANGE ]`).
+        WordId::Range | WordId::Fill => Some((2, 1)),
         _ => None,
     }
 }

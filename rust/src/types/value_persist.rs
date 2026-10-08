@@ -255,6 +255,20 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             if nums.len() != dens.len() {
                 return Err("tensor numerator/denominator length mismatch".to_string());
             }
+            // The value reads its length off `shape` and its lanes off the
+            // columns, so both shapes must name exactly the lanes the columns
+            // hold: a forged shape would otherwise decode and then index past
+            // them.
+            let lanes_of = |dims: &[usize]| {
+                dims.iter()
+                    .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
+            };
+            if shape.is_empty()
+                || lanes_of(shape) != Some(nums.len())
+                || lanes_of(dshape) != Some(nums.len())
+            {
+                return Err("tensor shape does not match its columns".to_string());
+            }
             let mut absences = BTreeMap::new();
             for (index, reason) in absent {
                 let reason = NilReason::from_protocol_str(reason)

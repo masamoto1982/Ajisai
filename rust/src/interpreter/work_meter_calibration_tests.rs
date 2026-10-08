@@ -103,3 +103,27 @@ async fn ordinary_arithmetic_is_still_far_below_the_ceiling() {
         );
     }
 }
+
+/// An algebraic `FORMAT` refines every term to the scaled width, so its price
+/// follows the term count and the square of the width, as an algebraic
+/// product's does. At one unit a digit, six square roots at 65,536 places
+/// ran for 7.3 s on 0.86% of the agent profile's budget.
+#[tokio::test]
+async fn an_algebraic_format_is_priced_by_its_terms_and_width() {
+    const SIX: &str = "2 SQRT 3 SQRT ADD 5 SQRT ADD 7 SQRT ADD 11 SQRT ADD 13 SQRT ADD";
+    // What building the operand charged is not the FORMAT's.
+    let building = charged_by(SIX).await;
+    let narrow = charged_by(&format!("{SIX} 1024 FORMAT")).await - building;
+    let wide = charged_by(&format!("{SIX} 4096 FORMAT")).await - building;
+    assert!(
+        wide >= 12 * narrow,
+        "four times the places is about sixteen times the work: {narrow} -> {wide}"
+    );
+    let one_term = charged_by("2 SQRT 4096 FORMAT").await - charged_by("2 SQRT").await;
+    assert!(
+        wide >= 3 * one_term,
+        "six terms cost more than one: {one_term} -> {wide}"
+    );
+    // A rational still scales and rounds once.
+    assert!(charged_by("1/3 4096 FORMAT").await <= 4097);
+}

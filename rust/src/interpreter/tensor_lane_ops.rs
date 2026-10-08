@@ -19,7 +19,7 @@
 //! [`tensor_ops`]: crate::interpreter::tensor_ops
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
+use crate::interpreter::broadcast_tree::broadcast_tree;
 use crate::interpreter::tensor_ops::{
     broadcast_leaf, broadcast_shape, compute_strides, project_broadcast_index, ravel_index,
     rectangular_shape, unravel_index,
@@ -89,7 +89,7 @@ fn apply_lane_wise_recursive<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
 {
-    broadcast_tree(a, b, UnequalAxes::Refuse, &|x, y| apply_lane_law(x, y, op))
+    broadcast_tree(a, b, &|x, y| apply_lane_law(x, y, op))
 }
 
 /// Element-wise broadcast whose leaf law answers with a whole `Value`.

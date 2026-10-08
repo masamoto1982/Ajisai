@@ -334,3 +334,128 @@ async fn ordinary_arithmetic_stays_far_below_the_meter() {
         );
     }
 }
+
+// ── call-depth ceiling: calls and blocks together ─────────────────────
+
+/// `levels` nested `[ … ] EXEC` around `inner`.
+fn nested_exec(levels: usize, inner: &str) -> String {
+    let mut block = inner.to_string();
+    for _ in 0..levels {
+        block = format!("[ {block} ] EXEC");
+    }
+    block
+}
+
+// A block a Word evaluates nests native frames as a call does, and the two
+// guards each held alone while their product blew the native stack: 250
+// nested EXECs per body (under the nesting ceiling) down a chain of 22 Words
+// (under the call-depth ceiling) is over 5,000 levels. Both now count
+// against the one guard, and the run ends in its ERROR.
+#[tokio::test]
+async fn nested_blocks_down_a_call_chain_hit_the_depth_guard() {
+    let mut source = String::from("[ 1 ] 'A0' DEF\n");
+    for k in 1..22 {
+        source.push_str(&format!(
+            "[ {} ] 'A{k}' DEF\n",
+            nested_exec(250, &format!("A{}", k - 1))
+        ));
+    }
+    let mut interp = Interpreter::new();
+    interp.execute(&source).await.unwrap();
+    let err = interp.execute("A21").await.expect_err("must be refused");
+    assert!(
+        matches!(
+            err,
+            crate::error::AjisaiError::RecursionLimitExceeded { .. }
+        ),
+        "{err}"
+    );
+    assert_eq!(interp.call_depth, 0, "the guard unwinds what it counted");
+
+    // One body of the same nesting, called once, is within the guard.
+    let mut interp = Interpreter::new();
+    interp
+        .execute(&format!("[ {} ] 'B' DEF B", nested_exec(250, "7")))
+        .await
+        .unwrap();
+    assert_eq!(format!("{}", interp.stack.last().unwrap()), "7/1");
+}
+
+// No User Word is needed: blocks bound to one another nest the same way.
+#[tokio::test]
+async fn a_chain_of_bound_blocks_hits_the_depth_guard() {
+    let mut source = String::from("[ 1 ] 'A0' BIND\n");
+    for k in 1..300 {
+        source.push_str(&format!("[ A{} EXEC ] 'A{k}' BIND\n", k - 1));
+    }
+    source.push_str("A299 EXEC");
+    let mut interp = Interpreter::new();
+    let err = interp.execute(&source).await.expect_err("must be refused");
+    assert!(
+        matches!(
+            err,
+            crate::error::AjisaiError::RecursionLimitExceeded { .. }
+        ),
+        "{err}"
+    );
+}
+
+// ── collection work the step budget cannot see ─────────────────────────
+
+/// Collection work charged by `word` alone, with `setup` left on the stack
+/// beforehand: `execute` keeps the stack and resets the counters.
+async fn collection_charged_by_word(setup: &str, word: &str) -> u64 {
+    let mut interp = Interpreter::new();
+    interp.execute(setup).await.expect("setup computes");
+    interp.execute(word).await.expect("the Word computes");
+    interp.collection_work_used()
+}
+
+/// The Words that walk a whole value to render, encode or hash it did that
+/// walk for one step and no work: 1,000 `JSON-ENCODE`s of a 100,000-element
+/// Vector ran 41 s on 8.7% of the agent profile's collection budget, and
+/// `PRINT` reached 7.5 GB of output. Each now pays for the walk, so the
+/// charge follows the operand.
+#[tokio::test]
+async fn a_word_that_walks_a_whole_value_is_charged_for_it() {
+    for word in ["PRINT", "JSON-ENCODE", "STR", "DIGEST", "CONTRACT"] {
+        let small = collection_charged_by_word("0 99 RANGE", word).await;
+        let large = collection_charged_by_word("0 9999 RANGE", word).await;
+        assert!(
+            large >= 10_000 && large >= 50 * small,
+            "`{word}` over 10,000 elements charged {large} against {small} for 100"
+        );
+    }
+    // A String is one leaf however long it is; its bytes are charged.
+    let long = format!(
+        "'{}' 'S' BIND 1 100 RANGE [ 'E' BIND S ] MAP",
+        "x".repeat(1000)
+    );
+    for word in ["PRINT", "JSON-ENCODE", "DIGEST"] {
+        let charged = collection_charged_by_word(&long, word).await;
+        assert!(
+            charged >= 100_000,
+            "`{word}` over 100 KB of text charged {charged}"
+        );
+    }
+}
+
+/// A `DEF` or `DEL` re-derives every identity in the dictionary, so it is
+/// charged for the dictionary it walks, not one step: 3,000 `DEF`s ran 20 s
+/// to 157 s with every meter at zero.
+#[tokio::test]
+async fn a_dictionary_change_is_charged_for_the_dictionary_it_walks() {
+    let defs = |n: usize| -> String {
+        (0..n)
+            .map(|k| format!("[ {k} ] 'W{k}' DEF "))
+            .collect::<String>()
+    };
+    let into_small = collection_charged_by_word(&defs(10), "[ 1 ] 'NEW' DEF").await;
+    let into_large = collection_charged_by_word(&defs(100), "[ 1 ] 'NEW' DEF").await;
+    assert!(
+        into_large >= 9 * into_small && into_small > 0,
+        "a DEF into 100 Words charged {into_large} against {into_small} into 10"
+    );
+    let delete = collection_charged_by_word(&defs(100), "'W0' DEL").await;
+    assert!(delete > 0, "a DEL re-derives the dictionary as well");
+}

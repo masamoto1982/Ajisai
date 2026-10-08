@@ -34,12 +34,14 @@
 //! push, so `1 0 DIV OR-NIL 9` inferred `( 0 -- 2 )` for a body that leaves
 //! one value.
 //!
-//! `Dynamic` is the honest answer, but `Dynamic` alone still licenses a hard
-//! error against a declared fixed arity. So the two cases are kept apart:
+//! `Dynamic` is the honest answer. The two ways to reach it are kept apart:
 //! `dynamic` records a flow *derived* from a dependency's own `Dynamic` mass
-//! contract (a proof, which may license an error), while `unmodelled` records
-//! that this simulation gave up (a gap, which may only produce a note). The
-//! same split `word_space` draws between a bound and its `exact` witness.
+//! contract, while `unmodelled` records that this simulation gave up (a gap
+//! the contract carries). Neither proves a declared fixed arity wrong — a
+//! dependency of variable arity can still be fed the same operands on every
+//! call (`[ 2 COLLECT ]` is 2 -> 1) — so the declaration check reads a
+//! `Dynamic` flow against a count as "cannot verify" either way
+//! (`agent::contract_decl`).
 
 use super::word_contract::ContractFlow;
 use crate::types::Token;
@@ -49,11 +51,12 @@ use crate::types::Token;
 #[derive(Default)]
 pub(crate) struct FlowSim {
     /// The flow is data-dependent because a dependency's own mass contract is
-    /// `Dynamic`. This is a *derived* fact, not a gap: it may license a
-    /// declaration error.
+    /// `Dynamic`. A *derived* fact, not a gap — but not a proof that this
+    /// body's arity varies either.
     dynamic: bool,
     /// This simulation could not model the body (a control directive whose
-    /// paths differ in height, or an unbalanced delimiter). Reported as a gap
+    /// paths differ in height, an unbalanced delimiter, or a count past
+    /// `u16::MAX`, which a contract cannot state). Reported as a gap
     /// so the declaration check can only ever produce a note.
     unmodelled: bool,
     /// Values the body needs beneath what it pushed for itself.
@@ -75,7 +78,17 @@ impl FlowSim {
     }
 
     fn push_value(&mut self) {
-        self.height = self.height.saturating_add(1);
+        self.add_height(1);
+    }
+
+    /// Raise the height by `n`. A count past what `u16` holds is no count at
+    /// all: saturating would leave `u16::MAX` standing as a proven arity for a
+    /// body that pushes more.
+    fn add_height(&mut self, n: u16) {
+        match self.height.checked_add(n) {
+            Some(height) => self.height = height,
+            None => self.unmodelled = true,
+        }
     }
 
     /// A `Number`/`String` literal token.
@@ -123,12 +136,15 @@ impl FlowSim {
             return;
         };
         if self.height < *consumes {
-            self.required = self.required.saturating_add(consumes - self.height);
+            match self.required.checked_add(consumes - self.height) {
+                Some(required) => self.required = required,
+                None => self.unmodelled = true,
+            }
             self.height = 0;
         } else {
             self.height -= consumes;
         }
-        self.height = self.height.saturating_add(*produces);
+        self.add_height(*produces);
     }
 
     /// A symbol that did not resolve, or a dependency whose own inference

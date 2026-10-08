@@ -133,8 +133,16 @@ const projectionReasons = new Set();
 const errorWhenConditions = new Set();
 for (const entry of words().entries) {
   const proj = entry.projection;
-  if (proj && typeof proj === 'object' && typeof proj.reason === 'string') {
-    projectionReasons.add(proj.reason);
+  // A projection.reason is one reason or an array of them (POW, GET, ...);
+  // every element has to resolve. A null reason means the Word projects none.
+  if (proj && typeof proj === 'object' && proj.reason != null) {
+    for (const reason of [].concat(proj.reason)) {
+      if (typeof reason === 'string') {
+        projectionReasons.add(reason);
+      } else {
+        fail(`spec/words.json ${entry.name}: projection.reason element ${JSON.stringify(reason)} is not a string`);
+      }
+    }
   }
   for (const condition of entry.errorWhen ?? []) {
     errorWhenConditions.add(condition);

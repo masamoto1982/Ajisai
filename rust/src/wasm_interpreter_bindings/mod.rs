@@ -15,8 +15,8 @@
 //! Should one ever fail anyway, console_error_panic_hook puts the stack trace
 //! in the browser console.
 
-use crate::agent::api;
 use crate::agent::report::{ai_payload_json, diagnosis_json, failed_run_diagnosis};
+use crate::agent::{api, contract_violation};
 use crate::error::ErrorCategory;
 use crate::interpreter::Interpreter;
 use crate::types::value_protocol::{value_to_protocol, ProtocolNode, ProtocolValue};
@@ -113,6 +113,24 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         let obj = js_sys::Object::new();
+
+        // LANG.CONTRACT.CHECK: a program whose `#:contract` declaration is
+        // violated is not executed, here as in every other host.
+        if let Some(check) = contract_violation::declared_contract_check(code) {
+            if check.violated {
+                let (message, diagnosis) = contract_violation::violation_diagnosis(&check);
+                let category = ErrorCategory::ContractViolation;
+                let ai = ai_payload_json(&diagnosis.ai_payload(Some(&category)));
+                set_js_prop(&obj, "status", &("ERROR".into()));
+                set_js_prop(&obj, "message", &(message.into()));
+                set_js_prop(&obj, "error", &(true.into()));
+                set_js_prop(&obj, "output", &("".into()));
+                set_js_prop(&obj, "diagnosis", &json_to_js(diagnosis_json(&diagnosis)));
+                set_js_prop(&obj, "aiDiagnostic", &json_to_js(ai));
+                set_js_prop(&obj, "errorFlowTrace", &js_sys::Array::new().into());
+                return Ok(obj.into());
+            }
+        }
 
         match self.interpreter.execute(code).await {
             Ok(()) => {

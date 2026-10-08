@@ -228,3 +228,27 @@ fn a_restored_tensor_does_not_keep_a_false_claim_of_purity() {
         "purity is recomputed from the columns, not believed"
     );
 }
+
+#[test]
+fn a_restored_tensor_whose_shape_does_not_fit_its_columns_is_refused() {
+    // `Value::len()` reads the shape and the lanes read the columns, so a shape
+    // that disagrees with them would decode and then panic when displayed or
+    // sliced. The decoder refuses it the way it refuses mismatched columns.
+    for json in [
+        // The shape names more lanes than the columns hold.
+        r#"[{"t":"Tensor","nums":[1],"dens":[1],"dshape":[1],"pure_int":true,"shape":[2,2]}]"#,
+        r#"[{"t":"Tensor","nums":[],"dens":[],"dshape":[0],"pure_int":true,"shape":[1000000]}]"#,
+        // The columns' own shape names fewer lanes than they hold.
+        r#"[{"t":"Tensor","nums":[1,2],"dens":[1,1],"dshape":[1],"pure_int":true,"shape":[2]}]"#,
+        // Rank 0 is a Scalar, never a tensor.
+        r#"[{"t":"Tensor","nums":[1],"dens":[1],"dshape":[],"pure_int":true,"shape":[]}]"#,
+        // A product that overflows.
+        r#"[{"t":"Tensor","nums":[],"dens":[],"dshape":[18446744073709551615,2],"pure_int":true,"shape":[18446744073709551615,2]}]"#,
+    ] {
+        assert!(decode_stack(json).is_err(), "`{json}` must be refused");
+    }
+    // The well-formed spelling still restores.
+    let good = r#"[{"t":"Tensor","nums":[1,2,3,4],"dens":[1,1,1,1],"dshape":[2,2],"pure_int":true,"shape":[2,2]}]"#;
+    let value = decode_stack(good).expect("decode_stack").pop().unwrap();
+    assert_eq!(format!("{value}"), "[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]");
+}

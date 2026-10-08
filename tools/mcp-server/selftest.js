@@ -13,7 +13,10 @@ import { runCli } from "./doctor.js";
 import { coveredLimitNames, limitCases } from "./golden/limit-cases.js";
 import { HOST_ERRORS } from "./host-error.js";
 import { SKILL_BOUNDARY } from "./sync-assets.js";
-import { readFileSync } from "node:fs";
+import { NativeCliBackend } from "./backend/native-cli.js";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 let failures = 0;
 function check(label, condition) {
@@ -472,6 +475,27 @@ if (impatient) {
   );
 } else {
   check("limit wallTimeMs (hostGate): a backend is available to exercise it", false);
+}
+
+// A native child that dies of a signal the deadline did not send crashed: it is
+// a non-retryable `backendFailure`, not a `timeout` claiming the wall time ran
+// out after a few milliseconds.
+if (process.platform !== "win32") {
+  const crashDir = mkdtempSync(join(tmpdir(), "ajisai-selftest-"));
+  const crashBin = join(crashDir, "crash.sh");
+  writeFileSync(crashBin, "#!/bin/sh\nkill -SEGV $$\n", { mode: 0o755 });
+  const crashing = new NativeCliBackend({ bin: crashBin, wallTimeMs: 5_000, responseBytes: 1_000, executionSteps: 1 });
+  let crashed = null;
+  try {
+    await crashing.compute("1");
+  } catch (error) {
+    crashed = error;
+  }
+  rmSync(crashDir, { recursive: true, force: true });
+  check(
+    "a native backend killed by a signal it was not sent is a backendFailure, not a timeout",
+    crashed?.code === "backendFailure" && crashed?.retryable === false,
+  );
 }
 
 // The two halves of a result, and the padding between them.

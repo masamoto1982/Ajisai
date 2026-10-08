@@ -46,7 +46,7 @@ use crate::error::{AjisaiError, ResourceProgress, Result, PROGRESS_UNIT_ELEMENTS
 use crate::interpreter::arithmetic_meter::measure_operand;
 use crate::interpreter::runtime_limits::{ElementCost, OperandWork, COLLECTION_COPY_UNITS};
 use crate::interpreter::Interpreter;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 
 /// What one `HashMap` lookup costs beyond the leaf-width probe it hashes, in
 /// collection units — the de-quadraticization follow-up's constant
@@ -142,6 +142,76 @@ pub(crate) fn charge_stacktop_copy(
         Some(value) if value.is_vector() => element_cost(value).copies(portion(value.len())),
         _ => return Ok(()),
     };
+    charge(interp, units)
+}
+
+/// Charge for a Word that walks the whole of `value` to render, encode or hash
+/// it (`PRINT`, `JSON-ENCODE`, `DIGEST`, `CONTRACT` on a block).
+///
+/// The walk visits every leaf, so it is priced as a copy of every element —
+/// what the Word builds is a second rendering of the value — plus a unit per
+/// byte of the text the value holds, the rate `JSON-DECODE` reads text at. A
+/// String is one leaf to `element_cost` however long it is, and a Vector of a
+/// hundred thousand references to one long String renders all of them.
+pub(crate) fn charge_walk_of(interp: &mut Interpreter, value: &Value) -> Result<()> {
+    let units = element_cost(value)
+        .copies(value.len().max(1))
+        .saturating_add(text_bytes(value));
+    charge(interp, units)
+}
+
+/// The bytes of text `value` holds, through every container.
+fn text_bytes(value: &Value) -> u64 {
+    match &value.data {
+        ValueData::Text(text) => text.len() as u64,
+        ValueData::Symbol(name) => name.len() as u64,
+        ValueData::Vector(children) => children.iter().map(text_bytes).sum(),
+        ValueData::Record(record) => record
+            .keys()
+            .iter()
+            .chain(record.values())
+            .map(text_bytes)
+            .sum(),
+        ValueData::Scalar(_)
+        | ValueData::ExactScalar(_)
+        | ValueData::Tensor { .. }
+        | ValueData::Boolean(_)
+        | ValueData::Nil => 0,
+    }
+}
+
+/// What re-deriving one User Word's content identity costs beyond its body's
+/// tokens, in collection units.
+///
+/// Every `DEF` and `DEL` re-derives every identity in the dictionary
+/// (`recompute_word_identities`): per Word a snapshot of its name into four
+/// tables, a shape built and serialized, and three digests. Measured on native
+/// release, a chain of 2,000 one-token Words visited 2,000,000 Words in 15.9 s
+/// — 7.95 µs a visit, 375 units at the collection floor rate
+/// (`host_profile_defaults::COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS`) — less
+/// the token's own copy. Independent Words are cheaper (5.1 µs a visit), so
+/// they are over-charged, the safe direction.
+const IDENTITY_UNITS: u64 = 360;
+
+/// Charge for a change to the dictionary that re-derives it whole — the
+/// referrer scan and identity recompute after a `DEF` of `body_tokens`, or
+/// after a `DEL`.
+///
+/// One `DEF` is one step, and it used to be nothing else: 3,000 of them in a
+/// 64 KiB program ran 20 s, or 157 s when each named the one before, with
+/// every meter at zero. A bulk restore defers the recompute and runs it once
+/// (`restore_user_word_definitions`), so it is not charged per Word.
+pub(crate) fn charge_dictionary_change(interp: &mut Interpreter, body_tokens: usize) -> Result<()> {
+    if interp.defer_identity_recompute {
+        return Ok(());
+    }
+    let units = interp
+        .user_words
+        .values()
+        .map(|def| def.body.len() as u64)
+        .chain(std::iter::once(body_tokens as u64))
+        .map(|tokens| IDENTITY_UNITS.saturating_add(tokens.saturating_mul(COLLECTION_COPY_UNITS)))
+        .fold(0u64, u64::saturating_add);
     charge(interp, units)
 }
 

@@ -48,9 +48,29 @@ pub(crate) fn predict_outcomes(source: &str, options: &ComputeOptions) -> Outcom
     let Ok(tokens) = crate::tokenizer::tokenize(source) else {
         return exact("error:malformedSource", &probe);
     };
-    let (mut interp, _names) = build_definitions_interpreter(source);
+    // A source past `sourceBytes` is refused before anything runs, whether
+    // or not it holds a token (one long comment does not), so the walk below
+    // — which adds its structural ceilings only for a non-empty token
+    // stream — would answer `value` for it. Only the `#:contract` check,
+    // which `compute` runs first, can end it otherwise.
+    if probe
+        .runtime_limits()
+        .check_source_bytes(source.len())
+        .is_err()
+    {
+        let mut outcomes = vec!["error:resourceLimitExceeded".to_string()];
+        if super::contract_violation::declares_contracts(source) {
+            outcomes.insert(0, "error:contractViolation".to_string());
+        }
+        return OutcomeReport {
+            exact: outcomes.len() == 1,
+            outcomes,
+            limit_profile: limit_profile_json(probe.runtime_limits(), probe.max_execution_steps()),
+        };
+    }
+    let (mut interp, _names, unsettled) = build_definitions_interpreter(source);
     options.apply(&mut interp);
-    let mut prediction = interp.predict_program_outcomes(&tokens);
+    let mut prediction = interp.predict_program_outcomes(&tokens, &|name| unsettled.contains(name));
     // A name nothing defines raises `unknownWord` when execution reaches it.
     // The walk already covers the reaching part (every Word that could fail
     // first is in the set); this adds the arrival itself. `resolve_words` is
@@ -104,6 +124,40 @@ impl OutcomeReport {
 #[cfg(test)]
 mod tests {
     use crate::agent::api::{predict_outcomes, ComputeOptions};
+
+    /// Each Word calls the one before it twice, so walking every call site
+    /// anew visits `W0` 2^40 times; the walk visits each Word once. Run on a
+    /// thread so a regression fails here instead of hanging the suite.
+    #[test]
+    fn prediction_is_not_exponential_in_the_call_graph() {
+        let mut source = "[ 1 ] 'W0' DEF\n".to_string();
+        for i in 1..=40 {
+            source.push_str(&format!("[ W{0} W{0} ] 'W{1}' DEF\n", i - 1, i));
+        }
+        source.push_str("W40");
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let report = predict_outcomes(&source, ComputeOptions::agent(None));
+            let _ = done.send(report.to_json()["outcomes"].clone());
+        });
+        let outcomes = finished
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .expect("prediction must finish");
+        assert!(outcomes.as_array().unwrap().iter().any(|id| id == "value"));
+    }
+
+    /// One comment line past `sourceBytes` holds no token, and the run
+    /// refuses it all the same.
+    #[test]
+    fn a_source_past_the_byte_limit_predicts_the_refusal_even_without_tokens() {
+        let source = format!("# {}", "x".repeat(70_000));
+        let response = predict_outcomes(&source, ComputeOptions::agent(None)).to_json();
+        assert_eq!(
+            response["outcomes"],
+            serde_json::json!(["error:resourceLimitExceeded"])
+        );
+        assert_eq!(response["exact"], true);
+    }
 
     #[test]
     fn malformed_source_predicts_exactly_that() {

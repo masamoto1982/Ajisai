@@ -12,12 +12,13 @@
 //! cannot be written as user definitions at any cost.
 
 use super::ordering_ops::{elements_of, restore, take_operand};
-use super::tensor_cmds::checked_shape_product;
+use super::tensor_cmds::checked_materialized_count;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::charge_materialization;
-use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
+use crate::interpreter::value_extraction_helpers::{extract_position_from_value, normalize_index};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
+use crate::types::fraction::saturating_narrow;
 use crate::types::{Value, ValueData};
 
 /// The shape of a rectangular nesting, or `None` for a ragged one.
@@ -75,12 +76,41 @@ pub(super) fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
 /// A shape operand: a Vector of non-negative integers — exactly what `SHAPE`
 /// answers, the empty shape of a leaf and a zero-length axis included — or
 /// `None` for anything else (`invalidShape`).
+///
+/// Each axis is read as a `u64` on every target and narrowed saturating. An
+/// axis a 32-bit `usize` cannot hold is still a well-formed axis, too long to
+/// build, so it reaches the size check as one: declining it here made
+/// `[ 4294967296 ] 0 FILL` an `invalidShape` on wasm32 and `spaceExhausted`
+/// natively.
 pub(super) fn parse_shape(shape_val: &Value) -> Option<Vec<usize>> {
+    Some(
+        shape_axes(shape_val)?
+            .into_iter()
+            .map(saturating_narrow)
+            .collect(),
+    )
+}
+
+fn shape_axes(shape_val: &Value) -> Option<Vec<u64>> {
     shape_val
         .as_vector_view()?
         .iter()
-        .map(|dim| dim.as_usize())
+        .map(|dim| dim.as_scalar()?.as_u64())
         .collect()
+}
+
+/// The element count a shape names, as a `spaceExhausted` diagnosis reports
+/// it: the product of the axes as written, in `u64` on every target (`None`
+/// past it), so the observed size is one number on wasm32 and natively. The
+/// product of `parse_shape`'s saturated axes is not that number on wasm32.
+/// Past a zero-length axis it counts the Vectors built above that axis, as
+/// [`checked_materialized_count`] does for the ceiling itself.
+pub(super) fn shape_observed_size(shape_val: &Value) -> Option<u128> {
+    shape_axes(shape_val)?
+        .iter()
+        .take_while(|&&axis| axis != 0)
+        .try_fold(1u64, |acc, &axis| acc.checked_mul(axis))
+        .map(u128::from)
 }
 
 /// `SHAPE ( [ vec ] -> [ shape ] )`: the axis lengths of a rectangular Vector,
@@ -190,8 +220,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     let max_materialized = interp.runtime_limits.max_materialized_elements;
-    let total = match checked_shape_product(&shape) {
-        Some(total) if total <= max_materialized => total,
+    let materialized = match checked_materialized_count(&shape) {
+        Some(count) if count <= max_materialized => count,
         _ => {
             // The same projection FILL makes for the same reason: a
             // well-formed request the host declines (LANG.COLLECTIONS.BUDGET).
@@ -200,11 +230,14 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
                     "RESHAPE",
                     max_materialized,
-                    checked_shape_product(&shape).map(|size| size as u128),
+                    shape_observed_size(&shape_val),
                 ));
             return Ok(());
         }
     };
+
+    // Within the ceiling just checked, so the leaf product cannot overflow.
+    let total: usize = shape.iter().product();
 
     let mut leaves = Vec::new();
     for child in &children {
@@ -221,7 +254,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
             ),
         ));
     }
-    if let Err(e) = charge_materialization(interp, total) {
+    if let Err(e) = charge_materialization(interp, materialized) {
         put_back(interp, target, shape_val);
         return Err(e);
     }
@@ -236,10 +269,10 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 // The companion module to `ordering_ops`, on the same reasoning: each of these
 // is expressible in the existing vocabulary, and each one written that way
 // costs asymptotically more.
-/// `extract_integer_from_value`, with a non-integer operand raised as the
+/// `extract_position_from_value`, with a non-integer operand raised as the
 /// declared `invalidInteger` that every integer-taking Word shares.
 fn require_integer_operand(value: &Value) -> Result<i64> {
-    extract_integer_from_value(value).map_err(|e| {
+    extract_position_from_value(value).map_err(|e| {
         AjisaiError::declared(
             "invalidInteger",
             format!("expected an integer, got {}", e.got),
@@ -398,13 +431,9 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let length = items.len();
-    let position = if raw_index < 0 {
-        length as i64 + raw_index
-    } else {
-        raw_index
-    };
-    if position < 0 || position as usize >= length {
+    // `normalize_index` checks the bounds in `i64` before narrowing: an
+    // `as usize` first truncated `2^32 + 1` to slot 1 on 32-bit wasm.
+    let Some(position) = normalize_index(raw_index, items.len()) else {
         // A well-formed index over a well-formed Vector that names no slot is
         // the question `GET` already projects for, and `TAKE` now projects for
         // too: data that did not work out, not a malformed program
@@ -417,9 +446,9 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
             Recoverability::Recoverable,
         ));
         return Ok(());
-    }
+    };
 
-    items[position as usize] = replacement;
+    items[position] = replacement;
     interp.stack.push(Value::from_vector(items));
     Ok(())
 }

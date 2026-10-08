@@ -17,6 +17,11 @@ export interface StepToken {
     readonly text: string;
     readonly start: number;
     readonly end: number;
+    // The `#:contract` lines written ahead of a `DEF` piece, run with it. Each
+    // piece runs on its own, so a declaration dropped as a comment never
+    // reached the `DEF` it describes, and a stepped definition lost the
+    // description a Run gives it.
+    readonly contracts?: string;
 }
 
 // Split `code` into the balanced pieces step mode executes, in order.
@@ -26,29 +31,50 @@ export interface StepToken {
 // preserved, because the piece is executed as the source text it is: a
 // multi-line vector is one value and stepping through it half-built would
 // execute something the program never contains. Comments are dropped: a
-// comment is not a step.
+// comment is not a step. A `#:contract` line is the exception in part: it is
+// not a step either, but it travels with the next `DEF` piece.
 //
 // Malformed source is deliberately *not* repaired here. An unclosed `[` yields
 // one final piece running to the end of the source, a stray `]` yields a
 // piece of its own, and an unclosed string runs to the end; either way the
 // interpreter reports the real source error against the real text, which is
 // the same error a plain run would give.
+const CONTRACT_DIRECTIVE = '#:contract';
+
+// Whether a piece is the bare word `name`; a word's name is matched without
+// regard to case, as the interpreter matches it.
+const checkIsWord = (piece: StepToken, name: string): boolean =>
+    piece.text.toUpperCase() === name;
+
 export const tokenizeWithOffsets = (code: string): StepToken[] => {
     const pieces: StepToken[] = [];
-    const all = scanAtoms(code).filter((atom) => atom.kind !== 'comment');
+    const all = scanAtoms(code);
+    const contracts: string[] = [];
     let index = 0;
     while (index < all.length) {
         const first = all[index]!;
+        if (first.kind === 'comment') {
+            if (first.text.startsWith(CONTRACT_DIRECTIVE)) contracts.push(first.text);
+            index += 1;
+            continue;
+        }
         let depth = 0;
         let last = first;
         do {
             const atom = all[index]!;
-            if (atom.text === '[') depth += 1;
-            else if (atom.text === ']') depth -= 1;
-            last = atom;
+            if (atom.kind !== 'comment') {
+                if (atom.text === '[') depth += 1;
+                else if (atom.text === ']') depth -= 1;
+                last = atom;
+            }
             index += 1;
         } while (depth > 0 && index < all.length);
-        pieces.push({ text: code.slice(first.start, last.end), start: first.start, end: last.end });
+        const piece = { text: code.slice(first.start, last.end), start: first.start, end: last.end };
+        if (contracts.length > 0 && checkIsWord(piece, 'DEF')) {
+            pieces.push({ ...piece, contracts: contracts.splice(0).join('\n') });
+        } else {
+            pieces.push(piece);
+        }
     }
     return pieces;
 };
@@ -116,6 +142,10 @@ export const createStepExecutor = (callbacks: StepExecutorCallbacks): StepExecut
     } = callbacks;
 
     let state: StepState = INITIAL_STATE;
+    // The step mode whose piece is running, if any. Ctrl+Enter pressed while
+    // a piece is running is ignored: it read the index the running piece had
+    // not advanced yet, and ran that piece a second time.
+    let stepInFlight: StepState | null = null;
 
     const isActive = (): boolean => state.active;
 
@@ -148,6 +178,16 @@ export const createStepExecutor = (callbacks: StepExecutorCallbacks): StepExecut
             return;
         }
 
+        // A binding lasts for the rest of the frame that made it, and every
+        // piece runs as a program of its own, so a name bound by one piece is
+        // gone in the next: `5 'N' BIND N N ADD` is 10 when Run and an unknown
+        // word when stepped. Rather than give a stepped program another
+        // meaning, step mode refuses it.
+        if (tokens.some((token) => checkIsWord(token, 'BIND'))) {
+            showInfo('Step mode cannot run a program that uses BIND: a name it binds would be gone by the next step. Run it with Shift+Enter instead.', true);
+            return;
+        }
+
         state = { active: true, tokens, currentIndex: 0 };
 
         await executeNextToken(`[STEP] Step mode: ${tokens.length} steps (Ctrl+Enter to continue)`);
@@ -157,18 +197,26 @@ export const createStepExecutor = (callbacks: StepExecutorCallbacks): StepExecut
     // replaces the Output area, so a line written ahead of it was erased by
     // the very step it described.
     const executeNextToken = async (preface?: string): Promise<void> => {
-        const token = state.tokens[state.currentIndex]!;
-        const message = formatStepMessage(state.currentIndex, state.tokens.length, token.text);
+        const current = state;
+        const token = current.tokens[current.currentIndex]!;
+        const message = formatStepMessage(current.currentIndex, current.tokens.length, token.text);
 
         // Mark the token before running it, so the highlight always shows
         // what is *about* to happen rather than what just did.
         highlightSourceRange(token.start, token.end);
 
-        const completed = await executeSource(token.text);
+        stepInFlight = current;
+        let completed: boolean;
+        try {
+            completed = await executeSource(token.contracts ? `${token.contracts}\n${token.text}` : token.text);
+        } finally {
+            if (stepInFlight === current) stepInFlight = null;
+        }
 
-        // Aborted while the step was running: `abort` has already ended step
-        // mode and said so.
-        if (!state.active) return;
+        // Step mode ended or was started again while the step was running —
+        // Abort, Run or Reset: this step's continuation belongs to a step mode
+        // that is gone, and advancing would skip a piece of the new one.
+        if (state !== current) return;
 
         if (preface) showInfo(preface, true);
         showInfo(message, true);
@@ -186,6 +234,7 @@ export const createStepExecutor = (callbacks: StepExecutorCallbacks): StepExecut
     };
 
     const executeStep = async (): Promise<void> => {
+        if (stepInFlight !== null && stepInFlight === state) return;
         if (!state.active) {
             await startStepMode();
         } else {

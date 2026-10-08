@@ -17,6 +17,9 @@
 //! - one execution step (`charge_execution_step`, the same counter);
 //! - for `ADD` `SUB` `MUL` `DIV`, one unit of numeric work — two operands of
 //!   one limb each, `binary_numeric_work(1, 1)` — and a fast-path hit;
+//! - for `POW`, the same one unit — a power whose answer fits a machine word
+//!   is priced as one product of machine words (`power_numeric_work`) — and
+//!   no fast-path hit;
 //! - for `LT` `GT` and an `EQ` of two numbers, a fast-path hit and no work;
 //! - for `MIN` `MAX`, `FLOOR` `ROUND`, `NOT` `AND`, `SELECT` and an `EQ` of two
 //!   truth values, neither;
@@ -135,7 +138,7 @@ pub(crate) enum Kind {
     Not,
     And,
     Select,
-    /// `POW` on plain operands (`small_power`): a step, nothing else.
+    /// `POW` on plain operands (`small_power`): a step and one unit of work.
     Pow,
 }
 
@@ -255,7 +258,7 @@ pub(crate) fn apply(kind: Kind, operands: &[Slot]) -> Option<Answer> {
         Kind::Select => answered(if x(2).truth()? { x(0) } else { x(1) }, 0, 0),
         Kind::Pow => {
             let (a, b) = (x(0).num()?, x(1).num()?);
-            answered(Slot::Num(small_power(a, b)?), 0, 0)
+            answered(Slot::Num(small_power(a, b)?), 1, 0)
         }
     }
 }

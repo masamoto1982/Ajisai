@@ -19,20 +19,20 @@ import type {
 } from '../wasm-interpreter-types';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
 import { ExecutionTimeoutError } from '../workers/execution-contract';
-import { ExecutionAbortedError } from '../workers/execution-contract';
+import { ExecutionAbortedError, type InterpreterSnapshot } from '../workers/execution-contract';
 import { createExecutionController } from './execution-controller';
 import { num } from '../test-support';
 
-type Answer = (code: string) => Promise<ExecuteResult>;
+type Answer = (code: string, state: InterpreterSnapshot) => Promise<ExecuteResult>;
 
 const pool = vi.hoisted(() => ({
-    answer: null as null | ((code: string) => Promise<unknown>),
+    answer: null as null | ((code: string, state: any) => Promise<unknown>),
     abortAll: (): void => { /* replaced per test */ }
 }));
 
 vi.mock('../workers/execution-worker-manager', () => ({
     WORKER_MANAGER: {
-        execute: (code: string) => pool.answer!(code),
+        execute: (code: string, state: unknown) => pool.answer!(code, state),
         abortAll: () => pool.abortAll(),
         resetAllWorkers: async () => { /* not exercised */ }
     }
@@ -112,6 +112,7 @@ const setup = () => {
     let editor = '';
     const controller = createExecutionController(fake.interpreter, {
         extractEditorValue: () => editor,
+        readEditorValue: () => editor,
         clearEditor: () => { log.push('clearEditor'); },
         showInfo: (text, append) => { log.push(`${append ? 'info+' : 'info'}: ${text}`); },
         showFoldedInfo: (label) => { log.push(`folded: ${label}`); },
@@ -332,5 +333,99 @@ describe('Lookup', () => {
         page.controller.lookupWord('NOPE');
         expect(page.log).toEqual(['error: Unknown word: NOPE']);
         expect(page.views).toEqual(['output']);
+    });
+});
+
+// The session is used by one operation at a time. Every run used to be handed
+// the snapshot of the moment it was asked for, and its answer replaced the
+// session whole: a second Run before the first answered lost the first's
+// effect, and a Stack clear or Import made meanwhile was undone when the run
+// answered. Here the pool runs each task against the snapshot it was handed
+// and answers when the test releases it.
+describe('Overlapping operations', () => {
+    const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+    const holdAnswers = () => {
+        const held: Array<() => void> = [];
+        answerWith((code, state) => new Promise(resolve => held.push(() => {
+            const before = JSON.parse(state.stackSnapshot ?? '[]') as Value[];
+            resolve(ok([...before, num(Number(code))]));
+        })));
+        return held;
+    };
+
+    it('runs a second Run after the first has answered, from what it left', async () => {
+        const page = setup();
+        const held = holdAnswers();
+
+        const first = page.controller.executeCode('1');
+        const second = page.controller.executeCode('2');
+        await tick();
+        expect(held).toHaveLength(1);
+        held.shift()!();
+        await first;
+        await tick();
+        held.shift()!();
+        await second;
+
+        expect(page.interpreter.collect_stack()).toEqual([num(1), num(2)]);
+    });
+
+    it('applies a host edit made during a run after the run, not under it', async () => {
+        const page = setup();
+        page.setStack([num(7)]);
+        const held = holdAnswers();
+
+        const run = page.controller.executeCode('9');
+        await tick();
+        const edits = Promise.all([
+            page.controller.runExclusive(() => page.setStack([])),
+            page.controller.runExclusive(() => { page.words.set('IMPORTED', '1'); })
+        ]);
+        held.shift()!();
+        await run;
+        await edits;
+
+        expect(page.interpreter.collect_stack()).toEqual([]);
+        expect([...page.words.keys()]).toEqual(['IMPORTED']);
+    });
+
+    it('keeps text typed into the editor while the run was going', async () => {
+        const page = setup();
+        const held = holdAnswers();
+        page.setEditor('1');
+
+        const run = page.controller.executeCode('1');
+        await tick();
+        page.setEditor('2 3 ADD');
+        held.shift()!();
+        await run;
+
+        expect(page.log).not.toContain('clearEditor');
+    });
+
+    it('clears the editor after a run when it still holds the submitted source', async () => {
+        const page = setup();
+        answerWith(async () => ok([num(1)]));
+        page.setEditor('1');
+
+        await page.controller.executeCode('1');
+
+        expect(page.log).toContain('clearEditor');
+    });
+
+    it('drops the runs still waiting when Abort stops the one in flight', async () => {
+        const page = setup();
+        const dispatched: string[] = [];
+        answerWith((code) => new Promise<ExecuteResult>((_, reject) => {
+            dispatched.push(code);
+            pool.abortAll = () => reject(new ExecutionAbortedError());
+        }));
+
+        const first = page.controller.executeCode('1');
+        const second = page.controller.executeCode('2');
+        page.controller.abortExecution();
+        await Promise.all([first, second]);
+
+        expect(dispatched).toEqual(['1']);
     });
 });

@@ -50,6 +50,37 @@ async fn past_the_end_projects_the_same_reason_from_every_addressing_word() {
     }
 }
 
+/// An integer too large for a machine word is still an integer, and no Vector
+/// is that long, so it is past the end like any other: `indexOutOfBounds`,
+/// not the `invalidInteger` reserved for an operand that is not an integer.
+/// The answer used to jump from NIL to ERROR at 2^63, a storage boundary the
+/// language does not have.
+#[tokio::test]
+async fn an_address_past_i64_is_past_the_end() {
+    for code in [
+        "[ 1 2 3 ] 100000000000000000000 GET",
+        "[ 1 2 3 ] -100000000000000000000 GET",
+        "[ 1 2 3 ] 9223372036854775808 GET",
+        "[ 1 2 3 ] -9223372036854775809 GET",
+        "[ 1 2 3 ] 100000000000000000000 TAKE",
+        "[ 1 2 3 ] -100000000000000000000 TAKE",
+        "[ 1 2 3 ] 100000000000000000000 DROP",
+        "[ 1 2 3 ] -100000000000000000000 DROP",
+        "[ 1 2 3 ] 100000000000000000000 9 PUT",
+        "[ 1 2 3 ] -100000000000000000000 9 PUT",
+        // 2^32 + 1: an `as usize` before the bounds check wrapped this to
+        // slot 1 on 32-bit wasm, and PUT wrote there.
+        "[ 1 2 3 ] 4294967297 9 PUT",
+        "[ 1 2 3 ] 4294967297 GET",
+    ] {
+        assert_eq!(
+            reason(code).await.as_deref(),
+            Some("indexOutOfBounds"),
+            "`{code}` must project past-the-end"
+        );
+    }
+}
+
 /// In range, each Word still answers with the value it always did: projecting
 /// the miss changed nothing about the hit.
 #[tokio::test]

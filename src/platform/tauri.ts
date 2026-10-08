@@ -37,11 +37,23 @@ async function readStoredData(): Promise<StoredData> {
         return cloneEmptyData();
     }
 
+    // A file that is not a JSON object — truncated, or holding `null` — is no
+    // saved state, as an unreadable document is on the web, rather than an
+    // error that starts the session without the Example Words.
     const raw = await readTextFile(STATE_FILE, { baseDir: BaseDirectory.AppData });
-    const parsed = JSON.parse(raw) as Partial<StoredData>;
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (error) {
+        console.warn(`${STATE_FILE} is not JSON; starting without saved state:`, error);
+        return cloneEmptyData();
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+        return cloneEmptyData();
+    }
 
     return {
-        interpreterState: parsed.interpreterState ?? null
+        interpreterState: (parsed as Partial<StoredData>).interpreterState ?? null
     };
 }
 
@@ -129,7 +141,8 @@ export class TauriFileIO implements FileIO {
         }
 
         await writeTextFile(path, formatJsonDocument(data));
-        return { filename: defaultName };
+        // The name the user chose in the dialog, not the one it was offered.
+        return { filename: path.split(/[\\/]/).pop() ?? defaultName };
     }
 
     async openJsonFile(): Promise<OpenResult | null> {

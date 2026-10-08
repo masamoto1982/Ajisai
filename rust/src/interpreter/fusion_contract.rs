@@ -130,11 +130,19 @@ fn uncharged(value: Value) -> Option<Answer> {
     })
 }
 
-/// `GCD`: `math_ops::gcd_scalar`, the law `op_gcd` lifts. It charges no
-/// numeric work there; a non-integer operand is its NIL projection, which
-/// declines here.
+/// `GCD`: `math_ops::gcd_scalar`, the law `op_gcd` lifts, charged what
+/// `op_gcd` charges for it — `binary_numeric_work` of the operands' widths, as
+/// `ADD` is; a non-integer operand is its NIL projection, which declines
+/// here.
 fn gcd(operands: &[Plain], _: &Interpreter) -> Option<Answer> {
     let [a, b] = operands else { return None };
+    let work = match (a, b) {
+        (Plain::Num(x), Plain::Num(y)) => {
+            use crate::interpreter::runtime_limits::{binary_numeric_work, fraction_work_bits};
+            binary_numeric_work(fraction_work_bits(x), fraction_work_bits(y))
+        }
+        _ => return None,
+    };
     // Two machine-word integers: the gcd the law computes, without the
     // `BigInt`s it reads them into. `Fraction::new` would hold the answer as
     // this same machine-word pair, so the value is the law's to the
@@ -144,7 +152,7 @@ fn gcd(operands: &[Plain], _: &Interpreter) -> Option<Answer> {
             if let Ok(g) = i64::try_from(n.unsigned_abs().gcd(&m.unsigned_abs())) {
                 return Some(Answer {
                     value: Plain::Num(crate::types::fraction::Fraction::from(g)),
-                    work: 0,
+                    work,
                     fastpath: 0,
                 });
             }
@@ -152,7 +160,10 @@ fn gcd(operands: &[Plain], _: &Interpreter) -> Option<Answer> {
     }
     let law =
         crate::interpreter::math_ops::gcd_scalar(&a.clone().into_value(), &b.clone().into_value());
-    uncharged(law.ok()?)
+    Some(Answer {
+        work,
+        ..uncharged(law.ok()?)?
+    })
 }
 
 /// `NIL?`: a plain value is never NIL (`nil_diagnostics::op_nil_check`).

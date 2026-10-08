@@ -321,29 +321,41 @@ impl Algebraic {
     /// with s = ⌊√(m·4ᵇⁱᵗˢ)⌋, √m ∈ [s, s+1]/2ᵇⁱᵗˢ; a point for m = 1.
     /// Deeper `bits` give nested, shrinking enclosures.
     pub fn bounds(&self, bits: u64) -> (Fraction, Fraction) {
+        // Summed over one common denominator and reduced once: adding the
+        // terms as `Fraction`s took a gcd per term, which made the enclosure
+        // of a wide value the dominant cost of hashing, digesting and
+        // comparing it (a stack of 2,000 512-term values took ~25 s to digest).
+        let common = self
+            .terms
+            .values()
+            .fold(BigInt::one(), |acc, c| acc.lcm(&c.denominator()));
         let scale = BigInt::one() << bits;
-        let mut lo = Fraction::new(BigInt::zero(), BigInt::one());
-        let mut hi = lo.clone();
+        let mut lo = BigInt::zero();
+        let mut hi = BigInt::zero();
         for (m, c) in &self.terms {
+            // √m ∈ [m_lo, m_hi] / 2^bits.
             let (m_lo, m_hi) = if m.is_one() {
-                let one = Fraction::new(BigInt::one(), BigInt::one());
-                (one.clone(), one)
+                (scale.clone(), scale.clone())
             } else {
                 let s = (m.clone() << (2 * bits)).sqrt();
-                (
-                    Fraction::new(s.clone(), scale.clone()),
-                    Fraction::new(s + 1, scale.clone()),
-                )
+                let s_plus = &s + 1;
+                (s, s_plus)
             };
-            let (term_lo, term_hi) = if c.numerator().is_negative() {
-                (c.mul(&m_hi), c.mul(&m_lo))
+            let (num, den) = c.to_bigint_pair();
+            let weight = num * (&common / den);
+            if weight.is_negative() {
+                lo += &weight * m_hi;
+                hi += weight * m_lo;
             } else {
-                (c.mul(&m_lo), c.mul(&m_hi))
-            };
-            lo = lo.add(&term_lo);
-            hi = hi.add(&term_hi);
+                lo += &weight * m_lo;
+                hi += weight * m_hi;
+            }
         }
-        (lo, hi)
+        let denominator = common << bits;
+        (
+            Fraction::new(lo, denominator.clone()),
+            Fraction::new(hi, denominator),
+        )
     }
 }
 

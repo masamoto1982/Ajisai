@@ -124,6 +124,22 @@ async fn fill_projects_shape_product_overflow_onto_a_space_ceiling() {
     assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
 }
 
+/// LANG.COLLECTIONS.BUDGET names JSON-DECODE beside RANGE and FILL: the
+/// members of every container in the text count together, nested ones
+/// included.
+#[tokio::test]
+async fn json_decode_projects_too_many_members_onto_a_space_ceiling() {
+    for (ceiling, reason) in [(4, Some(NilReason::SpaceExhausted)), (5, None)] {
+        let mut interp = Interpreter::new();
+        let mut limits = *interp.runtime_limits();
+        limits.max_materialized_elements = ceiling;
+        interp.set_runtime_limits(limits);
+        let result = interp.execute("'[1, 2, [3, 4]]' JSON-DECODE").await;
+        assert!(result.is_ok(), "ceiling {ceiling}: {result:?}");
+        assert_eq!(top_nil_reason(&interp), reason, "ceiling {ceiling}");
+    }
+}
+
 #[tokio::test]
 async fn fill_accepts_ordinary_shape() {
     let mut interp = Interpreter::new();

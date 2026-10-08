@@ -126,3 +126,34 @@ async fn mismatched_lengths_error() {
     let result = interp.execute("[ 1 2 3 ] [ 1 2 ] MIN").await;
     assert!(result.is_err(), "unequal lengths should not silently pair");
 }
+
+/// FLOOR and ROUND over a Vector holding an irrational lane answer each lane
+/// exactly, as they do for that irrational on its own. The flat rational
+/// route used to drop the irrational lane and abort on the short buffer.
+#[tokio::test]
+async fn floor_and_round_lift_over_irrational_lanes() {
+    use crate::test_support::top;
+    assert_eq!(top("[ 2 ] SQRT FLOOR").await, "[ 1/1 ]");
+    assert_eq!(top("[ 2 8 ] SQRT FLOOR").await, "[ 1/1 2/1 ]");
+    assert_eq!(top("[ 2 3 ] SQRT ROUND").await, "[ 1/1 2/1 ]");
+    assert_eq!(top("[ 4 2 ] SQRT FLOOR").await, "[ 2/1 1/1 ]");
+    assert_eq!(
+        top("[ [ 2 ] [ 3 ] ] SQRT FLOOR").await,
+        "[ [ 1/1 ] [ 1/1 ] ]"
+    );
+}
+
+/// MIN and MAX align two shapes at the innermost axis, as ADD does
+/// (LANG.COLLECTIONS.LIFT): `[ 0 5 ]` is a row reused down the columns of a
+/// matrix, not one value per row. A ragged Vector pairs with no Vector.
+#[tokio::test]
+async fn min_aligns_shapes_innermost_like_add() {
+    assert_eq!(
+        crate::test_support::top("[ [ 1 2 ] [ 3 4 ] ] [ 0 5 ] MIN").await,
+        "[ [ 0/1 2/1 ] [ 0/1 4/1 ] ]"
+    );
+    assert_eq!(
+        crate::test_support::error_of("[ 1 [ 2 3 ] ] [ 1 1 ] MAX").await,
+        "shapeMismatch"
+    );
+}

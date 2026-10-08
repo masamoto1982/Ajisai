@@ -384,3 +384,81 @@ fn a_pure_declaration_over_vector_literal_symbols_is_verified() {
         assert_eq!(exit_code(&source), 0, "body: {body}");
     }
 }
+
+// -----------------------------------------------------------------
+// A name the execution-free pass cannot bind to one body: the check must
+// not verify (or refute) a declaration against whichever body it happened
+// to register last.
+// -----------------------------------------------------------------
+
+#[test]
+fn a_redefined_word_cannot_be_verified_against_its_last_body() {
+    // The `W` the call runs prints, divides by zero and leaves three values;
+    // the last body registered is `[ 1 ]`, which the declaration matches.
+    let source = "#:contract W purity=pure partiality=total inputs=0 outputs=1\n\
+                  [ 'x' PRINT 1 0 DIV 7 8 ] 'W' DEF\nW\n[ 1 ] 'W' DEF";
+    let decls = contract_decls(source);
+    assert_eq!(decls["outcome"], "nil", "{decls}");
+    assert_eq!(
+        decls["declarations"][0]["reason"],
+        "gap.unmodelledControlFlow"
+    );
+    assert_eq!(exit_code(source), 0);
+}
+
+#[test]
+fn a_word_defined_by_a_def_the_check_does_not_read_is_a_note_not_a_violation() {
+    // Runs fine (`1/1`); the static pass never sees the DEF inside the block.
+    let source = "#:contract W inputs=0 outputs=1\n[ [ 1 ] 'W' DEF ] EXEC\nW";
+    let decls = contract_decls(source);
+    assert_eq!(decls["outcome"], "nil", "{decls}");
+    assert_eq!(exit_code(source), 0);
+    // A name no DEF anywhere binds is still a violation.
+    assert_eq!(exit_code("#:contract W inputs=0 outputs=1\n1"), 1);
+}
+
+/// A Core dependency of variable arity makes the inferred flow `variable`,
+/// which proves nothing about a body that always feeds it the same operands:
+/// `[ 2 COLLECT ]` is 2 -> 1 and `[ [ 1 2 ] EXEC ]` is 0 -> 2.
+#[tokio::test]
+async fn a_variable_arity_dependency_cannot_refute_a_declared_count() {
+    for (body, decl, args) in [
+        ("2 COLLECT", "inputs=2 outputs=1", "3 4"),
+        ("[ 1 2 ] EXEC", "inputs=0 outputs=2", ""),
+    ] {
+        let source = format!("#:contract W {decl}\n[ {body} ] 'W' DEF\n{args} W");
+        let decls = contract_decls(&source);
+        assert_eq!(decls["outcome"], "nil", "{body}: {decls}");
+        assert_eq!(exit_code(&source), 0, "{body}");
+        let response = crate::agent::api::compute(&source, Default::default())
+            .await
+            .to_json();
+        assert_eq!(response["status"], "ok", "{body}: {response}");
+    }
+}
+
+/// `CONTRACT` reads its operand and never runs it, so asking for a printing
+/// block's contract leaves the asking Word pure.
+#[test]
+fn contracts_operand_does_not_make_the_caller_effectful() {
+    let source = "#:contract W purity=pure determinism=stateRelative partiality=projecting\n\
+                  [ [ 'x' PRINT ] CONTRACT 'purity' GET ] 'W' DEF\nW";
+    let decls = contract_decls(source);
+    assert_eq!(decls["outcome"], "value", "{decls}");
+    assert_eq!(exit_code(source), 0);
+}
+
+#[test]
+fn a_call_to_a_redefined_word_does_not_prove_its_last_bodys_arity() {
+    // The `W` that `ADD` follows pushes one value, so this underflows.
+    let response = crate::agent::api::predict_outcomes(
+        "[ 1 ] 'W' DEF W ADD [ 1 2 ] 'W' DEF",
+        crate::agent::api::ComputeOptions::default(),
+    )
+    .to_json();
+    let outcomes = response["outcomes"].as_array().unwrap();
+    assert!(
+        outcomes.iter().any(|v| v == "error:stackUnderflow"),
+        "{outcomes:?}"
+    );
+}

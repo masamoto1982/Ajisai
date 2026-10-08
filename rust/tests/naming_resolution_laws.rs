@@ -207,7 +207,15 @@ fn a_binding_and_a_word_may_not_share_a_name() {
         );
     }
     assert!(run_err("[ 1 ] 'Q' DEF 5 'Q' BIND").contains("User Word"));
-    assert!(run_err("5 'T' BIND [ 1 ] 'T' DEF").contains("bound in this frame"));
+    assert!(run_err("5 'T' BIND [ 1 ] 'T' DEF").contains("bound in a live frame"));
+}
+
+/// The refusal sees past a Word call's barrier. A `DEF` run inside a Word
+/// must not take a name the caller holds: once the call returns, that name
+/// would be a binding and a Word at once.
+#[test]
+fn a_def_inside_a_word_may_not_take_a_callers_binding() {
+    assert!(run_err("[ [ 7 ] 'X' DEF ] 'MK' DEF 5 'X' BIND MK").contains("bound in a live frame"));
 }
 
 /// **Destructuring is exact.** A Vector longer than the name list would drop
@@ -217,6 +225,7 @@ fn a_binding_and_a_word_may_not_share_a_name() {
 fn destructuring_requires_one_name_per_element() {
     assert!(!run_err("[ 1 2 3 ] [ 'W' 'B' ] BIND").is_empty());
     assert!(!run_err("[ 1 ] [ 'W' 'B' ] BIND").is_empty());
+    assert!(run_err("1 [ ] BIND").contains("non-Vector"));
     assert_eq!(obs("[ 1 2 3 ] [ 'A' 'B' 'C' ] BIND C A ADD"), vec!["4/1"]);
 }
 

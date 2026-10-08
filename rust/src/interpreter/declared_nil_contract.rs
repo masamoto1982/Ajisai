@@ -221,6 +221,22 @@ impl Interpreter {
             return None;
         }
 
+        // The lift loops over every lane in one step and builds a container
+        // of the results: a copy of the widest lifted operand, charged before
+        // any lane runs. Each lane's own work is the Word's, charged by it.
+        let lanes = window
+            .iter()
+            .zip(&lifted)
+            .filter(|(operand, lifts)| **lifts && is_container(operand))
+            .map(|(operand, _)| {
+                super::collection_meter::element_cost(operand).copies(operand.len())
+            })
+            .max()
+            .unwrap_or(0);
+        if let Err(e) = super::collection_meter::charge(self, lanes) {
+            return Some(Err(e));
+        }
+
         let start = self.stack.len() - arity;
         let operands: Vec<Value> = self.stack.drain(start..).collect();
         let refs: Vec<&Value> = operands.iter().collect();

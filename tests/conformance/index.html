@@ -289,6 +289,28 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-vector-singleton-broadcast-irrational-lanes" data-category="core">
+  <h3>A singleton vector broadcasts across irrational lanes, in either position</h3>
+  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 2 ] MUL [ 2 ] [ 2 3 ] [ SQRT ] MAP MUL</pre>
+  <pre class="ajisai-expect-result">[ 2/1*sqrt(2) 2/1*sqrt(3) ] [ 2/1*sqrt(2) 2/1*sqrt(3) ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vector-shapes-align-innermost-irrational" data-category="core">
+  <h3>Shapes align at the innermost axis whether the lanes are rational or not</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] ADD [ [ 0 0 ] [ 0 0 ] ] [ 2 3 ] [ SQRT ] MAP ADD</pre>
+  <pre class="ajisai-expect-result">[ [ 11/1 22/1 ] [ 13/1 24/1 ] ] [ [ sqrt(2) sqrt(3) ] [ sqrt(2) sqrt(3) ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vector-ragged-pair-errors" data-category="core">
+  <h3>A ragged vector does not pair with a vector, even one of its length</h3>
+  <pre class="ajisai-source">[ 1 [ 2 3 ] ] [ 1 1 ] MUL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">got a ragged one</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-get-negative-index" data-category="core">
   <h3>GET with a negative index counts from the end</h3>
   <pre class="ajisai-source">[ 10 20 30 ] -1 GET</pre>

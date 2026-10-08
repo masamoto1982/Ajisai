@@ -20,7 +20,8 @@
 //! longer be read off which character opened the group. It is still answerable,
 //! from the fixed-position-operand convention the higher-order Words share: a
 //! `[ ... ]` immediately followed by one of `MAP`/`FILTER`/`FOLD`/`SCAN` (or
-//! `EXEC`/`CONTRACT`) *is* that Word's code operand, and that Word will run it.
+//! `EXEC`) *is* that Word's code operand, and that Word will run it. `CONTRACT`
+//! takes a block the same way but never runs it, so its operand is data here.
 //! Any other `[ ... ]` is inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT'
 //! 'b' ]`, PRINT never resolves or runs, so widening the accumulator with it
 //! would be a false `error` — a body that never prints inferred `effectful`
@@ -194,21 +195,21 @@ impl LiteralContext {
 
 /// Canonical names of Words whose immediately preceding fixed-position
 /// operand is code they actually execute — the higher-order Words, with
-/// `EXEC`/`CONTRACT` taking their sole operand the same way.
+/// `EXEC` taking its sole operand the same way.
+///
+/// `CONTRACT` is absent too: it infers its operand's contract and never
+/// evaluates it, so calling it carries none of the operand's effects
+/// (LANG.CONTRACT.CHECK) — `[ [ 'x' PRINT ] CONTRACT ]` is pure.
 ///
 /// `SELECT` is deliberately absent: its operands are values, not code. That
 /// is the whole of the difference between it and the `COND` it replaced, and
 /// it is why branching no longer needs a special case anywhere in this file.
 fn consumes_preceding_as_code(canonical_name: &str) -> bool {
-    matches!(
-        canonical_name,
-        "MAP" | "FILTER" | "FOLD" | "SCAN" | "EXEC" | "CONTRACT"
-    )
+    matches!(canonical_name, "MAP" | "FILTER" | "FOLD" | "SCAN" | "EXEC")
 }
 
 /// Whether the Symbol at `idx`, named `canonical_name`, runs code this walk
-/// never read: a Word that runs its operand as code (not `CONTRACT`, which
-/// only reads it) whose operand is anything but the `[ ... ]` literal written
+/// never read: a Word that runs its operand as code whose operand is anything but the `[ ... ]` literal written
 /// immediately before it. A Vector taken out of data (`[ [ [ 42 PRINT ] ] ]
 /// 0 GET EXEC`), a bound name, or a dependency's result are all code the walk
 /// saw only as inert data, so it cannot say what running them does.
@@ -218,7 +219,7 @@ pub(super) fn runs_unread_code(
     idx: usize,
     canonical_name: &str,
 ) -> bool {
-    if !consumes_preceding_as_code(canonical_name) || canonical_name == "CONTRACT" {
+    if !consumes_preceding_as_code(canonical_name) {
         return false;
     }
     let read_literal = idx.checked_sub(1).is_some_and(|prev| {

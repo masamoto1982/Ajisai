@@ -304,6 +304,25 @@ pub(crate) fn is_string_token_content(content: &str) -> bool {
     )
 }
 
+/// `text` cut after every quote that whitespace follows, so that no piece
+/// holds a quote right before whitespace and each piece is one String
+/// literal: `a' b` is `a'` and ` b`.
+pub(crate) fn string_literal_pieces(text: &str) -> Vec<String> {
+    let mut pieces = Vec::new();
+    let mut current = String::new();
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        current.push(c);
+        if c == '\'' && chars.peek().is_some_and(|next| next.is_whitespace()) {
+            pieces.push(std::mem::take(&mut current));
+        }
+    }
+    if !current.is_empty() {
+        pieces.push(current);
+    }
+    pieces
+}
+
 /// The content of the string literal `text` opens with its quote, or `None`
 /// when no quote closes it.
 ///

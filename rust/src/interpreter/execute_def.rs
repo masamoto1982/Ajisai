@@ -215,10 +215,12 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     // The other half of `BIND`'s refusal to take a Word's name. Together they
     // keep the two name spaces disjoint at every moment, so a reader never has
-    // to know which of the two a name resolved through.
-    if interp.lookup_binding(&upper_name).is_some() {
+    // to know which of the two a name resolved through. Every live frame
+    // counts, not only the one `DEF` runs in: a binding in a caller past a
+    // User Word's barrier is in scope again the moment the call returns.
+    if interp.binding_exists_beyond_barrier(&upper_name) {
         return Err(AjisaiError::declared("nameConflict", format!(
-            "Cannot define '{}': the name is bound in this frame. A binding and a Word may not share a name.",
+            "Cannot define '{}': the name is bound in a live frame. A binding and a Word may not share a name.",
             upper_name
         )));
     }
@@ -287,6 +289,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         ));
     }
 
+    // The work below walks the whole dictionary; it is paid for here, the
+    // last refusal, so a refused definition changes nothing.
+    crate::interpreter::collection_meter::charge_dictionary_change(interp, tokens.len())?;
+
     // Nothing below refuses.
 
     if let Some(warning) =
@@ -305,10 +311,14 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     // Content store: share one stored body across textually identical
-    // definitions so copying a word group does not duplicate its code.
+    // definitions so copying a word group does not duplicate its code. A
+    // stored body is shared only when it is these very tokens: the key is a
+    // digest, and a body carrying a value whole keys it by a value digest
+    // that does not separate every pair of algebraic values.
     let body_key = crate::interpreter::word_identity::body_content_key(tokens);
     let body: Arc<[Token]> = match interp.body_store.get(&body_key) {
-        Some(shared) => shared.clone(),
+        Some(shared) if shared[..] == tokens[..] => shared.clone(),
+        Some(_) => tokens.into(),
         None => {
             let arc: Arc<[Token]> = tokens.into();
             interp.body_store.insert(body_key, arc.clone());
@@ -448,6 +458,8 @@ fn delete_named(interp: &mut Interpreter, val: &Value) -> Result<()> {
             ),
         ));
     }
+
+    crate::interpreter::collection_meter::charge_dictionary_change(interp, 0)?;
 
     // The index holds exactly the edges the definitions hold (`DEF` records
     // both directions, a forward reference included once its target is

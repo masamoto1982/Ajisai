@@ -178,3 +178,89 @@ describe('tokenizeWithOffsets', () => {
         }
     });
 });
+
+// Ctrl+Enter pressed while a piece is still running used to read the index
+// that piece had not advanced yet, and ran it a second time; and a piece still
+// running when Run ended its step mode advanced the step mode started after.
+describe('a step still running', () => {
+    const harness = (source: () => string) => {
+        const executed: string[] = [];
+        const held: Array<(completed: boolean) => void> = [];
+        let holding = true;
+        const executor = createStepExecutor({
+            extractEditorValue: source,
+            showInfo: () => { /* not observed */ },
+            highlightSourceRange: () => { /* not observed */ },
+            executeSource: (code) => {
+                executed.push(code);
+                return holding ? new Promise<boolean>(resolve => held.push(resolve)) : Promise.resolve(true);
+            }
+        });
+        return { executor, executed, held, release: () => { holding = false; } };
+    };
+
+    test('ignores Ctrl+Enter until it has answered', async () => {
+        const h = harness(() => '1 2 ADD');
+        const first = h.executor.executeStep();
+        const pressedAgain = h.executor.executeStep();
+        h.held.forEach(resolve => resolve(true));
+        await Promise.all([first, pressedAgain]);
+        h.release();
+        await h.executor.executeStep();
+        await h.executor.executeStep();
+        expect(h.executed).toEqual(['1', '2', 'ADD']);
+    });
+
+    test('does not advance a step mode started after its own ended', async () => {
+        let source = '10 20';
+        const h = harness(() => source);
+        const old = h.executor.executeStep();
+        h.executor.reset();
+        source = '1 2 3';
+        const fresh = h.executor.executeStep();
+        h.held[0]!(true);
+        await old;
+        h.held[1]!(true);
+        await fresh;
+        h.release();
+        await h.executor.executeStep();
+        expect(h.executed).toEqual(['10', '1', '2']);
+    });
+});
+
+// Step mode runs each piece as a program of its own, so it must not give a
+// program another meaning than Run does.
+describe('what a stepped program means', () => {
+    // A binding lasts for the rest of its frame, and the frame ends with the
+    // piece: stepped, `N` was an unknown word by the time it was read.
+    test('refuses a program that binds a name, rather than stepping it', async () => {
+        const { executor, executed, info } = setup("5 'N' BIND N N ADD");
+        await executor.executeStep();
+        expect(executed).toEqual([]);
+        expect(executor.isActive()).toBe(false);
+        expect(info.at(-1)).toMatch(/BIND/);
+    });
+
+    test('a BIND inside a vector or a string is not a binding at the top level', async () => {
+        const { executor, executed } = setup("[ 'N' BIND ] 'BIND' PRINT");
+        await executor.executeStep();
+        expect(executed).toEqual(["[ 'N' BIND ]"]);
+    });
+
+    test('runs a #:contract line with the DEF it describes', async () => {
+        const source = "#:contract DOUBLE inputs=1 outputs=1 purity=pure\n[ [ 2 ] MUL ] 'DOUBLE' DEF";
+        const { executor, executed } = setup(source);
+        for (let step = 0; step < 3; step++) await executor.executeStep();
+        expect(executed).toEqual([
+            '[ [ 2 ] MUL ]',
+            "'DOUBLE'",
+            '#:contract DOUBLE inputs=1 outputs=1 purity=pure\nDEF'
+        ]);
+    });
+
+    test('a plain comment still is not a step, and travels with nothing', () => {
+        const tokens = tokenizeWithOffsets("# note\n[ 1 ] 'ONE' DEF");
+        expect(tokens.map((t) => t.text)).toEqual(['[ 1 ]', "'ONE'", 'DEF']);
+        expect(tokens.every((t) => t.contracts === undefined)).toBe(true);
+    });
+});

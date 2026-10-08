@@ -199,7 +199,7 @@ async fn a_recovery_phrase_has_a_fixed_arity() {
 //
 // `{ }` spells a Record and never code, so a `[ ... ]` alone cannot say whether its
 // interior is inert data or a fixed-position code operand a higher-order
-// Word (`MAP`/`FILTER`/`FOLD`/`SCAN`/`EXEC`/`CONTRACT`) will
+// Word (`MAP`/`FILTER`/`FOLD`/`SCAN`/`EXEC`) will
 // actually run. `classify_vector_positions` answers this positionally: a
 // `[ ... ]` immediately followed by one of those Words is code, everything
 // else is data, and a `Data` ancestor forces `Data` all the way down. Every
@@ -235,6 +235,23 @@ async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
             "body: {body}"
         );
     }
+}
+
+#[tokio::test]
+async fn contracts_operand_block_is_read_not_run() {
+    // `CONTRACT` never evaluates its operand, so a Word that asks for the
+    // contract of a printing block prints nothing and is pure.
+    let source = "[ [ 'x' PRINT ] CONTRACT 'purity' GET ] 'W' DEF";
+    let contract = contract_for(source, "W").await;
+    assert_eq!(contract.purity, ContractPurity::Pure);
+    assert!(contract.effects.is_empty(), "{:?}", contract.effects);
+    assert_eq!(contract.confidence, ContractConfidence::Complete);
+    assert_eq!(
+        crate::test_support::run(&format!("{source} W"))
+            .await
+            .output_buffer,
+        "Defined word: W\n"
+    );
 }
 
 #[tokio::test]
@@ -291,4 +308,14 @@ async fn a_bound_name_reads_as_one_value_not_an_unresolved_word() {
         assert_eq!(contract.flow, fixed(1, 1), "`{src}`");
         assert!(contract.gaps.is_empty(), "`{src}`: {:?}", contract.gaps);
     }
+}
+
+/// A body pushing more values than `u16` counts has no statable arity:
+/// saturating reported `outputs=65535` as complete for 65,537 pushes.
+#[tokio::test]
+async fn an_arity_past_u16_is_a_gap_not_a_saturated_count() {
+    let body = vec!["1"; 65_537].join(" ");
+    let contract = contract_for(&format!("[ {body} ] 'W' DEF"), "W").await;
+    assert_eq!(contract.flow, ContractFlow::Dynamic);
+    assert_eq!(contract.confidence, ContractConfidence::Conservative);
 }

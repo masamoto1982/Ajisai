@@ -36,6 +36,9 @@ const RUN_STATUS_TEXT =
 
 export interface ExecutionCallbacks {
     readonly extractEditorValue: () => string;
+    // The editor's text as it stands, read without tidying it: a Run clears
+    // the editor only while it still holds the source that was submitted.
+    readonly readEditorValue: () => string;
     readonly clearEditor: (switchView?: boolean) => void;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showFoldedInfo: (label: string, text: string) => void;
@@ -67,6 +70,11 @@ export interface ExecutionController {
     // `Ctrl+Alt+L`, which supplies the word under the cursor — see
     // `lookupWord` below for why the answer always goes to Output.
     readonly lookupWord: (name: string) => void;
+    // Run `task` once every Run, Step and host edit queued before it has
+    // finished, so it neither runs against a snapshot a pending run will
+    // overwrite nor is undone when that run commits. Stack clear, Delete,
+    // Import and the startup restore all go through it.
+    readonly runExclusive: <T>(task: () => Promise<T> | T) => Promise<T>;
 }
 
 export const createExecutionController = (
@@ -75,6 +83,7 @@ export const createExecutionController = (
 ): ExecutionController => {
     const {
         extractEditorValue,
+        readEditorValue,
         clearEditor,
         showInfo,
         showFoldedInfo,
@@ -187,10 +196,14 @@ export const createExecutionController = (
     // nor the dictionary — a failed one, whose state `syncInterpreterState`
     // never applied, or one that only printed — has nothing to save. Every
     // run used to rebuild both panels and serialize the session regardless.
+    //
+    // `submittedSource` is the editor text a Run was started from. A run that
+    // succeeds clears the editor only if it still holds that text: whatever
+    // was typed while the run was going is the next program, not this one.
     const applyExecutionResult = async (
         context: string,
         outcome: ExecutionOutcome,
-        clearEditorOnSuccess: boolean
+        submittedSource: string | null
     ): Promise<boolean> => {
         let changes: ExecutionSurfaceChanges = OUTPUT_ONLY_CHANGE;
         let after: ExecutionStateView | null = null;
@@ -211,7 +224,9 @@ export const createExecutionController = (
             };
             reportExecutionResult(result, checkRunLeftOwnNil(before, after));
             succeeded = !isFailure(result);
-            if (succeeded && clearEditorOnSuccess) clearEditor(false);
+            if (succeeded && submittedSource !== null && readEditorValue() === submittedSource) {
+                clearEditor(false);
+            }
             changes = detectExecutionSurfaceChanges(before, after, result);
         } catch (error) {
             resolveExecutionException(context, error, showInfo, showError);
@@ -225,38 +240,65 @@ export const createExecutionController = (
         return succeeded;
     };
 
+    // The session is used by one operation at a time. A run is handed a
+    // snapshot of the session and its answer replaces the session whole, so a
+    // second run started before the first answered was handed the same
+    // snapshot and its answer overwrote the first's, and a Stack clear,
+    // Delete or Import made in between was undone when the run committed.
+    // Each operation therefore starts once the one before it has finished —
+    // at once when there is none.
+    let sessionTail: Promise<void> = Promise.resolve();
+    let pendingOperations = 0;
+    const runExclusive = <T>(task: () => Promise<T> | T): Promise<T> => {
+        const start = async (): Promise<T> => task();
+        const operation = pendingOperations === 0 ? start() : sessionTail.then(start);
+        pendingOperations += 1;
+        sessionTail = operation
+            .then(() => undefined, () => undefined)
+            .then(() => { pendingOperations -= 1; });
+        return operation;
+    };
+
+    // Abort and Reset also drop the runs still waiting for their turn: Escape
+    // stops what was asked for, not only the part of it already started.
+    let runGeneration = 0;
+
     // One execution path: a run is one task on one worker, and its answer —
     // or the exception that stood in for one — goes to `applyExecutionResult`.
-    const executeSource = async (
+    const executeSource = (
         context: string,
         code: string,
-        clearEditorOnSuccess: boolean
+        submittedSource: string | null
     ): Promise<boolean> => {
-        let outcome: ExecutionOutcome;
-        showRunStatus(RUN_STATUS_TEXT);
-        try {
-            // The main thread's own view of the run's start, for the
-            // before/after comparison; the worker is handed the lossless
-            // snapshot instead, and the dictionary is read once for both.
-            const before: ExecutionStateView = {
-                stack: interpreter.collect_stack(),
-                userWords: collectUserWords(interpreter)
-            };
-            const snapshot = createExecutionSnapshot(interpreter, before.userWords);
-            outcome = { before, result: await WORKER_MANAGER.execute(code, snapshot) };
-        } catch (error) {
-            outcome = { error };
-        } finally {
-            showRunStatus(null);
-        }
-        return applyExecutionResult(context, outcome, clearEditorOnSuccess);
+        const generation = runGeneration;
+        return runExclusive(async () => {
+            if (generation !== runGeneration) return false;
+            let outcome: ExecutionOutcome;
+            showRunStatus(RUN_STATUS_TEXT);
+            try {
+                // The main thread's own view of the run's start, for the
+                // before/after comparison; the worker is handed the lossless
+                // snapshot instead, and the dictionary is read once for both.
+                const before: ExecutionStateView = {
+                    stack: interpreter.collect_stack(),
+                    userWords: collectUserWords(interpreter)
+                };
+                const snapshot = createExecutionSnapshot(interpreter, before.userWords);
+                outcome = { before, result: await WORKER_MANAGER.execute(code, snapshot) };
+            } catch (error) {
+                outcome = { error };
+            } finally {
+                showRunStatus(null);
+            }
+            return applyExecutionResult(context, outcome, submittedSource);
+        });
     };
 
     const stepExecutor: StepExecutor = createStepExecutor({
         extractEditorValue,
         showInfo,
         highlightSourceRange,
-        executeSource: (code) => executeSource('StepExecutor', code, false)
+        executeSource: (code) => executeSource('StepExecutor', code, null)
     });
 
     const executeCode = async (code: string): Promise<void> => {
@@ -264,12 +306,13 @@ export const createExecutionController = (
 
         stepExecutor.reset();
         showInfo('Executing...', false);
-        await executeSource('ExecController', code, true);
+        await executeSource('ExecController', code, code);
     };
 
     const executeReset = async (): Promise<void> => {
         try {
             console.log('[ExecController] Executing full reset');
+            runGeneration += 1;
             stepExecutor.reset();
             await WORKER_MANAGER.resetAllWorkers();
             const result = interpreter.reset();
@@ -291,6 +334,7 @@ export const createExecutionController = (
     // replaced, exactly as the wall-clock guard does — and the run answers
     // through `applyExecutionResult` like any other that did not complete.
     const abortExecution = (): void => {
+        runGeneration += 1;
         WORKER_MANAGER.abortAll();
         stepExecutor.abort();
     };
@@ -301,6 +345,7 @@ export const createExecutionController = (
         executeStep: stepExecutor.executeStep,
         checkIsStepModeActive: stepExecutor.isActive,
         abortExecution,
-        lookupWord
+        lookupWord,
+        runExclusive
     };
 };

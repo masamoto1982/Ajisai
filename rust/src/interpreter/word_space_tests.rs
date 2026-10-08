@@ -38,6 +38,17 @@ async fn input_operand_range_is_unbounded_and_exact() {
 }
 
 #[tokio::test]
+async fn one_literal_operand_does_not_pin_a_range_or_fill() {
+    // The literal is only the top operand; the caller's value underneath
+    // still sets the length.
+    for (src, name) in [("[ 10 RANGE ] 'R' DEF", "R"), ("[ 0 FILL ] 'Z' DEF", "Z")] {
+        let (class, exact) = space_of(src, name).await;
+        assert_eq!(class, SpaceClass::Unbounded, "{src}");
+        assert!(exact, "{src}");
+    }
+}
+
+#[tokio::test]
 async fn literal_operand_fill_is_const_but_input_fill_is_unbounded() {
     let (lit_class, lit_exact) = space_of("[ [ 2 2 ] 0 FILL ] 'F' DEF", "F").await;
     assert_eq!(lit_class, SpaceClass::Const);

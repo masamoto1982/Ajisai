@@ -10,7 +10,7 @@ mod tests;
 pub use structure::{op_collect, op_concat, op_range, op_reverse};
 
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
+use crate::interpreter::value_extraction_helpers::{extract_position_from_value, normalize_index};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
@@ -87,14 +87,14 @@ where
     }
 }
 
-/// `extract_integer_from_value`, with a structurally malformed index operand
+/// `extract_position_from_value`, with a structurally malformed index operand
 /// reclassified as the declared `invalidInteger` — GET's own condition for "not
 /// itself a well-formed index (non-integer, wrong shape)", distinct from
 /// `indexOutOfBounds` (a well-formed index outside bounds, which is a NIL
 /// projection, not this ERROR). The message names an index, which is what
 /// this caller of the shared helper knows the integer was for.
 fn require_index_operand(value: &Value) -> Result<i64> {
-    extract_integer_from_value(value).map_err(|e| {
+    extract_position_from_value(value).map_err(|e| {
         AjisaiError::declared(
             "invalidInteger",
             format!("expected a well-formed index, got {}", e.got),
@@ -286,7 +286,7 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
 /// on a count that is not an integer, same projection past the end.
 fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
-    let count = match extract_integer_from_value(&count_val) {
+    let count = match extract_position_from_value(&count_val) {
         Ok(v) => v,
         // `invalidInteger`: TAKE's own declared condition for a count operand
         // that isn't a well-formed integer.
@@ -302,7 +302,7 @@ fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
     // Priced on what the answer copies, not on the vector it was handed:
     // taking 100 elements out of 100,000 copies 100 of them, and dropping 100
     // copies the other 99,900.
-    let wanted = count.unsigned_abs() as usize;
+    let wanted = usize::try_from(count.unsigned_abs()).unwrap_or(usize::MAX);
     if let Err(e) = crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| {
         split.copied(len, wanted)
     }) {

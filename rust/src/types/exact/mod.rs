@@ -15,5 +15,5 @@ pub mod squarefree;
 pub mod value;
 
 pub use algebraic::{Algebraic, AlgebraicResult};
-pub use power::PowOutcome;
+pub use power::{PowOutcome, PowPlan, PowerSize};
 pub use value::ExactReal;

@@ -41,12 +41,13 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolveAjisaiBin } from './lib/common.mjs';
 
 const SURFACES = [
   { path: 'public/docs/en/index.html', stackHeader: 'Expected value', outputHeader: 'Expected output' },
   { path: 'public/docs/ja/index.html', stackHeader: '期待値', outputHeader: '期待される出力' },
 ];
-const BINARY = 'rust/target/debug/ajisai';
+const BINARY = resolveAjisaiBin('reference-samples');
 
 const ANY_ERROR = 'error';
 const EMPTY_STACK = '—';
@@ -66,8 +67,36 @@ const cellText = (cell) =>
 
 // Whitespace is insignificant between the printed form and the CLI's, and only
 // there: this normalization is for comparing two renderings of one value, never
-// for deciding what a program means.
-const normalize = (text) => text.replace(/\s+/g, '');
+// for deciding what a program means. Inside a string literal whitespace is
+// content (`'rate not quoted'` is not `'ratenotquoted'`), so a quoted run is
+// kept verbatim; it closes on a quote followed by whitespace, a closing
+// bracket, or the end, as the literal grammar closes it (spec/grammar.json
+// stringLiteral), with the bracket allowed because a rendering may glue it.
+const normalizeStack = (text) => {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "'") {
+      let end = i + 1;
+      while (end < text.length && !(text[end] === "'" && (end + 1 === text.length || /[\s\]}]/.test(text[end + 1])))) end += 1;
+      out += text.slice(i, end + 1);
+      i = end + 1;
+    } else {
+      if (!/\s/.test(ch)) out += ch;
+      i += 1;
+    }
+  }
+  return out;
+};
+// Printed output is text, so its spaces are content too; only line-end and
+// edge whitespace, which the table cell cannot show, is ignored.
+const normalizeOutput = (text) =>
+  text
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim();
 
 const samples = [];
 const errors = [];
@@ -147,8 +176,18 @@ try {
     // report the CLI appends.
     const output = lines.slice(0, stackLine ? lines.indexOf(stackLine) : lines.length).join('\n').trim();
     const failed = stack === null;
+    // The CLI exits 0 with a stack report, or 1 with an `error:` report. Any
+    // other status, or a signal, is a crash: its text must not pass for the
+    // error a sample expects, nor for a value.
+    const crashed =
+      run.signal !== null ||
+      (failed ? run.status !== 1 || !lines.some((l) => l.startsWith('error:')) : run.status !== 0);
     const at = `${sample.path}:${sample.line}: ${sample.code.replace(/\n/g, ' ⏎ ')}`;
 
+    if (crashed) {
+      errors.push(`${at}\n  the CLI did not exit cleanly (status ${run.status}, signal ${run.signal}): ${lines[0]}`);
+      continue;
+    }
     if (sample.kind === 'error') {
       if (!failed) errors.push(`${at}\n  expected an error, got stack ${stack}`);
       continue;
@@ -162,6 +201,7 @@ try {
       continue;
     }
     const actual = sample.kind === 'output' ? output : stack;
+    const normalize = sample.kind === 'output' ? normalizeOutput : normalizeStack;
     if (normalize(actual) !== normalize(sample.expectation)) {
       errors.push(`${at}\n  expected ${sample.kind} ${sample.expectation}, got ${actual}`);
     }

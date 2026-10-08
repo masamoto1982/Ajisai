@@ -2,8 +2,11 @@ use super::{extract_vector_elements, with_stacktop_vector_target_no_arg};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_bigint_from_value;
 use crate::interpreter::Interpreter;
+use crate::types::fraction::saturating_narrow;
+use crate::types::fraction::Fraction;
 use crate::types::Value;
-use num_traits::ToPrimitive;
+use num_bigint::BigInt;
+use num_traits::{One, ToPrimitive};
 
 /// Join two vectors, lifting one level of nesting out of each.
 ///
@@ -51,12 +54,17 @@ fn concat_values(left: &Value, right: &Value) -> Value {
     Value::from_vector(elements)
 }
 
-/// One bound of `RANGE`: an integer the machine can count to. Anything else —
-/// a fraction, a String, a Boolean — names no position in an integer sequence,
-/// so it is the malformed use `invalidInteger` declares. A Vector never reaches
-/// here: `leaf` operands are lifted by the dispatcher first.
-fn parse_range_bound(bound: &Value, label: &str) -> Result<i64> {
-    let bigint = extract_bigint_from_value(bound).map_err(|_| {
+/// One bound of `RANGE`: any integer. Anything else — a fraction, a String, a
+/// Boolean — names no position in an integer sequence, so it is the malformed
+/// use `invalidInteger` declares. A Vector never reaches here: `leaf` operands
+/// are lifted by the dispatcher first.
+///
+/// An integer outside `i64` is still an integer: `2^63 2^63+2 RANGE` is three
+/// numbers, and refusing it as `invalidInteger` for its size made the answer
+/// jump from a sequence to an ERROR at a storage boundary the language does not
+/// have. How many lanes the bounds span is what the ceiling bounds.
+fn parse_range_bound(bound: &Value, label: &str) -> Result<BigInt> {
+    extract_bigint_from_value(bound).map_err(|_| {
         AjisaiError::declared(
             "invalidInteger",
             format!(
@@ -65,9 +73,6 @@ fn parse_range_bound(bound: &Value, label: &str) -> Result<i64> {
                 bound.domain_name()
             ),
         )
-    })?;
-    bigint.to_i64().ok_or_else(|| {
-        AjisaiError::declared("invalidInteger", format!("the {} is too large", label))
     })
 }
 
@@ -177,35 +182,38 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
             return Err(error);
         }
     };
-    let step: i64 = if start <= end { 1 } else { -1 };
-
+    // Count the elements in BigInt so the span arithmetic cannot overflow for
+    // any pair of bounds; a count past `u128` is past every ceiling anyway.
+    //
     // Guard against unbounded materialization before allocating. RANGE loops
     // internally, so it counts as one execution step and bypasses the
     // step-count backstop; an input like `0 9999999999999 RANGE` would
     // otherwise drive the process into an OOM abort (a WASM trap in the
-    // playground) instead of a recoverable error. Count the elements in i128
-    // so the span arithmetic cannot overflow for extreme i64 bounds.
-    let element_count = (end as i128 - start as i128).unsigned_abs() + 1;
+    // playground) instead of a recoverable error.
+    let element_count = ((&end - &start).magnitude() + 1u32).to_u128();
     // CS5: the cap is the injectable per-interpreter ceiling (folded into
     // `RuntimeLimits`), so tests can fire this guard with a tiny limit and
     // child runtimes inherit it — same behavior and message as before.
     let max_materialized = interp.runtime_limits.max_materialized_elements;
-    if element_count > max_materialized as u128 {
-        // Phase 3 (structural-memory-safety roadmap): a well-formed, finite
-        // range whose materialized length exceeds the space water level is a
-        // well-formed operation that cannot produce a value within budget. The
-        // NIL Projection Rule projects it onto a diagnosable NIL (reason
-        // `spaceExhausted`) so a pipeline can recover it with a chosen fallback,
-        // instead of a channel error that halts evaluation.
-        interp
-            .stack
-            .push(crate::interpreter::space_projection::space_exhausted_nil(
-                "RANGE",
-                max_materialized,
-                Some(element_count),
-            ));
-        return Ok(());
-    }
+    let element_count = match element_count {
+        Some(count) if count <= max_materialized as u128 => count,
+        _ => {
+            // Phase 3 (structural-memory-safety roadmap): a well-formed, finite
+            // range whose materialized length exceeds the space water level is a
+            // well-formed operation that cannot produce a value within budget. The
+            // NIL Projection Rule projects it onto a diagnosable NIL (reason
+            // `spaceExhausted`) so a pipeline can recover it with a chosen fallback,
+            // instead of a channel error that halts evaluation.
+            interp
+                .stack
+                .push(crate::interpreter::space_projection::space_exhausted_nil(
+                    "RANGE",
+                    max_materialized,
+                    element_count,
+                ));
+            return Ok(());
+        }
+    };
 
     // Materializing an element costs what copying one costs: the elements are
     // freshly built rather than cloned, but they are the same boxed values, and
@@ -219,22 +227,46 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
 
-    // Built as columns, not as boxed lanes. `parse_range_bound` answers in
-    // `i64`, so *every* value RANGE can produce is an `i64` with denominator 1
-    // and no lane absent — a 1-D pure-integer dense tensor is not a guess about
-    // this result, it is what the result is. Building `Vec<Value>` instead
-    // boxed each lane into a 96-byte `Value` wrapping a 64-byte `Fraction` to
-    // carry 8 bytes of integer, and then every Word downstream had to decline
-    // its dense fast path because the dense representation had been thrown away
-    // at construction: `0 262143 RANGE` spent 9.9 ms laying out 25 MB to
-    // describe 2 MB of numbers.
+    let count = element_count as usize;
+    let ascending = start <= end;
+
+    // Bounds past `i64` build their lanes as exact integers, one boxed value
+    // each: the columns below hold only `i64`.
+    let (Some(start), Some(_)) = (start.to_i64(), end.to_i64()) else {
+        let step = if ascending {
+            BigInt::one()
+        } else {
+            -BigInt::one()
+        };
+        let mut lanes = Vec::with_capacity(count);
+        let mut current = start;
+        for _ in 0..count {
+            lanes.push(Value::from_fraction(Fraction::new(
+                current.clone(),
+                BigInt::one(),
+            )));
+            current += &step;
+        }
+        interp.stack.push(Value::from_vector(lanes));
+        return Ok(());
+    };
+    let step: i64 = if ascending { 1 } else { -1 };
+
+    // Built as columns, not as boxed lanes. Within `i64` bounds *every* value
+    // RANGE can produce is an `i64` with denominator 1 and no lane absent — a
+    // 1-D pure-integer dense tensor is not a guess about this result, it is
+    // what the result is. Building `Vec<Value>` instead boxed each lane into a
+    // 96-byte `Value` wrapping a 64-byte `Fraction` to carry 8 bytes of
+    // integer, and then every Word downstream had to decline its dense fast
+    // path because the dense representation had been thrown away at
+    // construction: `0 262143 RANGE` spent 9.9 ms laying out 25 MB to describe
+    // 2 MB of numbers.
     //
     // `element_count` is exact (`|end - start| + 1` counts the lanes the
     // comparison loops below used to visit), so the count drives the loop and
     // the bound comparison is gone with it. `saturating_add` matters only on the
     // final, unused step past the last lane, where `current += step` could
     // overflow `i64` for an extreme bound; the lanes themselves are unchanged.
-    let count = element_count as usize;
     let mut numerators = Vec::with_capacity(count);
     let mut current = start;
     for _ in 0..count {
@@ -262,8 +294,12 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let count: usize = match count_bigint.to_usize() {
-        Some(c) => c,
+    // Read as a `u64` on every target. A count a 32-bit `usize` cannot hold is
+    // still a count — more values than any stack holds — so it saturates into
+    // the underflow below instead of being declined as `invalidInteger` on
+    // wasm32 alone.
+    let count: usize = match count_bigint.to_u64() {
+        Some(c) => saturating_narrow(c),
         None => {
             let got = crate::types::display::describe_operand(&count_val);
             interp.stack.push(count_val);

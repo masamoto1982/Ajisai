@@ -3,7 +3,9 @@
 //! lifting every arithmetic Word shares (LANG.VALUES.EXACT,
 //! LANG.COLLECTIONS.LIFT).
 
-use crate::test_support::{error_of, top};
+use crate::error::{AjisaiError, ResourceLimit};
+use crate::interpreter::runtime_limits::RuntimeLimits;
+use crate::test_support::{charged_by, error_of, top, top_nil_reason, with_limits};
 
 #[tokio::test]
 async fn pow_stays_exact_where_the_field_holds_the_answer() {
@@ -115,4 +117,139 @@ async fn the_numeric_words_lift_over_records() {
         top("[ 'a' ] [ 4 ] RECORD 1/2 POW").await,
         "[ 'a' ] [ 2/1 ] RECORD"
     );
+}
+
+// ── POW and GCD are on the work meter and under the size ceilings ──────
+
+/// The product of the primes below 200, a 272-bit square-free integer: its
+/// root is one term with coefficient 1, so only the radicand says how wide
+/// the root's powers are.
+const PRIMORIAL_200: &str =
+    "7799922041683461553249199106329813876687996789903550945093032474868511536164700810";
+
+/// What `source` leaves on top under `limits`: `Ok(Some(reason))` for a
+/// reasoned NIL, `Ok(None)` for any other value, or the error it raised.
+async fn under(limits: RuntimeLimits, source: &str) -> Result<Option<String>, AjisaiError> {
+    let mut interp = with_limits(limits);
+    interp.execute(source).await?;
+    Ok(top_nil_reason(&interp).map(|reason| reason.as_protocol_str().to_string()))
+}
+
+fn bits(max_bigint_bits: u64) -> RuntimeLimits {
+    RuntimeLimits {
+        max_bigint_bits,
+        ..RuntimeLimits::default()
+    }
+}
+
+fn terms(max_algebraic_terms: usize) -> RuntimeLimits {
+    RuntimeLimits {
+        max_algebraic_terms,
+        ..RuntimeLimits::default()
+    }
+}
+
+/// `POW` is repeated multiplication (LANG.VALUES.EXACT), and its contract
+/// prices it as the products it is. It was charged nothing, so a power was
+/// the one way to build a wide number the work meter never saw.
+#[tokio::test]
+async fn pow_is_charged_as_the_products_it_performs() {
+    assert!(charged_by("3 2 POW").await > 0, "a power is work");
+    assert!(
+        charged_by("3 20000 POW").await > charged_by("3 2000 POW").await,
+        "a wider power costs more"
+    );
+    assert!(
+        charged_by("[ 3 3 3 3 ] 20000 POW").await >= 4 * charged_by("3 20000 POW").await,
+        "every lane is a power of its own"
+    );
+    assert!(
+        charged_by("2 SQRT 3 SQRT ADD 5 SQRT ADD 40 POW").await
+            > charged_by("2 SQRT 3 SQRT ADD 5 SQRT ADD 2 POW").await,
+        "an algebraic power is charged for its term products"
+    );
+    let err = under(
+        RuntimeLimits {
+            max_numeric_work: 1_000,
+            ..RuntimeLimits::default()
+        },
+        "3 100000 POW",
+    )
+    .await
+    .expect_err("a power past the work budget is refused");
+    assert!(
+        matches!(
+            err,
+            AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::NumericWork,
+                ..
+            }
+        ),
+        "{err:?}"
+    );
+}
+
+/// A power past `bigintBits` or `algebraicTerms` is refused before it is
+/// computed — the `spaceExhausted` projection POW declares for an exponent
+/// past what the machine will materialize. It used to be computed whole, and
+/// only the operation after it, if any, met the ceiling.
+#[tokio::test]
+async fn a_power_past_the_size_ceilings_is_refused_before_it_is_computed() {
+    assert_eq!(under(bits(1_000), "2 900 POW").await.unwrap(), None);
+    assert_eq!(
+        under(bits(1_000), "2 1100 POW").await.unwrap().as_deref(),
+        Some("spaceExhausted")
+    );
+    assert_eq!(
+        under(bits(1_000), "1/3 -700 POW").await.unwrap().as_deref(),
+        Some("spaceExhausted")
+    );
+    // √P has coefficient 1; its tenth power is P⁵, 1,360 bits wide.
+    assert_eq!(
+        under(bits(1_000), &format!("{PRIMORIAL_200} SQRT 10 POW"))
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("spaceExhausted")
+    );
+    assert_eq!(
+        under(bits(1_000), &format!("{PRIMORIAL_200} SQRT 6 POW"))
+            .await
+            .unwrap(),
+        None
+    );
+    // A sum of four radicals powers into the 8 monomials an even product of
+    // them can reach; a sum of two only ever into 2, either way up.
+    let four = "2 SQRT 3 SQRT ADD 5 SQRT ADD 7 SQRT ADD";
+    assert_eq!(
+        under(terms(4), &format!("{four} 6 POW"))
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("spaceExhausted")
+    );
+    assert_eq!(
+        under(terms(8), &format!("{four} 6 POW")).await.unwrap(),
+        None
+    );
+    assert_eq!(
+        under(terms(2), "2 SQRT 3 SQRT ADD 40 POW").await.unwrap(),
+        None
+    );
+    assert_eq!(
+        under(terms(2), "2 SQRT 3 SQRT ADD -40 POW").await.unwrap(),
+        None
+    );
+}
+
+/// `GCD` is Euclid on the operands' limbs, priced at least as `ADD` is on
+/// the same pair; it was charged nothing.
+#[tokio::test]
+async fn gcd_is_charged_like_the_arithmetic_beside_it() {
+    let a = format!("{}1", "9".repeat(600));
+    let c = format!("{}3", "7".repeat(600));
+    let gcd = charged_by(&format!("{a} {c} GCD")).await;
+    assert!(gcd > 0, "a gcd is work");
+    assert!(gcd >= charged_by(&format!("{a} {c} ADD")).await);
+    assert!(charged_by(&format!("[ {a} {a} {a} ] {c} GCD")).await >= 3 * gcd);
 }
