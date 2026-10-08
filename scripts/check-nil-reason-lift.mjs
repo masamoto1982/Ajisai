@@ -24,9 +24,14 @@
 //     compare there because there is no NIL left to carry one, so the reason
 //     check passes such a lane in silence.
 //
-// Every program here is executed; nothing is string-matched. A program that
-// raises is not a failure of this gate (an ERROR is a legitimate answer under
-// LANG.FAILURE.TRICHOTOMY) — but a program that does not answer at all is.
+// Every program here is executed; nothing is string-matched. Some programs
+// legitimately raise — a chain that pairs the producer's vector with one its
+// shape cannot pair with is a `shapeMismatch` (LANG.COLLECTIONS.LIFT) — and
+// which ones is worked out from the shapes below, not observed: a program
+// that raises where its shapes pair is a failure, and so is one that answers
+// where they do not. Skipping every raise instead let a lift that wrongly
+// refused a pairing (a one-element Vector over irrational lanes) pass here.
+// A program that does not answer at all is always a failure.
 //
 // Usage:
 //   node scripts/check-nil-reason-lift.mjs
@@ -37,8 +42,9 @@ import { reporter, resolveAjisaiBin, runAgent } from './lib/common.mjs';
 const report = reporter('nil-reason-lift');
 const fail = report.fail;
 
-// A program that leaves a collection with at least one reasoned NIL lane, and
-// the reason every one of those lanes carries. Chosen to cover each way a lane
+// A program that leaves a collection with at least one reasoned NIL lane, the
+// reason every one of those lanes carries, and the shape of that collection
+// (`null` for a ragged one, which pairs with no vector). Chosen to cover each way a lane
 // can become absent and each representation a lane can live in: a dense
 // rational vector, a nested one, a ragged one, and a vector of irrational
 // exact reals (which takes an entirely separate lift).
@@ -48,22 +54,23 @@ const fail = report.fail;
 // only *that* a lane was absent; now that it records why, that vector is
 // stored densely like any other and takes the same path as a computed one.
 const PRODUCERS = [
-  ['[ 1 2 ] [ 1 0 ] DIV', 'divisionByZero'],
-  ['[ 6 6 6 ] [ 1 2 0 ] DIV', 'divisionByZero'],
-  ['[ 6 ] [ 1 2 0 ] DIV', 'divisionByZero'],
-  ['[ 4 -1 ] SQRT', 'domainMiss'],
-  ['[ -1 -4 ] SQRT', 'domainMiss'],
-  ["[ '1' 'a' ] [ NUM ] MAP", 'invalidEncoding'],
-  ['[ 1 2 3 ] [ 0 DIV ] MAP', 'divisionByZero'],
-  ['[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV', 'divisionByZero'],
-  ['[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 1 1 ] ] DIV', 'divisionByZero'],
-  ['[ 1 [ 2 3 ] ] 0 DIV', 'divisionByZero'],
-  ['[ 1 NIL 3 ] [ 2 ] MUL', 'literal'],
+  ['[ 1 2 ] [ 1 0 ] DIV', 'divisionByZero', [2]],
+  ['[ 6 6 6 ] [ 1 2 0 ] DIV', 'divisionByZero', [3]],
+  ['[ 6 ] [ 1 2 0 ] DIV', 'divisionByZero', [3]],
+  ['[ 4 -1 ] SQRT', 'domainMiss', [2]],
+  ['[ -1 -4 ] SQRT', 'domainMiss', [2]],
+  ["[ '1' 'a' ] [ NUM ] MAP", 'invalidEncoding', [2]],
+  ['[ 1 2 3 ] [ 0 DIV ] MAP', 'divisionByZero', [3]],
+  ['[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV', 'divisionByZero', [2]],
+  ['[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 1 1 ] ] DIV', 'divisionByZero', [2, 2]],
+  ['[ 1 [ 2 3 ] ] 0 DIV', 'divisionByZero', null],
+  ['[ 1 NIL 3 ] [ 2 ] MUL', 'literal', [3]],
 ];
 
 // Applied after a producer. Each is lane-preserving: it maps over the lanes
 // without adding or removing an absence, so the result must carry exactly the
-// producer's absences, with exactly the producer's reasons.
+// producer's absences, with exactly the producer's reasons. A chain that
+// pairs the result with a vector says so in PAIRS_WITH below.
 const CHAINS = [
   '',
   '[ 1 1 ] ADD',
@@ -89,6 +96,29 @@ const CHAINS = [
   '[ 1 1 ] ADD [ 3 4 ] CONCAT',
 ];
 
+// The one-axis vector each pairing chain combines the producer's result with
+// (its first pairing; a chain whose first pairing succeeds pairs the same
+// shape again).
+const PAIRS_WITH = {
+  '[ 1 1 ] ADD': 2,
+  '[ 1 1 ] SUB': 2,
+  '[ 1 1 ] MUL': 2,
+  '[ 1 1 ] DIV': 2,
+  '[ 2 ] MUL': 1,
+  '[ 2 ] ADD': 1,
+  '[ 1 1 ] ADD [ 1 1 ] MUL': 2,
+  '[ 1 1 ] ADD [ 3 4 ] CONCAT': 2,
+};
+
+// LANG.COLLECTIONS.LIFT: shapes align at the innermost axis, and a one-axis
+// vector of length n pairs when n is 1 or the innermost length; a ragged
+// vector pairs with no vector at all.
+function pairs(shape, length) {
+  if (length === undefined) return true;
+  if (shape === null) return false;
+  return length === 1 || length === shape[shape.length - 1];
+}
+
 function collectAbsenceReasons(node, out) {
   if (node === null || typeof node !== 'object') return;
   if (Array.isArray(node)) {
@@ -109,14 +139,15 @@ function absenceReasons(source) {
       `the engine did not answer (exit ${result.status}) — no value, no NIL and no ERROR is ` +
       `no outcome under LANG.FAILURE.TRICHOTOMY: ${result.stderr.split('\n').slice(0, 3).join(' ')}`,
   });
-  if (json.status === 'error') return { raised: true, reasons: [] };
+  if (json.status === 'error') return { raised: true, category: json.aiDiagnostic?.category ?? null, reasons: [] };
   const reasons = [];
   collectAbsenceReasons(json.stack ?? [], reasons);
   return { raised: false, reasons };
 }
 
 let checked = 0;
-for (const [producer, expected] of PRODUCERS) {
+let refused = 0;
+for (const [producer, expected, shape] of PRODUCERS) {
   let base;
   try {
     base = absenceReasons(producer);
@@ -141,7 +172,27 @@ for (const [producer, expected] of PRODUCERS) {
       fail(`${JSON.stringify(source)}: ${e.message}`);
       continue;
     }
-    if (observed.raised) continue;
+    const shouldPair = pairs(shape, PAIRS_WITH[chain]);
+    if (observed.raised) {
+      if (shouldPair || observed.category !== 'shapeMismatch') {
+        fail(
+          `${JSON.stringify(source)}: raised ${observed.category ?? '(no category)'}, but ` +
+            (shouldPair
+              ? `its shapes pair under LANG.COLLECTIONS.LIFT, so the lift must answer`
+              : `a pairing LANG.COLLECTIONS.LIFT refuses is a shapeMismatch`),
+        );
+        continue;
+      }
+      refused += 1;
+      continue;
+    }
+    if (!shouldPair) {
+      fail(
+        `${JSON.stringify(source)}: answered, but ${shape === null ? 'a ragged vector' : `shape [${shape}]`} ` +
+          `does not pair with a vector of length ${PAIRS_WITH[chain]} (LANG.COLLECTIONS.LIFT) — it must raise shapeMismatch`,
+      );
+      continue;
+    }
 
     if (observed.reasons.length !== base.reasons.length) {
       fail(
@@ -164,7 +215,15 @@ for (const [producer, expected] of PRODUCERS) {
   }
 }
 
+// Every combination is either checked or refused as predicted; a shortfall
+// means some were silently passed over.
+const combinations = PRODUCERS.length * CHAINS.length;
+if (checked + refused !== combinations) {
+  fail(`accounted for ${checked + refused} of ${combinations} programs`);
+}
+
 report.done(
   `every absent lane kept its reason and stayed absent across ${checked} executed ` +
-    `programs (${PRODUCERS.length} producers x ${CHAINS.length} element-wise chains).`,
+    `programs, and ${refused} more raised the shapeMismatch their shapes predict ` +
+    `(${PRODUCERS.length} producers x ${CHAINS.length} element-wise chains).`,
 );
