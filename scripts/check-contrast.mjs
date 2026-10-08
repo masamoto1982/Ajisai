@@ -42,6 +42,7 @@ const TEXT = {
   '--color-primary': PANEL,
   '--color-white': ['--color-primary'],
   '--color-stack': ['--color-white', '--color-stack-top'],
+  '--color-nil': ['--color-white', '--color-stack-top'],
   '--color-core': PANEL,
   '--color-dependency': PANEL,
   '--color-non-dependency': PANEL,
