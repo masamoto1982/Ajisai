@@ -321,7 +321,7 @@ function agent_predict_outcomes(source, step_limit) {
 exports.agent_predict_outcomes = agent_predict_outcomes;
 
 /**
- * Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+ * Benchmark hook for `scripts/bench/speed-bench-wasm.mjs`: run `source` on a fresh
  * interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
  * the same one `rust/examples/speed_bench.rs` times natively) and answer the
  * final stack depth. Nothing is converted to JS, so the caller's clock sees
@@ -600,7 +600,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 204, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 212, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___wasm_bindgen_413a9fa07f7179f1___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_413a9fa07f7179f1___JsError___true_);
             return ret;
         },
