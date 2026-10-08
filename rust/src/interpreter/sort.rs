@@ -2,7 +2,6 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::comparison::three_way_compare;
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueData};
-use std::cell::RefCell;
 
 fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
     perm.iter()
@@ -18,27 +17,20 @@ fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value>
 /// comparison (LANG.VALUES.EXACT) decides every pair; `Err(_)` is malformed
 /// use (a structurally non-comparable element, LANG.FAILURE.ERROR).
 pub(crate) fn order_indices(items: &[Value]) -> Result<Vec<usize>> {
-    // Captured by the comparator: the first malformed error. When it is set
-    // the produced permutation is discarded, so returning `Equal` from the
-    // comparator in that case is harmless to correctness.
-    let malformed: RefCell<Option<AjisaiError>> = RefCell::new(None);
+    // Whether a pair orders depends only on whether each of its elements is an
+    // orderable Scalar, so one pass comparing each element with itself finds
+    // the first malformed one before the sort runs. The sort's comparator must
+    // be a total order — the standard sort panics on one that reports `Equal`
+    // for a pair it could not order — and after this pass it cannot fail.
+    for item in items {
+        compare_for_sort(item, item)?;
+    }
 
     let mut perm: Vec<usize> = (0..items.len()).collect();
-    perm.sort_by(|&i, &j| match compare_for_sort(&items[i], &items[j]) {
-        Ok(ord) => ord,
-        Err(e) => {
-            let mut slot = malformed.borrow_mut();
-            if slot.is_none() {
-                *slot = Some(e);
-            }
-            std::cmp::Ordering::Equal
-        }
+    perm.sort_by(|&i, &j| {
+        compare_for_sort(&items[i], &items[j]).unwrap_or(std::cmp::Ordering::Equal)
     });
-
-    match malformed.into_inner() {
-        Some(e) => Err(e),
-        None => Ok(perm),
-    }
+    Ok(perm)
 }
 
 /// `three_way_compare`, with an operand the exact order is not defined on
@@ -295,6 +287,43 @@ mod sort_word_tests {
             assert!(
                 format!("{error:?}").contains("nonNumeric"),
                 "`{source}` must be refused as nonNumeric, got: {error:?}"
+            );
+        }
+    }
+
+    /// A non-orderable element among enough others to reach the sort's
+    /// non-trivial paths must still be refused as declared, with the operand
+    /// restored: a comparator that reports `Equal` for a pair it cannot order
+    /// is not a total order, and the standard sort panics on one rather than
+    /// returning.
+    #[tokio::test]
+    async fn a_non_orderable_element_in_a_long_vector_is_refused_not_a_panic() {
+        let ints = "582 867 821 782 64 261 507 779 460 483 667 388 214 96 499 29 914 855 443 622";
+        for (word, odd) in [
+            ("SORT", "'a'"),
+            ("ORDER", "NIL"),
+            ("SORT", "NIL"),
+            ("ORDER", "'a'"),
+        ] {
+            let items: Vec<&str> = ints
+                .split(' ')
+                .enumerate()
+                .flat_map(|(i, n)| if i % 3 == 0 { vec![odd, n] } else { vec![n] })
+                .collect();
+            let source = format!("[ {} ] {word}", items.join(" "));
+            let mut interp = Interpreter::new();
+            let error = interp
+                .execute(&source)
+                .await
+                .expect_err(&format!("`{source}` must be refused"));
+            assert!(
+                format!("{error:?}").contains("nonNumeric"),
+                "`{source}` must be refused as nonNumeric, got: {error:?}"
+            );
+            assert_eq!(
+                interp.get_stack().len(),
+                1,
+                "`{source}` must restore its operand"
             );
         }
     }
