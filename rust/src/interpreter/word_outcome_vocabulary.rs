@@ -64,7 +64,7 @@ use super::Interpreter;
 /// `DivisionByZero` is excluded: it is not a registered outcome category at
 /// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
 /// diagnostic-trace-only).
-fn structural_error_categories() -> [ErrorCategory; 6] {
+fn structural_error_categories() -> [ErrorCategory; 7] {
     [
         ErrorCategory::StackUnderflow,
         ErrorCategory::UnknownWord,
@@ -72,6 +72,7 @@ fn structural_error_categories() -> [ErrorCategory; 6] {
         ErrorCategory::ExecutionLimitExceeded,
         ErrorCategory::ResourceLimitExceeded,
         ErrorCategory::RecursionLimitExceeded,
+        ErrorCategory::ContractViolation,
     ]
 }
 
@@ -224,7 +225,13 @@ pub(crate) fn structural_ceiling_ids(reach: &Reachability) -> BTreeSet<String> {
     structural_error_categories()
         .into_iter()
         .map(|category| category.as_protocol_str())
-        .filter(|id| *id != "stackUnderflow" && *id != "malformedSource")
+        // `contractViolation` is decided before execution from the
+        // `#:contract` directives alone, so `agent::outcome_report` adds it
+        // exactly when the source carries one, rather than this walk adding
+        // it to every program.
+        .filter(|id| {
+            *id != "stackUnderflow" && *id != "malformedSource" && *id != "contractViolation"
+        })
         .map(|id| format!("error:{id}"))
         .filter(|id| {
             // `recursionLimitExceeded` is `execute_builtin`'s call-depth guard,

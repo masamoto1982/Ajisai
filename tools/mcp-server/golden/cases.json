@@ -136,7 +136,9 @@
         "/aiDiagnostic/category": "executionLimitExceeded",
         "/errorFlowTrace/0/kind": "wordError",
         "/errorFlowTrace/0/word": "ADD",
-        "/diagnosis/resourceLimit/resource": "executionSteps"
+        "/diagnosis/resourceLimit/resource": "executionSteps",
+        "/diagnosis/resourceLimit/limit": 100000,
+        "/diagnosis/resourceLimit/observed": 100001
       }
     },
     {
@@ -213,8 +215,75 @@
         "/resourceUsage/executionSteps": 22,
         "/resourceUsage/numericWork": 20
       },
-      "expectAbsent": ["/runtimeMetrics/executionSteps"],
-      "comment": "RANGE and FOLD are one step each and the block's `MUL` runs twenty times: 22. The step count is a budget, reported once under resourceUsage and not again beside the optimizer counters. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
+      "expectAbsent": [
+        "/runtimeMetrics"
+      ],
+      "comment": "RANGE and FOLD are one step each and the block's `MUL` runs twenty times: 22. The step count is a budget, reported once under resourceUsage; the engine's optimizer counters (`runtimeMetrics`) are not sent at all. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
+    },
+    {
+      "name": "a violated #:contract declaration stops compute before anything runs",
+      "source": "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE PRINT",
+      "expect": {
+        "/status": "error",
+        "/outcome": "error:contractViolation",
+        "/diagnosis/when": "checkContract",
+        "/diagnosis/why": "contractViolation",
+        "/diagnosis/where/word": "DOUBLE",
+        "/aiDiagnostic/category": "contractViolation",
+        "/aiDiagnostic/repair": "program",
+        "/diagnosis/nextChecks/0/code": "checkDeclaredContract",
+        "/contractDecls/outcome": "error",
+        "/contractDecls/findings/0/message": "`#:contract DOUBLE`: declared `inputs=2` but inferred `inputs=1`.",
+        "/output": [],
+        "/stackDisplay": []
+      },
+      "comment": "The PRINT never runs: LANG.CONTRACT.CHECK is a pre-execution check, and compute is where execution happens. The same report, less the receipt and the outcome id, is what check answers."
+    },
+    {
+      "name": "a verified #:contract declaration is reported beside the run",
+      "source": "#:contract DOUBLE inputs=1 outputs=1 purity=pure partiality=total\n[ 2 MUL ] 'DOUBLE' DEF 21 DOUBLE",
+      "expect": {
+        "/status": "ok",
+        "/outcome": "value",
+        "/stackDisplay/0": "42/1",
+        "/contractDecls/outcome": "value",
+        "/contractDecls/gapSummary/verified": 1
+      }
+    },
+    {
+      "name": "an oversized success is elided rather than refused",
+      "source": "0 7000 RANGE 1 2 ADD",
+      "expect": {
+        "/status": "ok",
+        "/outcome": "value",
+        "/stackElided/reason": "valueStackBudget",
+        "/stackElided/budgetBytes": 450560,
+        "/stackElided/slots/0/index": 0,
+        "/stackElided/slots/0/elements": 7001,
+        "/stack/0/type": "vector",
+        "/stack/0/value": null,
+        "/stack/0/elided/reason": "valueStackBudget",
+        "/stackDisplay/1": "3/1"
+      },
+      "comment": "A success is its stack, so the budget is generous (440 KiB, sized against responseBytes with the response's two copies in mind) and the trusted profile sets none. The answer that fits (`3/1`) is whole; the 7,001-element intermediate arrives as a record of what it was, which is what tells the caller to drop it."
+    },
+    {
+      "name": "a Forth stack word is diagnosed as the mistake it is",
+      "source": "1 2 DUP",
+      "expect": {
+        "/status": "error",
+        "/aiDiagnostic/category": "unknownWord",
+        "/diagnosis/nextChecks/0/code": "checkNoStackShufflers"
+      }
+    },
+    {
+      "name": "a full-width name suggests its ASCII spelling",
+      "source": "ＬＥＮＧＨＴ",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/nextChecks/0/code": "checkCharacterWidth",
+        "/diagnosis/candidates/0": "LENGTH"
+      }
     }
   ]
 }

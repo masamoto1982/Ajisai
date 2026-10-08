@@ -152,6 +152,12 @@ pub enum ErrorCategory {
     /// "one value grew past the declared size ceiling" stop sharing an answer.
     ResourceLimitExceeded,
     RecursionLimitExceeded,
+    /// A `#:contract` declaration the inferred contract contradicts
+    /// (`agent::contract_decl`). Raised before anything runs — by `check`,
+    /// and by `compute`, which refuses to execute a program whose own
+    /// declaration about itself is false — so it has no `AjisaiError`
+    /// behind it: no Word ever raises it.
+    ContractViolation,
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
     /// asked `word_contract` for the Word gets back the same vocabulary the
@@ -168,6 +174,7 @@ impl ErrorCategory {
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
+            ErrorCategory::ContractViolation => "contractViolation",
             ErrorCategory::Declared(condition) => condition,
         }
     }

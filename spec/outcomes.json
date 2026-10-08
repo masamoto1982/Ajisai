@@ -51,6 +51,13 @@
       "documentation": "A higher-order Word's block operand did not return the shape its contract requires — MAP/FILTER/FOLD/SCAN's block returned other than one value per contract."
     },
     {
+      "id": "contractViolation",
+      "kind": "structural",
+      "attribution": "machine",
+      "repair": "program",
+      "documentation": "A `#:contract` declaration the inferred contract contradicts (LANG.CONTRACT.CHECK): the program says its own Word takes two inputs and the body takes one. Decided before anything runs, by `check` and by `compute`, which refuses to execute a program that is wrong about itself; the findings are in `contractDecls`."
+    },
+    {
       "id": "declaredFailure",
       "kind": "declared",
       "repair": "program",

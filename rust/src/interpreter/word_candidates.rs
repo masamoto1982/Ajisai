@@ -34,7 +34,10 @@ fn distance_ceiling(len: usize) -> usize {
 /// and live bindings from the interpreter that raised the failure. Matching is
 /// case-insensitive because Ajisai resolves names that way.
 pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>) -> Vec<String> {
-    let needle = name.trim().to_uppercase();
+    // What was written, and what it folds to: `ＡＤＤ` folds to `ADD`, which
+    // is then the suggestion rather than the name that resolved.
+    let written = name.trim().to_uppercase();
+    let needle = fold_full_width(&written);
     if needle.is_empty() {
         return Vec::new();
     }
@@ -48,7 +51,7 @@ pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>
     let mut scored: Vec<(usize, String)> = Vec::new();
     for candidate in vocabulary {
         let upper = candidate.to_uppercase();
-        if upper == needle {
+        if upper == written {
             // The name resolves after all — a caller asking about it wants a
             // different diagnosis than a spelling hint.
             continue;
@@ -72,6 +75,20 @@ pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>
         .into_iter()
         .take(MAX_CANDIDATES)
         .map(|(_, candidate)| candidate)
+        .collect()
+}
+
+/// Full-width ASCII (U+FF01–U+FF5E, what a Japanese input method produces
+/// for `ＡＤＤ`) folded to its ASCII form, so `ＬＥＮＧＴＨ` is one
+/// substitution from nothing and `ＬＥＮＧＨＴ` is a typo of `LENGTH`. The
+/// dictionary itself holds no full-width name, so nothing resolves
+/// differently; only the suggestions do.
+fn fold_full_width(name: &str) -> String {
+    name.chars()
+        .map(|c| match c {
+            '\u{FF01}'..='\u{FF5E}' => char::from_u32(c as u32 - 0xFF01 + 0x21).unwrap_or(c),
+            _ => c,
+        })
         .collect()
 }
 

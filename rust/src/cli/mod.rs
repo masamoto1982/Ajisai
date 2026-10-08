@@ -231,7 +231,7 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         &source,
         agent_api::ComputeOptions {
             step_limit: opts.step_limit,
-            runtime_limits: None,
+            ..agent_api::ComputeOptions::default()
         },
     ));
     emit(response.report());
@@ -380,7 +380,7 @@ fn compute_options(opts: &Opts) -> agent_api::ComputeOptions {
         LimitProfile::Agent => agent_api::ComputeOptions::agent(opts.step_limit),
         LimitProfile::Trusted => agent_api::ComputeOptions {
             step_limit: opts.step_limit,
-            runtime_limits: None,
+            ..agent_api::ComputeOptions::default()
         },
     }
 }

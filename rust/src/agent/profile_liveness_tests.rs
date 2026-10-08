@@ -194,6 +194,7 @@ async fn refused_by(profile: &Profile, source: &str) -> (String, u64, u64) {
         ComputeOptions {
             step_limit: profile.step_limit,
             runtime_limits: Some(profile.limits),
+            ..ComputeOptions::default()
         },
     )
     .await

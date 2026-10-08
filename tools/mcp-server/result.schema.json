@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "ajisai://schema/result",
  "title": "Ajisai MCP result",
- "description": "One envelope for every Ajisai MCP tool result (compute, check, infer_contracts, outcomes, word_contract). `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program. An optional field carrying no value is omitted rather than sent as `null`, so `diagnosis`, `aiDiagnostic`, `message` and `contractDecls` are simply absent from a plain success — test for presence, not for `null`. The text content block of a tool result carries this same object serialized, so a text-only client receives the whole result and not a summary of it.",
+ "description": "One envelope for every Ajisai MCP tool result (compute, check, infer_contracts, outcomes, word_contract). `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program. An optional field carrying no value is omitted rather than sent as `null`, so `diagnosis`, `aiDiagnostic` and `message` are simply absent from a plain success, and `contractDecls` from a source that declares no contract — test for presence, not for `null`. The text content block of a tool result carries this same object serialized, so a text-only client receives the whole result and not a summary of it.",
  "type": "object",
  "additionalProperties": true,
  "required": [
@@ -63,11 +63,14 @@
     "object",
     "null"
    ],
-   "description": "Present on an `error` whose failing stack was too large to send in full. An error report's answer is its diagnosis; the stack is residual state, so the values of the slots that do not fit a byte budget are dropped and this record says which. Absent whenever nothing was dropped, which is every success and every ordinary error. A successful result is never elided: it *is* its stack, and an oversized one is reported as `responseTooLarge` instead.",
+   "description": "Present when the stack was too large to send in full and the values of the slots that do not fit a byte budget were dropped; this record says which. On an `error` the budget is the fixed one every error report applies (`errorStackBudget`): the report's answer is its diagnosis, and the stack is residual state. On an `ok` it is the agent profile's stack budget (`valueStackBudget`): the values that fit arrive whole, and an oversized one arrives as this record rather than the whole result being refused as `responseTooLarge`, so a caller learns what it left on the stack and can fix the program. Absent whenever nothing was dropped, which is every ordinary result.",
    "properties": {
     "reason": {
      "type": "string",
-     "const": "errorStackBudget"
+     "enum": [
+      "errorStackBudget",
+      "valueStackBudget"
+     ]
     },
     "budgetBytes": {
      "type": "integer",
@@ -130,7 +133,7 @@
     "type": "integer",
     "minimum": 0
    },
-   "description": "outcomes only. The resource ceilings the prediction assumed, keyed like `mcp.limits`."
+   "description": "outcomes only. The resource ceilings the prediction assumed, keyed like the `limits` of `ajisai://limits`."
   },
   "contracts": {
    "type": "array",
@@ -264,14 +267,10 @@
     }
    }
   },
-  "runtimeMetrics": {
-   "type": "object",
-   "description": "How the runtime went about its work: which cache answered, which fast path fired, how often a plan was rebuilt. Optimizer observations, not budgets — read `resourceUsage` for what a ceiling would judge."
-  },
   "resourceUsage": {
    "type": "object",
    "additionalProperties": false,
-   "description": "What this run spent of the budgets that could have refused it. Every key names a key of `mcp.limits` and carries the same number the ceiling compared against — read from the counter the check reads, not a parallel copy — so an agent can subtract one from the other and know what it has left. Only the accumulating ceilings appear: `bigintBits` and `algebraicTerms` are checked per result and never accumulated, so there is no peak to report and none is invented.",
+   "description": "What this run spent of the budgets that could have refused it. Every key names a ceiling of the `ajisai://limits` profile (`mcp.limitProfile`) and carries the same number the ceiling compared against — read from the counter the check reads, not a parallel copy — so an agent can subtract one from the other and know what it has left. Only the accumulating ceilings appear: `bigintBits` and `algebraicTerms` are checked per result and never accumulated, so there is no peak to report and none is invented.",
    "required": [
     "executionSteps",
     "numericWork",
@@ -292,6 +291,21 @@
      "type": "integer",
      "minimum": 0,
      "description": "Element operations charged inside collection Words — copies, order comparisons and equality probes — against the `collectionWork` ceiling. Priced from the operand, so an element that is wide, nested or algebraic costs more than a machine word; a collection Word loops inside one execution step, so this is the only counter that can see it."
+    }
+   }
+  },
+  "receipt": {
+   "type": "object",
+   "description": "compute only. The execution receipt (rust/src/agent/execution_receipt.rs): `digest` is a BLAKE3 over the source, the engine version, the registry digest, the limit profile, the outcome status, the observation digest and the resource usage. This adapter sends the three inputs nothing else in the envelope carries — `digest`, `sourceDigest`, `registryDigest` — and a verifier takes the rest from beside them: `status`, `observationDigest`, `resourceUsage`, `mcp.engineVersion`, and the engine-side entries of `ajisai://limits` as the limit profile. The native CLI's `--json` receipt carries them all inline.",
+   "properties": {
+    "digest": {
+     "type": "string"
+    },
+    "sourceDigest": {
+     "type": "string"
+    },
+    "registryDigest": {
+     "type": "string"
     }
    }
   },
@@ -325,7 +339,7 @@
     "engineVersion",
     "assetDigest",
     "backend",
-    "limits"
+    "limitProfile"
    ],
    "properties": {
     "serverVersion": {
@@ -363,74 +377,10 @@
       }
      }
     },
-    "limits": {
-     "type": "object",
-     "additionalProperties": false,
-     "description": "The host profile applied to this call. Every entry is pinned by a case in `golden/limits.json`.",
-     "required": [
-      "sourceBytes",
-      "wallTimeMs",
-      "responseBytes",
-      "executionSteps",
-      "concurrentExecutions",
-      "materializedElements",
-      "numericLiteralDigits",
-      "numericWork",
-      "collectionWork",
-      "bigintBits",
-      "algebraicTerms",
-      "nestingDepth"
-     ],
-     "properties": {
-      "sourceBytes": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "wallTimeMs": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "responseBytes": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "executionSteps": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "concurrentExecutions": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "materializedElements": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "numericLiteralDigits": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "numericWork": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "collectionWork": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "bigintBits": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "algebraicTerms": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "nestingDepth": {
-       "type": "integer",
-       "minimum": 1
-      }
-     }
+    "limitProfile": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The name of the host profile applied to this call — the `profile` of the `ajisai://limits` resource, which carries the twelve ceilings themselves. They are constants of the server, so they travel once, in that resource, rather than on every result; a ceiling that fires names itself and its value in `diagnosis.resourceLimit`, and a host failure about one names it in `error.limit`. Every entry is pinned by a case in `golden/limits.json`."
     }
    }
   }
@@ -473,7 +423,7 @@
     },
     "limit": {
      "type": "string",
-     "description": "The declared `mcp.limits` entry this failure is about, when it is about one.",
+     "description": "The declared ceiling (an entry of `ajisai://limits`) this failure is about, when it is about one.",
      "enum": [
       "sourceBytes",
       "wallTimeMs",
@@ -528,7 +478,7 @@
     "resource",
     "limit"
    ],
-   "description": "Which declared ceiling a resource-limit failure crossed, or a generative Word declined a result under (the diagnosis of a NIL(spaceExhausted), which can name `materializedElements`). `resource` names an entry of `mcp.limits`. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
+   "description": "Which declared ceiling a resource-limit failure crossed, or a generative Word declined a result under (the diagnosis of a NIL(spaceExhausted), which can name `materializedElements`). `resource` names an entry of the `ajisai://limits` profile, and `limit` is its value, so no result needs the profile read to be acted on. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
    "properties": {
     "resource": {
      "type": "string",
@@ -992,10 +942,13 @@
     "reason",
     "approxBytes"
    ],
-   "description": "Present only in the stack of a CLI/MCP error report, on a slot whose value was dropped to keep the report deliverable (rust/src/agent/error_stack.rs). `type` and `semantics` still describe what the value was (less an algebraic value's `exactTerms`, whose count moves here); `value` is null. Tell it apart from a genuine NIL by `type`, which names the real domain, and by this field's presence.",
+   "description": "Present only in the stack of a CLI/MCP agent report, on a slot whose value was dropped to keep the report deliverable (rust/src/agent/error_stack.rs): under the fixed error budget every error report applies (`errorStackBudget`), or under the stack budget a host chose for successful results (`valueStackBudget`, the agent profile's; the trusted profile sets none). `type` and `semantics` still describe what the value was (less an algebraic value's `exactTerms`, whose count moves here); `value` is null. Tell it apart from a genuine NIL by `type`, which names the real domain, and by this field's presence.",
    "properties": {
     "reason": {
-     "const": "errorStackBudget"
+     "enum": [
+      "errorStackBudget",
+      "valueStackBudget"
+     ]
     },
     "approxBytes": {
      "type": "integer",

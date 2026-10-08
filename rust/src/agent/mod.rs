@@ -8,13 +8,18 @@
 
 pub mod api;
 #[cfg(test)]
+mod api_tests;
+#[cfg(test)]
 mod check_locals_tests;
 pub(crate) mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;
 pub(crate) mod contract_gap;
 pub(crate) mod contract_report;
+pub(crate) mod contract_violation;
 mod error_stack;
+#[cfg(test)]
+mod error_stack_tests;
 pub(crate) mod execution_receipt;
 pub(crate) mod observation_digest;
 #[cfg(test)]

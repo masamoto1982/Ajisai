@@ -111,15 +111,38 @@ function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
     }
     const profile = parseHostProfile(reported);
     if (!profile) return;
+    // The MCP server's profile, beside this host's: the two differ by 10x to
+    // 120x on purpose, and a program tried here and then handed to an agent
+    // met that difference as a surprise, because only the Reference and the
+    // MCP README said so. Best effort like everything else here — an engine
+    // without the method simply shows this host's table alone.
+    let agentProfile: ReturnType<typeof parseHostProfile> = null;
+    try {
+        agentProfile = parseHostProfile(interpreter.agent_host_profile());
+    } catch {
+        agentProfile = null;
+    }
     const text = `resource limits: ${profile.profile}`;
     const limitLines = [
-        ...Object.entries(profile.limits).map(([name, value]) => `${name}: ${value.toLocaleString()}`),
+        ...Object.entries(profile.limits).map(([name, value]) => {
+            const agentValue = agentProfile?.limits[name];
+            const beside =
+                typeof agentValue === 'number' && agentValue !== value
+                    ? ` (${agentProfile?.profile}: ${agentValue.toLocaleString()})`
+                    : '';
+            return `${name}: ${value.toLocaleString()}${beside}`;
+        }),
         // The wall-clock guard is this host's alone and is not one of the
         // interpreter's ceilings, so `host_profile()` cannot report it — and a
         // list that omits the guard most likely to stop a long run reads as a
         // complete list that is wrong.
         `executionTimeoutMs: ${EXECUTION_TIMEOUT_MS.toLocaleString()} (wall clock, this host only)`,
     ];
+    if (agentProfile) {
+        limitLines.push(
+            `A program run through the MCP server (${agentProfile.profile}) meets the ceilings in parentheses instead.`
+        );
+    }
 
     // Now that the ceilings are known, the badge's tooltip can state the whole
     // thing — the same detail, in the same order, the splash shows on screen.

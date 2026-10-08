@@ -24,21 +24,45 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 2. Minimal syntax
 
-- Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] ADD`.
+- Postfix, stack-based. Operands first, word last: `1 2 ADD`.
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
-- Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar — **except where a Word takes an *element*** (`PUT`, `GET`, `INDEX-OF`): there `[ 9 ]` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
+- A scalar is written bare: `42`, `1 3 DIV`. Data lives in vectors: `[ 1 2 3 ]`, and vectors nest for ragged and grouped data. `[ 42 ]` is a one-element *vector*, not another way to write 42 — arithmetic broadcasts it like a scalar, but a Word that takes an *element* (`PUT`, `GET`, `INDEX-OF`) stores or reads the vector itself, and nothing errors (§7). Write scalars bare and the question never arises.
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
-- Named data is a Record, built by `RECORD` from a Vector of keys and a Vector of values: `[ 'x' 'y' ] [ 1 2 ] RECORD`. It is not a Vector and is never code. It displays as `{ 'x' 1/1 'y' 2/1 }`, which is a display, not source: only `[ ]` delimits.
-- Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
+- Named data is a Record, built by `RECORD` from a Vector of keys and a Vector of values: `[ 'x' 'y' ] [ 1 2 ] RECORD`. It is not a Vector and is never code. It displays as `[ 'x' 'y' ] [ 1/1 2/1 ] RECORD` — the keys, the values and the Word that joins them, which is also valid source that rebuilds it.
+- Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ 1 2 ADD ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
+- Declare a user word's contract on a `#:contract` comment line — `#:contract DOUBLE inputs=1 outputs=1 purity=pure` — and `check` verifies it against the body before anything runs; `compute` runs the same check first and refuses a program whose declaration is violated (§2a).
 - Comments: `#` to end of line.
-- Every Word consumes the operands it reads. To use a value more than once, name it with `BIND` and read the name: `5 'N' BIND N N 1 ADD` leaves `5 6`.
+- Every Word consumes the operands it reads. To use a value more than once, name it with `BIND` and read the name: `5 'N' BIND N N 1 ADD` leaves `5/1  6/1`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
+
+## 2a. Declaring a contract (`#:contract`)
+
+One comment line per Word, written in the keys and values of a contract Record
+(the same vocabulary `word_contract` / `CONTRACT` answer in):
+
+`#:contract NAME [inputs=N] [outputs=N] [purity=pure|effectful] [partiality=total|partial|projecting] [determinism=deterministic|stateRelative|hostRelative] [cost steps=C numeric=C collection=C]`
+with each cost class `C` one of `const` `linear` `superlinear` `unbounded`.
+
+`inputs`/`outputs` must equal what the body does; every other key is an upper
+bound the body must not exceed; a key left out is not checked. The check is
+conservative: a body inference cannot read is reported as *cannot verify*
+(a `note` with a `gap.*` code), never as a false violation. To write a
+declaration without guessing, run `infer_contracts` first and paste its
+`suggested` line.
+
+- Declare what your Word does; check verifies it before anything runs
+  ```ajisai
+  #:contract DOUBLE inputs=1 outputs=1 purity=pure partiality=total
+  [ 2 MUL ] 'DOUBLE' DEF 21 DOUBLE
+  ```
+  `check` → exit 0, `contractDecls: { outcome: "value", gapSummary: {"byGap":{},"cannotVerify":0,"declarationsChecked":1,"verified":1,"violated":0} }`; `compute` → stack: `42/1`, with the same `contractDecls`.
 
 ## 3. Control and iteration
 
-- Branch: the two candidates, then the truth that chooses between them, then `SELECT`: `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT`. An absent truth chooses neither and answers that same absence.
-- Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with block operands (examples in §6). `FOLD` requires an explicit initial-value Vector.
+- Branch: the two candidates, then the truth that chooses between them, then `SELECT`: `'non-negative' 'negative' 4 0 LT NOT SELECT PRINT` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: `0 [ -3 5 -1 ] [ -3 5 -1 ] 0 LT SELECT`. An absent truth chooses neither and answers that same absence.
+- Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with block operands (examples in §6). `FOLD` requires an explicit initial value: `[ 1 2 3 ] 0 [ ADD ] FOLD`.
+- Budget: a block iteration is one step per element, so under the MCP profile's 100,000-step budget `MAP` / `FILTER` / `FOLD` walk tens of thousands of elements, not more. Beyond that, write the operation on whole vectors — `V V ADD` over 100,000 lanes is a few steps — and leave no large intermediate on the stack.
 - No recursion: `DEF` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
@@ -48,7 +72,7 @@ pushes `NIL` (reason: `divisionByZero`). The projection is recorded in
 `errorFlowTrace` as a `nilProduced` event with a full diagnosis, and the NIL
 value itself carries `semantics.absence.reason` on the stack.
 
-- Provide a fallback with `BIND`, `NIL?` and `SELECT`: `1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT` → stack `[ 99/1 ]`. `NIL?` consumes its subject like every Word and answers whether it was absent, which is exactly where `SELECT` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
+- Provide a fallback with `BIND`, `NIL?` and `SELECT`: `1 0 DIV 'S' BIND 99 S S NIL? SELECT` → stack `99/1`. `NIL?` consumes its subject like every Word and answers whether it was absent, which is exactly where `SELECT` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
 - Over a vector the projection is **per lane, not per value**: `[ 6 6 ] [ 1 0 ] DIV` → stack `[ 6/1 NIL ]`. The lane that could not divide is the only one emptied.
 - That makes the top a vector, not a NIL, so `NIL?` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (NIL projection rule); check for it where it matters instead of letting it propagate to the end.
@@ -82,14 +106,14 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
 
-- Push a number (always inside a vector)
-  `[ 42 ]` → stack: `[ 42/1 ]`
+- Push a number: a bare scalar
+  `42` → stack: `42/1`
 - Exact rational division — no floats, ever
-  `[ 1 ] [ 3 ] DIV` → stack: `[ 1/3 ]`
+  `1 3 DIV` → stack: `1/3`
 - Elementwise vector arithmetic
   `[ 1 2 3 ] [ 4 5 6 ] ADD` → stack: `[ 5/1 7/1 9/1 ]`
 - Scalar broadcast over a vector
-  `[ 5 ] [ 1 2 3 ] MUL` → stack: `[ 5/1 10/1 15/1 ]`
+  `5 [ 1 2 3 ] MUL` → stack: `[ 5/1 10/1 15/1 ]`
 - Remainder: name the operands, then a - b * floor(a/b)
   `10 'A' BIND 3 'B' BIND A A B DIV FLOOR B MUL SUB` → stack: `1/1`
 - Comparison pushes a boolean
@@ -103,19 +127,19 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - Fill a shape with one number: [ shape ] value
   `[ 2 2 ] 7 FILL` → stack: `[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]`
 - MAP with a [ ] code block
-  `0 4 RANGE [ [ 2 ] MUL ] MAP` → stack: `[ [ 0/1 ] [ 2/1 ] [ 4/1 ] [ 6/1 ] [ 8/1 ] ]`
+  `0 4 RANGE [ 2 MUL ] MAP` → stack: `[ 0/1 2/1 4/1 6/1 8/1 ]`
 - FILTER keeps matching elements
   `0 10 RANGE [ 5 GT ] FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
-  `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD` → stack: `[ 6/1 ]`
+  `[ 1 2 3 ] 0 [ ADD ] FOLD` → stack: `6/1`
 - A Record from a Vector of keys and a Vector of values
   `[ 'x' 'y' ] [ 1 2 ] RECORD` → stack: `[ 'x' 'y' ] [ 1/1 2/1 ] RECORD`
 - Define a user word: [ body ] then name, then DEF
-  `[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
+  `[ 1 2 ADD ] 'MY-SUM' DEF MY-SUM` → stack: `3/1`
 - SELECT: the two candidates, then the truth that chooses between them
-  `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT` → prints `[ 'non-negative' ]`
+  `'non-negative' 'negative' 4 0 LT NOT SELECT PRINT` → prints `non-negative`
 - SELECT chooses lane by lane, so a whole vector branches at once
-  `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT` → stack: `[ 0/1 5/1 0/1 ]`
+  `0 [ -3 5 -1 ] [ -3 5 -1 ] 0 LT SELECT` → stack: `[ 0/1 5/1 0/1 ]`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
@@ -138,23 +162,28 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - **Stack underflow: operands must be pushed first** — `ADD`
   → exit 1, `message: "ADD: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
-  Fix: Push both operands before the operator: `[ 1 ] [ 2 ] ADD`. Ajisai is postfix; there is no infix form.
+  Fix: Push both operands before the operator: `1 2 ADD`. Ajisai is postfix; there is no infix form.
 - **FOLD without an initial value** — `[ 1 2 3 ] [ ADD ] FOLD`
   → exit 1, `message: "FOLD: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
-  Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD`.
+  Fix: FOLD is `vector init [ op ] FOLD`: `[ 1 2 3 ] 0 [ ADD ] FOLD`.
+- **A `#:contract` declaration the body contradicts** — `#:contract DOUBLE inputs=2 outputs=1
+[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE`
+  → exit 1, `message: "Contract declaration violated: `#:contract DOUBLE`: declared `inputs=2` but inferred `inputs=1`."`, `diagnosis: { when: "checkContract", why: "contractViolation" }`,
+  `aiDiagnostic: { category: "contractViolation", repair: "program" }`, first nextCheck code: `checkDeclaredContract`.
+  Fix: The declaration is checked before anything runs, and a violated one stops the run (`contractDecls.findings` lists every finding). Fix the body or the line; `ajisai agent infer-contracts` answers a paste-ready `suggested` line for the Word as written.
 - **SELECT takes three operands: both candidates, then the truth** — `[ 'big' ] [ 5 ] [ 3 ] GT SELECT`
   → exit 1, `message: "SELECT: stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic: { category: "stackUnderflow", repair: "program" }`, first nextCheck code: `checkDeclaredArity`.
-  Fix: SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.
+  Fix: SELECT is `whenTrue whenFalse truth SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.
 - **SELECT needs a truth value, not a number** — `[ 'y' ] [ 'n' ] 1 SELECT`
   → exit 1, `message: "SELECT: expected a truth value, got Scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic: { category: "nonTruthValue" }`, first nextCheck code: `checkFiredCondition`.
-  Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.
+  Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `1 0 EQ NOT`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] ADD`
   → exit 1, `message: "ADD: expected shapes that align, got [2] and [3] (axis 0 is 2 and 3, and neither is 1)"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
   `aiDiagnostic: { category: "shapeMismatch" }`, first nextCheck code: `checkFiredCondition`.
-  Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
+  Fix: Elementwise ops need equal or broadcastable shapes (a scalar `5`, or a one-element vector, broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
   → exit 1, `message: "NUM: expected a String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic: { category: "nonText" }`, first nextCheck code: `checkFiredCondition`.
@@ -170,7 +199,7 @@ than it looks like it answers, which is the harder kind to notice:
 - **A one-element vector where a Word wants an element** — both of these succeed (exit 0):
   `[ 1 2 3 ] [ 1 ] [ 9 ] PUT` → stack `[ [ 1/1 [ 9/1 ] 3/1 ] ]`
   `[ 1 2 3 ] 1 9 PUT` → stack `[ 1/1 9/1 3/1 ]`
-  Fix: PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. The `[ 42 ]` idiom of §2 is for operands a Word reads as a value; it does not carry here, and no error says so.
+  Fix: PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. Write a scalar bare (§2) and this cannot happen; a one-element vector is a vector, everywhere, and no error says so.
 
 ## 8. Forbidden patterns (each verified to fail)
 

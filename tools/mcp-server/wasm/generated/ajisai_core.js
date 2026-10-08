@@ -12,6 +12,27 @@ class AjisaiInterpreter {
         wasm.__wbg_ajisaiinterpreter_free(ptr, 0);
     }
     /**
+     * The agent profile — what the MCP server and `ajisai agent` apply — in
+     * the same shape as `host_profile()`, so the playground can show the
+     * ceilings a program meets when it leaves the browser beside its own.
+     * They differ by 10x to 120x on purpose (LANG.MACHINE.LIMITS), and a
+     * program tried here and then run through MCP met that difference as a
+     * surprise, because only the Reference and the MCP README said so.
+     * @returns {string}
+     */
+    agent_host_profile() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.ajisaiinterpreter_agent_host_profile(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Discard every value on the stack, leaving the dictionary, the output
      * and every other piece of session state untouched.
      *

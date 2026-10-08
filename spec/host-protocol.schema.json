@@ -95,9 +95,9 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["reason", "approxBytes"],
-      "description": "Present only in the stack of a CLI/MCP error report, on a slot whose value was dropped to keep the report deliverable (rust/src/agent/error_stack.rs). `type` and `semantics` still describe what the value was (less an algebraic value's `exactTerms`, whose count moves here); `value` is null. Tell it apart from a genuine NIL by `type`, which names the real domain, and by this field's presence.",
+      "description": "Present only in the stack of a CLI/MCP agent report, on a slot whose value was dropped to keep the report deliverable (rust/src/agent/error_stack.rs): under the fixed error budget every error report applies (`errorStackBudget`), or under the stack budget a host chose for successful results (`valueStackBudget`, the agent profile's; the trusted profile sets none). `type` and `semantics` still describe what the value was (less an algebraic value's `exactTerms`, whose count moves here); `value` is null. Tell it apart from a genuine NIL by `type`, which names the real domain, and by this field's presence.",
       "properties": {
-        "reason": { "const": "errorStackBudget" },
+        "reason": { "enum": ["errorStackBudget", "valueStackBudget"] },
         "approxBytes": { "type": "integer", "minimum": 0 },
         "elements": { "type": "integer", "minimum": 0 },
         "algebraicTerms": { "type": "integer", "minimum": 0 }

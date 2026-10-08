@@ -41,6 +41,8 @@ export interface AjisaiInterpreter {
      * is what it enforces.
      */
     host_profile(): string;
+    /** The MCP server's (and `ajisai agent`'s) profile, in the same shape. */
+    agent_host_profile(): string;
     reset(): ExecuteResult;
     collect_stack(): Value[];
     collect_user_words_info(): UserWordInfo[];
@@ -165,6 +167,7 @@ export type DiagnosisPhase =
     | 'tokenize'
     | 'resolveWord'
     | 'executeWord'
+    | 'checkContract'
     | 'hostGuard';
 
 export type DiagnosisLocusKind = 'coreWord' | 'userWord' | 'unknown' | 'hostEnvironment';

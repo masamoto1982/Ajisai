@@ -5,6 +5,15 @@ export class AjisaiInterpreter {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * The agent profile — what the MCP server and `ajisai agent` apply — in
+     * the same shape as `host_profile()`, so the playground can show the
+     * ceilings a program meets when it leaves the browser beside its own.
+     * They differ by 10x to 120x on purpose (LANG.MACHINE.LIMITS), and a
+     * program tried here and then run through MCP met that difference as a
+     * surprise, because only the Reference and the MCP README said so.
+     */
+    agent_host_profile(): string;
+    /**
      * Discard every value on the stack, leaving the dictionary, the output
      * and every other piece of session state untouched.
      *

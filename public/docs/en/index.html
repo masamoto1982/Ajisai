@@ -1155,6 +1155,30 @@ FILTER</code></td>
                     <p><code>DEF</code> only stores the body; it does not resolve the names inside it. A definition whose body calls a Word that does not exist is accepted and reported as defined. The failure surfaces the first time the Word is <strong>called</strong>: <code>[ TOTALL 1 ] 'FOO' DEF</code> succeeds, and only running <code>FOO</code> reports <em>Unknown word: TOTALL</em>.</p>
                     <p>This is a design choice, not a gap in checking. Names are resolved at call time. This lets a Word call another Word defined after it, so you never have to reorder definitions to match their dependencies.</p>
                     <p class="ref-note">The price is that a typo in a body lies quietly in wait until something calls it. The headless CLI can catch it in advance: <code>ajisai check</code> resolves every name in a file without running anything and reports the unknown ones, and <code>ajisai check --contract</code> also verifies declared Word contracts. The Playground has no equivalent; inside the app, calling a Word is itself the check.</p>
+                    <h3 id="declare-contract">Declaring a Word's contract: <code>#:contract</code></h3>
+                    <p>A definition can state its own contract on a comment line, and the statement is checked against the body <strong>before anything runs</strong>. The line is <code>#:contract</code>, the Word's name, then any of the keys a contract Record carries (see <a href="#reflection"><code>CONTRACT</code></a>) with a value that key admits: <code>inputs=N</code> and <code>outputs=N</code>, which must equal what the body does; <code>purity=pure|effectful</code>, <code>partiality=total|partial|projecting</code> and <code>determinism=deterministic|stateRelative|hostRelative</code>, each an upper bound the body must not exceed; and <code>cost steps=const numeric=linear collection=const</code>, each axis a class that is one of <code>const</code>, <code>linear</code>, <code>superlinear</code>, <code>unbounded</code>. A key left out is not checked. To the interpreter the line is an ordinary comment; to <code>ajisai check</code>, to <code>ajisai agent compute</code> and to the MCP server's <code>check</code> and <code>compute</code> tools it is a declaration, and a program whose declaration the body contradicts is refused as an error (<code>contractViolation</code>) rather than run. A body the inference cannot read — a block taken out of data and passed to <code>EXEC</code>, say — is reported as <em>cannot verify</em>, never as a false violation.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>#:contract DOUBLE inputs=1 outputs=1 purity=pure
+[ 2 MUL ] 'DOUBLE' DEF
+21 DOUBLE</code></td>
+                                    <td><code>42/1</code></td>
+                                    <td class="notes">The declaration is verified, then the program runs. Declare <code>inputs=2</code> instead and nothing runs: the check reports <em>declared inputs=2 but inferred inputs=1</em>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">A declaration need not be written by hand: <code>ajisai contract</code> (the MCP server's <code>infer_contracts</code>) answers, for every Word a file defines, the contract it infers and a <code>suggested</code> line in exactly this form, which pastes back as the declaration.</p>
                     <h3 id="acyclic">A Word cannot call itself</h3>
                     <p>The reference graph of the User dictionary has no cycles. If a body contains the name of the very Word being defined, as in <code>[ REC ] 'REC' DEF</code>, <code>DEF</code> rejects it with an error. It does not matter where the name is written: directly in the body, or only inside a <code>[ ]</code> block passed to <code>MAP</code> or <code>EXEC</code>, it is the same.</p>
                     <p>This extends to indirect cycles. Define <code>A</code> to call <code>B</code>, then try to define <code>B</code> to call <code>A</code>, and the second <code>DEF</code> is rejected: <code>A</code>'s body already contains the name <code>B</code> (even though it does not exist yet), and adding a reference from <code>B</code> to <code>A</code> would close a cycle back to <code>A</code>. A new definition is free to call Words that already exist. The only thing forbidden is for the chain to come back to the Word being defined right now.</p>

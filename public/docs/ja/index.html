@@ -1152,6 +1152,30 @@ FILTER</code></td>
                     <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>[ TOTALL 1 ] 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
                     <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出すことができ、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
                     <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです。<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがなく、アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
+                    <h3 id="declare-contract">ワードの契約を宣言する: <code>#:contract</code></h3>
+                    <p>定義は自分の契約をコメント行に書いて宣言でき、その宣言は<strong>何かが実行される前に</strong>本体と照合されます。行は<code>#:contract</code>、ワード名、そして契約Record（<a href="#reflection"><code>CONTRACT</code></a>を参照）が持つキーのうち任意のものを、そのキーが許す値と共に並べます。<code>inputs=N</code>と<code>outputs=N</code>は本体の実際の個数と一致しなければなりません。<code>purity=pure|effectful</code>、<code>partiality=total|partial|projecting</code>、<code>determinism=deterministic|stateRelative|hostRelative</code>は本体が超えてはならない上界です。<code>cost steps=const numeric=linear collection=const</code>の各軸のクラスは<code>const</code>、<code>linear</code>、<code>superlinear</code>、<code>unbounded</code>のいずれかです。書かなかったキーは検査されません。インタプリタにとってこの行は普通のコメントですが、<code>ajisai check</code>、<code>ajisai agent compute</code>、そしてMCPサーバーの<code>check</code>・<code>compute</code>ツールにとっては宣言であり、本体が宣言に反するプログラムは実行されずにエラー（<code>contractViolation</code>）として拒否されます。推論が読めない本体——データから取り出して<code>EXEC</code>に渡すブロックなど——は<em>検証不能</em>として報告され、偽の違反にはなりません。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>#:contract DOUBLE inputs=1 outputs=1 purity=pure
+[ 2 MUL ] 'DOUBLE' DEF
+21 DOUBLE</code></td>
+                                    <td><code>42/1</code></td>
+                                    <td class="notes">宣言が検証され、それからプログラムが走る。代わりに<code>inputs=2</code>と宣言すると何も実行されず、検査は<em>declared inputs=2 but inferred inputs=1</em>と報告する。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">宣言を手で書く必要はありません。<code>ajisai contract</code>（MCPサーバーの<code>infer_contracts</code>）は、ファイルが定義するすべてのワードについて推論した契約と、ちょうどこの形の<code>suggested</code>行を返し、それをそのまま宣言として貼り付けられます。</p>
                     <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
                     <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
                     <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>

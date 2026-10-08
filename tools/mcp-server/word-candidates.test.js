@@ -49,7 +49,10 @@ const registry = JSON.parse(
 // bucket); a name with several equally-close matches, to exercise the
 // distance-then-alphabetical tie-break; and an unmatched name, which must
 // come back empty on both sides.
-const CASES = ["LENGHT", "MAPP", "FILTR", "PRIN", "ADDD", "SQR", "EXECC", "ZZZZZZZZZZ"];
+// `ＡＤＤ` and `ＬＥＮＧＨＴ` are full-width: the folding both sides apply
+// before matching is what makes a Japanese input method's output a typo of
+// the ASCII name rather than a name nothing resembles.
+const CASES = ["LENGHT", "MAPP", "FILTR", "PRIN", "ADDD", "SQR", "EXECC", "ZZZZZZZZZZ", "ＡＤＤ", "ＬＥＮＧＨＴ"];
 
 for (const word of CASES) {
   const fromJs = suggestWords(word, registry.entries);
