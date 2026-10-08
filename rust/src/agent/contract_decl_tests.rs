@@ -417,6 +417,37 @@ fn a_word_defined_by_a_def_the_check_does_not_read_is_a_note_not_a_violation() {
     assert_eq!(exit_code("#:contract W inputs=0 outputs=1\n1"), 1);
 }
 
+/// A Core dependency of variable arity makes the inferred flow `variable`,
+/// which proves nothing about a body that always feeds it the same operands:
+/// `[ 2 COLLECT ]` is 2 -> 1 and `[ [ 1 2 ] EXEC ]` is 0 -> 2.
+#[tokio::test]
+async fn a_variable_arity_dependency_cannot_refute_a_declared_count() {
+    for (body, decl, args) in [
+        ("2 COLLECT", "inputs=2 outputs=1", "3 4"),
+        ("[ 1 2 ] EXEC", "inputs=0 outputs=2", ""),
+    ] {
+        let source = format!("#:contract W {decl}\n[ {body} ] 'W' DEF\n{args} W");
+        let decls = contract_decls(&source);
+        assert_eq!(decls["outcome"], "nil", "{body}: {decls}");
+        assert_eq!(exit_code(&source), 0, "{body}");
+        let response = crate::agent::api::compute(&source, Default::default())
+            .await
+            .to_json();
+        assert_eq!(response["status"], "ok", "{body}: {response}");
+    }
+}
+
+/// `CONTRACT` reads its operand and never runs it, so asking for a printing
+/// block's contract leaves the asking Word pure.
+#[test]
+fn contracts_operand_does_not_make_the_caller_effectful() {
+    let source = "#:contract W purity=pure determinism=stateRelative partiality=projecting\n\
+                  [ [ 'x' PRINT ] CONTRACT 'purity' GET ] 'W' DEF\nW";
+    let decls = contract_decls(source);
+    assert_eq!(decls["outcome"], "value", "{decls}");
+    assert_eq!(exit_code(source), 0);
+}
+
 #[test]
 fn a_call_to_a_redefined_word_does_not_prove_its_last_bodys_arity() {
     // The `W` that `ADD` follows pushes one value, so this underflows.

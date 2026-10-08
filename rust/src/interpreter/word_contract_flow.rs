@@ -34,12 +34,14 @@
 //! push, so `1 0 DIV OR-NIL 9` inferred `( 0 -- 2 )` for a body that leaves
 //! one value.
 //!
-//! `Dynamic` is the honest answer, but `Dynamic` alone still licenses a hard
-//! error against a declared fixed arity. So the two cases are kept apart:
+//! `Dynamic` is the honest answer. The two ways to reach it are kept apart:
 //! `dynamic` records a flow *derived* from a dependency's own `Dynamic` mass
-//! contract (a proof, which may license an error), while `unmodelled` records
-//! that this simulation gave up (a gap, which may only produce a note). The
-//! same split `word_space` draws between a bound and its `exact` witness.
+//! contract, while `unmodelled` records that this simulation gave up (a gap
+//! the contract carries). Neither proves a declared fixed arity wrong — a
+//! dependency of variable arity can still be fed the same operands on every
+//! call (`[ 2 COLLECT ]` is 2 -> 1) — so the declaration check reads a
+//! `Dynamic` flow against a count as "cannot verify" either way
+//! (`agent::contract_decl`).
 
 use super::word_contract::ContractFlow;
 use crate::types::Token;
@@ -49,8 +51,8 @@ use crate::types::Token;
 #[derive(Default)]
 pub(crate) struct FlowSim {
     /// The flow is data-dependent because a dependency's own mass contract is
-    /// `Dynamic`. This is a *derived* fact, not a gap: it may license a
-    /// declaration error.
+    /// `Dynamic`. A *derived* fact, not a gap — but not a proof that this
+    /// body's arity varies either.
     dynamic: bool,
     /// This simulation could not model the body (a control directive whose
     /// paths differ in height, or an unbalanced delimiter). Reported as a gap

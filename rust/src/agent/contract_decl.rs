@@ -478,12 +478,17 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                     });
                 }
             }
+            // `variable` proves nothing against a count: a Core Word whose
+            // arity depends on its operands (`EXEC`, `COLLECT`) makes the
+            // inferred flow `Dynamic` even where this body always feeds it
+            // the same operands (`[ 2 COLLECT ]` is 2 -> 1). So a fixed
+            // declaration over it cannot be verified, never refuted.
             ContractFlow::Dynamic => findings.push(bound_finding(
                 &decl.name,
                 &format!("{key}={declared}"),
                 &format!("{key}=variable"),
-                conservative,
-                code,
+                true,
+                code.or(Some(GapCode::UnmodelledControlFlow.as_str())),
             )),
         }
     }
