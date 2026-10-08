@@ -1,5 +1,5 @@
 use crate::types::{Token, WordDefinition};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use super::Interpreter;
@@ -211,27 +211,44 @@ impl Interpreter {
         defining: &str,
         referenced: &HashSet<String>,
     ) -> Option<Vec<String>> {
-        let mut visited: HashSet<String> = HashSet::new();
-        let mut queue: VecDeque<Vec<String>> = referenced
-            .iter()
-            .map(|name| vec![defining.to_string(), name.clone()])
-            .collect();
+        // Breadth-first, each name keeping only the name that first reached
+        // it; the chain is rebuilt once, when the walk closes. Carrying the
+        // whole path on every queued step made one DEF quadratic in the depth
+        // of the chain it extends, and a program of such DEFs cubic.
+        let mut reached_from: HashMap<String, String> = HashMap::new();
+        let mut queue: VecDeque<String> = VecDeque::new();
+        let chain_to = |reached_from: &HashMap<String, String>, last: &str| {
+            let mut chain = vec![defining.to_string(), last.to_string()];
+            let mut at = last;
+            while let Some(from) = reached_from.get(at).filter(|from| *from != defining) {
+                chain.push(from.clone());
+                at = from;
+            }
+            chain.push(defining.to_string());
+            chain.reverse();
+            chain
+        };
 
-        while let Some(path) = queue.pop_front() {
-            let current = path.last().expect("path always has a last element");
-            if current == defining {
-                return Some(path);
+        for name in referenced {
+            if name == defining {
+                return Some(vec![defining.to_string(), defining.to_string()]);
             }
-            if !visited.insert(current.clone()) {
+            if !reached_from.contains_key(name) {
+                reached_from.insert(name.clone(), defining.to_string());
+                queue.push_back(name.clone());
+            }
+        }
+        while let Some(current) = queue.pop_front() {
+            let Some(def) = self.user_words.get(&current) else {
                 continue;
-            }
-            if let Some(def) = self.user_words.get(current) {
-                for next in &def.text_references {
-                    if !visited.contains(next) {
-                        let mut next_path = path.clone();
-                        next_path.push(next.clone());
-                        queue.push_back(next_path);
-                    }
+            };
+            for next in &def.text_references {
+                if next == defining {
+                    return Some(chain_to(&reached_from, &current));
+                }
+                if !reached_from.contains_key(next) {
+                    reached_from.insert(next.clone(), current.clone());
+                    queue.push_back(next.clone());
                 }
             }
         }

@@ -180,6 +180,41 @@ fn text_bytes(value: &Value) -> u64 {
     }
 }
 
+/// What re-deriving one User Word's content identity costs beyond its body's
+/// tokens, in collection units.
+///
+/// Every `DEF` and `DEL` re-derives every identity in the dictionary
+/// (`recompute_word_identities`): per Word a snapshot of its name into four
+/// tables, a shape built and serialized, and three digests. Measured on native
+/// release, a chain of 2,000 one-token Words visited 2,000,000 Words in 15.9 s
+/// — 7.95 µs a visit, 375 units at the collection floor rate
+/// (`host_profile_defaults::COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS`) — less
+/// the token's own copy. Independent Words are cheaper (5.1 µs a visit), so
+/// they are over-charged, the safe direction.
+const IDENTITY_UNITS: u64 = 360;
+
+/// Charge for a change to the dictionary that re-derives it whole — the
+/// referrer scan and identity recompute after a `DEF` of `body_tokens`, or
+/// after a `DEL`.
+///
+/// One `DEF` is one step, and it used to be nothing else: 3,000 of them in a
+/// 64 KiB program ran 20 s, or 157 s when each named the one before, with
+/// every meter at zero. A bulk restore defers the recompute and runs it once
+/// (`restore_user_word_definitions`), so it is not charged per Word.
+pub(crate) fn charge_dictionary_change(interp: &mut Interpreter, body_tokens: usize) -> Result<()> {
+    if interp.defer_identity_recompute {
+        return Ok(());
+    }
+    let units = interp
+        .user_words
+        .values()
+        .map(|def| def.body.len() as u64)
+        .chain(std::iter::once(body_tokens as u64))
+        .map(|tokens| IDENTITY_UNITS.saturating_add(tokens.saturating_mul(COLLECTION_COPY_UNITS)))
+        .fold(0u64, u64::saturating_add);
+    charge(interp, units)
+}
+
 /// Charge for materializing `count` fresh elements of unit width.
 ///
 /// The generative Words (`RANGE`, `FILL`) have no operand to measure

@@ -373,6 +373,26 @@ async fn test_call_depth_resets_after_recursion_error() {
     );
 }
 
+// The refusal names the shortest chain that closes, start to start.
+#[tokio::test]
+async fn a_reference_cycle_is_reported_as_its_closing_chain() {
+    for (source, chain) in [
+        ("[ X ] 'X' DEF", "(X -> X)"),
+        (
+            "[ B ] 'A' DEF [ C ] 'B' DEF [ A ] 'C' DEF",
+            "(C -> A -> B -> C)",
+        ),
+        ("[ B C ] 'A' DEF [ A ] 'C' DEF", "(C -> A -> C)"),
+    ] {
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute(source)
+            .await
+            .expect_err("a cycle is refused");
+        assert!(err.to_string().contains(chain), "{source}: {err}");
+    }
+}
+
 /// `levels` nested `[ … ] EXEC` around `inner`.
 fn nested_exec(levels: usize, inner: &str) -> String {
     let mut block = inner.to_string();

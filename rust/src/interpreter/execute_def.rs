@@ -289,6 +289,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         ));
     }
 
+    // The work below walks the whole dictionary; it is paid for here, the
+    // last refusal, so a refused definition changes nothing.
+    crate::interpreter::collection_meter::charge_dictionary_change(interp, tokens.len())?;
+
     // Nothing below refuses.
 
     if let Some(warning) =
@@ -450,6 +454,8 @@ fn delete_named(interp: &mut Interpreter, val: &Value) -> Result<()> {
             ),
         ));
     }
+
+    crate::interpreter::collection_meter::charge_dictionary_change(interp, 0)?;
 
     // The index holds exactly the edges the definitions hold (`DEF` records
     // both directions, a forward reference included once its target is
