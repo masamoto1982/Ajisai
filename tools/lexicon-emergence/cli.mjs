@@ -10,6 +10,7 @@
 //   node cli.mjs run   <run> <condition> <gen> <A,B,…> [options]   one generation's subjects
 //   node cli.mjs pilot <run> [options]                             Phase 1's settings end to end
 // Options: --model <id|large|medium|small> (default large), --effort <level> (default high),
+//          --price <input>,<output> (USD per million tokens; required for a model with no listed price),
 //          --budget <usd> (stop before any request once spent), --max-turns <n> (default 60),
 //          and for pilot --gens <n> (3) --agents <n> (3) --k <n> (8).
 //
@@ -21,7 +22,7 @@ import { connect } from './lib/ajisai.mjs';
 import { analyze, renderReport } from './lib/analyze.mjs';
 import { classify, collectWords, nextLexicon } from './lib/evolve.mjs';
 import { grade, loadFamilies } from './lib/grade.mjs';
-import { anthropicClient, Budget, MODELS, runSubject, subjectSystem } from './lib/harness.mjs';
+import { anthropicClient, Budget, MODELS, priceOf, runSubject, subjectSystem } from './lib/harness.mjs';
 import { subjectPrompt } from './lib/prompt.mjs';
 
 const ROOT = new URL('./', import.meta.url);
@@ -104,12 +105,18 @@ async function runGeneration(ajisai, harness, runName, conditionName, generation
 
 async function harnessSettings() {
   const model = MODELS[options.model ?? 'large'] ?? options.model;
+  // Both are checked before any request is made: a model the harness cannot
+  // price, or a budget that is not a number, would otherwise never stop a run.
+  const price = options.price != null ? (([input, output]) => ({ input, output }))(options.price.split(',').map(Number)) : undefined;
+  priceOf(model, price);
+  const budget = new Budget(options.budget != null ? Number(options.budget) : null);
   return {
     client: await anthropicClient(),
     model,
+    price,
     effort: options.effort ?? 'high',
     system: subjectSystem(new URL('../../SKILL.md', ROOT)),
-    budget: new Budget(options.budget != null ? Number(options.budget) : null),
+    budget,
     maxTurns: Number(options['max-turns'] ?? 60),
   };
 }

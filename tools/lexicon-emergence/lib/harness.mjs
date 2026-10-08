@@ -79,9 +79,24 @@ export function subjectSystem(skillPath) {
   ].join('\n');
 }
 
-/** USD for one response's usage at `model`'s rates; null for a model without a listed price. */
-export function costOf(model, usage) {
-  const price = PRICES[model];
+/**
+ * The rates a run is charged at: `price` when the caller supplies one, else
+ * `model`'s listed rates. A model with neither is refused, because a cost of
+ * null would charge nothing and the budget would never stop the run.
+ */
+export function priceOf(model, price) {
+  const rates = price ?? PRICES[model];
+  if (!rates) {
+    throw new Error(`no listed price for model ${model}: supply one (--price <input>,<output> USD per million tokens)`);
+  }
+  for (const rate of [rates.input, rates.output]) {
+    if (!(Number.isFinite(rate) && rate > 0)) throw new Error(`invalid price for model ${model}: ${JSON.stringify(rates)}`);
+  }
+  return rates;
+}
+
+/** USD for one response's usage at `model`'s rates (or `price`); null for a model without a listed price. */
+export function costOf(model, usage, price = PRICES[model]) {
   if (!price) return null;
   const perToken = (rate) => rate / 1e6;
   return (
@@ -92,18 +107,37 @@ export function costOf(model, usage) {
   );
 }
 
-/** A spending ceiling shared by every agent of a run; checked before each request. */
+/**
+ * A spending ceiling shared by every agent of a run; checked before each request.
+ * Agents run concurrently, so a request in flight holds a reservation of its
+ * estimated cost until it is charged: the check counts those too, and N agents
+ * dispatching at once cannot each see the same unspent room.
+ */
 export class Budget {
   constructor(limitUsd) {
+    if (limitUsd != null && !(Number.isFinite(limitUsd) && limitUsd > 0)) {
+      throw new Error(`budget must be a positive number of USD, got ${limitUsd}`);
+    }
     this.limitUsd = limitUsd;
     this.spentUsd = 0;
+    this.reservedUsd = 0;
   }
   charge(usd) {
     this.spentUsd += usd ?? 0;
   }
+  /** Check for room, then hold `usd` until `release`. */
+  reserve(usd) {
+    this.assertRoom();
+    this.reservedUsd += usd;
+    return usd;
+  }
+  release(usd) {
+    this.reservedUsd -= usd;
+  }
   assertRoom() {
-    if (this.limitUsd != null && this.spentUsd >= this.limitUsd) {
-      throw new Error(`budget exhausted: $${this.spentUsd.toFixed(2)} of $${this.limitUsd.toFixed(2)} spent`);
+    if (this.limitUsd != null && this.spentUsd + this.reservedUsd >= this.limitUsd) {
+      const inFlight = this.reservedUsd > 0 ? ` (+$${this.reservedUsd.toFixed(2)} in flight)` : '';
+      throw new Error(`budget exhausted: $${this.spentUsd.toFixed(2)}${inFlight} of $${this.limitUsd.toFixed(2)} spent`);
     }
   }
 }
@@ -132,7 +166,8 @@ function toSubmission(input, meta) {
  * Returns the submission (null when the subject never submitted) and a record
  * of the run: every request's served model and usage, the cost, and why it ended.
  */
-export async function runSubject({ client, ajisai, model, effort = 'high', system, prompt, meta, budget, maxTurns = 60 }) {
+export async function runSubject({ client, ajisai, model, price, effort = 'high', system, prompt, meta, budget, maxTurns = 60 }) {
+  const rates = priceOf(model, price);
   const ajisaiTools = await ajisai.tools(SUBJECT_TOOLS);
   const tools = [
     ...ajisaiTools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
@@ -143,20 +178,31 @@ export async function runSubject({ client, ajisai, model, effort = 'high', syste
   let submission = null;
   let reminded = false;
   let ended = 'turnCap';
+  // What the next request is reserved at: the first, its input written to the
+  // cache at about four characters a token; each later one, the cost of the
+  // request before it, which carries the same growing context.
+  const firstInput = (system.length + prompt.length + JSON.stringify(tools).length) / 4;
+  let estimate = costOf(model, { cache_creation_input_tokens: firstInput }, rates);
 
   for (let turn = 0; turn < maxTurns; turn += 1) {
-    budget?.assertRoom();
-    const response = await client.messages.create({
-      model,
-      max_tokens: 16000,
-      system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-      tools,
-      messages,
-      cache_control: { type: 'ephemeral' },
-      ...modelParams(model, effort),
-    });
-    const cost = costOf(model, response.usage);
+    const reservation = budget?.reserve(estimate);
+    let response;
+    try {
+      response = await client.messages.create({
+        model,
+        max_tokens: 16000,
+        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+        tools,
+        messages,
+        cache_control: { type: 'ephemeral' },
+        ...modelParams(model, effort),
+      });
+    } finally {
+      budget?.release(reservation);
+    }
+    const cost = costOf(model, response.usage, rates);
     budget?.charge(cost);
+    estimate = cost;
     requests.push({ servedModel: response.model, stopReason: response.stop_reason, usage: response.usage, cost });
     messages.push({ role: 'assistant', content: response.content });
 

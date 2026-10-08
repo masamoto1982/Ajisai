@@ -134,3 +134,70 @@ test('cost follows the listed rates, cache writes at 1.25x and reads at 0.1x', (
   assert.equal(usd.toFixed(2), (2 + 10 + 2.5 + 0.2).toFixed(2));
   assert.equal(costOf('unknown-model', usage), null);
 });
+
+test('a model without a listed price is refused before any request, unless a price is supplied', async () => {
+  const client = scripted([[{ type: 'text', text: 'ok' }], [{ type: 'text', text: 'ok' }]]);
+  const budget = new Budget(1);
+  await assert.rejects(
+    runSubject({ client, ajisai, model: 'claude-opus-5-20260101', system: 's', prompt: 'p', meta, budget }),
+    /no listed price/,
+  );
+  assert.equal(client.requests.length, 0);
+  const priced = await runSubject({
+    client,
+    ajisai,
+    model: 'claude-opus-5-20260101',
+    price: { input: 5, output: 25 },
+    system: 's',
+    prompt: 'p',
+    meta,
+    budget,
+  });
+  assert.equal(priced.record.costUsd, 2 * costOf('claude-opus-5', usage));
+  assert.equal(budget.spentUsd, priced.record.costUsd);
+});
+
+test('a budget that is not a positive number is refused, not silently unenforced', () => {
+  for (const limit of [Number('abc'), 0, -1, Infinity]) {
+    assert.throws(() => new Budget(limit), /budget must be a positive number/);
+  }
+  assert.equal(new Budget(null).limitUsd, null);
+});
+
+test("concurrent subjects count each other's requests in flight against the budget", async () => {
+  // A server stand-in that answers at once, so every subject reaches its first
+  // request in the same turn of the event loop; the replies are held until all
+  // three have tried to dispatch.
+  const quick = { tools: async () => [], callText: async () => '' };
+  let release;
+  const held = new Promise((resolve) => {
+    release = resolve;
+  });
+  let sent = 0;
+  const client = {
+    messages: {
+      async create(params) {
+        sent += 1;
+        await held;
+        return { model: params.model, stop_reason: 'refusal', content: [], usage };
+      },
+    },
+  };
+  // About 10,000 input tokens each, so one request in flight reserves about $0.06.
+  const system = 'x'.repeat(40_000);
+  const budget = new Budget(0.1);
+  const runs = ['A', 'B', 'C'].map((agent) =>
+    runSubject({ client, ajisai: quick, model: 'claude-opus-5', system, prompt: 'p', meta: { ...meta, agent }, budget }),
+  );
+  const outcomes = Promise.allSettled(runs);
+  await new Promise((resolve) => setImmediate(resolve));
+  release();
+  const settled = await outcomes;
+  assert.equal(sent, 2);
+  assert.deepEqual(
+    settled.map((s) => s.status),
+    ['fulfilled', 'fulfilled', 'rejected'],
+  );
+  assert.match(settled[2].reason.message, /budget exhausted/);
+  assert.equal(budget.reservedUsd, 0);
+});

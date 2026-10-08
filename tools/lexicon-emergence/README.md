@@ -47,9 +47,12 @@ node cli.mjs pilot <run> --model large --effort high --budget 40   # Phase 1's d
 ```
 
 `--model` takes a model id or `large` / `medium` / `small` (`claude-opus-5`,
-`claude-sonnet-5`, `claude-haiku-4-5`). `--budget` is a ceiling in USD checked
-before every request, from the rates in `lib/harness.mjs`; a run that reaches
-it stops with an error and keeps what it wrote. Server-side refusal fallbacks
+`claude-sonnet-5`, `claude-haiku-4-5`); a model id with no rates in
+`lib/harness.mjs` needs `--price <input>,<output>` in USD per million tokens,
+and is refused without it. `--budget` is a positive ceiling in USD checked
+before every request, counting the estimated cost of requests other agents
+have in flight; a run that reaches it stops with an error and keeps what it
+wrote. Server-side refusal fallbacks
 are deliberately not enabled: a fallback would change which model answered,
 which is the variable §5.3 controls. A refusal is recorded as the run's end.
 
