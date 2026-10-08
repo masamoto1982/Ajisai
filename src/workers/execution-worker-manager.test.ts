@@ -26,7 +26,12 @@ const env = vi.hoisted(() => {
     }
     (globalThis as any).window = { innerWidth: 1200 };
     (globalThis as any).Worker = FakeWorker;
-    Object.defineProperty(globalThis.navigator, 'hardwareConcurrency', { value: 1, configurable: true });
+    // Node 20 (CI) has no global `navigator`; later versions do.
+    Object.defineProperty(globalThis, 'navigator', {
+        value: { hardwareConcurrency: 1 },
+        configurable: true,
+        writable: true
+    });
     return { workers };
 });
 
