@@ -1422,7 +1422,36 @@ FILTER</code></td>
                         <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)。切り上げは<code>x -1 MUL FLOOR -1 MUL</code>と書きます。</li>
                         <li><strong>格子への丸め</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の倍数に丸めます。ループ処理や反復計算で分母の肥大化を止めるのに使います。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
                     </ul>
-                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
+                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが理由付きの<code>NIL</code>になります。隣の要素は商のままで、除算の後に続くワードは不在の要素をそのまま通しながら残りを計算します。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
+                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
+                                    <td class="notes">除数が0の要素は、自分の要素だけを空にする。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD</code></td>
+                                    <td><code>[ 2/1 NIL 5/2 ]</code></td>
+                                    <td class="notes">次のワードは商を計算し、不在をそのまま運ぶ。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1 0 DIV 1 ADD NIL-REASON</code></td>
+                                    <td><code>'divisionByZero'</code></td>
+                                    <td class="notes">理由は不在とともに、どこまでも運ばれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
                     <h3 id="powers">累乗と、整数・有理数を読む: <code>POW</code>・<code>GCD</code>・<code>RATIO</code></h3>
                     <p><code>x y POW</code>は、厳密な体の中で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、非負の有理数の底に対する指数<code>p/2</code>なら平方根のべきとして体の中に留まります（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）。それ以外の指数——分母が1でも2でもない指数、無理数の底に対する<code>p/2</code>、無理数の指数——は体の外に出るので、答えが有理数になる場合（<code>8 1/3 POW</code>）も含めて<code>domainMiss</code>を投影します。<code>0</code>の負のべきは<code>divisionByZero</code>、負の底の<code>p/2</code>べきは実数の答えを持たないので<code>domainMiss</code>、機械が保持できないほど大きな指数は<code>spaceExhausted</code>を投影します。</p>
                     <p><code>GCD</code>は2つの整数の最大公約数を非負で答えます。ユークリッドの互除法は入力依存の反復であり、すでにあるベクトルの上でしか反復しないこの言語では定義で書けません——機械はすべての有理数を既約に保つためにこの計算を常に行っており、このワードはそれを見えるようにするだけです。<code>RATIO</code>は有理数を既約の分子と分母の2要素ベクトルに開きます。答えがベクトルなので、算術はそのまま持ち上がります。整数でない引数（<code>GCD</code>）や無理数（<code>RATIO</code>）は<code>domainMiss</code>を投影します。</p>
@@ -1830,7 +1859,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DIV">
 <h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は厳密に<code>1/3</code>。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除数が0のレーンはNIL(divisionByZero)を投影する。数でないものは<code>nonNumeric</code>。</p>
+<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は厳密に<code>1/3</code>。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除数が0のレーンはNIL(divisionByZero)を自分のレーンだけに投影し、他のレーンには触れない。<code>[ 1 2 3 ] [ 1 0 2 ] DIV</code>は<code>[ 1 NIL 3/2 ]</code>で、隣のレーンは商のままであり、後続のワードは不在のレーンをそのまま通しながら残りを計算する(LANG.FAILURE.PASSTHROUGH)。だから<code>1 0 DIV 1 ADD NIL-REASON</code>は<code>'divisionByZero'</code>になる。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>10 2 DIV</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>

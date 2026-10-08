@@ -1425,7 +1425,36 @@ FILTER</code></td>
                         <li><strong>Rounding</strong>: <code>FLOOR</code> (round down), <code>ROUND</code> (round half up). Ceiling is written <code>x -1 MUL FLOOR -1 MUL</code>.</li>
                         <li><strong>Rounding to a grid</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code> rounds a value to a multiple of <code>1/d</code>. Use it to stop denominators from growing in loops and iterative computations. See <a href="#iterative">The cost of iteration</a> for more.</li>
                     </ul>
-                    <p class="ref-note">Division by zero does not crash the program; only the affected elements become <code>NIL</code>. See <a href="#nil">The NIL rule</a> for more.</p>
+                    <p class="ref-note">Division by zero does not crash the program; only the affected element becomes <code>NIL</code>, and it carries its reason. The elements beside it are quotients, and every Word after the division computes those while passing the absent element through. See <a href="#nil">The NIL rule</a> for more.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
+                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
+                                    <td class="notes">A zero divisor empties exactly its own element.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD</code></td>
+                                    <td><code>[ 2/1 NIL 5/2 ]</code></td>
+                                    <td class="notes">The next Word computes the quotients and carries the absence along.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1 0 DIV 1 ADD NIL-REASON</code></td>
+                                    <td><code>'divisionByZero'</code></td>
+                                    <td class="notes">The reason travels with the absence, however far it goes.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
                     <h3 id="powers">Powers, and reading integers and rationals: <code>POW</code>, <code>GCD</code>, <code>RATIO</code></h3>
                     <p><code>x y POW</code> answers within the exact field. An integer exponent stays in the base's layer (<code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>), and an exponent <code>p/2</code> on a non-negative rational base stays in the field as a power of a square root (<code>2 1/2 POW</code> is exactly the same value as <code>2 SQRT</code>). Any other exponent — a denominator other than 1 or 2, <code>p/2</code> on an irrational base, an irrational exponent — leaves the field, so it projects <code>domainMiss</code>, even when the answer would be rational (<code>8 1/3 POW</code>). A negative power of <code>0</code> projects <code>divisionByZero</code>; a <code>p/2</code> power of a negative base has no real answer and projects <code>domainMiss</code>; an exponent too large for the machine to hold projects <code>spaceExhausted</code>.</p>
                     <p><code>GCD</code> answers the non-negative greatest common divisor of two integers. Euclid's algorithm is an input-dependent iteration, which cannot be written by definition in this language, where iteration runs only over a Vector that already exists — the machine performs this computation all the time to keep every rational in lowest terms, and this Word merely makes it visible. <code>RATIO</code> opens a rational into a two-element Vector of its reduced numerator and denominator. Since the answer is a Vector, arithmetic lifts over it directly. A non-integer argument (<code>GCD</code>) or an irrational (<code>RATIO</code>) projects <code>domainMiss</code>.</p>
@@ -1833,7 +1862,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DIV">
 <h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The exact quotient, left over right: <code>1 3 DIV</code> is exactly <code>1/3</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 2 4 ] 2 DIV</code> is <code>[ 1 2 ]</code>. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is <code>nonNumeric</code>.</p>
+<p>The exact quotient, left over right: <code>1 3 DIV</code> is exactly <code>1/3</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 2 4 ] 2 DIV</code> is <code>[ 1 2 ]</code>. A zero divisor projects NIL(divisionByZero) in its own lane and no other: <code>[ 1 2 3 ] [ 1 0 2 ] DIV</code> is <code>[ 1 NIL 3/2 ]</code>, the lanes beside it are quotients, and a Word after it passes the absent lane through while computing the rest (LANG.FAILURE.PASSTHROUGH), so <code>1 0 DIV 1 ADD NIL-REASON</code> is <code>'divisionByZero'</code>. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>10 2 DIV</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>
