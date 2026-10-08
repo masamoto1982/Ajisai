@@ -354,7 +354,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
 /// below instead. Bare scalar `ExactScalar` operands are already handled by
 /// `push_exact_real_schema_result` upstream; this predicate exists to catch the
 /// *vector/structural* cases that would otherwise hard-error in broadcast.
-fn value_contains_exact_scalar(val: &Value) -> bool {
+pub(crate) fn value_contains_exact_scalar(val: &Value) -> bool {
     match &val.data {
         ValueData::ExactScalar(_) => true,
         ValueData::Vector(items) => items.iter().any(value_contains_exact_scalar),

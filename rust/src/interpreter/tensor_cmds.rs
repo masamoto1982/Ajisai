@@ -16,6 +16,7 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
+use super::arithmetic::value_contains_exact_scalar;
 use super::tensor_lane_ops::contains_absent_lane;
 use super::tensor_ops::{apply_unary_flat, build_nested_value};
 
@@ -57,7 +58,9 @@ where
     // A NIL lane passes through carrying its reason (LANG.FAILURE.PASSTHROUGH).
     // The flat route below works on bare fractions and would keep the lane
     // absent but drop why, so a vector holding one takes the lane-wise route.
-    if val.is_vector() && contains_absent_lane(&val) {
+    // An irrational lane has no `Fraction` at all, so it takes the same route:
+    // the flat route would drop it and answer a shorter vector than the shape.
+    if val.is_vector() && (contains_absent_lane(&val) || value_contains_exact_scalar(&val)) {
         let scalar_op = |lane: &Value| -> Result<Value> {
             if let Some(f) = lane.as_scalar() {
                 return Ok(Value::from_fraction(op(f)));
