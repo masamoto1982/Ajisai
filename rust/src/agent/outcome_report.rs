@@ -48,6 +48,26 @@ pub(crate) fn predict_outcomes(source: &str, options: &ComputeOptions) -> Outcom
     let Ok(tokens) = crate::tokenizer::tokenize(source) else {
         return exact("error:malformedSource", &probe);
     };
+    // A source past `sourceBytes` is refused before anything runs, whether
+    // or not it holds a token (one long comment does not), so the walk below
+    // — which adds its structural ceilings only for a non-empty token
+    // stream — would answer `value` for it. Only the `#:contract` check,
+    // which `compute` runs first, can end it otherwise.
+    if probe
+        .runtime_limits()
+        .check_source_bytes(source.len())
+        .is_err()
+    {
+        let mut outcomes = vec!["error:resourceLimitExceeded".to_string()];
+        if super::contract_violation::declares_contracts(source) {
+            outcomes.insert(0, "error:contractViolation".to_string());
+        }
+        return OutcomeReport {
+            exact: outcomes.len() == 1,
+            outcomes,
+            limit_profile: limit_profile_json(probe.runtime_limits(), probe.max_execution_steps()),
+        };
+    }
     let (mut interp, _names, unsettled) = build_definitions_interpreter(source);
     options.apply(&mut interp);
     let mut prediction = interp.predict_program_outcomes(&tokens, &|name| unsettled.contains(name));
@@ -104,6 +124,19 @@ impl OutcomeReport {
 #[cfg(test)]
 mod tests {
     use crate::agent::api::{predict_outcomes, ComputeOptions};
+
+    /// One comment line past `sourceBytes` holds no token, and the run
+    /// refuses it all the same.
+    #[test]
+    fn a_source_past_the_byte_limit_predicts_the_refusal_even_without_tokens() {
+        let source = format!("# {}", "x".repeat(70_000));
+        let response = predict_outcomes(&source, ComputeOptions::agent(None)).to_json();
+        assert_eq!(
+            response["outcomes"],
+            serde_json::json!(["error:resourceLimitExceeded"])
+        );
+        assert_eq!(response["exact"], true);
+    }
 
     #[test]
     fn malformed_source_predicts_exactly_that() {
