@@ -349,7 +349,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
 
 /// `true` when `val` is, or structurally contains, an irrational `ExactScalar`
 /// leaf. The all-rational `Fraction`/`FlatTensor` broadcast path cannot carry
-/// irrational continued-fraction lanes (`FlatTensor::from_value` rejects
+/// irrational algebraic lanes (`FlatTensor::from_value` rejects
 /// `ExactScalar`), so its presence selects the exact-real recursive route
 /// below instead. Bare scalar `ExactScalar` operands are already handled by
 /// `push_exact_real_schema_result` upstream; this predicate exists to catch the
