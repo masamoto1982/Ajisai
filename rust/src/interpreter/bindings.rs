@@ -100,8 +100,9 @@ impl Interpreter {
     }
 
     /// Whether `name` is bound anywhere at all, including past a barrier. Used
-    /// only to tell a reader why a name they can see in the source does not
-    /// resolve where they used it.
+    /// to tell a reader why a name they can see in the source does not
+    /// resolve where they used it, and by `DEF` to keep a Word from taking a
+    /// name a caller's frame still holds.
     pub(crate) fn binding_exists_beyond_barrier(&self, name: &str) -> bool {
         self.binding_scopes
             .iter()
@@ -226,14 +227,11 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
             // Destructuring is exact. A Vector longer than the name list would
             // otherwise drop its tail silently, and a shorter one would bind a
             // name to nothing; both are the caller having said something
-            // different from what they meant.
-            let width = if subject.is_vector() {
-                subject.len()
-            } else {
-                0
-            };
-            if width != several.len() {
-                let is_vector = subject.is_vector();
+            // different from what they meant. A non-Vector is never
+            // destructured, not even by an empty name list.
+            let is_vector = subject.is_vector();
+            let width = if is_vector { subject.len() } else { 0 };
+            if !is_vector || width != several.len() {
                 interp.stack.push(subject);
                 interp.stack.push(name_value);
                 // `shapeMismatch`, with a message about destructuring rather

@@ -215,10 +215,12 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     // The other half of `BIND`'s refusal to take a Word's name. Together they
     // keep the two name spaces disjoint at every moment, so a reader never has
-    // to know which of the two a name resolved through.
-    if interp.lookup_binding(&upper_name).is_some() {
+    // to know which of the two a name resolved through. Every live frame
+    // counts, not only the one `DEF` runs in: a binding in a caller past a
+    // User Word's barrier is in scope again the moment the call returns.
+    if interp.binding_exists_beyond_barrier(&upper_name) {
         return Err(AjisaiError::declared("nameConflict", format!(
-            "Cannot define '{}': the name is bound in this frame. A binding and a Word may not share a name.",
+            "Cannot define '{}': the name is bound in a live frame. A binding and a Word may not share a name.",
             upper_name
         )));
     }
