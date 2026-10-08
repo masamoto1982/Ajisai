@@ -20,6 +20,7 @@ use num_traits::{One, Signed};
 use std::cmp::Ordering;
 
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::runtime_limits::{binary_numeric_work, exact_work_bits};
 use crate::interpreter::value_extraction_helpers::{exact_real_of, extract_operands};
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
@@ -39,6 +40,26 @@ fn digit_count(value: &Value) -> Option<u64> {
     }
     let n = f.numerator();
     (n <= BigInt::from(MAX_DIGITS)).then(|| n.to_string().parse().ok())?
+}
+
+/// What deciding `digits` places of `x` costs the work meter.
+///
+/// A rational scales and rounds once: every digit is a decimal place of
+/// big-integer work. An algebraic value is scaled, floored and compared with
+/// one half, and each of its terms is refined to the full scaled width to do
+/// it — a bignum product per term, priced limb×limb as arithmetic prices one
+/// (`binary_numeric_work`), plus one more for the comparison. Measured, six
+/// square roots at 65,536 places ran 7.3 s natively and were charged 86,065
+/// units at one unit a digit; this prices them at the floor rate the budget
+/// is derived from.
+fn format_work(x: &ExactReal, digits: u64) -> u64 {
+    if x.as_rational().is_some() {
+        return digits + 1;
+    }
+    // log2(10) < 10/3: the scaled width, over-estimated slightly.
+    let width = (digits.saturating_mul(10) / 3).saturating_add(exact_work_bits(x));
+    let terms = x.algebraic_term_count() as u64;
+    binary_numeric_work(width, width).saturating_mul(terms + 1)
 }
 
 /// `x * 10^digits`, rounded to an integer with a tie away from zero.
@@ -104,8 +125,7 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
             "expected a non-negative integer digit count",
         ));
     };
-    // Every digit is a decimal place of big-integer work.
-    if let Err(e) = interp.charge_numeric_work(digits + 1) {
+    if let Err(e) = interp.charge_numeric_work(format_work(&x, digits)) {
         interp.stack.extend(operands);
         return Err(e);
     }
