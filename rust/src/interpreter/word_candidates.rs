@@ -41,7 +41,8 @@ pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>
     if needle.is_empty() {
         return Vec::new();
     }
-    let ceiling = distance_ceiling(needle.chars().count());
+    let needle: Vec<char> = needle.chars().collect();
+    let ceiling = distance_ceiling(needle.len());
 
     let vocabulary = get_builtin_word_registry()
         .iter()
@@ -61,8 +62,11 @@ pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>
         if !upper.chars().any(|c| c.is_alphanumeric()) {
             continue;
         }
-        let distance = edit_distance(&needle, &upper);
-        if distance <= ceiling && !scored.iter().any(|(_, existing)| existing == &candidate) {
+        let upper: Vec<char> = upper.chars().collect();
+        let Some(distance) = edit_distance_within(&needle, &upper, ceiling) else {
+            continue;
+        };
+        if !scored.iter().any(|(_, existing)| existing == &candidate) {
             scored.push((distance, candidate));
         }
     }
@@ -92,7 +96,53 @@ fn fold_full_width(name: &str) -> String {
         .collect()
 }
 
-/// Levenshtein distance over `char`s, two rows at a time.
+/// Levenshtein distance over `char`s when it is at most `ceiling`, else
+/// `None`.
+///
+/// Only the band of cells within `ceiling` of the diagonal can hold a
+/// distance that small, so only the band is computed: the work is
+/// `len × (2·ceiling + 1)` rather than `len²`. A diagnosis runs outside every
+/// meter, and the full table over a 32,000-character name and a User Word of
+/// the same length took seconds.
+fn edit_distance_within(left: &[char], right: &[char], ceiling: usize) -> Option<usize> {
+    if left.len().abs_diff(right.len()) > ceiling {
+        return None;
+    }
+    // Any distance past the ceiling is as good as infinite.
+    let past = ceiling + 1;
+    let mut previous: Vec<usize> = (0..=right.len()).map(|j| j.min(past)).collect();
+    let mut current = vec![past; right.len() + 1];
+    for (i, l) in left.iter().enumerate() {
+        let row = i + 1;
+        let low = row.saturating_sub(ceiling).max(1);
+        let high = (row + ceiling).min(right.len());
+        current[0] = row.min(past);
+        current[low - 1] = if low == 1 { current[0] } else { past };
+        let mut best = current[low - 1];
+        for j in low..=high {
+            let substitution = previous[j - 1] + usize::from(*l != right[j - 1]);
+            let cell = substitution
+                .min(previous[j] + 1)
+                .min(current[j - 1] + 1)
+                .min(past);
+            current[j] = cell;
+            best = best.min(cell);
+        }
+        if high < right.len() {
+            current[high + 1] = past;
+        }
+        if best > ceiling {
+            return None;
+        }
+        std::mem::swap(&mut previous, &mut current);
+    }
+    let distance = previous[right.len()];
+    (distance <= ceiling).then_some(distance)
+}
+
+/// Levenshtein distance over `char`s, two rows at a time: the reference the
+/// banded form above is checked against.
+#[cfg(test)]
 fn edit_distance(left: &str, right: &str) -> usize {
     let left: Vec<char> = left.chars().collect();
     let right: Vec<char> = right.chars().collect();
@@ -144,6 +194,36 @@ mod tests {
     #[test]
     fn the_name_itself_is_never_offered_as_its_own_correction() {
         assert!(!suggest_words("MAP", std::iter::empty()).contains(&"MAP".to_string()));
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn the_banded_distance_agrees_with_the_full_table(
+            left in "[ABC]{0,9}",
+            right in "[ABC]{0,9}",
+            ceiling in 0usize..4,
+        ) {
+            let full = edit_distance(&left, &right);
+            let left: Vec<char> = left.chars().collect();
+            let right: Vec<char> = right.chars().collect();
+            proptest::prop_assert_eq!(
+                edit_distance_within(&left, &right, ceiling),
+                (full <= ceiling).then_some(full)
+            );
+        }
+    }
+
+    /// The diagnosis runs outside every meter, so its work has to be bounded
+    /// by the names, not by their product: two 32,000-character names took
+    /// seconds through the full table.
+    #[test]
+    fn a_long_name_is_matched_in_linear_time() {
+        let user = "A".repeat(32_000);
+        let typo = format!("{}B", "A".repeat(31_999));
+        let started = std::time::Instant::now();
+        let candidates = suggest_words(&typo, std::iter::once(user.as_str()));
+        assert_eq!(candidates, vec![user]);
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
     }
 
     #[test]
