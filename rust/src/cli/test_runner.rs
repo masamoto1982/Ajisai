@@ -16,13 +16,17 @@
 //! #@ error  <substring>     the run must fail with a message containing <substring>
 //!                           (implies `status error`)
 //! ```
+//!
+//! `status`, `stack` and `error` each state one expectation, so giving one
+//! twice, or `error` beside `status ok`, is a directive error: a later line
+//! silently replacing an earlier one would let a failing test pass.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::interpreter::Interpreter;
 
-use crate::agent::{block_on, print_payloads, stack_display, Opts};
+use crate::agent::{block_on, contract_violation, print_payloads, stack_display, Opts};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExpectedStatus {
@@ -47,6 +51,10 @@ struct Expectations {
 
 fn parse_directives(source: &str) -> Expectations {
     let mut exp = Expectations::default();
+    let mut seen: Vec<&str> = Vec::new();
+    // The status a `#@ status` line states, apart from the one `#@ error`
+    // implies, so the two can be checked against each other.
+    let mut stated_status: Option<ExpectedStatus> = None;
     for raw in source.lines() {
         let Some(body) = raw.trim_start().strip_prefix("#@") else {
             continue;
@@ -61,10 +69,18 @@ fn parse_directives(source: &str) -> Expectations {
             Some((k, v)) => (k, v.trim()),
             None => (body, ""),
         };
+        if matches!(keyword, "status" | "stack" | "error") {
+            if seen.contains(&keyword) {
+                exp.directive_errors
+                    .push(format!("`#@ {keyword}` is given more than once"));
+                continue;
+            }
+            seen.push(keyword);
+        }
         match keyword {
             "status" => match value {
-                "ok" => exp.status = Some(ExpectedStatus::Ok),
-                "error" => exp.status = Some(ExpectedStatus::Error),
+                "ok" => stated_status = Some(ExpectedStatus::Ok),
+                "error" => stated_status = Some(ExpectedStatus::Error),
                 other => exp
                     .directive_errors
                     .push(format!("unknown status `{other}` (expected ok|error)")),
@@ -74,14 +90,20 @@ fn parse_directives(source: &str) -> Expectations {
                 .output
                 .get_or_insert_with(Vec::new)
                 .push(value.to_string()),
-            "error" => {
-                exp.error_contains = Some(value.to_string());
-                exp.status = Some(ExpectedStatus::Error);
-            }
+            "error" => exp.error_contains = Some(value.to_string()),
             other => exp
                 .directive_errors
                 .push(format!("unknown directive `{other}`")),
         }
+    }
+    exp.status = stated_status;
+    if exp.error_contains.is_some() {
+        if stated_status == Some(ExpectedStatus::Ok) {
+            exp.directive_errors.push(
+                "`#@ error` expects a failure but `#@ status ok` expects success".to_string(),
+            );
+        }
+        exp.status = Some(ExpectedStatus::Error);
     }
     exp
 }
@@ -107,9 +129,17 @@ fn run_test_source(name: &str, source: &str) -> TestOutcome {
     let mut failures = exp.directive_errors.clone();
 
     let mut interp = Interpreter::new();
-    let result = block_on(interp.execute(source));
-    let error_message = result.as_ref().err().map(|e| e.to_string());
-    let actual_status = if result.is_ok() {
+    // `run` checks `#:contract` declarations first and refuses a program
+    // that violates one (LANG.CONTRACT.CHECK), so the test does too.
+    let error_message = match contract_violation::declared_contract_check(source) {
+        Some(check) if check.violated => {
+            contract_violation::violation_report(&interp, &check, None).message
+        }
+        _ => block_on(interp.execute(source))
+            .err()
+            .map(|e| e.to_string()),
+    };
+    let actual_status = if error_message.is_none() {
         ExpectedStatus::Ok
     } else {
         ExpectedStatus::Error
@@ -346,6 +376,47 @@ mod tests {
             .failures
             .iter()
             .any(|f| f.contains("unknown directive")));
+    }
+
+    /// A later directive must not cancel an earlier one: this program
+    /// succeeds, so `#@ error division` alone fails it, and it must not pass
+    /// because `#@ status ok` came after.
+    #[test]
+    fn conflicting_or_repeated_directives_are_reported() {
+        for src in [
+            "#@ error division\n#@ status ok\n1 2 ADD",
+            "#@ status ok\n#@ error division\n1 2 ADD",
+            "#@ stack 9/1\n#@ stack 3/1\n1 2 ADD",
+            "#@ status error\n#@ status ok\n1 2 ADD",
+            "#@ error a\n#@ error b\n1 0 GET",
+        ] {
+            let outcome = run_test_source("t", src);
+            assert!(!outcome.passed(), "{src}");
+        }
+        // `output` is repeatable, and `error` beside `status error` agrees.
+        let outcome = run_test_source("t", "#@ output a\n#@ output b\n'a' PRINT 'b' PRINT");
+        assert!(outcome.passed(), "failures: {:?}", outcome.failures);
+        let outcome = run_test_source("t", "#@ status error\n#@ error Unknown word\nNOSUCHWORD");
+        assert!(outcome.passed(), "failures: {:?}", outcome.failures);
+    }
+
+    /// `run` refuses a program whose `#:contract` declaration is violated
+    /// before executing it, and the test runner runs what `run` runs.
+    #[test]
+    fn a_violated_contract_declaration_fails_like_run() {
+        let src = "#@ stack 2/1\n#:contract INC inputs=2 outputs=1 purity=pure\n\
+                   [ 1 ADD ] 'INC' DEF\n1 INC";
+        let outcome = run_test_source("t", src);
+        assert!(!outcome.passed());
+        assert!(
+            outcome.failures[0].contains("Contract declaration violated"),
+            "{:?}",
+            outcome.failures
+        );
+        let src =
+            "#@ error inputs=2\n#:contract INC inputs=2 outputs=1\n[ 1 ADD ] 'INC' DEF\n1 INC";
+        let outcome = run_test_source("t", src);
+        assert!(outcome.passed(), "failures: {:?}", outcome.failures);
     }
 
     #[test]
