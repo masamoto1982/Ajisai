@@ -41,7 +41,12 @@ pub(crate) fn lift_unary_numeric(
                 .iter()
                 .map(|item| lift_unary_numeric(item, scalar_op))
                 .collect::<Result<Vec<_>>>()?;
-            Ok(Value::from_vector(lanes))
+            // Promoted back to a dense Tensor wherever the lanes fit one: a
+            // dense lane holds an absence with its reason (the sentinel in
+            // the columns, the reason in `DenseTensor::absences`), so a lane
+            // that projected or passed a NIL through does not cost the
+            // vector its columns for every Word after it.
+            Ok(Value::from_vector_promoted(lanes))
         }
         None if value.is_nil() => Ok(value.clone()),
         None => scalar_op(value),

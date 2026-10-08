@@ -12,98 +12,44 @@
 //!
 //! These kernels take the columns as they are, for the shapes whose answer is
 //! fixed by the lanes alone: a Tensor beside a plain scalar, or two Tensors of
-//! one length, with no absent lane. They answer exactly the `Value` the
-//! general route builds — the same dense Tensor (`from_fractions` of the same
-//! lanes is `from_columns` of the same columns), or for a comparison the same
-//! Vector of Booleans — and decline (`None`) wherever that route could answer
-//! anything else: a zero divisor (a reasoned NIL lane), a lane that no longer
-//! fits a machine word (a boxed Vector), any other shape. The charges are
-//! untouched, because the dispatcher made them before choosing a route
-//! (`charge_binary_schema`); which route ran is unobservable
+//! one length. They answer exactly the `Value` the general route builds — the
+//! same dense Tensor (`from_fractions` of the same lanes is `from_columns` of
+//! the same columns), or for a comparison the same Vector of Booleans — and
+//! decline (`None`) wherever that route could answer anything else: a lane
+//! that no longer fits a machine word (a boxed Vector), any other shape. The
+//! charges are untouched, because the dispatcher made them before choosing a
+//! route (`charge_binary_schema`); which route ran is unobservable
 //! (LANG.AUTHORITY.FREEDOM). `dense_kernels_tests` holds the two equal.
+//!
+//! An absent lane is not a reason to decline either, in an operand or in the
+//! answer. A dense Tensor holds one as it holds any other lane: the
+//! denominator-0 sentinel in the columns, and the reason in the Tensor's
+//! absence map, which is sized to the failures rather than to the data. So
+//! the two laws that meet absence are the kernels' own:
+//!
+//! - **Passthrough** (LANG.FAILURE.PASSTHROUGH): an absent operand lane is
+//!   the result lane, the leftmost operand first, carried with its reason and
+//!   never re-minted. On the integer route the sentinel's numerator is 0, so
+//!   the vectorised loop runs over it like any lane and the absent lanes are
+//!   overwritten afterwards, from the sentinel scan, at the cost of the
+//!   failures rather than the data (`carry_absent_lanes`).
+//! - **Projection** (LANG.FAILURE.PROJECT): `DIV` by a zero lane writes the
+//!   sentinel, records `divisionByZero` for that lane, and keeps dividing the
+//!   rest.
+//!
+//! The kernels used to hand both cases to the general route, which boxed a
+//! million lanes to say that one of them was absent, and left the result
+//! boxed for every Word after it. One absent lane then cost a pipeline its
+//! columns from that Word on.
+
+mod lanes;
 
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::comparison::OrderingKind;
 use crate::types::small_rational;
 use crate::types::Column;
-use crate::types::{DenseTensor, Value, ValueData};
-use std::collections::BTreeMap;
-use std::sync::Arc;
-
-/// An operand's lanes: a Tensor's columns, or one rational for every lane.
-#[derive(Clone, Copy)]
-enum Lanes<'a> {
-    Columns {
-        nums: &'a [i64],
-        dens: &'a [i64],
-        integer: bool,
-    },
-    Splat(i64, i64),
-}
-
-impl Lanes<'_> {
-    fn of(value: &Value) -> Option<Lanes<'_>> {
-        match &value.data {
-            ValueData::Tensor { data, shape }
-                if shape.len() == 1
-                    && !data.is_empty()
-                    && (data.is_pure_integer || data.all_lanes_valid()) =>
-            {
-                Some(Lanes::Columns {
-                    nums: &data.numerators,
-                    dens: &data.denominators,
-                    integer: data.is_pure_integer,
-                })
-            }
-            ValueData::Scalar(f) if value.absence.is_none() && !f.is_nil() => {
-                let (n, d) = f.extract_i64_pair()?;
-                Some(Lanes::Splat(n, d))
-            }
-            _ => None,
-        }
-    }
-
-    fn len(self) -> Option<usize> {
-        match self {
-            Lanes::Columns { nums, .. } => Some(nums.len()),
-            Lanes::Splat(..) => None,
-        }
-    }
-
-    fn integer(self) -> bool {
-        match self {
-            Lanes::Columns { integer, .. } => integer,
-            Lanes::Splat(_, d) => d == 1,
-        }
-    }
-
-    #[inline(always)]
-    fn at(self, i: usize) -> (i64, i64) {
-        match self {
-            Lanes::Columns { nums, dens, .. } => (nums[i], dens[i]),
-            Lanes::Splat(n, d) => (n, d),
-        }
-    }
-
-    #[inline(always)]
-    fn num(self, i: usize) -> i64 {
-        match self {
-            Lanes::Columns { nums, .. } => nums[i],
-            Lanes::Splat(n, _) => n,
-        }
-    }
-}
-
-/// The lane count two operands pair over: a Tensor's length against a
-/// scalar, or the shared length of two Tensors. Anything else — two scalars,
-/// two lengths — is the general route's.
-fn paired(a: Lanes, b: Lanes) -> Option<usize> {
-    match (a.len(), b.len()) {
-        (Some(n), None) | (None, Some(n)) => Some(n),
-        (Some(n), Some(m)) if n == m => Some(n),
-        _ => None,
-    }
-}
+use crate::types::Value;
+use lanes::{carry_absent_lanes, paired, Lanes, Out};
 
 #[cfg(test)]
 thread_local! {
@@ -124,21 +70,11 @@ fn hit<T>(answer: Option<T>) -> Option<T> {
     answer
 }
 
-fn dense_value(nums: Column, dens: Column, integer: bool) -> Value {
-    let shape = vec![nums.len()];
-    let tensor = DenseTensor::from_columns(nums, dens, shape.clone(), integer, BTreeMap::new());
-    Value::new(
-        ValueData::Tensor {
-            data: Arc::new(tensor),
-            shape: Arc::new(shape),
-        },
-        None,
-    )
-}
-
 /// `out[i] = f(a[i], b[i])` on integer lanes, with the overflow flags of
 /// every lane gathered rather than checked one by one, so the loop is free
-/// to vectorise. A set flag declines the whole operation.
+/// to vectorise. A set flag declines the whole operation. An absent lane's
+/// sentinel numerator is 0, which `f` takes like any other integer; the lane
+/// is overwritten afterwards (`carry_absent_lanes`).
 #[inline(always)]
 fn integer_lanes(
     a: Lanes,
@@ -149,22 +85,22 @@ fn integer_lanes(
     let mut out: Column = smallvec::smallvec![0i64; n];
     let mut bad = false;
     match (a, b) {
-        (Lanes::Columns { nums: x, .. }, Lanes::Columns { nums: y, .. }) => {
-            for ((o, &x), &y) in out.iter_mut().zip(x).zip(y) {
+        (Lanes::Columns { tensor: x, .. }, Lanes::Columns { tensor: y, .. }) => {
+            for ((o, &x), &y) in out.iter_mut().zip(&x.numerators).zip(&y.numerators) {
                 let (v, f) = f(x, y);
                 *o = v;
                 bad |= f;
             }
         }
-        (Lanes::Columns { nums: x, .. }, Lanes::Splat(y, _)) => {
-            for (o, &x) in out.iter_mut().zip(x) {
+        (Lanes::Columns { tensor: x, .. }, Lanes::Splat(y, _)) => {
+            for (o, &x) in out.iter_mut().zip(&x.numerators) {
                 let (v, f) = f(x, y);
                 *o = v;
                 bad |= f;
             }
         }
-        (Lanes::Splat(x, _), Lanes::Columns { nums: y, .. }) => {
-            for (o, &y) in out.iter_mut().zip(y) {
+        (Lanes::Splat(x, _), Lanes::Columns { tensor: y, .. }) => {
+            for (o, &y) in out.iter_mut().zip(&y.numerators) {
                 let (v, f) = f(x, y);
                 *o = v;
                 bad |= f;
@@ -180,8 +116,9 @@ fn integer_lanes(
 const GCD_TABLE_MAX: u64 = 4096;
 
 /// `a / b` on integer lanes: each quotient reduced by one gcd, with the sign
-/// carried by the numerator. `None` for a zero divisor (a NIL lane) or the
-/// one quotient a machine word cannot hold, `i64::MIN / -1`.
+/// carried by the numerator; an absent operand lane carried, a zero divisor
+/// an absent lane. `None` for the one quotient a machine word cannot hold,
+/// `i64::MIN / -1`.
 fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
     use crate::types::fraction::binary_gcd_u64;
     // A Tensor divided by one small integer (`7 DIV`, the common case) meets
@@ -193,13 +130,23 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         }
         _ => None,
     };
-    let mut nums = Column::with_capacity(n);
-    let mut dens = Column::with_capacity(n);
-    let mut integer = true;
+    let absent = a.absent() || b.absent();
+    let mut out = Out::with_capacity(n);
     for i in 0..n {
+        if absent {
+            if a.den(i) == 0 {
+                out.carry(i, a);
+                continue;
+            }
+            if b.den(i) == 0 {
+                out.carry(i, b);
+                continue;
+            }
+        }
         let (x, y) = (a.num(i), b.num(i));
         if y == 0 {
-            return None;
+            out.project(i);
+            continue;
         }
         // gcd(x, y) = gcd(y, x mod y): one division brings both operands
         // below the divisor, where Stein's loop takes a few steps rather than
@@ -222,11 +169,9 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         } else {
             (q, d)
         };
-        nums.push(q);
-        dens.push(d);
-        integer &= d == 1;
+        out.push(q, d);
     }
-    Some(dense_value(nums, dens, integer))
+    Some(out.into_value())
 }
 
 /// `a schema b` lane by lane, or `None` for the general route.
@@ -245,35 +190,49 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
             ExactArithmeticSchema::Div => None,
         };
         if let Some(nums) = lanes {
-            return Some(dense_value(nums, smallvec::smallvec![1; n], true));
+            let mut out = Out::integers(nums);
+            carry_absent_lanes(&mut out, a, b);
+            return Some(out.into_value());
         }
         if matches!(schema, ExactArithmeticSchema::Div) {
             return integer_quotients(a, b, n);
         }
     }
-    let mut nums = Column::with_capacity(n);
-    let mut dens = Column::with_capacity(n);
-    let mut integer = true;
+    let mut out = Out::with_capacity(n);
     for i in 0..n {
         let (x, y) = (a.at(i), b.at(i));
-        // A zero divisor is a reasoned NIL lane, the general route's to make,
-        // and a lane that outgrows a machine word a boxed Vector.
+        // A present lane never has denominator 0, so the sentinel alone says
+        // which operand lane is absent: that lane is the result, leftmost
+        // first (LANG.FAILURE.PASSTHROUGH). Then a zero divisor projects its
+        // own lane; a lane that outgrows a machine word is a boxed Vector,
+        // the general route's to make.
+        if x.1 == 0 {
+            out.carry(i, a);
+            continue;
+        }
+        if y.1 == 0 {
+            out.carry(i, b);
+            continue;
+        }
+        if matches!(schema, ExactArithmeticSchema::Div) && y.0 == 0 {
+            out.project(i);
+            continue;
+        }
         let (rn, rd) = match schema {
             ExactArithmeticSchema::Add => small_rational::add(x, y, false),
             ExactArithmeticSchema::Sub => small_rational::add(x, y, true),
             ExactArithmeticSchema::Mul => small_rational::mul(x, y),
             ExactArithmeticSchema::Div => small_rational::div(x, y),
         }?;
-        nums.push(rn);
-        dens.push(rd);
-        integer &= rd == 1;
+        out.push(rn, rd);
     }
-    Some(dense_value(nums, dens, integer))
+    Some(out.into_value())
 }
 
 /// `a LT b` / `a GT b` lane by lane: the Vector of Booleans `lift_lanes`
-/// builds, or `None` for the general route. Denominators are positive, so
-/// the cross products order the lanes, and they fit `i128`.
+/// builds, an absent operand lane passed through as the NIL it would answer
+/// there, or `None` for the general route. Denominators are positive, so the
+/// cross products order the lanes, and they fit `i128`.
 pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     hit(ordering_lanes(kind, a, b))
 }
@@ -282,7 +241,16 @@ fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     let (a, b) = (Lanes::of(a)?, Lanes::of(b)?);
     let n = paired(a, b)?;
     let integer = a.integer() && b.integer();
-    let decide = |i: usize| -> bool {
+    let absent = a.absent() || b.absent();
+    let decide = |i: usize| -> Value {
+        if absent {
+            if a.den(i) == 0 {
+                return Value::nil_with_absence(a.absence(i));
+            }
+            if b.den(i) == 0 {
+                return Value::nil_with_absence(b.absence(i));
+            }
+        }
         let ordering = if integer {
             a.num(i).cmp(&b.num(i))
         } else {
@@ -290,11 +258,9 @@ fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
             let (bn, bd) = b.at(i);
             (i128::from(an) * i128::from(bd)).cmp(&(i128::from(bn) * i128::from(ad)))
         };
-        kind.apply_ordering(ordering)
+        Value::from_bool(kind.apply_ordering(ordering))
     };
-    Some(Value::from_vector(
-        (0..n).map(|i| Value::from_bool(decide(i))).collect(),
-    ))
+    Some(Value::from_vector((0..n).map(decide).collect()))
 }
 
 /// Which rounding `rounded` applies.
@@ -306,32 +272,42 @@ pub(crate) enum Rounding {
 }
 
 /// `FLOOR`/`ROUND` of every lane, or `None` for the general route. Every
-/// result is an integer, so the answer is a pure-integer Tensor; for one that
-/// already was, that is the operand itself.
+/// present result is an integer, so the answer is a pure-integer Tensor; for
+/// one that already was, that is the operand itself. An absent lane passes
+/// through with its reason.
 pub(crate) fn rounded(rounding: Rounding, value: &Value) -> Option<Value> {
     hit(rounded_lanes(rounding, value))
 }
 
 fn rounded_lanes(rounding: Rounding, value: &Value) -> Option<Value> {
+    let lanes = Lanes::of(value)?;
     let Lanes::Columns {
-        nums,
-        dens,
+        tensor,
         integer,
-    } = Lanes::of(value)?
+        absent,
+    } = lanes
     else {
         return None;
     };
-    if integer {
+    if integer && !absent {
         return Some(value.clone());
     }
-    let out = nums
+    let mut out = Out::with_capacity(tensor.len());
+    for (i, (&n, &d)) in tensor
+        .numerators
         .iter()
-        .zip(dens)
-        .map(|(&n, &d)| match rounding {
+        .zip(&tensor.denominators)
+        .enumerate()
+    {
+        if d == 0 {
+            out.carry(i, lanes);
+            continue;
+        }
+        let rounded = match rounding {
             Rounding::Floor => n.div_euclid(d),
             Rounding::Round => small_rational::round_half_away_from_zero(n, d),
-        })
-        .collect::<Column>();
-    let ones = smallvec::smallvec![1; out.len()];
-    Some(dense_value(out, ones, true))
+        };
+        out.push(rounded, 1);
+    }
+    Some(out.into_value())
 }
