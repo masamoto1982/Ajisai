@@ -44,6 +44,9 @@ enum Reject {
     /// One JSON value holding a number of more digits, counting its exponent,
     /// than the decoder's `max_digits` (the numeric-literal ceiling).
     TooManyDigits(u64),
+    /// One JSON value whose containers hold more members, all together, than
+    /// the decoder's `max_elements` (the materialization ceiling).
+    TooLarge,
 }
 
 /// An open container on the decoder's own stack.
@@ -65,6 +68,11 @@ struct Decoder<'a> {
     /// The numeric-literal ceiling, which a number in the text meets as a
     /// number in source does.
     max_digits: usize,
+    /// The materialization ceiling, met by the members of every container in
+    /// the text together, as `RANGE` meets it by the elements it builds.
+    max_elements: usize,
+    /// Members placed in a container so far.
+    elements: usize,
 }
 
 impl<'a> Decoder<'a> {
@@ -149,13 +157,16 @@ impl<'a> Decoder<'a> {
             numerator = -numerator;
         }
         let mut denominator = BigInt::from(10).pow(scale);
-        let shift = u32::try_from(magnitude).map_err(|_| Reject::Malformed)?;
         if numerator.is_zero() {
-            // Zero at any scale; skips the (possibly enormous) power.
-        } else if !negative_exponent {
-            numerator *= BigInt::from(10).pow(shift);
+            // Zero at any scale; skips the (possibly enormous) power, and an
+            // exponent past `u32` with it.
         } else {
-            denominator *= BigInt::from(10).pow(shift);
+            let shift = u32::try_from(magnitude).map_err(|_| Reject::Malformed)?;
+            if !negative_exponent {
+                numerator *= BigInt::from(10).pow(shift);
+            } else {
+                denominator *= BigInt::from(10).pow(shift);
+            }
         }
         Ok(Value::from_fraction(Fraction::new(numerator, denominator)))
     }
@@ -277,6 +288,10 @@ impl<'a> Decoder<'a> {
                         Err(Reject::Malformed)
                     };
                 };
+                self.elements += 1;
+                if self.elements > self.max_elements {
+                    return Err(Reject::TooLarge);
+                }
                 match frame {
                     Frame::Array(items) => items.push(value),
                     Frame::Object {
@@ -365,11 +380,14 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
     }
     let max_nesting = interp.runtime_limits.max_nesting_depth;
     let max_digits = interp.runtime_limits.max_numeric_literal_digits;
+    let max_elements = interp.runtime_limits.max_materialized_elements;
     let mut decoder = Decoder {
         bytes: text.as_bytes(),
         pos: 0,
         max_nesting,
         max_digits,
+        max_elements,
+        elements: 0,
     };
     match decoder.decode() {
         Ok(value) => {
@@ -395,6 +413,17 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
                     max_nesting + 1,
                 ))
         }
+        // Counted as it is built, so the whole count is not known; one past
+        // the ceiling is, as `TooDeep` reports one level past it.
+        Err(Reject::TooLarge) => {
+            interp
+                .stack
+                .push(crate::interpreter::space_projection::space_exhausted_nil(
+                    "JSON-DECODE",
+                    max_elements,
+                    Some(max_elements as u128 + 1),
+                ))
+        }
     }
     Ok(())
 }
@@ -411,6 +440,8 @@ mod tests {
             pos: 0,
             max_nesting: MAX_NESTING,
             max_digits: crate::interpreter::runtime_limits::DEFAULT_MAX_NUMERIC_LITERAL_DIGITS,
+            max_elements: usize::MAX,
+            elements: 0,
         }
         .decode()
         .ok()
@@ -422,6 +453,8 @@ mod tests {
             pos: 0,
             max_nesting: MAX_NESTING,
             max_digits: crate::interpreter::runtime_limits::DEFAULT_MAX_NUMERIC_LITERAL_DIGITS,
+            max_elements: usize::MAX,
+            elements: 0,
         }
         .decode()
         .err()
