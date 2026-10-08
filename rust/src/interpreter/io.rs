@@ -6,6 +6,12 @@ use std::fmt::Write;
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
     interp.run_effect_schema(|interp| {
         let val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+        // Rendering walks the whole value, charged before it runs; a refusal
+        // puts the operand back.
+        if let Err(e) = crate::interpreter::collection_meter::charge_walk_of(interp, &val) {
+            interp.stack.push(val);
+            return Err(e);
+        }
         // PRINT is an output boundary: a String is emitted as its raw
         // character content, without the `'...'` quotes the Stack projection
         // uses to mark it as a string (LANG.EFFECTS.OUTPUT).

@@ -46,7 +46,7 @@ use crate::error::{AjisaiError, ResourceProgress, Result, PROGRESS_UNIT_ELEMENTS
 use crate::interpreter::arithmetic_meter::measure_operand;
 use crate::interpreter::runtime_limits::{ElementCost, OperandWork, COLLECTION_COPY_UNITS};
 use crate::interpreter::Interpreter;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 
 /// What one `HashMap` lookup costs beyond the leaf-width probe it hashes, in
 /// collection units — the de-quadraticization follow-up's constant
@@ -143,6 +143,41 @@ pub(crate) fn charge_stacktop_copy(
         _ => return Ok(()),
     };
     charge(interp, units)
+}
+
+/// Charge for a Word that walks the whole of `value` to render, encode or hash
+/// it (`PRINT`, `JSON-ENCODE`, `DIGEST`, `CONTRACT` on a block).
+///
+/// The walk visits every leaf, so it is priced as a copy of every element —
+/// what the Word builds is a second rendering of the value — plus a unit per
+/// byte of the text the value holds, the rate `JSON-DECODE` reads text at. A
+/// String is one leaf to `element_cost` however long it is, and a Vector of a
+/// hundred thousand references to one long String renders all of them.
+pub(crate) fn charge_walk_of(interp: &mut Interpreter, value: &Value) -> Result<()> {
+    let units = element_cost(value)
+        .copies(value.len().max(1))
+        .saturating_add(text_bytes(value));
+    charge(interp, units)
+}
+
+/// The bytes of text `value` holds, through every container.
+fn text_bytes(value: &Value) -> u64 {
+    match &value.data {
+        ValueData::Text(text) => text.len() as u64,
+        ValueData::Symbol(name) => name.len() as u64,
+        ValueData::Vector(children) => children.iter().map(text_bytes).sum(),
+        ValueData::Record(record) => record
+            .keys()
+            .iter()
+            .chain(record.values())
+            .map(text_bytes)
+            .sum(),
+        ValueData::Scalar(_)
+        | ValueData::ExactScalar(_)
+        | ValueData::Tensor { .. }
+        | ValueData::Boolean(_)
+        | ValueData::Nil => 0,
+    }
 }
 
 /// Charge for materializing `count` fresh elements of unit width.

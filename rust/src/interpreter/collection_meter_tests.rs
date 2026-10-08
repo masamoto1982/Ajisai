@@ -372,6 +372,32 @@ async fn every_charging_word_charges_something() {
     }
 }
 
+/// The Words that walk a whole value to render, encode or hash it did that
+/// walk for one step and no work: 1,000 `JSON-ENCODE`s of a 100,000-element
+/// Vector ran 41 s on 8.7% of the agent profile's collection budget, and
+/// `PRINT` reached 7.5 GB of output. Each now pays for the walk, so the
+/// charge follows the operand.
+#[tokio::test]
+async fn a_word_that_walks_a_whole_value_is_charged_for_it() {
+    for word in ["PRINT", "JSON-ENCODE", "STR", "DIGEST", "CONTRACT"] {
+        let small = charged_by_word("0 99 RANGE", word).await;
+        let large = charged_by_word("0 9999 RANGE", word).await;
+        assert!(
+            large >= 10_000 && large >= 50 * small,
+            "`{word}` over 10,000 elements charged {large} against {small} for 100"
+        );
+    }
+    // A String is one leaf however long it is; its bytes are charged.
+    let long = format!("'{}' 'S' BIND 1 100 RANGE [ 'E' BIND S ] MAP", "x".repeat(1000));
+    for word in ["PRINT", "JSON-ENCODE", "DIGEST"] {
+        let charged = charged_by_word(&long, word).await;
+        assert!(
+            charged >= 100_000,
+            "`{word}` over 100 KB of text charged {charged}"
+        );
+    }
+}
+
 // ── SORT's dense route is priced as SORT's comparison route ─────────────
 //
 // `SORT` over a flat pure-integer dense buffer sorts its numerator column

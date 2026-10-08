@@ -142,7 +142,7 @@ fn encode(out: &mut String, value: &Value) -> Option<()> {
 pub(crate) fn op_json_encode(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     // One walk over the value, charged before it runs.
-    if let Err(e) = collection_meter::charge_copy_of(interp, &operand, 1) {
+    if let Err(e) = collection_meter::charge_walk_of(interp, &operand) {
         restore(interp, operand);
         return Err(e);
     }
