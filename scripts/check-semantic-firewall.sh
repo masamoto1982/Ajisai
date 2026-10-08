@@ -15,15 +15,34 @@ fi
 
 failed=0
 
+# rg exits 0 on a match, 1 on none, and 2 on an error such as a missing path
+# (even when it also matched elsewhere). `if rg` would read 2 as "no match"
+# and pass without having scanned the missing file, so every status is
+# classified explicitly and anything but 0 or 1 aborts the check.
+classify_rg_status() {
+  local description="$1"
+  local status="$2"
+  case "$status" in
+    0)
+      echo "[semantic-firewall] FAIL: ${description}" >&2
+      failed=1
+      ;;
+    1) ;;
+    *)
+      echo "[semantic-firewall] ERROR: rg exited ${status} while checking ${description}" >&2
+      exit 2
+      ;;
+  esac
+}
+
 check_absent() {
   local description="$1"
   local pattern="$2"
   shift 2
   echo "[semantic-firewall] checking: ${description}"
-  if rg -n --color never "$pattern" "$@"; then
-    echo "[semantic-firewall] FAIL: ${description}" >&2
-    failed=1
-  fi
+  local status=0
+  rg -n --color never "$pattern" "$@" || status=$?
+  classify_rg_status "$description" "$status"
 }
 
 # External payloads must not expose disallowed camelCase fields.
@@ -61,16 +80,22 @@ check_user_visible_absent() {
   local description="$1"
   local pattern="$2"
   echo "[semantic-firewall] checking: user-visible ${description}"
-  if rg -n --color never "\"[^\"]*(${pattern})[^\"]*\"" \
+  local statuses
+  set +e
+  rg -n --color never "\"[^\"]*(${pattern})[^\"]*\"" \
       rust/src src \
       -g '!*test*' -g '!**/elastic/**' -g '!**/cli/**' -g '!**/agent/**' \
       -g '!**/wasm_interpreter_bindings/**' -g '!**/benches/**' \
       -g '!**/route_equivalence.rs' -g '!src/wasm/generated/**' \
     | rg -v '\.expect\(|eprintln!|\[trace-|debug_assert|panic!|#\[cfg\(feature'
-  then
-    echo "[semantic-firewall] FAIL: user-visible ${description}" >&2
-    failed=1
+  statuses=("${PIPESTATUS[@]}")
+  set -e
+  # The scan itself erroring is fatal; it finding nothing (1) is fine. The
+  # filter's status then decides: 0 means a line survived it.
+  if [[ "${statuses[0]}" -ge 2 ]]; then
+    classify_rg_status "user-visible ${description}" "${statuses[0]}"
   fi
+  classify_rg_status "user-visible ${description}" "${statuses[1]}"
 }
 
 check_user_visible_absent 'fast-kernel vocabulary' '[Ff]ast kernel'
