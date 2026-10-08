@@ -293,25 +293,25 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
 // A NIL's reason is its observable content (LANG.VALUES.NIL): `1 0 DIV` is a
 // NIL whose reason is `divisionByZero`, and a Stack that shows only `NIL`
 // leaves the reader to find out why in an Output area that may not be on
-// screen. The canonical text stays `NIL` — the display the engine writes — and
-// the reason is drawn after it as an annotation. Exported for
+// screen. The canonical text stays `NIL` — the display the engine writes —
+// and the reason is the tooltip the pointer finds on it. Drawn in the line
+// as `NIL · divisionByZero`, it read as two values side by side; the tooltip
+// keeps the `NIL` so that it reads whole on its own. Exported for
 // `output-display-renderer.test.ts`.
 export const describeNilNode = (item: Value): string => {
     const reason = item.semantics?.absence?.reason;
     return reason ? `NIL · ${reason}` : 'NIL';
 };
 
-// The visible text already carries the whole label, so the tooltip repeats it
-// and assistive technology reads it from the text itself.
+// The NIL is set in its own ink (`--color-nil`) so it stands apart from the
+// values around it, and a reasoned one invites the pointer: the tooltip
+// carries the reason, and `stack-node-nil-reasoned` draws the affordance.
 const annotateNilNode = (node: HTMLElement, item: Value): void => {
     const label = describeNilNode(item);
     node.classList.add('stack-node-nil');
-    node.title = label;
     if (label === 'NIL') return;
-    const reason = document.createElement('span');
-    reason.className = 'stack-nil-reason';
-    reason.textContent = label.slice('NIL'.length);
-    node.appendChild(reason);
+    node.classList.add('stack-node-nil-reasoned');
+    node.title = label;
 };
 
 // A number as the engine displays it. An irrational's `n/d` is only an

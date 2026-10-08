@@ -131,8 +131,8 @@ describe('an irrational renders as the engine writes it', () => {
 });
 
 // A NIL's reason is its observable content (LANG.VALUES.NIL). The canonical
-// text stays the engine's `NIL`; the Stack draws the reason beside it, and the
-// label it draws is this one.
+// text stays the engine's `NIL`; the Stack keeps the reason in the tooltip
+// the pointer finds on it, and the label it shows there is this one.
 describe('a NIL in the Stack carries its reason', () => {
     const nil = (reason?: string): Node =>
         ({ type: 'nil', value: null, semantics: reason ? { absence: { reason } } : {} }) as Node;

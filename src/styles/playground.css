@@ -78,6 +78,10 @@
     --color-dependency:     oklch(73.4% 0.158 71.0);    /* amber   */
     --color-non-dependency: oklch(52.5% 0.135 161.2);   /* green   */
     --color-stack:          oklch(47.9% 0.220 328.4);   /* magenta */
+    /* A NIL on the Stack: a cool slate, apart from the magenta of the values
+       around it and from every bracket depth, muted because it is an absence.
+       Reads at 4.5:1 on white and on --color-stack-top. */
+    --color-nil:            oklch(46% 0.06 240);        /* slate   */
 
     /* --- Vector bracket depth colours (after Tol's muted palette) ------- */
     /* Brackets are text, and the top of the stack sits on its fill, so each
@@ -1198,16 +1202,19 @@ footer {
     &[data-depth="9"] { color: var(--bracket-depth-9); }
 }
 
-/* A NIL with its reason beside it (`NIL · divisionByZero`). The reason is
-   the NIL's content rather than commentary, so it stays in the value's line,
-   set in the secondary ink so `NIL` itself still reads as the value. */
+/* A NIL in its own ink, apart from the magenta of the values around it. Its
+   reason (`divisionByZero`) is the tooltip rather than text beside it: set
+   in the line, `NIL · divisionByZero` read as two values. A reasoned NIL
+   carries the dotted underline and help cursor that say there is one. */
 .stack-node-nil {
+    color: var(--color-nil);
     white-space: nowrap;
 }
 
-.stack-nil-reason {
-    color: var(--color-text-light);
-    font-weight: var(--weight-regular);
+.stack-node-nil-reasoned {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.15em;
 }
 
 /* The undrawn tail of a large collection (the render budget in src/gui/output-display-renderer.ts),
