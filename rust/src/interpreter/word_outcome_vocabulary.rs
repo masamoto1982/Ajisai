@@ -235,9 +235,14 @@ pub(crate) fn structural_ceiling_ids(reach: &Reachability) -> BTreeSet<String> {
         .map(|id| format!("error:{id}"))
         .filter(|id| {
             // `recursionLimitExceeded` is `execute_builtin`'s call-depth guard,
-            // so it needs a User-Word activation and nothing else does.
+            // so it needs a User-Word activation or a Word that evaluates a
+            // block, and nothing else does.
             if id == "error:recursionLimitExceeded" {
-                return reach.unresolved || reach.calls_user_word;
+                return reach.unresolved
+                    || reach.calls_user_word
+                    || ["EXEC", "MAP", "FILTER", "FOLD", "SCAN"]
+                        .iter()
+                        .any(|word| reach.names.contains(*word));
             }
             true
         })

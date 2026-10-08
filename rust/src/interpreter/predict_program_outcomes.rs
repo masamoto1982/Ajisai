@@ -259,11 +259,14 @@ mod tests {
     }
 
     /// `recursionLimitExceeded` is `execute_builtin`'s call-depth guard, so it
-    /// needs a User-Word activation rather than a named Word.
+    /// needs a User-Word activation or a Word that evaluates a block — a
+    /// chain of blocks bound to one another nests as deep as a call chain.
     #[test]
-    fn the_call_depth_guard_needs_a_user_word_to_be_possible() {
+    fn the_call_depth_guard_needs_a_user_word_or_a_block_to_be_possible() {
         let calls_user_word = predict("[ 1 ADD ] 'INC' DEF 5 INC");
         assert!(calls_user_word.contains(&"error:recursionLimitExceeded".to_string()));
+        let runs_a_block = predict("[ 1 ] 'B' BIND B EXEC");
+        assert!(runs_a_block.contains(&"error:recursionLimitExceeded".to_string()));
         assert!(!predict("1 2 ADD").contains(&"error:recursionLimitExceeded".to_string()));
     }
 

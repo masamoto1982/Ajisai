@@ -31,7 +31,9 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MA
 /// `AjisaiError` regardless of that step budget's value — a stack overflow is
 /// a depth problem, not a count problem. Recursion itself cannot reach this
 /// guard: LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check makes a self-referential
-/// definition impossible to construct.
+/// definition impossible to construct. A Word that evaluates a block nests
+/// the same frames, so it counts one level too (`in_block_frame`): the depth
+/// is that of calls and blocks together.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
 /// Default cap on the number of elements a single generative built-in
@@ -139,7 +141,8 @@ pub struct Interpreter {
     /// Type-erased caches owned by runtime subsystems.
     pub(crate) runtime_scratch: HashMap<String, Box<dyn std::any::Any + Send>>,
     /// User-word call depth. Incremented on entry to a user-word body in
-    /// `execute_word_core`, decremented on exit. Compared against
+    /// `execute_word_core`, and around a Word that evaluates a block
+    /// (`in_block_frame`), decremented on exit. Compared against
     /// `MAX_USER_WORD_DEPTH` to prevent a deep recursion from blowing the
     /// Rust call stack and trapping the WASM module.
     pub(crate) call_depth: usize,

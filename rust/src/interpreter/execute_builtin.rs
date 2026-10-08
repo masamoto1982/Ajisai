@@ -179,6 +179,30 @@ impl Interpreter {
         result.map_err(|err| err.attributed_to(word.name))
     }
 
+    /// Run a Word that evaluates a block (`EXEC`, `MAP`, `FILTER`, `FOLD`,
+    /// `SCAN`) as one more level of `call_depth`.
+    ///
+    /// The block nests native frames just as a User Word body does, and the
+    /// two multiply: a body of 250 nested `[ … ] EXEC` levels called down a
+    /// chain of 22 Words, or a chain of blocks bound to one another, is
+    /// thousands of frames deep while each guard alone is satisfied. So both
+    /// count against the one guard. The level is taken here, at the Word,
+    /// before any route is chosen, so a fused or compiled route reaches the
+    /// same answer as the interpreted one (LANG.AUTHORITY.FREEDOM); a refusal
+    /// comes before the operands are taken, so they stay where they were.
+    fn in_block_frame(&mut self, word: &str, op: fn(&mut Interpreter) -> Result<()>) -> Result<()> {
+        if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
+            return Err(AjisaiError::RecursionLimitExceeded {
+                limit: super::interpreter_core::MAX_USER_WORD_DEPTH,
+                word: word.to_string(),
+            });
+        }
+        self.call_depth += 1;
+        let result = op(self);
+        self.call_depth -= 1;
+        result
+    }
+
     /// Run the primitive for a Word's canonical identity.
     ///
     /// `WordId` is generated from `spec/words.json`, so this match is total
@@ -194,10 +218,10 @@ impl Interpreter {
             WordId::Eq => comparison::op_eq(self),
             WordId::Lt => comparison::op_lt(self),
             WordId::Gt => comparison::op_gt(self),
-            WordId::Map => higher_order::op_map(self),
-            WordId::Filter => higher_order::op_filter(self),
-            WordId::Fold => higher_order_fold::op_fold(self),
-            WordId::Scan => higher_order_fold::op_scan(self),
+            WordId::Map => self.in_block_frame("MAP", higher_order::op_map),
+            WordId::Filter => self.in_block_frame("FILTER", higher_order::op_filter),
+            WordId::Fold => self.in_block_frame("FOLD", higher_order_fold::op_fold),
+            WordId::Scan => self.in_block_frame("SCAN", higher_order_fold::op_scan),
             WordId::Get => vector_ops::op_get(self),
             WordId::Length => vector_ops::op_length(self),
             WordId::Concat => vector_ops::op_concat(self),
@@ -216,7 +240,7 @@ impl Interpreter {
                 self.stack.push(Value::nil());
                 Ok(())
             }
-            WordId::Exec => control::op_exec(self),
+            WordId::Exec => self.in_block_frame("EXEC", control::op_exec),
             WordId::Contract => reflection_ops::op_contract(self),
             WordId::Digest => reflection_ops::op_digest(self),
             WordId::Bind => bindings::op_bind(self),
