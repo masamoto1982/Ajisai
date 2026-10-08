@@ -157,6 +157,43 @@ async fn range_length_matches_the_counted_span() {
     }
 }
 
+/// A bound outside `i64` is still an integer, so RANGE builds the sequence
+/// rather than raising `invalidInteger`, which the spec reserves for a bound
+/// that is not an integer. The ceiling still bounds a span that is too long.
+#[tokio::test]
+async fn range_bounds_past_i64_are_integers_and_build() {
+    for (range, literal) in [
+        (
+            "9223372036854775808 9223372036854775810 RANGE",
+            "[ 9223372036854775808 9223372036854775809 9223372036854775810 ]",
+        ),
+        (
+            "9223372036854775806 9223372036854775808 RANGE",
+            "[ 9223372036854775806 9223372036854775807 9223372036854775808 ]",
+        ),
+        (
+            "-9223372036854775808 -9223372036854775810 RANGE",
+            "[ -9223372036854775808 -9223372036854775809 -9223372036854775810 ]",
+        ),
+        (
+            "100000000000000000000 100000000000000000000 RANGE",
+            "[ 100000000000000000000 ]",
+        ),
+    ] {
+        assert_eq!(
+            range_equals_literal(range, literal).await,
+            Some(true),
+            "`{range}` must hold exactly {literal}"
+        );
+    }
+    assert_eq!(
+        crate::test_support::reason("0 100000000000000000000 RANGE")
+            .await
+            .as_deref(),
+        Some("spaceExhausted")
+    );
+}
+
 // ── REVERSE keeps a flat dense buffer dense ─────────────────────────────────
 
 /// `EQ` between two programs. Cross-representation equality means a dense

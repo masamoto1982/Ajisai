@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::{Value, ValueData};
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
@@ -74,10 +74,20 @@ fn extract_integer_bigint(value: &Value) -> std::result::Result<BigInt, NotAnInt
     }
 }
 
-pub(crate) fn extract_integer_from_value(value: &Value) -> std::result::Result<i64, NotAnInteger> {
-    extract_integer_bigint(value)?
+/// An integer operand read as a position or count in a Vector: any integer,
+/// with one outside `i64` clamped to the nearer end of it. No Vector is that
+/// long, so a clamped position is past the end exactly when the integer was,
+/// and GET, TAKE, DROP and PUT project it as `indexOutOfBounds` rather than
+/// refusing an integer as `invalidInteger` for its size.
+pub(crate) fn extract_position_from_value(value: &Value) -> std::result::Result<i64, NotAnInteger> {
+    let integer = extract_integer_bigint(value)?;
+    Ok(integer
         .to_i64()
-        .ok_or_else(|| NotAnInteger::of(value))
+        .unwrap_or(if integer.sign() == Sign::Minus {
+            i64::MIN
+        } else {
+            i64::MAX
+        }))
 }
 
 pub(crate) fn extract_bigint_from_value(
@@ -206,9 +216,14 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_integer_from_value() {
+    fn test_extract_position_from_value() {
         let wrapped = Value::from_fraction(Fraction::new(BigInt::from(42), BigInt::one()));
-        let result = extract_integer_from_value(&wrapped).unwrap();
+        let result = extract_position_from_value(&wrapped).unwrap();
         assert_eq!(result, 42);
+        let huge = Value::from_fraction(Fraction::new(BigInt::from(10).pow(20), BigInt::one()));
+        assert_eq!(extract_position_from_value(&huge).unwrap(), i64::MAX);
+        let negative =
+            Value::from_fraction(Fraction::new(-BigInt::from(10).pow(20), BigInt::one()));
+        assert_eq!(extract_position_from_value(&negative).unwrap(), i64::MIN);
     }
 }

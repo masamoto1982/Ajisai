@@ -15,7 +15,7 @@ use super::ordering_ops::{elements_of, restore, take_operand};
 use super::tensor_cmds::checked_materialized_count;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::charge_materialization;
-use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
+use crate::interpreter::value_extraction_helpers::{extract_position_from_value, normalize_index};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
@@ -239,10 +239,10 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 // The companion module to `ordering_ops`, on the same reasoning: each of these
 // is expressible in the existing vocabulary, and each one written that way
 // costs asymptotically more.
-/// `extract_integer_from_value`, with a non-integer operand raised as the
+/// `extract_position_from_value`, with a non-integer operand raised as the
 /// declared `invalidInteger` that every integer-taking Word shares.
 fn require_integer_operand(value: &Value) -> Result<i64> {
-    extract_integer_from_value(value).map_err(|e| {
+    extract_position_from_value(value).map_err(|e| {
         AjisaiError::declared(
             "invalidInteger",
             format!("expected an integer, got {}", e.got),
@@ -401,13 +401,9 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let length = items.len();
-    let position = if raw_index < 0 {
-        length as i64 + raw_index
-    } else {
-        raw_index
-    };
-    if position < 0 || position as usize >= length {
+    // `normalize_index` checks the bounds in `i64` before narrowing: an
+    // `as usize` first truncated `2^32 + 1` to slot 1 on 32-bit wasm.
+    let Some(position) = normalize_index(raw_index, items.len()) else {
         // A well-formed index over a well-formed Vector that names no slot is
         // the question `GET` already projects for, and `TAKE` now projects for
         // too: data that did not work out, not a malformed program
@@ -420,9 +416,9 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
             Recoverability::Recoverable,
         ));
         return Ok(());
-    }
+    };
 
-    items[position as usize] = replacement;
+    items[position] = replacement;
     interp.stack.push(Value::from_vector(items));
     Ok(())
 }
