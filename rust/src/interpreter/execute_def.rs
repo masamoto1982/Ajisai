@@ -311,10 +311,14 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     // Content store: share one stored body across textually identical
-    // definitions so copying a word group does not duplicate its code.
+    // definitions so copying a word group does not duplicate its code. A
+    // stored body is shared only when it is these very tokens: the key is a
+    // digest, and a body carrying a value whole keys it by a value digest
+    // that does not separate every pair of algebraic values.
     let body_key = crate::interpreter::word_identity::body_content_key(tokens);
     let body: Arc<[Token]> = match interp.body_store.get(&body_key) {
-        Some(shared) => shared.clone(),
+        Some(shared) if shared[..] == tokens[..] => shared.clone(),
+        Some(_) => tokens.into(),
         None => {
             let arc: Arc<[Token]> = tokens.into();
             interp.body_store.insert(body_key, arc.clone());

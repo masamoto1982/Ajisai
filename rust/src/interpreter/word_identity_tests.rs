@@ -82,3 +82,48 @@ fn distinct_inputs_get_distinct_digests() {
     assert_ne!(content_digest(b"AB"), content_digest(b"ABA"));
     assert_ne!(content_digest(b""), content_digest(b"\0"));
 }
+
+/// A String (or name) may hold the separator byte `0x1f` followed by a tag
+/// byte; the key must not read that as a token boundary, or the content store
+/// hands the first Word's body to the second and `QUIET` prints.
+#[tokio::test]
+async fn a_separator_inside_a_string_does_not_forge_a_token_boundary() {
+    let interp = crate::test_support::run(
+        "[ 'hi' PRINT ] 'NOISY' DEF [ 'hi\u{1f}YPRINT' ] 'QUIET' DEF QUIET",
+    )
+    .await;
+    assert!(
+        !interp.output_buffer.contains("hi\n"),
+        "QUIET ran NOISY's body: {:?}",
+        interp.output_buffer
+    );
+    assert_eq!(interp.get_stack().len(), 1);
+
+    assert_eq!(
+        crate::test_support::top("[ 'a\u{1f}Sb' ] 'A' DEF [ 'a' 'b' ] 'B' DEF B").await,
+        "'a' 'b'"
+    );
+    assert_eq!(
+        crate::test_support::top(
+            "[ 'hi' PRINT ] 'NOISY' DEF [ 'hi\u{1f}YPRINT' ] 'QUIET' DEF \
+             [ NOISY ] 0 GET DIGEST [ QUIET ] 0 GET DIGEST EQ"
+        )
+        .await,
+        "FALSE"
+    );
+}
+
+/// Escaping leaves a body that holds no separator byte with the identity it
+/// had before escaping existed, so saved and published identities still match.
+#[tokio::test]
+async fn identities_of_bodies_without_separators_are_unchanged() {
+    assert_eq!(
+        crate::test_support::top(
+            "[ 1 ADD 'hi' PRINT [ 2 1/2 ] ] 'IDA' DEF [ IDA DUP ] 'IDB' DEF \
+             [ IDA ] 0 GET DIGEST [ IDB ] 0 GET DIGEST"
+        )
+        .await,
+        "'#d6c6055eadf9c03a8e8a22d1b849a8fb93977edd612ef5432ee79525fa0ab57f' \
+         '#d7ca84d7dfb057988481ebb28bd3f812a021ed7708ae2f1d1f57171edd7517ab'"
+    );
+}
