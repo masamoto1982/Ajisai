@@ -14,6 +14,7 @@ mod check_locals_tests;
 pub(crate) mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;
+mod contract_directive;
 pub(crate) mod contract_gap;
 pub(crate) mod contract_report;
 pub(crate) mod contract_violation;
