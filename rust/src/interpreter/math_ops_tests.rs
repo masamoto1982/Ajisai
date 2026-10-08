@@ -142,3 +142,18 @@ async fn floor_and_round_lift_over_irrational_lanes() {
         "[ [ 1/1 ] [ 1/1 ] ]"
     );
 }
+
+/// MIN and MAX align two shapes at the innermost axis, as ADD does
+/// (LANG.COLLECTIONS.LIFT): `[ 0 5 ]` is a row reused down the columns of a
+/// matrix, not one value per row. A ragged Vector pairs with no Vector.
+#[tokio::test]
+async fn min_aligns_shapes_innermost_like_add() {
+    assert_eq!(
+        crate::test_support::top("[ [ 1 2 ] [ 3 4 ] ] [ 0 5 ] MIN").await,
+        "[ [ 0/1 2/1 ] [ 0/1 4/1 ] ]"
+    );
+    assert_eq!(
+        crate::test_support::error_of("[ 1 [ 2 3 ] ] [ 1 1 ] MAX").await,
+        "shapeMismatch"
+    );
+}

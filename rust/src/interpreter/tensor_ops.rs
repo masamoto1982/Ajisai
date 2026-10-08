@@ -317,8 +317,8 @@ pub(crate) fn broadcast_leaf(value: &Value) -> Option<Fraction> {
 /// instead of a flattened tensor, so it stays correct when scalars and
 /// vectors are mixed as siblings or sub-vectors have differing shapes. A
 /// scalar paired with a vector is broadcast across every element; two vectors
-/// of equal length combine element-wise; unequal lengths raise
-/// `VectorLengthMismatch`. The leaf operation is the same `op` used by the
+/// pair by shape, and a ragged one pairs with no vector
+/// (`broadcast_tree::broadcast_tree`). The leaf operation is the same `op` used by the
 /// flat path, so NIL-lane handling is identical.
 fn apply_recursive_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where

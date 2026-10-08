@@ -11,7 +11,7 @@
 
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
-use crate::test_support::run_ok;
+use crate::test_support::{error_of, run_ok, top};
 use crate::types::{Value, ValueData};
 
 fn vector_children(value: &Value) -> &[Value] {
@@ -190,4 +190,68 @@ async fn an_absent_lane_survives_the_exact_real_broadcast() {
         // The exact lane beside it is untouched.
         assert!(is_exact_real_lane(&stack[0].child(0).unwrap()));
     }
+}
+
+/// **A one-element Vector broadcasts across irrational lanes, in either
+/// position, as it does across rational ones.**
+///
+/// LANG.COLLECTIONS.LIFT: a length-1 axis's single lane is reused across the
+/// other's length, and `[ 1 2 3 ] [ 10 ] MUL` is the spec's own example. The
+/// exact-real route walked the operands requiring equal lengths, so the same
+/// program with an irrational lane raised `shapeMismatch`.
+#[tokio::test]
+async fn a_one_element_vector_broadcasts_across_irrational_lanes() {
+    let irrational = "[ 2 3 ] [ SQRT ] MAP";
+    for word in ["ADD", "SUB", "MUL", "DIV"] {
+        assert_eq!(
+            top(&format!("{irrational} [ 2 ] {word}")).await,
+            top(&format!("{irrational} 2 {word}")).await,
+            "{word}: the one-element Vector on the right"
+        );
+        assert_eq!(
+            top(&format!("[ 2 ] {irrational} {word}")).await,
+            top(&format!("2 {irrational} {word}")).await,
+            "{word}: the one-element Vector on the left"
+        );
+    }
+}
+
+/// **The exact-real route aligns shapes at the innermost axis, as the
+/// rational route does.** `[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] ADD` pairs `10` with
+/// the first column; the exact route used to pair it with the first row, so
+/// one program meant two things depending on whether a lane was rational.
+#[tokio::test]
+async fn the_exact_real_route_aligns_shapes_innermost() {
+    assert_eq!(
+        top("[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] ADD").await,
+        "[ [ 11/1 22/1 ] [ 13/1 24/1 ] ]"
+    );
+    assert_eq!(
+        top("[ [ 1 2 ] [ 3 4 ] ] [ 2 3 ] [ SQRT ] MAP ADD").await,
+        top("1 2 SQRT ADD 2 3 SQRT ADD 3 2 SQRT ADD 4 3 SQRT ADD 4 COLLECT [ 2 2 ] RESHAPE").await
+    );
+}
+
+/// **Two Vectors where either is ragged do not pair** (LANG.COLLECTIONS.LIFT:
+/// "so is any pairing of two vectors where either one is ragged"), on both
+/// routes and whatever the lengths. Equal top-level lengths used to be zipped.
+/// A scalar still combines with every element of a ragged Vector.
+#[tokio::test]
+async fn a_ragged_vector_does_not_pair_with_a_vector() {
+    for code in [
+        "[ 1 [ 2 3 ] ] [ 1 1 ] MUL",
+        "[ 1 [ 2 3 ] ] [ 1 1 ] ADD",
+        "[ 1 1 ] [ 1 [ 2 3 ] ] SUB",
+        "[ 1 [ 2 3 ] ] [ 1 0 ] DIV",
+        "[ 1 [ 2 3 ] ] [ 2 ] MUL",
+        "[ 1 [ 2 3 ] ] [ 2 3 ] [ SQRT ] MAP MUL",
+        "[ 2 3 ] [ SQRT ] MAP [ 1 [ 2 3 ] ] ADD",
+    ] {
+        assert_eq!(error_of(code).await, "shapeMismatch", "`{code}`");
+    }
+    assert_eq!(top("[ 1 [ 2 3 ] ] 2 MUL").await, "[ 2/1 [ 4/1 6/1 ] ]");
+    assert_eq!(
+        top("[ 1 [ 2 3 ] ] 2 SQRT MUL").await,
+        top("2 SQRT [ 1 [ 2 3 ] ] MUL").await
+    );
 }

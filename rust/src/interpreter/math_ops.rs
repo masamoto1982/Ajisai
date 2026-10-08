@@ -59,8 +59,8 @@ pub(crate) fn lift_unary_numeric(
 /// Apply a binary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
 ///
 /// The shape rules are the ones the arithmetic broadcast already uses: a
-/// scalar pairs with every element of a vector, two vectors of equal length
-/// pair element-wise, and unequal lengths are a shape error. `MIN` and `MAX`
+/// scalar pairs with every element of a vector, and two vectors pair by
+/// shape, aligned at the innermost axis with a length-1 axis reused. `MIN` and `MAX`
 /// used to take scalars only, so `[ -1 2 -3 ] 0 MAX` — a rectifier, and the
 /// most ordinary thing anyone writes with `MAX` — was an ERROR while
 /// `[ -1 2 -3 ] 0 ADD` lifted happily. Same clause, same family, two answers.
@@ -70,9 +70,9 @@ pub(crate) fn lift_binary_numeric(
     b: &Value,
     leaf_op: &dyn Fn(&Value, &Value) -> Result<Value>,
 ) -> Result<Value> {
-    use crate::interpreter::broadcast_tree::{broadcast_tree, UnequalAxes};
+    use crate::interpreter::broadcast_tree::broadcast_tree;
 
-    broadcast_tree(a, b, UnequalAxes::StretchSingleton, &|x, y| {
+    broadcast_tree(a, b, &|x, y| {
         if x.is_nil() {
             return Ok(x.clone());
         }
