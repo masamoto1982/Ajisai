@@ -57,7 +57,7 @@ don't know.
 | you want | call | pass |
 |---|---|---|
 | a number, a vector, an exact root, a `PRINT` line | `compute` | `source` |
-| to know whether source parses and resolves, without running it | `check` | `source` |
+| to know whether source parses, resolves and keeps its `#:contract` declarations, without running it | `check` | `source` |
 | the inferred contract of Words *you* defined | `infer_contracts` | `source` |
 | every outcome a program could reach, before running it | `outcomes` | `source` |
 | a built-in Word's contract, or "did I spell it right?" | `word_contract` | `word` |
@@ -78,12 +78,20 @@ its contents as `source`.
    the general rule and it has exactly one exception: for an irrational square
    root `stackDisplay` is an exact but display-only rendering (`sqrt(2)`), and
    the value to compute with lives in `semantics.exactTerms` — see §4, which you
-   must read before computing with any `SQRT` result.
+   must read before computing with any `SQRT` result. A `stackElided` field
+   means a value was too large to send: its slot keeps its `type` and gains an
+   `elided` record (`elements`, `approxBytes`) in place of the value, the
+   values beside it are whole, and the fix is to leave less on the stack.
 3. On `error`: `diagnosis.why` and `.where` locate it; `diagnosis.candidates`
    names the Word you probably meant; `diagnosis.nextChecks[].code` is a stable
    identifier to act on — never match on its display text, which is localized.
+   A `#:contract` declaration the body contradicts is an error like any other
+   (`aiDiagnostic.category: contractViolation`), with every finding listed in
+   `contractDecls.findings`; see §8.
 4. On `hostError`: branch on `error.code`, and retry only if `error.retryable`
-   is true. `mcp.limits` states every ceiling that applies.
+   is true. `mcp.limitProfile` names the profile that applied; its ceilings
+   are the `ajisai://limits` resource, and a ceiling that fired names itself
+   and its value in `diagnosis.resourceLimit`.
 
 A field carrying no value is **absent**, not `null`: a successful result simply
 has no `diagnosis`. Test for presence.
@@ -176,12 +184,28 @@ misspelling with `suggestions`.
 
 ## 6. Bounds
 
-Every result carries the profile it ran under in `mcp.limits`, alongside
-`mcp.serverVersion`, `mcp.engineVersion` and `mcp.backend.kind`. Exceeding a
-ceiling is a diagnosed outcome, never a hang. The full profile is also readable
-without a tool call at `ajisai://limits`, the result contract at
-`ajisai://schema/result`, every Word's full contract at `ajisai://contracts`,
-and the inventory — every Word's name and family — at `ajisai://vocabulary`.
+Every result names the profile it ran under in `mcp.limitProfile`, alongside
+`mcp.serverVersion`, `mcp.engineVersion` and `mcp.backend.kind`; the ceilings
+themselves are read once, at `ajisai://limits`, rather than repeated on every
+result. Exceeding a ceiling is a diagnosed outcome, never a hang, and the
+diagnosis names the ceiling and its value (`diagnosis.resourceLimit`). The
+result contract is at `ajisai://schema/result`, every Word's full contract at
+`ajisai://contracts`, and the inventory — every Word's name and family — at
+`ajisai://vocabulary`.
+
+Two of the ceilings decide how a program should be shaped, and they are 10x
+to 120x tighter than the browser playground's, so a program tried there does
+not carry over unchanged:
+
+- **`executionSteps` is 100,000, and a block iteration is one step per
+  element.** `MAP` / `FILTER` / `FOLD` / `SCAN` walk tens of thousands of
+  elements, not more: `0 99999 RANGE 0 [ ADD ] FOLD` is refused. Write the
+  same operation on whole vectors instead — `V V ADD` over 100,000 lanes is
+  a few steps, and so is `0 99999 RANGE` itself (the materialization ceiling,
+  `materializedElements`, is also 100,000).
+- **A result is sent in full up to 440 KiB of stack.** Past that, the slot
+  that does not fit is elided (§2) and the rest arrives whole. Leave the
+  answer on the stack, not the intermediates it was built from.
 
 ## 7. Budget before you run
 
@@ -206,7 +230,8 @@ attains the class; `exact: false` marks a sound over-approximation the real run
 may beat.
 
 The three axes are the same counters a result reports back in
-`runtimeMetrics`, so a bound and a measurement are answers about one quantity.
+`resourceUsage` (`executionSteps`, `numericWork`, `collectionWork`), so a bound
+and a measurement are answers about one quantity.
 
 **A class is how the charge grows, not how large it is.** Two programs of the
 same class can differ by orders of magnitude, because the class says nothing
@@ -239,6 +264,38 @@ Two further rules:
   a `{class, exact}` pair: an inferred bound states what the inference derived,
   and its exactness is observable instead as whether `suggested` carries that
   axis — `suggested` names only the axes the declaration checker can verify.
+
+## 8. Declare a contract, and have it checked before anything runs
+
+A Word you define can state its own contract on a `#:contract` comment line,
+in the keys and values `word_contract` answers in: `inputs=N` `outputs=N`
+(must match the body), `purity=pure|effectful`,
+`partiality=total|partial|projecting`,
+`determinism=deterministic|stateRelative|hostRelative` (each a bound the body
+must not exceed), and `cost steps=… numeric=… collection=…` with a class from
+`const` `linear` `superlinear` `unbounded`. A key left out is not checked.
+`check` verifies the line against the body without running anything, and
+`compute` runs the same check first:
+
+```ajisai tool=check status=ok
+#:contract DOUBLE inputs=1 outputs=1 purity=pure
+[ 2 MUL ] 'DOUBLE' DEF 21 DOUBLE
+```
+
+A declaration the body contradicts is refused by both, as an ordinary error:
+`status: error`, `aiDiagnostic.category: contractViolation`, `outcome:
+error:contractViolation` (from `compute`), `message` quoting the finding, and
+`contractDecls.findings` listing every one. Nothing runs and nothing prints:
+
+```ajisai tool=compute status=error
+#:contract DOUBLE inputs=2 outputs=1
+[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE PRINT
+```
+
+A body the inference cannot read (a block taken out of data and passed to
+`EXEC`) is *cannot verify* — a `note` with a `gap.*` code — never a false
+violation. To write a declaration without guessing, call `infer_contracts`
+first and paste the `suggested` line it answers for the Word.
 
 ---
 

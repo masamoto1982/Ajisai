@@ -22,6 +22,26 @@ fn looks_double_quoted(word: &str) -> bool {
     word.len() >= 2 && word.starts_with('"') && word.ends_with('"')
 }
 
+/// Forth-style stack shufflers, which Ajisai does not have: every Word
+/// consumes the operands it reads, and a value used twice is named with
+/// `BIND`. `DROP` is not here — it is an Ajisai collection Word.
+const STACK_SHUFFLERS: &[&str] = &["DUP", "SWAP", "OVER", "ROT", "NIP", "TUCK", "PICK", "2DUP"];
+
+/// Structured-programming keywords, which Ajisai does not have: a branch is
+/// `SELECT` over two values, and iteration is `MAP`/`FILTER`/`FOLD`/`SCAN`
+/// over a finite Vector.
+const CONTROL_KEYWORDS: &[&str] = &[
+    "IF", "ELSE", "THEN", "ENDIF", "WHILE", "FOR", "LOOP", "REPEAT", "UNTIL", "BEGIN", "DO",
+    "BREAK", "RETURN",
+];
+
+/// Whether an unresolved name contains a full-width form (U+FF01–U+FF5E) of an
+/// ASCII character: `ＡＤＤ` for `ADD`, `１` for `1`. A Japanese input method
+/// produces these with one key, and the dictionary never holds them.
+fn has_full_width_ascii(word: &str) -> bool {
+    word.chars().any(|c| ('\u{FF01}'..='\u{FF5E}').contains(&c))
+}
+
 fn check(code: &'static str, title: (&str, &str), detail: (&str, &str)) -> DebugCheck {
     DebugCheck {
         code,
@@ -171,6 +191,58 @@ pub(crate) fn build_next_checks(
             // no spelling error, with nothing naming the real rule. SKILL.md
             // already lists this among the common mistakes, which is the
             // clearest sign it is worth diagnosing rather than documenting.
+            // The names a Forth or a structured language would have here are
+            // a recognizable mistake of their own, not a misspelling: the
+            // repair is a different phrase, which `checkSpelling` cannot
+            // say. SKILL.md §8 lists both; a diagnosis is where an agent
+            // meets them at run time.
+            let upper = word.map(|w| w.trim().to_uppercase());
+            if upper
+                .as_deref()
+                .is_some_and(|name| STACK_SHUFFLERS.contains(&name))
+            {
+                out.push(check(
+                    "checkNoStackShufflers",
+                    ("No stack shufflers", "スタック操作語はない"),
+                    (
+                        "Ajisai has no DUP / SWAP / OVER / ROT. Every Word consumes the operands it \
+                         reads; to use a value more than once, name it with BIND and read the name: \
+                         `5 'N' BIND N N MUL`.",
+                        "Ajisai に DUP / SWAP / OVER / ROT はない。どの word も読んだオペランドを消費する。\
+                         値を二度使うなら BIND で名前を付けて名前を読む: `5 'N' BIND N N MUL`",
+                    ),
+                ));
+            }
+            if upper
+                .as_deref()
+                .is_some_and(|name| CONTROL_KEYWORDS.contains(&name))
+            {
+                out.push(check(
+                    "checkNoControlKeywords",
+                    ("No control keywords", "制御構文のキーワードはない"),
+                    (
+                        "Ajisai has no IF / ELSE / WHILE / FOR. Branch by choosing between two values \
+                         already built — `[ whenTrue ] [ whenFalse ] test SELECT` — and iterate with \
+                         MAP / FILTER / FOLD / SCAN over a finite Vector.",
+                        "Ajisai に IF / ELSE / WHILE / FOR はない。分岐は作り終えた二つの値から選ぶ \
+                         `[ whenTrue ] [ whenFalse ] test SELECT`、反復は有限の Vector に対する \
+                         MAP / FILTER / FOLD / SCAN",
+                    ),
+                ));
+            }
+            if word.is_some_and(has_full_width_ascii) {
+                out.push(check(
+                    "checkCharacterWidth",
+                    ("Check character width", "全角文字を確認する"),
+                    (
+                        "This name contains full-width characters. Word names and numbers are \
+                         written in ASCII: `ＡＤＤ` is not `ADD`, and `１` is not `1`. Switch the \
+                         input method to half-width and retype the token.",
+                        "この名前に全角文字が含まれている。word 名と数値は半角 (ASCII) で書く: \
+                         `ＡＤＤ` は `ADD` ではなく、`１` は `1` ではない。半角に切り替えて打ち直す",
+                    ),
+                ));
+            }
             if word.is_some_and(looks_double_quoted) {
                 out.push(check(
                     "checkStringQuoting",
@@ -347,7 +419,21 @@ pub(crate) fn build_next_checks(
             }
         }
         CauseClass::ContractViolation => {
-            if matches!(category, Some(ErrorCategory::Declared("protectedWord"))) {
+            if matches!(category, Some(ErrorCategory::ContractViolation)) {
+                out.push(check(
+                    "checkDeclaredContract",
+                    ("Check the declared contract", "宣言した契約を確認する"),
+                    (
+                        "A `#:contract` line declares something the Word's body does not do; \
+                         the message says which key, as declared and as inferred. Fix the body \
+                         or the declaration. infer_contracts (`ajisai agent infer-contracts`) \
+                         answers a paste-ready `suggested` line for the Word as written.",
+                        "`#:contract` 行の宣言が word 本体の振る舞いと食い違う。どのキーが宣言と推論で \
+                         異なるかはメッセージにある。本体か宣言を直す。infer_contracts \
+                         (`ajisai agent infer-contracts`) が今の本体に合う `suggested` 行を返す",
+                    ),
+                ));
+            } else if matches!(category, Some(ErrorCategory::Declared("protectedWord"))) {
                 out.push(check(
                     "checkProtection",
                     ("Check protection", "保護を確認する"),

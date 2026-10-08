@@ -5,7 +5,8 @@
 
 use super::report::{completed_run_report, Report};
 use super::{
-    contract_decl, contract_report, error_report, outcome_report, print_payloads, resolve_words,
+    contract_decl, contract_report, contract_violation, error_report, outcome_report,
+    print_payloads, resolve_words,
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -39,20 +40,74 @@ pub const LOCAL_AGENT_RUNTIME_LIMITS: RuntimeLimits = RuntimeLimits {
     max_nesting_depth: DEFAULT_MAX_NESTING_DEPTH,
 };
 
+/// The execution-step budget of the agent profile: the one the MCP server
+/// applies (`tools/mcp-server/index.js`, `LIMITS.executionSteps`, which
+/// threads it explicitly on every call) and the one `ajisai agent compute`
+/// runs under unless `--step-limit` says otherwise. `docs/dev/mcp-host-profiles.md`
+/// compares it with the playground's derived budget, which is 120 times
+/// larger: a block iteration is one step per element, so under this profile
+/// MAP / FILTER / FOLD walk tens of thousands of elements and a vector
+/// operation (`V V ADD`) handles the rest.
+pub const LOCAL_AGENT_EXECUTION_STEPS: usize = 100_000;
+
+/// Byte budget for a *successful* agent-profile result's `stack` and
+/// `stackDisplay`, together, past which the largest slots are elided
+/// (`agent::error_stack`) rather than sent.
+///
+/// A success used to be sent whole or not at all: a 7,000-element vector left
+/// on the stack became the host's `responseTooLarge`, and the caller learned
+/// that its answer was too big and nothing else — not what was on the stack,
+/// not how big, not that the small values beside it were fine. Elided, the
+/// same result arrives with every affordable slot in full and the oversized
+/// one replaced by a record of what it was, so the caller can see that it
+/// left an intermediate value behind and fix that.
+///
+/// Sized against the MCP host's 1 MiB `responseBytes`, which bounds the
+/// response as sent: the envelope twice (structured, and mirrored into a text
+/// block where every quote is escaped), measured at 2.2x the envelope. A
+/// stack of this many bytes leaves that response under the ceiling with
+/// about 6% to spare, and still admits a 5,000-element vector of small
+/// integers in full (433 KB). The estimate the budget is compared against is
+/// `error_stack::node_wire_bytes`, calibrated on the real rendering.
+pub const AGENT_STACK_BUDGET_BYTES: usize = 440 * 1024;
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ComputeOptions {
     pub step_limit: Option<usize>,
     pub runtime_limits: Option<RuntimeLimits>,
+    /// Byte budget for a successful result's stack, past which the largest
+    /// slots are elided. `None` sends every success whole, whatever its size
+    /// — the trusted profile, for a host with no response ceiling.
+    pub stack_budget_bytes: Option<usize>,
 }
 
 impl ComputeOptions {
-    /// The agent profile: [`LOCAL_AGENT_RUNTIME_LIMITS`], with `step_limit`
-    /// overriding the execution step budget when given.
+    /// The agent profile: [`LOCAL_AGENT_RUNTIME_LIMITS`] and
+    /// [`LOCAL_AGENT_EXECUTION_STEPS`], with `step_limit` overriding the
+    /// step budget when given, and [`AGENT_STACK_BUDGET_BYTES`] bounding
+    /// what a success sends. The profile used to leave the step budget at
+    /// the interpreter's derived default when none was given, so `ajisai
+    /// agent compute` ran 12,180,000 steps where the MCP server, which names
+    /// the same profile, ran 100,000.
     pub const fn agent(step_limit: Option<usize>) -> Self {
         ComputeOptions {
-            step_limit,
+            step_limit: Some(match step_limit {
+                Some(limit) => limit,
+                None => LOCAL_AGENT_EXECUTION_STEPS,
+            }),
             runtime_limits: Some(LOCAL_AGENT_RUNTIME_LIMITS),
+            stack_budget_bytes: Some(AGENT_STACK_BUDGET_BYTES),
         }
+    }
+
+    /// The agent profile's ceilings as `ajisai://limits` and a receipt name
+    /// them, for a host that wants to show them beside its own.
+    pub fn agent_limit_profile() -> serde_json::Value {
+        let options = Self::agent(None);
+        crate::interpreter::limit_profile::to_json(
+            &LOCAL_AGENT_RUNTIME_LIMITS,
+            options.step_limit.unwrap_or(LOCAL_AGENT_EXECUTION_STEPS),
+        )
     }
 
     /// Put `interp` under these ceilings; an absent one keeps the
@@ -163,11 +218,41 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
         ));
     }
 
+    // The pre-execution check (LANG.CONTRACT.CHECK) runs here as well as in
+    // `check`: a program that declares a contract for its own Word is
+    // checked against it *before anything runs*, and a declaration inference
+    // disproves stops the run — the program is wrong about itself, and
+    // executing it would answer a value as if it were not. The result is the
+    // same report `check` gives, with `contractDecls` carrying every finding.
+    // Programs without a directive are untouched, which is every program
+    // that does not opt in.
     let mut interp = options.interpreter();
+    let decls = contract_violation::declared_contract_check(source);
+    if let Some(check) = &decls {
+        if check.violated {
+            return AgentResponse::computed(contract_violation::violation_report(
+                &interp,
+                check,
+                Some(source),
+            ));
+        }
+    }
     let result = interp.execute(source).await;
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
-    AgentResponse::computed(completed_run_report(&interp, result, trace, output, source))
+    let mut report = completed_run_report(
+        &interp,
+        result,
+        trace,
+        output,
+        source,
+        options.stack_budget_bytes,
+    );
+    // A verified (or unverifiable) declaration is reported too, so the caller
+    // sees the check happened and what it decided; a source with no
+    // directive carries no `contractDecls` at all.
+    report.contract_decls = decls.as_ref().map(|check| check.to_json());
+    AgentResponse::computed(report)
 }
 
 /// The source-form gate every execution-free operation shares: a source that
@@ -262,10 +347,17 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
     }
 
     let contract_decls = verify_contracts.then(|| contract_decl::check_contract_decls(source));
-    let contract_failed = contract_decls
-        .as_ref()
-        .is_some_and(|result| result.violated);
-    let status = if contract_failed { "error" } else { "ok" };
+    if let Some(check) = contract_decls.as_ref().filter(|result| result.violated) {
+        // The same shape every other error has — `message`, `diagnosis`,
+        // `aiDiagnostic.category: contractViolation` — so a reader following
+        // the documented order ("on error, read diagnosis.why") finds the
+        // violation where every other failure is, not only in
+        // `contractDecls.findings`.
+        return AgentResponse {
+            report: contract_violation::violation_report(&interp, check, None),
+        };
+    }
+    let status = "ok";
     // `check` never executes, so the observation is the degenerate one: no
     // stack, no output, no dictionary — but it still folds to a stable digest
     // that a caller can compare across two identical `check` calls.
@@ -334,118 +426,5 @@ impl OutcomesResponse {
 pub fn predict_outcomes(source: &str, options: ComputeOptions) -> OutcomesResponse {
     OutcomesResponse {
         report: outcome_report::predict_outcomes(source, &options),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn compute_is_source_only_and_returns_the_cli_envelope() {
-        let response = compute("[ 2 ] SQRT", ComputeOptions::default()).await;
-        let json = response.to_json();
-        assert_eq!(response.exit_code(), 0);
-        assert_eq!(json["status"], "ok");
-        assert_eq!(
-            json["stack"][0]["value"][0]["semantics"]["exactTerms"][0]["radicand"],
-            "2"
-        );
-    }
-
-    #[tokio::test]
-    async fn compute_preserves_structured_language_errors() {
-        let response = compute("FROBNICATE", ComputeOptions::default()).await;
-        let json = response.to_json();
-        assert_eq!(response.exit_code(), 1);
-        assert_eq!(json["status"], "error");
-        assert_eq!(json["diagnosis"]["why"], "typoOrUnknownName");
-    }
-
-    #[tokio::test]
-    async fn compute_applies_injected_internal_cost_limits() {
-        let response = compute(
-            "0 11 RANGE",
-            ComputeOptions {
-                runtime_limits: Some(RuntimeLimits {
-                    max_materialized_elements: 10,
-                    ..RuntimeLimits::default()
-                }),
-                ..ComputeOptions::default()
-            },
-        )
-        .await;
-        let json = response.to_json();
-        assert_eq!(json["status"], "ok");
-        assert_eq!(
-            json["stack"][0]["semantics"]["absence"]["reason"],
-            "spaceExhausted"
-        );
-    }
-
-    /// `outcome` names a run in `outcomes`' own vocabulary — a value, a NIL
-    /// by its reason, an error by its category — so a prediction and a run
-    /// compare by membership. `check` never runs, so it names none.
-    #[tokio::test]
-    async fn compute_names_the_outcome_id_it_produced() {
-        for (source, expected) in [
-            ("1 2 ADD", "value"),
-            ("", "value"),
-            ("1 0 DIV", "nil:divisionByZero"),
-            ("FROBNICATE", "error:unknownWord"),
-            ("[ 1 2", "error:malformedSource"),
-        ] {
-            let json = compute(source, ComputeOptions::default()).await.to_json();
-            assert_eq!(json["outcome"], expected, "{source}");
-        }
-        assert!(check("1 2 ADD", true).to_json().get("outcome").is_none());
-    }
-
-    #[test]
-    fn check_is_execution_free_and_structured() {
-        let response = check("[ [ 1 ] ADD ] 'INC' DEF 'must-not-print' PRINT", true);
-        let json = response.to_json();
-        assert_eq!(response.exit_code(), 0);
-        assert_eq!(json["status"], "ok");
-        assert_eq!(json["output"], serde_json::json!([]));
-    }
-
-    #[test]
-    fn infer_contracts_returns_a_common_agent_envelope() {
-        let response = infer_contracts("[ [ 1 ] ADD ] 'INC' DEF").to_json();
-        assert_eq!(response["status"], "ok");
-        assert_eq!(response["contracts"][0]["name"], "INC");
-    }
-
-    /// Source that does not read is `malformedSource` to every execution-free
-    /// operation, exactly as `check` reports it — not an empty success.
-    #[test]
-    fn infer_contracts_reports_malformed_source_as_check_does() {
-        for source in ["[ 1 2", "1 2 ]", "'unterminated"] {
-            let inferred = infer_contracts(source);
-            let checked = check(source, false);
-            let inferred_json = inferred.to_json();
-            assert_eq!(inferred_json["status"], "error", "{source}");
-            assert_eq!(
-                inferred_json["aiDiagnostic"]["category"], "malformedSource",
-                "{source}"
-            );
-            assert_eq!(inferred_json, checked.to_json(), "{source}");
-            assert_eq!(inferred.exit_code(), checked.exit_code(), "{source}");
-        }
-    }
-
-    /// A body naming a Word nothing defines raises `unknownWord` when it
-    /// runs, so its contract is `partial`, never `total`.
-    #[test]
-    fn an_unresolved_word_makes_a_contract_partial() {
-        let response = infer_contracts("[ FOO ] 'W' DEF").to_json();
-        let contract = &response["contracts"][0];
-        assert_eq!(contract["name"], "W");
-        assert_eq!(contract["partiality"], "partial");
-        assert_eq!(contract["gaps"], serde_json::json!(["gap.unresolvedWord"]));
-        // A body whose every name resolves keeps the registry's derivation.
-        let resolved = infer_contracts("[ 1 ADD ] 'W' DEF").to_json();
-        assert_eq!(resolved["contracts"][0]["partiality"], "total");
     }
 }

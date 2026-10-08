@@ -96,6 +96,20 @@ impl AjisaiInterpreter {
         })
         .to_string()
     }
+    /// The agent profile — what the MCP server and `ajisai agent` apply — in
+    /// the same shape as `host_profile()`, so the playground can show the
+    /// ceilings a program meets when it leaves the browser beside its own.
+    /// They differ by 10x to 120x on purpose (LANG.MACHINE.LIMITS), and a
+    /// program tried here and then run through MCP met that difference as a
+    /// surprise, because only the Reference and the MCP README said so.
+    #[wasm_bindgen]
+    pub fn agent_host_profile(&self) -> String {
+        serde_json::json!({
+            "profile": "mcp-local-stdio",
+            "limits": api::ComputeOptions::agent_limit_profile(),
+        })
+        .to_string()
+    }
     #[wasm_bindgen]
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         let obj = js_sys::Object::new();

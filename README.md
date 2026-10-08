@@ -49,7 +49,7 @@ Ajisai is built from ten concepts and nothing else.
 6. Code is a vector, evaluated only when a Word asks for it — and branching is not one of those Words.
 7. One modifier axis: consume or keep.
 8. A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity that a program can ask for.
-9. A machine-readable contract for every Word, and a pre-execution check of user declarations against those contracts — both readable from inside the language.
+9. A machine-readable contract for every Word, and a pre-execution check of user declarations (`#:contract DOUBLE inputs=1 outputs=1 …`) against those contracts, run by `check` and by `compute` before anything executes — both readable from inside the language.
 10. One host protocol, the only way anything outside the language observes it, and an executable conformance corpus that decides whether an implementation is Ajisai.
 
 ## Documentation
@@ -59,8 +59,7 @@ Ajisai is built from ten concepts and nothing else.
 | Specification | Builders and porters | [SPECIFICATION.html](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html) |
 | Reference (English) | Ajisai users | [docs/en/index.html](https://masamoto1982.github.io/Ajisai/docs/en/index.html) — from a program down to its elements and every built-in Word with its contract (generated from `spec/words.json`), with runnable samples |
 | Reference (Japanese) | Ajisai users | [docs/ja/index.html](https://masamoto1982.github.io/Ajisai/docs/ja/index.html) — the same content in Japanese |
-| Reference (English) | Ajisai users | Not yet published — the Japanese edition is the current full Reference; the English Word Reference above covers the vocabulary |
-| Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Word Reference button links to the English Word Reference |
+| Playground | Run it now | [masamoto1982.github.io/Ajisai](https://masamoto1982.github.io/Ajisai/) — its Reference button opens the Reference in the UI language, English or Japanese |
 
 ## Build and run
 

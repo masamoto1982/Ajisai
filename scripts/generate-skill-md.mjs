@@ -18,6 +18,7 @@
 //   node scripts/generate-skill-md.mjs --check    # fail if SKILL.md is stale
 //   AJISAI_BIN=/path/to/ajisai ...                # override CLI binary
 
+import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fatal, readJson, repoRoot, resolveAjisaiBin, spawnAgent, words, writeOrCheck } from './lib/common.mjs';
 
@@ -29,8 +30,12 @@ const fail = (message) => fatal('skill-md', message);
 
 const ajisaiBin = resolveAjisaiBin('skill-md');
 
-function runSnippet(code) {
-  const proc = spawnAgent(ajisaiBin, code);
+function runSnippet(code, command = 'compute') {
+  // `check` reads no limit profile (a flag a command does not read is a usage
+  // error), so it is spawned without the `--limits trusted` every compute gets.
+  const proc = command === 'check'
+    ? spawnSync(ajisaiBin, ['agent', 'check', '-'], { input: `${code}\n`, encoding: 'utf8' })
+    : spawnAgent(ajisaiBin, code, { command });
   if (proc.error) fail(`failed to spawn ajisai CLI: ${proc.error.message}`);
   let json = null;
   try {
@@ -44,6 +49,13 @@ function runSnippet(code) {
 function expectOk(code) {
   const { exit, json } = runSnippet(code);
   if (exit !== 0) fail(`snippet must succeed but failed (${json.message}): ${code}`);
+  return json;
+}
+
+/** Run `ajisai agent check` on `code`; it must pass (exit 0). */
+function expectCheckOk(code) {
+  const { exit, json } = runSnippet(code, 'check');
+  if (exit !== 0) fail(`check must pass but failed (${json.message}): ${code}`);
   return json;
 }
 
@@ -95,19 +107,19 @@ function buildWordTable() {
 // ---------------------------------------------------------------------------
 
 const canonicalExamples = [
-  { title: 'Push a number (always inside a vector)', code: '[ 42 ]' },
-  { title: 'Exact rational division — no floats, ever', code: '[ 1 ] [ 3 ] DIV' },
+  { id: 'scalar', title: 'Push a number: a bare scalar', code: '42' },
+  { id: 'div', title: 'Exact rational division — no floats, ever', code: '1 3 DIV' },
   { title: 'Elementwise vector arithmetic', code: '[ 1 2 3 ] [ 4 5 6 ] ADD' },
-  { title: 'Scalar broadcast over a vector', code: '[ 5 ] [ 1 2 3 ] MUL' },
+  { title: 'Scalar broadcast over a vector', code: '5 [ 1 2 3 ] MUL' },
   { title: 'Remainder: name the operands, then a - b * floor(a/b)', code: "10 'A' BIND 3 'B' BIND A A B DIV FLOOR B MUL SUB" },
   { title: 'Comparison pushes a boolean', code: '1 2 LT' },
   { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] LT' },
   { title: 'Range: start end, both included', code: '0 5 RANGE' },
   { title: 'A stride is a multiplication of a range', code: '0 5 RANGE 2 MUL' },
   { title: 'Fill a shape with one number: [ shape ] value', code: '[ 2 2 ] 7 FILL' },
-  { title: 'MAP with a [ ] code block', code: '0 4 RANGE [ [ 2 ] MUL ] MAP' },
+  { title: 'MAP with a [ ] code block', code: '0 4 RANGE [ 2 MUL ] MAP' },
   { title: 'FILTER keeps matching elements', code: '0 10 RANGE [ 5 GT ] FILTER' },
-  { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ ADD ] FOLD' },
+  { id: 'fold', title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] 0 [ ADD ] FOLD' },
   {
     id: 'record-basic',
     title: 'A Record from a Vector of keys and a Vector of values',
@@ -116,17 +128,17 @@ const canonicalExamples = [
   {
     id: 'def-basic',
     title: 'Define a user word: [ body ] then name, then DEF',
-    code: "[ [ 1 ] [ 2 ] ADD ] 'MY-SUM' DEF MY-SUM",
+    code: "[ 1 2 ADD ] 'MY-SUM' DEF MY-SUM",
   },
   {
     id: 'select-basic',
     title: 'SELECT: the two candidates, then the truth that chooses between them',
-    code: "[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT",
+    code: "'non-negative' 'negative' 4 0 LT NOT SELECT PRINT",
   },
   {
     id: 'select-lanes',
     title: 'SELECT chooses lane by lane, so a whole vector branches at once',
-    code: '[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT',
+    code: '0 [ -3 5 -1 ] [ -3 5 -1 ] 0 LT SELECT',
   },
   { title: 'Strings are bare \'...\' literals; CHARS/JOIN convert', code: "'hello' CHARS REVERSE JOIN" },
   { title: 'Cast a string to an exact number', code: "'42' NUM" },
@@ -134,6 +146,17 @@ const canonicalExamples = [
   { title: 'Sorting is a plain Core word', code: '[ 3 1 2 ] SORT' },
   { title: 'Exact square root takes a bare scalar', code: '2 SQRT' },
   { title: 'A value used twice is named with BIND', code: "5 'N' BIND N N 1 ADD" },
+];
+
+// `#:contract` declarations: the one feature README's "Why Ajisai" leads
+// with that no reading surface showed the syntax of. Each is run through the
+// real check, so the grammar written here is the grammar the checker parses.
+const contractDeclarations = [
+  {
+    id: 'contract-verified',
+    title: 'Declare what your Word does; check verifies it before anything runs',
+    code: "#:contract DOUBLE inputs=1 outputs=1 purity=pure partiality=total\n[ 2 MUL ] 'DOUBLE' DEF 21 DOUBLE",
+  },
 ];
 
 const commonErrors = [
@@ -145,27 +168,32 @@ const commonErrors = [
   {
     title: 'Stack underflow: operands must be pushed first',
     code: 'ADD',
-    fix: 'Push both operands before the operator: `[ 1 ] [ 2 ] ADD`. Ajisai is postfix; there is no infix form.',
+    fix: 'Push both operands before the operator: `1 2 ADD`. Ajisai is postfix; there is no infix form.',
   },
   {
     title: 'FOLD without an initial value',
     code: '[ 1 2 3 ] [ ADD ] FOLD',
-    fix: 'FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ ADD ] FOLD`.',
+    fix: 'FOLD is `vector init [ op ] FOLD`: `[ 1 2 3 ] 0 [ ADD ] FOLD`.',
+  },
+  {
+    title: 'A `#:contract` declaration the body contradicts',
+    code: "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE",
+    fix: 'The declaration is checked before anything runs, and a violated one stops the run (`contractDecls.findings` lists every finding). Fix the body or the line; `ajisai agent infer-contracts` answers a paste-ready `suggested` line for the Word as written.',
   },
   {
     title: 'SELECT takes three operands: both candidates, then the truth',
     code: "[ 'big' ] [ 5 ] [ 3 ] GT SELECT",
-    fix: "SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.",
+    fix: "SELECT is `whenTrue whenFalse truth SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.",
   },
   {
     title: 'SELECT needs a truth value, not a number',
     code: "[ 'y' ] [ 'n' ] 1 SELECT",
-    fix: 'The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.',
+    fix: 'The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `1 0 EQ NOT`.',
   },
   {
     title: 'Broadcast shape mismatch',
     code: '[ 1 2 ] [ 1 2 3 ] ADD',
-    fix: 'Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).',
+    fix: 'Elementwise ops need equal or broadcastable shapes (a scalar `5`, or a one-element vector, broadcasts; `[2]` vs `[3]` does not).',
   },
   {
     title: 'NUM casts strings, not booleans',
@@ -189,7 +217,7 @@ const silentMistakes = [
     title: 'A one-element vector where a Word wants an element',
     wrong: '[ 1 2 3 ] [ 1 ] [ 9 ] PUT',
     right: '[ 1 2 3 ] 1 9 PUT',
-    fix: 'PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. The `[ 42 ]` idiom of §2 is for operands a Word reads as a value; it does not carry here, and no error says so.',
+    fix: 'PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. Write a scalar bare (§2) and this cannot happen; a one-element vector is a vector, everywhere, and no error says so.',
   },
 ];
 
@@ -262,6 +290,32 @@ function renderCanonicalExamples() {
     .join('\n');
 }
 
+/** The display of an executed §6 example, by id — the one hand-typed copy. */
+function canonicalExampleDisplay(id) {
+  return expectOk(canonicalExampleCode(id)).stackDisplay.join('  ');
+}
+
+function renderContractDeclarations() {
+  return contractDeclarations
+    .map((entry) => {
+      const checked = expectCheckOk(entry.code);
+      const decls = checked.contractDecls;
+      if (!decls || decls.outcome !== 'value') {
+        fail(`declaration must verify (contractDecls.outcome value), got ${JSON.stringify(decls)}: ${entry.code}`);
+      }
+      const run = expectOk(entry.code);
+      if (run.contractDecls?.outcome !== 'value') fail(`compute must carry the verified declaration: ${entry.code}`);
+      return [
+        `- ${entry.title}`,
+        '  ```ajisai',
+        ...entry.code.split('\n').map((line) => `  ${line}`),
+        '  ```',
+        `  \`check\` → exit 0, \`contractDecls: { outcome: "value", gapSummary: ${JSON.stringify(decls.gapSummary)} }\`; \`compute\` → ${renderResult(run)}, with the same \`contractDecls\`.`,
+      ].join('\n');
+    })
+    .join('\n');
+}
+
 function renderCommonErrors() {
   return commonErrors
     .map((entry) => {
@@ -316,8 +370,8 @@ function verifiedNilSection() {
   if (projected.stackDisplay.join(' ') !== 'NIL') fail('division by zero must project to NIL');
   const event = projected.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk("1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT");
-  if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('the fallback must replace NIL');
+  const fallback = expectOk("1 0 DIV 'S' BIND 99 S S NIL? SELECT");
+  if (fallback.stackDisplay.join(' ') !== '99/1') fail('the fallback must replace NIL');
   // Lifted over a vector the same law projects lane by lane, so the top stays
   // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
   // taught the collapse rather than the lane law.
@@ -379,21 +433,40 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 2. Minimal syntax
 
-- Postfix, stack-based. Operands first, word last: \`[ 1 ] [ 2 ] ADD\`.
+- Postfix, stack-based. Operands first, word last: \`1 2 ADD\`.
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
-- Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
+- A scalar is written bare: \`${canonicalExampleCode('scalar')}\`, \`${canonicalExampleCode('div')}\`. Data lives in vectors: \`[ 1 2 3 ]\`, and vectors nest for ragged and grouped data. \`[ 42 ]\` is a one-element *vector*, not another way to write 42 — arithmetic broadcasts it like a scalar, but a Word that takes an *element* (\`PUT\`, \`GET\`, \`INDEX-OF\`) stores or reads the vector itself, and nothing errors (§7). Write scalars bare and the question never arises.
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
-- Named data is a Record, built by \`RECORD\` from a Vector of keys and a Vector of values: \`${canonicalExampleCode('record-basic')}\`. It is not a Vector and is never code. It displays as \`{ 'x' 1/1 'y' 2/1 }\`, which is a display, not source: only \`[ ]\` delimits.
+- Named data is a Record, built by \`RECORD\` from a Vector of keys and a Vector of values: \`${canonicalExampleCode('record-basic')}\`. It is not a Vector and is never code. It displays as \`${canonicalExampleDisplay('record-basic')}\` — the keys, the values and the Word that joins them, which is also valid source that rebuilds it.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
+- Declare a user word's contract on a \`#:contract\` comment line — \`#:contract DOUBLE inputs=1 outputs=1 purity=pure\` — and \`check\` verifies it against the body before anything runs; \`compute\` runs the same check first and refuses a program whose declaration is violated (§2a).
 - Comments: \`#\` to end of line.
-- Every Word consumes the operands it reads. To use a value more than once, name it with \`BIND\` and read the name: \`5 'N' BIND N N 1 ADD\` leaves \`5 6\`.
+- Every Word consumes the operands it reads. To use a value more than once, name it with \`BIND\` and read the name: \`5 'N' BIND N N 1 ADD\` leaves \`5/1  6/1\`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
+
+## 2a. Declaring a contract (\`#:contract\`)
+
+One comment line per Word, written in the keys and values of a contract Record
+(the same vocabulary \`word_contract\` / \`CONTRACT\` answer in):
+
+\`#:contract NAME [inputs=N] [outputs=N] [purity=pure|effectful] [partiality=total|partial|projecting] [determinism=deterministic|stateRelative|hostRelative] [cost steps=C numeric=C collection=C]\`
+with each cost class \`C\` one of \`const\` \`linear\` \`superlinear\` \`unbounded\`.
+
+\`inputs\`/\`outputs\` must equal what the body does; every other key is an upper
+bound the body must not exceed; a key left out is not checked. The check is
+conservative: a body inference cannot read is reported as *cannot verify*
+(a \`note\` with a \`gap.*\` code), never as a false violation. To write a
+declaration without guessing, run \`infer_contracts\` first and paste its
+\`suggested\` line.
+
+${renderContractDeclarations()}
 
 ## 3. Control and iteration
 
 - Branch: the two candidates, then the truth that chooses between them, then \`SELECT\`: \`${canonicalExampleCode('select-basic')}\` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: \`${canonicalExampleCode('select-lanes')}\`. An absent truth chooses neither and answers that same absence.
-- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial-value Vector.
+- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial value: \`${canonicalExampleCode('fold')}\`.
+- Budget: a block iteration is one step per element, so under the MCP profile's 100,000-step budget \`MAP\` / \`FILTER\` / \`FOLD\` walk tens of thousands of elements, not more. Beyond that, write the operation on whole vectors — \`V V ADD\` over 100,000 lanes is a few steps — and leave no large intermediate on the stack.
 - No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
@@ -403,7 +476,7 @@ pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
+- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND 99 S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
 - Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
 - That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (NIL projection rule); check for it where it matters instead of letting it propagate to the end.

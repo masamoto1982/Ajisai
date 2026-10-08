@@ -65,6 +65,22 @@ pub(crate) fn predict_outcomes(source: &str, options: &ComputeOptions) -> Outcom
         prediction.outcomes.push("error:unknownWord".to_string());
         prediction.outcomes.sort();
     }
+    // A `#:contract` directive is checked before anything runs, and a
+    // declaration inference disproves refuses the run (`api::compute`), so a
+    // program that carries one can end that way and no other program can.
+    // Decided from the directive's presence alone, exactly as `compute`
+    // decides whether to check.
+    if super::contract_violation::declares_contracts(source)
+        && !prediction
+            .outcomes
+            .iter()
+            .any(|outcome| outcome == "error:contractViolation")
+    {
+        prediction
+            .outcomes
+            .push("error:contractViolation".to_string());
+        prediction.outcomes.sort();
+    }
     let exact = prediction.outcomes.len() == 1;
     OutcomeReport {
         outcomes: prediction.outcomes,

@@ -110,7 +110,7 @@ nothing else there.
 | tool | purpose |
 |---|---|
 | `compute` | execute source with time, source, output and step limits |
-| `check` | parse, resolve and conservatively verify declared contracts without execution |
+| `check` | parse, resolve and conservatively verify `#:contract` declarations without execution |
 | `infer_contracts` | infer contracts for user-defined Words without execution |
 | `outcomes` | predict, without execution, the finite set of outcome ids a program could produce |
 | `word_contract` | query the complete canonical `spec/words.json` contract registry |
@@ -119,8 +119,20 @@ Execution tools accept source text only. Deliberately omitting file-path input
 prevents an AI tool call from becoming an arbitrary local-file reader.
 
 `check` answers about the *form* of a program, never about running it: it
-tokenizes, parses, resolves names and verifies declared contracts, all without
-execution. So a `check` that returns `status: ok` says the program is
+tokenizes, parses, resolves names and verifies `#:contract` declarations
+(`#:contract DOUBLE inputs=1 outputs=1 purity=pure`, one line per Word, in the
+keys and values `word_contract` answers in), all without execution. `compute`
+runs the same declaration check **before executing anything**, and a
+declaration the body contradicts stops the run: both tools answer it as an
+ordinary error — `aiDiagnostic.category: contractViolation`, `message`,
+`diagnosis` with `when: checkContract` — with every finding in
+`contractDecls.findings`, and `compute` names it `outcome:
+error:contractViolation`, which `outcomes` predicts exactly when the source
+carries a directive. A source without a directive carries no `contractDecls`.
+`check` used to answer a violation with `status: error` and nothing else at
+the top level, so a reader following "on error, read `diagnosis.why`" found
+nothing, and `compute` did not check at all — a program whose declaration
+about itself was false ran and answered a value. So a `check` that returns `status: ok` says the program is
 well-formed and its names resolve — it does not say the program will succeed,
 stay inside a ceiling, or produce a value rather than a NIL. Nothing that only
 a run can decide is decided here. Read it as "this will get as far as
@@ -171,20 +183,34 @@ self-test pins that a text-only client can still tell a value, a
 reason-carrying NIL, a language error and a host failure apart from the text
 alone.
 
-What was removed instead is padding. The text used to be written with
-two-space indentation, which cost about a third of it and told a machine
-nothing, and an optional field carrying no value used to be sent as `null` —
-so a plain success advertised `message`, `diagnosis`, `aiDiagnostic` and
-`contractDecls`, all empty. Those fields are now absent. **Test for presence,
-not for `null`.** Nested fields are untouched: one stated rule at the top level
-is worth more than the ~4% recursing would add.
+What was removed is everything constant. `1 2 ADD` answered 3,732 bytes, of
+which the answer — `stack` and `stackDisplay` — was 85: the rest was the
+twelve-entry limit table on every result (`mcp.limits`), the same table again
+inside the engine's `receipt.limitProfile`, the receipt's copies of
+`observationDigest` and `resourceUsage`, and eight optimizer counters
+(`runtimeMetrics`) that describe how the engine went about its work and tell a
+caller nothing. Five calls in one turn cost 5,000 tokens of that. Now:
 
-Measured across the seven benchmark cases, the text block's median fell 32%
-(1,618 → 1,094 bytes) and the whole response's 22% (3,049 → 2,376).
-`npm run eval:performance` reports both and fails against a committed
-`medianResponseBytesBudget`, so the padding cannot come back unnoticed. The
-budget is a ceiling to lower when a response genuinely shrinks, never one to
-raise so a regression passes.
+- `mcp.limitProfile` names the profile (`mcp-local-stdio`); the ceilings are
+  the `ajisai://limits` resource, read once. A ceiling that fires still names
+  itself and its value in `diagnosis.resourceLimit`, and a host failure about
+  one in `error.limit`, so no result needs the table to be acted on.
+- `runtimeMetrics` is not sent. `resourceUsage` — the budget side, what the
+  run spent against each ceiling — is.
+- `receipt` keeps `digest`, `sourceDigest` and `registryDigest`, the three
+  things nothing else in the envelope carries; a verifier takes `status`,
+  `observationDigest`, `resourceUsage` and `mcp.engineVersion` from beside
+  them and the limit profile from `ajisai://limits`. The native CLI's own
+  envelope is untouched — this is the adapter's presentation of it.
+- An optional field carrying no value is absent, not `null` — `message`,
+  `diagnosis` and `aiDiagnostic` on a plain success, `contractDecls` on a
+  source that declares nothing. **Test for presence, not for `null`.**
+
+`1 2 ADD` is 1.8 KB as sent, and what remains constant is the three digests a receipt and its provenance need. `npm run eval:performance` measures the whole
+response and the text block alone over the seven benchmark cases and fails
+against a committed `medianResponseBytesBudget`, so none of it can come back
+unnoticed. The budget is a ceiling to lower when a response genuinely shrinks,
+never one to raise so a regression passes.
 
 A host failure is machine-readable: `error.code` is a stable identifier
 (`invalidRequest`, `unknownTool`, `sourceTooLarge`, `backendUnavailable`,
@@ -242,12 +268,23 @@ that projected the NIL, and the Words it then passed through record nothing. Rep
 is what made `1 ADD` a 12 KB response; it is now 7 KB.
 
 `responseBytes` bounds the response as sent: the structured result, its
-serialized text mirror and provenance together. A result whose single copy
-fits the ceiling but whose response does not is `responseTooLarge`.
+serialized text mirror and provenance together. A *successful* result is kept
+under it by the engine rather than refused: under the agent profile a stack is
+sent whole up to 440 KiB (a 5,000-element vector of small integers), and past
+that the slot that does not fit is elided the same way a failing stack's is —
+`value: null`, an `elided` record with `elements` and `approxBytes`, a
+matching `<elided …>` marker in `stackDisplay`, and `stackElided.reason:
+valueStackBudget` at the top level — while every value beside it arrives
+whole. `0 7000 RANGE 1 2 ADD` used to be `responseTooLarge`, which told the
+caller its answer was too big and nothing else; it now answers `3/1` and a
+record saying a 7,001-element vector was left under it, which is what tells
+the caller to drop it. `responseTooLarge` remains the hard gate behind that,
+for a result no elision can bring under the ceiling.
 
 A resource-limit failure carries `diagnosis.resourceLimit`
 (`{ resource, limit, observed }`), where `resource` is the name of the very
-entry in `mcp.limits` that fired.
+entry in `ajisai://limits` that fired and `limit` its value — every ceiling,
+`executionSteps` included, reports what it observed.
 
 A ceiling can refuse a call without failing it. A well-formed generative Word
 whose result will not fit — `0 100001 RANGE` against
@@ -275,7 +312,7 @@ path, with nothing in the response saying so. Parity is what makes the two
 answers equal; provenance is what would make an unequal one investigable.
 
 Every result also carries `mcp.serverVersion`, `mcp.engineVersion`,
-`mcp.assetDigest` and the applied `mcp.limits`. The two versions are two
+`mcp.assetDigest` and the name of the applied profile, `mcp.limitProfile`. The two versions are two
 separately released components: `serverVersion` is this Node adapter, and
 `engineVersion` is the Ajisai language it speaks for. A saved result used to
 name only the second, so a field missing from an archived envelope could not be
@@ -287,21 +324,25 @@ on whichever request touched it first.
 
 ## Limits
 
-`mcp.limits` is also served as the `ajisai://limits` resource. Every entry has
-a matching entry in `golden/limits.json`, and the self-test fails if the two
-sets differ — a ceiling cannot be declared without saying how it is exercised.
-Six are pinned by real boundary sources run against the live server on every
-self-test and compared across both backends; `concurrentExecutions` is pinned
-through the adapter's own admission path; and `numericWork`, `bigintBits` and
-`algebraicTerms` are pinned in Rust with injected ceilings because they are not
-reachable within `wallTimeMs` at their declared values. `golden/limits.json`
+The profile is the `ajisai://limits` resource, named on every result as
+`mcp.limitProfile`. Every entry has a matching entry in `golden/limits.json`,
+and the self-test fails if the two sets differ — a ceiling cannot be declared
+without saying how it is exercised. Five are pinned by real boundary sources
+run against the live server on every self-test and compared across both
+backends; `concurrentExecutions`, `wallTimeMs` and `responseBytes` are pinned
+through the adapter's own admission and delivery paths; and `numericWork`,
+`bigintBits` and `algebraicTerms` are pinned in Rust with injected ceilings
+because they are not reachable within `wallTimeMs` at their declared values. `golden/limits.json`
 and `docs/dev/mcp-host-profiles.md` say so explicitly rather than leaving the
 gap to be discovered.
 
 The playground applies a different, looser profile — `0 100001 RANGE`
-succeeds there and answers `NIL(spaceExhausted)` here. Both hosts now publish
-what they apply, and the divergence is recorded as an explicit
-`hostDivergence` block on the golden case that shows it.
+succeeds there and answers `NIL(spaceExhausted)` here, and its step budget is
+120 times this one's, so a block iteration that walks 100,000 elements there
+is refused here (`executionSteps`; the quickstart says what to write
+instead). Both hosts publish what they apply — the playground's splash shows
+this profile's ceilings beside its own — and the divergence is recorded as an
+explicit `hostDivergence` block on the golden case that shows it.
 
 ## Resources
 
@@ -315,7 +356,12 @@ lookups as in programs (`add` runs as `ADD`); the registry digest is calculated 
 the canonical specification, not from a reduced documentation manifest.
 
 `ajisai://guide/quickstart` is an MCP preface (`mcp-quickstart.md`) followed by
-the generated writing protocol (`SKILL.md`), joined by `sync-assets.js`. The
+the generated writing protocol (`SKILL.md`), joined by `sync-assets.js`.
+Reading `ajisai://words/{name}` with a name that is not a valid percent-encoded
+string is refused as an invalid request, and a tool call carrying an argument
+its schema does not declare is refused as `invalidRequest` naming the
+argument — `additionalProperties: false` is enforced by the server, not only
+advertised. The
 guide used to be `SKILL.md` alone, which opens on a CLI run loop — `ajisai run
 file --json`, commands a connected client cannot issue — and never says which
 of the tools to call, so a model that read it first learned the language
@@ -336,9 +382,6 @@ npm run selftest       # uses the packaged WASM backend unless AJISAI_BIN is set
 npm run test:pack
 npm run eval:validate
 npm run eval:performance
-npm run eval:number-baseline
-npm run eval:traces
-npm run eval:repairs
 ```
 
 The packaged WASM bundle (`wasm/generated/`) is regenerated by
@@ -350,132 +393,11 @@ backend.
 runs `backend/parity-test.js`) runs every golden case and every declared limit
 boundary against both backends and asserts they agree.
 
-`eval/cases.json` is the agent-evaluation corpus: 78 cases (58 positive, 20
-negative), each asked in English and Japanese, so 156 prompts. `npm run eval:traces` scores the
-corpus answering itself — `score-traces.js --reference` — which executes every case's expected
-tool call against the real backend. It measures backend semantic correctness only; model tool
-selection and source generation require captured model traces and are not claimed by this score.
+How the server is evaluated — the bilingual agent corpus, the trace and
+repair scorers, the captured model baselines, the performance and
+response-size budgets — is its own document: `docs/dev/mcp-evaluation.md`.
+This README is for connecting to the server and reading what it answers.
 
-Every case is bilingual because Ajisai is a Japanese-authored language with an
-English tool surface, so "does a Japanese prompt reach the same tool with the
-same source as its English twin" is a product question rather than a
-translation detail. Both halves of a pair name the same task and therefore
-share one expected tool and one expected result, which is what makes the
-difference between their scores attributable to the language and nothing else.
-The contract rejects a pair whose two sides are the same string: a copied
-prompt still scores twice, and would report a comparison it never made.
-
-`score-traces.js` accepts captured model traces in the documented reference
-shape and reports tool-selection accuracy, first-attempt generation rate,
-end-to-end semantic success, missing traces and irrelevant-tool rate — overall,
-per language, and as a `languageGap` between the two. Selection and generation
-are separate numbers because they have different repairs: a model that reaches
-for the wrong tool with correct source has a tool problem, and one that reaches
-correctly and writes source computing the wrong thing has a language problem.
-Generation is rated over the positive cases only, since a case whose correct
-answer is no call has nothing to generate. `positiveSelectionAccuracy` is there
-for the same reason from the other side: `toolSelectionAccuracy` mixes the two
-classes, so growing the negative set moves it without any behaviour changing.
-Each score carries a `composition` block naming how many cases of each class it
-was computed over — rates over one class survive a corpus that grows, rates over
-both only compare within one composition.
-
-A turn may hold several tool calls, and all of them are recorded and scored. A
-model that looks a Word up and then computes has made one attempt containing two
-calls, not a wrong choice — 91 of 130 turns in the first baseline did exactly
-that, so keeping only the first call scored the lookup as the model's decision
-and reported 0.323 selection accuracy where reading the whole turn reports
-0.469. `reachedExpectedToolFirstRate` reports the stricter reading beside it,
-without making instinct a pass criterion.
-
-The selection reference fixture is built from the corpus in memory
-(`score-traces.js --reference`) rather than committed. A perfect fixture is the
-corpus answering itself with its own reference arguments, so maintaining 130 of
-them by hand only meant that adding a case failed `--require-perfect` for a
-reason unrelated to the scorer it asserts, and a generated copy only moved that
-drift into a check.
-
-Every trace document declares what produced it. `provenance.source` is either
-`referenceFixture` — a trace built to pass the scorer, whose
-perfect result describes the scorer and nothing else — or `model`, a real
-capture, which must additionally record the model id, prompt-template digest,
-tool-choice setting, capture time, and the server, engine and registry versions
-it ran against. A document without that block is rejected rather than scored,
-because the same numbers mean "the harness works" or "the model performs this
-well" depending on an answer the file was not carrying. The scorers print the
-provenance alongside the metrics, so a score copied out of a log still says
-which it is.
-
-`--require-perfect` is only valid on a `referenceFixture`. It asserts that the
-scorer runs end to end; pointing it at a model trace would turn the first clean
-run into a committed claim that the model is perfect, which is the one thing
-this corpus is least entitled to say. A model trace is scored and reported,
-never asserted.
-
-**Model baselines have been captured** and are committed under `eval/traces/`:
-`claude-opus-5-full-corpus.json` and `claude-opus-5-repairs-full-corpus.json`,
-the full-corpus pair. The intermediate captures taken while the tool
-descriptions were being tuned (baseline, after-syntax-rules, after-negatives,
-after-entry-surface, and their repair counterparts) were superseded by that
-pair and removed; git history holds them. `npm run eval:capture` drives a
-real model over the server's tools — one
-call per corpus case per language, `tool_choice: auto` so the irrelevant-intent
-cases can correctly produce no call — and writes a
-`model` trace under `eval/traces/`, kept apart from the committed fixtures so no
-directory listing presents the two as the same kind of artifact. It resolves
-credentials the way the Anthropic SDK does (`ANTHROPIC_API_KEY`,
-`ANTHROPIC_AUTH_TOKEN`, or an `ant auth login` profile) and, finding none,
-exits non-zero having written nothing. `capture-traces.test.js` exercises the
-harness against a scripted client; it tests prompt assembly and tool-call
-extraction, not a model.
-`npm run eval:capture-repairs` captures the other half: for each repair case it
-asks, executes the model's call against the real server, hands the whole
-structured result back as a `tool_result`, and records the second attempt. Both
-attempts are recorded as *calls*, never as outcomes — the scorer replays them
-itself, because a capture that recorded its own verdict would be grading the
-model with the code that produced its answer. A turn that calls nothing, or a
-model that gives up after reading the diagnosis, is recorded rather than
-dropped: a harness that could only capture the runs that went well would report
-a repair rate computed over those.
-
-`score-repairs.js` replays a failed attempt and its model-produced revision,
-requires the expected structured diagnosis before the revision can count, and
-reports diagnosis-observation and diagnosis-driven repair rates, per language.
-It replays whichever tool the model chose, not only `compute`: `1 2 AD` through
-`check` returns the identical diagnosis, so replaying one tool scored a model
-that checked before running as never having seen a diagnosis at all.
-The cases cover unknown Words, stack shape, malformed source and the
-`collectionWork` ceiling — the last of these exists to make a claim testable:
-a ceiling named for collections should send a repair at the collection, and its
-source contains no arithmetic, so a repaired attempt that succeeds can only
-have shrunk the collection. Their reference trace is
-also a scorer fixture, not evidence of model performance.
-When a refusal comes from a ceiling charged as the operation proceeds — the
-collection scans — `diagnosis.resourceLimit` carries a `progress`
-`{ completed, total, unit }` alongside `observed`. It exists because `observed`
-cannot serve there: such a meter stops the instant the budget is crossed, so it
-reads a hair over the limit however far over the request was, and a reader
-taking it proportionally under-corrects wildly. `completed` is the size that
-fits. Measured against a real model, adding it moved the diagnosis-driven repair
-rate from 0.750 to 1.000 on the same corpus.
-
-`eval:validate` rejects duplicate or unknown case IDs, unknown tools, malformed
-JSON pointers and incomplete committed reference traces before scores are
-calculated. This prevents malformed or selectively omitted traces from
-silently producing plausible metrics.
-`eval:performance` measures five post-warmup rounds over seven representative
-compute, check, inference and registry cases. It reports p50/p95/max latency by
-tool and fails when the overall p95 exceeds the committed one-second local
-stdio budget. It also reports median and maximum response size — for the whole
-result and for its text block alone — and fails against
-`medianResponseBytesBudget`; response bytes are deterministic for a fixed
-corpus and engine, so unlike the latency figures that gate is exact and
-reproducible. The latency measurements describe this adapter and machine, not
-remote service latency.
-`eval:number-baseline` compares canonical results for five selected rational,
-decimal and integer operations with JavaScript `Number`. It includes two
-exactly representable controls as well as known precision-sensitive cases, and
-labels its scope explicitly; it is not a general JavaScript or CAS benchmark.
 `npm run test:pack` creates the allowlisted tarball and installs it into an
 empty temporary prefix, then exercises that installed copy four ways: importing
 `createServer` with neither `AJISAI_REPO` nor `AJISAI_BIN` set, proving it

@@ -46,7 +46,9 @@ stdout.
 for untrusted, generated programs (`agent::api::LOCAL_AGENT_RUNTIME_LIMITS`);
 `trusted` is the interpreter default that `run` uses. `--step-limit` is a
 positive integer and applies to `run`, `agent compute` and `agent outcomes`;
-the default is the host's derived step budget
+the default is the profile's own budget: 100,000 under `agent`
+(`agent::api::LOCAL_AGENT_EXECUTION_STEPS`, the budget the MCP server
+applies) and the host's derived budget under `trusted`
 (`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 12,180,000 — see
 `docs/dev/mcp-host-profiles.md`, re-derived per-container and not a value to
 hard-code elsewhere). `--contract` applies only to `check`.
@@ -85,8 +87,29 @@ Both operations emit schema version 3:
 `status` is `ok` or `error`. Ajisai language errors use exit 1 and retain this
 JSON envelope. `check` tokenizes, checks delimiter structure, performs
 best-effort static Word resolution, and never executes the program. With
-`--contract`, `contractDecls` contains the conservative result of comparing
-`#:contract` declarations with inferred contracts.
+`--contract` (always, for `agent check`), `contractDecls` contains the
+conservative result of comparing `#:contract` declarations with inferred
+contracts.
+
+`compute` runs the same declaration check **before executing anything**
+(LANG.CONTRACT.CHECK is a pre-execution check, and `compute` is where
+execution happens): a source that carries a `#:contract` directive gets
+`contractDecls` in its envelope whatever the run does, and a declaration
+inference disproves stops the run — `status: error`, `outcome:
+error:contractViolation`, nothing executed and nothing printed. A source with
+no directive carries no `contractDecls` and is untouched.
+
+A violated declaration is reported in the shape every other error has, by
+`check` and `compute` alike: `message` ("Contract declaration violated: …"),
+`diagnosis` with `when: checkContract`, `why: contractViolation` and
+`where.word` naming the declared Word, `aiDiagnostic.category:
+contractViolation` (a structural category of `spec/outcomes.json`, `repair:
+program`), and a `checkDeclaredContract` next-check pointing at
+`infer-contracts`' `suggested` line. `contractDecls.findings[]` still carries
+each finding; it used to be the only place the violation was written, so a
+reader following "on error, read `diagnosis.why`" found nothing. `outcomes`
+predicts `error:contractViolation` exactly when the source carries a
+directive.
 
 `compute` also carries a top-level `outcome` string: which of LANG.FAILURE's
 three results the run produced, as a `spec/outcomes.json` id — the vocabulary
@@ -356,7 +379,7 @@ unobservable). The byte grammar carries its own schema tag (`AJISAI-RECEIPT-2`,
 since a receipt is a superset of a digest and the two must be free to version
 independently.
 
-### An error report that cannot afford its stack
+### A report that cannot afford its stack
 
 An error report carries two different things. The **diagnosis** is the answer:
 why the program stopped and what to do about it. The **stack** is residual
@@ -364,8 +387,8 @@ state — whatever the program happened to be holding at the time. When the two
 together exceed what a host will accept, sending the residue and losing the
 answer is the wrong trade.
 
-So on `status: "error"` only, slots whose values do not fit a byte budget are
-replaced in place: `value` becomes `null`, `type` and `semantics` still say
+So on `status: "error"`, slots whose values do not fit a fixed 64 KiB budget
+are replaced in place: `value` becomes `null`, `type` and `semantics` still say
 what the value was, and an `elided` record says what was dropped.
 
 ```json
@@ -373,7 +396,7 @@ what the value was, and an `elided` record says what was dropped.
   "type": "vector",
   "value": null,
   "semantics": {},
-  "elided": { "reason": "errorStackBudget", "approxBytes": 27178011, "elements": 100000 }
+  "elided": { "reason": "errorStackBudget", "approxBytes": 8977832, "elements": 100000 }
 }
 ```
 
@@ -384,27 +407,46 @@ The envelope repeats it at the top level as `stackElided`, so one field answers
 {
   "reason": "errorStackBudget",
   "budgetBytes": 65536,
-  "slots": [ { "index": 0, "approxBytes": 27178011, "elements": 100000 } ]
+  "slots": [ { "index": 0, "approxBytes": 8977832, "elements": 100000 } ]
 }
 ```
 
+A **successful** result under the agent profile is elided the same way, with
+`reason: "valueStackBudget"` and the profile's own budget
+(`agent::api::AGENT_STACK_BUDGET_BYTES`, 440 KiB — sized so the MCP response,
+which carries the envelope twice, stays under its 1 MiB `responseBytes`). A
+success *is* its stack, so the budget is generous and the trusted profile
+(`run`, `agent compute --limits trusted`) sets none and sends every success
+whole. It exists because the alternative was worse: an oversized success was
+refused outright as `responseTooLarge`, which told the caller that its answer
+was too big and nothing else — not that it had left a 7,000-element
+intermediate on the stack, not that the two small values beside it were fine.
+Elided, the values that fit arrive whole and the one that does not arrives as
+the record above, which is what lets the caller fix the program.
+
+`approxBytes` is the size the slot would have serialized to — `stack` node and
+`stackDisplay` string together — estimated from the value without building the
+text, and calibrated to within a few percent of the real rendering (the first
+estimate charged a flat envelope per element and put `0 99999 RANGE` at "~33
+MB" for a stack that serializes to 8.6 MB).
+
 Four rules make this safe to rely on.
 
-- **Errors only.** A successful result *is* its stack; truncating it would
-  change the answer. An oversized success stays oversized, and a host that
-  cannot deliver it says so (`responseTooLarge`) rather than quietly shrinking
-  it.
+- **The reason names the budget.** `errorStackBudget` is the fixed error
+  budget; `valueStackBudget` is the agent profile's success budget, and a host
+  that sets none never sees it.
 - **Values are dropped, never reasons.** `diagnosis`, `aiDiagnostic`,
-  `errorFlowTrace`, `message` and `runtimeMetrics` are never elided.
+  `errorFlowTrace`, `message`, `output` and `runtimeMetrics` are never elided.
 - **Slots keep their index.** A dropped slot is replaced, never removed, so
   `stack` and `stackDisplay` stay the same length as the real stack and a
   diagnosis that points at stack depth still points at the same thing.
   `stackDisplay` carries a matching `<elided …>` marker, so a text-only reader
   learns the same facts.
-- **An ordinary error is untouched.** The budget is 64 KiB — one sixteenth of
-  the MCP adapter's 1 MiB `responseBytes` ceiling — and an ordinary diagnosis
-  is roughly 15 KiB in total, so `stackElided` is absent and nothing changes
-  byte for byte. It appears as `null` here and is omitted entirely from the MCP
+- **An ordinary result is untouched.** The error budget is 64 KiB — one
+  sixteenth of the MCP adapter's 1 MiB `responseBytes` ceiling — and an
+  ordinary diagnosis is roughly 15 KiB in total; a 5,000-element vector of
+  small integers (433 KB) still fits the success budget. For both,
+  `stackElided` is absent and nothing changes byte for byte. It appears as `null` here and is omitted entirely from the MCP
   envelope, which drops null top-level fields.
 
 Distinguishing an elided slot from a genuine `NIL`: a `NIL` has

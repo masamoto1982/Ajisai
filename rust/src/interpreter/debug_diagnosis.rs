@@ -9,6 +9,10 @@ pub enum ErrorPhase {
     Tokenize,
     ResolveWord,
     ExecuteWord,
+    /// The pre-execution check of `#:contract` declarations
+    /// (LANG.CONTRACT.CHECK): decided before any Word runs, by `check` and by
+    /// `compute` alike.
+    CheckContract,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,6 +132,7 @@ impl ErrorPhase {
             ErrorPhase::Tokenize => "tokenize",
             ErrorPhase::ResolveWord => "resolveWord",
             ErrorPhase::ExecuteWord => "executeWord",
+            ErrorPhase::CheckContract => "checkContract",
         }
     }
 }
@@ -176,6 +181,9 @@ impl CauseClass {
             ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
+            // A declaration the program made about itself that inference
+            // disproved: a rule broken by the program, not by any value.
+            ErrorCategory::ContractViolation => CauseClass::ContractViolation,
             // The registry named the condition at the raise site, so the class
             // follows from the spec's own vocabulary.
             ErrorCategory::Declared(condition) => {
@@ -366,12 +374,15 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
         }),
         // The step budget lives outside `RuntimeLimits` but is published in
         // the same limit table, so it answers "which ceiling" the same way.
+        // The step meter refuses on the step that crosses the budget, so
+        // what it observed is the budget plus that one step. It used to
+        // report `null` here, the one ceiling whose `observed` said nothing.
         AjisaiError::ExecutionLimitExceeded { limit } => Some(ResourceLimitFacts {
             resource: crate::error::ResourceLimit::ExecutionSteps
                 .as_protocol_str()
                 .to_string(),
             limit: *limit as u64,
-            observed: None,
+            observed: Some(*limit as u64 + 1),
             progress: None,
         }),
         _ => None,

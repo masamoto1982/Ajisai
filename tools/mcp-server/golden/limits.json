@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "comment": "Every entry of the server's declared `mcp.limits` must appear here exactly once, and selftest.js fails if the two key sets differ. A limit an agent plans against has to have pinned, observable behaviour at its boundary; one that is declared and never exercised is a claim, not a control.",
+  "comment": "Every entry of the server's declared limits (`ajisai://limits`; `LIMITS` in index.js) must appear here exactly once, and selftest.js fails if the two key sets differ. A limit an agent plans against has to have pinned, observable behaviour at its boundary; one that is declared and never exercised is a claim, not a control.",
   "coverageKinds": {
     "boundary": "A pair of real sources: one just under the declared value that succeeds, one just over it that fails in the stated way. Run against the live server on every selftest.",
     "hostGate": "Enforced by the adapter before or around execution, so it is exercised through the server's own admission path rather than through a source program.",
@@ -37,26 +37,9 @@
       "note": "Enforced by the adapter around execution (`backend/native-cli.js` spawn timeout, `backend/wasm-worker.js` worker deadline) and exercised through it in selftest.js, which drives a backend built with a 1 ms deadline against a program that cannot finish in one. It stopped being reachable through a source program when the collection meter landed, and that is the point rather than a regression: the over case used to be `0 99999 RANGE UNIQUE LENGTH`, 48 seconds of quadratic scanning that no ceiling counted, and it is now refused by `collectionWork` in 164 ms. With every path named, the slowest program the other ceilings admit runs about 1.4 s -- `numericWork` buys ~0.7 s at its slowest charged path and `collectionWork` ~0.65 s at its own -- so 5,000 ms is a backstop on their sum, which is what a wall clock should be. Do not go looking for a source-program boundary pair for it; finding one would mean a ceiling had gone quiet again."
     },
     "responseBytes": {
-      "coverage": "boundary",
+      "coverage": "hostGate",
       "declared": 1048576,
-      "under": {
-        "kind": "source",
-        "source": "0 1000 RANGE",
-        "expect": {
-          "/status": "ok"
-        }
-      },
-      "over": {
-        "kind": "source",
-        "source": "0 20000 RANGE",
-        "expect": {
-          "/status": "hostError",
-          "/error/code": "responseTooLarge",
-          "/error/limit": "responseBytes",
-          "/error/retryable": false
-        }
-      },
-      "note": "Both backends refuse early on the same measure — UTF-8 bytes of the one result copy they produce — and `backend/parity-test.js` runs this pair against both, which is what the native-only `maxBuffer` implementation could never have shown. The declared ceiling itself is applied by the adapter to the whole response as sent (structured result, its serialized text mirror and provenance); `selftest.js` pins the gap between the two measures."
+      "note": "Enforced by both backends on the one result copy they produce (`backend/native-cli.js` maxBuffer and its own byte check, `backend/wasm-worker-entry.js`) and by the adapter on the whole response as sent — structured result, serialized text mirror and provenance together — and exercised in selftest.js through a backend built with a 256-byte budget that no result fits. It stopped being reachable through a source program when successful results gained a stack budget: a success whose stack would not fit is elided by the engine (`stackElided.reason: valueStackBudget`, 440 KiB, sized so the doubled response stays under this ceiling), so `0 20000 RANGE`, the old over case, now answers `ok` with its vector elided and the rest whole, and selftest.js pins that it, `0 7000 RANGE 1 2 ADD` and the still-whole `0 5000 RANGE` all arrive under the declared value. Do not go looking for a source-program over case; finding one would mean the elision had stopped covering what it covers."
     },
     "executionSteps": {
       "coverage": "boundary",
@@ -76,7 +59,8 @@
           "/diagnosis/why": "resourceLimit",
           "/aiDiagnostic/category": "executionLimitExceeded",
           "/diagnosis/resourceLimit/resource": "executionSteps",
-          "/diagnosis/resourceLimit/limit": 100000
+          "/diagnosis/resourceLimit/limit": 100000,
+          "/diagnosis/resourceLimit/observed": 100001
         }
       }
     },

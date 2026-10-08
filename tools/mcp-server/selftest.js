@@ -5,6 +5,7 @@ import {
   CAPACITY_WAIT_MS,
   createBackend,
   ExecutionGate,
+  LIMIT_PROFILE,
   LIMITS,
   serverVersion,
 } from "./index.js";
@@ -407,18 +408,48 @@ for (const limit of limitCases()) {
 // `responseBytes` bounds the response as sent — the result twice (structured
 // and serialized) plus provenance — not the one copy a backend produces. The
 // gap between the two used to let a 2.29 MB answer through a 1 MiB ceiling.
-for (const [source, mustRefuse] of [["0 5000 RANGE", false], ["0 7000 RANGE", true]]) {
+// A success that would not fit is no longer refused: the engine elides the
+// slots that exceed its stack budget (`valueStackBudget`) and sends the rest
+// whole, so the caller learns what it left on the stack rather than only that
+// its answer was large. `0 5000 RANGE` (433 KB of stack) still arrives whole.
+for (const [source, mustElide] of [["0 5000 RANGE", false], ["0 7000 RANGE 1 2 ADD", true], ["0 20000 RANGE", true]]) {
   const observed = await client.callTool({ name: "compute", arguments: { source } });
   const sent = Buffer.byteLength(
     JSON.stringify({ content: observed.content, structuredContent: observed.structuredContent }),
     "utf8",
   );
-  const refused = observed.structuredContent?.error?.code === "responseTooLarge";
+  const result = observed.structuredContent;
+  const elided = result?.stackElided?.reason === "valueStackBudget";
   check(
-    `responseBytes bounds the whole response to \`${source}\` (${sent} bytes sent)`,
-    sent <= LIMITS.responseBytes && refused === mustRefuse &&
-      (refused || observed.structuredContent?.status === "ok"),
+    `responseBytes bounds the whole response to \`${source}\` (${sent} bytes sent${elided ? ", elided" : ""})`,
+    sent <= LIMITS.responseBytes && result?.status === "ok" && elided === mustElide &&
+      (!mustElide || (result.stack?.[0]?.elided?.reason === "valueStackBudget" &&
+        result.stack[0].value === null && result.stackDisplay?.[0]?.startsWith("<elided vector of"))) &&
+      validateResult(result),
   );
+}
+check(
+  "an elided success keeps the values that fit, whole",
+  (await client.callTool({ name: "compute", arguments: { source: "0 7000 RANGE 1 2 ADD" } }))
+    .structuredContent?.stackDisplay?.[1] === "3/1",
+);
+// The ceiling itself is still enforced, through the backend's own measure:
+// a backend built with a response budget no result fits refuses the way the
+// declared one would.
+const narrow = createBackend({ responseBytes: 256 });
+if (narrow) {
+  let refused = null;
+  try {
+    await narrow.compute("0 10 RANGE");
+  } catch (error) {
+    refused = error;
+  }
+  check(
+    "limit responseBytes (hostGate): a backend refuses a result its budget cannot hold",
+    refused?.code === "responseTooLarge" && refused?.retryable === false,
+  );
+} else {
+  check("limit responseBytes (hostGate): a backend is available to exercise it", false);
 }
 
 // `wallTimeMs` is a deadline the adapter holds around execution, not a budget
@@ -546,6 +577,77 @@ check(
   "an invalid request is a host error, not a language error",
   badRequest.structuredContent?.error?.code === "invalidRequest",
 );
+// `additionalProperties: false` is a promise the server itself keeps: an
+// argument no tool declares is refused by name, never read and never ignored.
+const undeclared = await client.callTool({
+  name: "compute",
+  arguments: { source: "1 2 ADD", limits: "trusted" },
+});
+check(
+  "an argument no tool declares is refused as an invalid request",
+  undeclared.isError === true &&
+    undeclared.structuredContent?.error?.code === "invalidRequest" &&
+    undeclared.structuredContent?.error?.message.includes("`limits`"),
+);
+// A `#:contract` declaration is checked before anything runs, by `check` and
+// by `compute` alike, and a violated one is an error in the shape every other
+// error has — not a bare `status: error` with the finding buried in
+// `contractDecls.findings`.
+const declared = "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE";
+for (const tool of ["check", "compute"]) {
+  const violated = await client.callTool({ name: tool, arguments: { source: declared } });
+  const result = violated.structuredContent;
+  check(
+    `${tool} refuses a violated #:contract declaration in the common error shape`,
+    violated.isError !== true &&
+      result?.status === "error" &&
+      result?.message?.startsWith("Contract declaration violated:") &&
+      result?.diagnosis?.why === "contractViolation" &&
+      result?.diagnosis?.when === "checkContract" &&
+      result?.diagnosis?.where?.word === "DOUBLE" &&
+      result?.aiDiagnostic?.category === "contractViolation" &&
+      result?.diagnosis?.nextChecks?.[0]?.code === "checkDeclaredContract" &&
+      result?.contractDecls?.outcome === "error" &&
+      result?.contractDecls?.findings?.[0]?.severity === "error" &&
+      (tool === "check" ? !("outcome" in result) : result?.outcome === "error:contractViolation") &&
+      (tool === "check" || (result?.stackDisplay?.length === 0 && result?.output?.length === 0)) &&
+      validateResult(result),
+  );
+}
+const verifiedDeclaration = await client.callTool({
+  name: "compute",
+  arguments: { source: "#:contract DOUBLE inputs=1 outputs=1 purity=pure\n[ 2 MUL ] 'DOUBLE' DEF 21 DOUBLE" },
+});
+check(
+  "compute runs a program whose declaration verifies, and says the check happened",
+  verifiedDeclaration.structuredContent?.status === "ok" &&
+    verifiedDeclaration.structuredContent?.stackDisplay?.[0] === "42/1" &&
+    verifiedDeclaration.structuredContent?.contractDecls?.outcome === "value" &&
+    verifiedDeclaration.structuredContent?.contractDecls?.gapSummary?.verified === 1,
+);
+check(
+  "outcomes predicts the violation exactly when a declaration is present",
+  (await client.callTool({ name: "outcomes", arguments: { source: declared } }))
+    .structuredContent?.outcomes?.includes("error:contractViolation") === true &&
+    (await client.callTool({ name: "outcomes", arguments: { source: "1 2 ADD" } }))
+      .structuredContent?.outcomes?.includes("error:contractViolation") === false,
+);
+// A Forth-style stack word or a structured-programming keyword is a
+// recognizable mistake with a repair of its own, which `checkSpelling` could
+// not say; a full-width name is the Japanese input method's.
+for (const [source, code, candidate] of [
+  ["1 2 DUP", "checkNoStackShufflers", undefined],
+  ["[ 1 ] IF", "checkNoControlKeywords", undefined],
+  ["１ ２ ADD", "checkCharacterWidth", undefined],
+  ["ＡＤＤ", "checkCharacterWidth", "ADD"],
+]) {
+  const observed = await client.callTool({ name: "compute", arguments: { source } });
+  check(
+    `\`${source}\` is diagnosed with ${code}${candidate ? ` and suggests ${candidate}` : ""}`,
+    observed.structuredContent?.diagnosis?.nextChecks?.[0]?.code === code &&
+      (candidate === undefined || observed.structuredContent?.diagnosis?.candidates?.[0] === candidate),
+  );
+}
 // Empty source and whitespace-only source are the same empty program; one used
 // to be a host error and the other a value.
 for (const source of ["", "   "]) {
@@ -579,15 +681,15 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     "compute renders the algebraic value from the terms it carries",
     compute.structuredContent?.stackDisplay?.[0] === "[ sqrt(2) ]",
   );
+  // The ceilings travel once, in `ajisai://limits`; a result names the
+  // profile and carries none of the twelve numbers.
   check(
-    "compute reports engine provenance and applied limits",
+    "compute reports engine provenance and names the applied profile",
     compute.structuredContent?.mcp?.serverVersion === serverVersion() &&
       compute.structuredContent?.mcp?.engineVersion === "1.0.0-beta.1" &&
-      compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
-      compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
-      compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
-      compute.structuredContent?.mcp?.limits?.algebraicTerms === 512 &&
-      compute.structuredContent?.mcp?.limits?.nestingDepth === 256,
+      compute.structuredContent?.mcp?.limitProfile === LIMIT_PROFILE &&
+      compute.structuredContent?.mcp?.limitProfile === limitsResource.profile &&
+      !("limits" in (compute.structuredContent?.mcp ?? {})),
   );
   check(
     "compute names which backend answered",
@@ -653,10 +755,30 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     "every reported resource names a declared limit",
     Object.keys(usage ?? {}).every((key) => key in LIMITS),
   );
+  // The optimizer counters are the engine's own business; an agent reads
+  // budgets, and `resourceUsage` is the one place they are reported.
   check(
-    "a budget is reported once, under resourceUsage, not again beside the optimizer counters",
-    spent.structuredContent?.runtimeMetrics !== undefined &&
-      !("executionSteps" in spent.structuredContent.runtimeMetrics),
+    "a budget is reported once, under resourceUsage, and the optimizer counters not at all",
+    !("runtimeMetrics" in (spent.structuredContent ?? {})),
+  );
+  // The receipt keeps what nothing else in the envelope carries, and a
+  // verifier rebuilds the rest from beside it.
+  check(
+    "the receipt carries its digest and the two inputs the envelope has nowhere else",
+    JSON.stringify(Object.keys(spent.structuredContent?.receipt ?? {}).sort()) ===
+      JSON.stringify(["digest", "registryDigest", "sourceDigest"]) &&
+      /^#[a-f0-9]{64}$/.test(spent.structuredContent?.receipt?.digest ?? ""),
+  );
+  // What the constant blocks cost, measured: `1 2 ADD` was 3,732 bytes as
+  // sent, of which the answer was 85; it is 1,782 now, the remaining
+  // constants being the three digests a receipt and its provenance need.
+  // The ceiling is a ceiling, not a target — lower it when a response
+  // genuinely shrinks; `eval/performance.json` holds the exact median.
+  const small = await client.callTool({ name: "compute", arguments: { source: "1 2 ADD" } });
+  const smallBytes = Buffer.byteLength(JSON.stringify(small), "utf8");
+  check(
+    `a small result is small as sent (${smallBytes} bytes for \`1 2 ADD\`)`,
+    small.structuredContent?.stackDisplay?.[0] === "3/1" && smallBytes <= 2048,
   );
   // One envelope, one version: the adapter's own answers (`word_contract`)
   // carry the backend report's schema version, not a number of their own.

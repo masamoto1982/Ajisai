@@ -123,6 +123,12 @@
       "source": "0 999999999999 RANGE",
       "expect": "nil:spaceExhausted",
       "rationale": "The table's domain representatives are small numbers, so no RANGE cell asks for more elements than the machine materializes. A pair of bounds a trillion apart is the witness."
+    },
+    {
+      "id": "contractViolation",
+      "source": "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE",
+      "expect": "error:contractViolation",
+      "rationale": "The exhaustive table never writes a `#:contract` directive, and the category is raised by the pre-execution check rather than by any Word. A declaration whose `inputs` the body contradicts is the simplest witness: `compute` refuses to run it, as `check` refuses to pass it."
     }
   ]
 }

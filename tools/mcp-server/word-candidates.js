@@ -45,8 +45,18 @@ function editDistance(left, right) {
  * `entries` are `spec/words.json` entries, and a Word is considered under its
  * one name.
  */
+/**
+ * Full-width ASCII (U+FF01–U+FF5E, what a Japanese input method produces for
+ * `ＡＤＤ`) folded to its ASCII form — the same folding the engine applies
+ * (`word_candidates.rs::fold_full_width`), so `ＬＥＮＧＨＴ` suggests `LENGTH`.
+ */
+function foldFullWidth(text) {
+  return text.replace(/[\uFF01-\uFF5E]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xff01 + 0x21));
+}
+
 export function suggestWords(word, entries) {
-  const needle = String(word ?? "").trim().toUpperCase();
+  const written = String(word ?? "").trim().toUpperCase();
+  const needle = foldFullWidth(written);
   if (!needle) return [];
   const ceiling = distanceCeiling([...needle].length);
 
@@ -54,7 +64,7 @@ export function suggestWords(word, entries) {
   const seen = new Set();
   for (const entry of entries ?? []) {
     const upper = String(entry.name).toUpperCase();
-    if (upper === needle || seen.has(upper)) continue;
+    if (upper === written || seen.has(upper)) continue;
     const distance = editDistance(needle, upper);
     if (distance > ceiling) continue;
     seen.add(upper);

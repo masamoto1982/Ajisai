@@ -39,6 +39,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | --- | --- | --- |
 | `agent-cli-output-contract.md` | `ajisai` CLI の `--json` 出力契約 | `[設計根拠]` |
 | `gui-current-design-memory.md` | GUI 現行設計メモ（モバイル提示で撤回した改修とその理由を含む） | `[設計根拠]` |
+| `mcp-evaluation.md` | MCP サーバーの評価ハーネス（二言語コーパス、trace/repair スコアラー、捕捉済みモデルベースライン、性能・応答バイト予算）。`tools/mcp-server/README.md` は接続して使う側の文書に分け、評価の記述はこちらへ移した | `[設計根拠]` |
 | `mcp-host-profiles.md` | ホストごとの資源上限プロファイル対照表と、意図された差分。導出の統一で退けた案、`collectionWork` を別上限にした理由、較正ホストの訂正も本書に持つ | `[設計根拠]` |
 | `lexicon-emergence-pilot-results-2026-09-23.md` | 語彙創発実験 Phase 1（パイロット、同一モデル 12 体・168 解答）の結果。全問正答で、正答率と圧縮率には情報がなかった。solo 条件だけで 34 類中 13 類が独立到達されたため、停止条件に該当し、H1 は判定不能。H5 に反例（`KEEP` をユーザー語に掛けた場合と、その本体を `EXEC` した場合で結果が違い、この形の語が継承されて 21 解答に伝播）。計測器の実測 4 件（DIGEST は束縛名を区別する → D0α、CONTRACT は `BIND` 本体で `inputs: variable`、探針不足による D1 の過結合、辞書の重複）と、Phase 2 の前提条件。付録 A に `report.md` の数値（H1 の類、H4 の Core 語別使用数）、付録 B に作業指示書のうち参照される設計（禁止事項・停止条件・経路・同一性の三段・仮説 H1〜H5・条件・統制・Phase） | `[観察ノート]` |
 | `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |

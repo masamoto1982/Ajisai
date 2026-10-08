@@ -23,7 +23,7 @@ to trust a document that could drift:
 
 | host | how to read the applied profile |
 |---|---|
-| MCP stdio server | `mcp.limits` on every tool result, and the `ajisai://limits` resource |
+| MCP stdio server | the `ajisai://limits` resource; every tool result names the profile in `mcp.limitProfile`, and a ceiling that fires is named with its value in `diagnosis.resourceLimit` |
 | browser playground | the `profile:` badge in the header (hover for the full table); `AjisaiInterpreter.host_profile()` |
 | native CLI (`ajisai run`) | interpreter defaults, `--step-limit` overrides the step budget |
 | native CLI (`ajisai agent …`) | the same profile the MCP server applies |
@@ -112,10 +112,24 @@ therefore a long loop of the *cheapest* word rather than the widest operand
 (measured at 406 steps/ms **on WASM** for a trampolined user-word call, the
 dispatch-bound analogue of `numericWork`'s "dense tensor lanes"; see
 `scripts/wasm-profile-calibration.mjs`). The MCP profile's own
-`executionSteps` is untouched: every real MCP call site threads its own
-`100_000` explicitly (`tools/mcp-server/index.js` `LIMITS.executionSteps`),
-independent of whatever the interpreter's own default is, so raising the
-playground/native default did not move it.
+`executionSteps` is untouched: it is the agent profile's own constant
+(`agent::api::LOCAL_AGENT_EXECUTION_STEPS`, 100,000), which `ajisai agent
+compute` applies unless `--step-limit` says otherwise and which every MCP call
+site threads explicitly as well (`tools/mcp-server/index.js`
+`LIMITS.executionSteps`), independent of whatever the interpreter's own
+default is, so raising the playground/native default did not move it.
+
+The 120x gap between the two step budgets is the one a program notices first
+when it moves from the playground to an agent, because a block iteration costs
+one step per element: `0 99999 RANGE 0 [ ADD ] FOLD` walks 100,000 elements
+and is refused by `executionSteps` under the MCP profile, while the same sum as
+a vector operation (`V V ADD`, or `RANGE` and `FOLD` over a vector a tenth the
+size) runs in a handful of steps. The materialization ceiling admits a vector
+that the step ceiling cannot walk element by element: under this profile,
+block iteration is for tens of thousands of elements, and vector arithmetic
+for the rest. The quickstart says so where an agent reads it, and the
+playground's splash shows the agent profile's ceilings beside its own
+(`AjisaiInterpreter.agent_host_profile()`).
 
 **Three ceilings are deliberately *not* derived from the time budget, and stay
 at their prior values (mostly) or a differently-reasoned one:**

@@ -6,6 +6,7 @@ export const agent_check: (a: number, b: number) => [number, number];
 export const agent_compute: (a: number, b: number, c: number) => any;
 export const agent_infer_contracts: (a: number, b: number) => [number, number];
 export const agent_predict_outcomes: (a: number, b: number, c: number) => [number, number];
+export const ajisaiinterpreter_agent_host_profile: (a: number) => [number, number];
 export const ajisaiinterpreter_clear_stack: (a: number) => void;
 export const ajisaiinterpreter_collect_core_words_info: (a: number) => any;
 export const ajisaiinterpreter_collect_stack: (a: number) => any;

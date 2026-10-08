@@ -13,7 +13,7 @@
 
 use super::execution_receipt::build_receipt;
 use super::observation_digest::{observation_digest, ObservationDigestInput};
-use super::{error_report, stack_display, user_word_identities};
+use super::{error_report, user_word_identities};
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
@@ -373,12 +373,17 @@ pub(crate) fn semantics_json(value: &Value) -> Json {
 /// `source` is the exact program text that was run — carried through only to
 /// name it in the execution receipt (`Report::receipt`); nothing here
 /// re-parses or re-executes it.
+///
+/// `stack_budget` is the byte budget a successful result's stack may take
+/// before its largest slots are elided (`agent::error_stack`); `None` sends
+/// the stack whole.
 pub(crate) fn completed_run_report(
     interp: &Interpreter,
     result: crate::error::Result<()>,
     trace: Vec<ErrorFlowEvent>,
     output: Vec<String>,
     source: &str,
+    stack_budget: Option<usize>,
 ) -> Report {
     match result {
         Ok(()) => {
@@ -398,10 +403,18 @@ pub(crate) fn completed_run_report(
                 &resource_usage,
                 &digest,
             );
+            // The answer is the stack, so a success is sent whole wherever
+            // the host can take it; under a budget, the slots that do not
+            // fit are replaced by a record of what they were rather than
+            // the whole result being refused (`agent::error_stack`).
+            let residue = match stack_budget {
+                Some(budget) => super::error_stack::elided_value_stack(interp, budget),
+                None => super::error_stack::whole_stack(interp),
+            };
             Report {
                 status: "ok",
-                stack: stack_json(interp),
-                stack_display: stack_display(interp),
+                stack: residue.stack,
+                stack_display: residue.stack_display,
                 output,
                 message: None,
                 diagnosis: None,
@@ -410,7 +423,7 @@ pub(crate) fn completed_run_report(
                 runtime_metrics: interp.runtime_metrics(),
                 resource_usage,
                 contract_decls: None,
-                stack_elided: None,
+                stack_elided: residue.elided,
                 observation_digest: digest,
                 receipt: Some(receipt),
                 outcome: None,
