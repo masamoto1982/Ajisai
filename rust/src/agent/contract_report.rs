@@ -100,7 +100,7 @@ fn suggested_directive(name: &str, contract: &WordContract) -> String {
 /// Infer and render every user word's contract, in source-definition order.
 /// Execution-free.
 pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
-    let (mut interp, names) = build_definitions_interpreter(source);
+    let (mut interp, names, _) = build_definitions_interpreter(source);
     let mut reports = Vec::new();
     for name in names {
         let Some(contract) = interp.infer_word_contract(&name) else {

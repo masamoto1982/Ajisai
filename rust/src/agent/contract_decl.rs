@@ -39,6 +39,7 @@ use crate::interpreter::word_contract::{
 };
 use crate::interpreter::Interpreter;
 use crate::types::Token;
+use std::collections::HashSet;
 
 /// A parsed `#:contract` declaration. Fields left unstated are `None` and are
 /// not checked.
@@ -244,9 +245,9 @@ fn unknown_term(term: &str) -> String {
 }
 
 /// Extract every top-level `[ body ] 'NAME' DEF` from `tokens`, returning
-/// `(NAME, body-tokens)` pairs in source order. Nested vectors are respected;
-/// this reads the token stream only — it executes nothing.
-fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
+/// `(NAME, body-tokens, DEF-index)` triples in source order. Nested vectors
+/// are respected; this reads the token stream only — it executes nothing.
+fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>, usize)> {
     let mut defs = Vec::new();
     // Record depth-0 `[ ... ]` spans as (open_index, close_index).
     let mut depth = 0i32;
@@ -279,28 +280,81 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
             continue;
         };
         let k = j + 1;
-        let is_def = matches!(tokens.get(k), Some(Token::Symbol(s))
-            if crate::word_name::canonical_word_name(s).eq_ignore_ascii_case("DEF"));
-        if !is_def {
+        if !is_def_symbol(tokens.get(k)) {
             continue;
         }
         let body = tokens[open + 1..close].to_vec();
-        defs.push((name.to_string(), body));
+        defs.push((name.to_string(), body, k));
     }
 
     defs
+}
+
+fn is_def_symbol(token: Option<&Token>) -> bool {
+    matches!(token, Some(Token::Symbol(s))
+        if crate::word_name::canonical_word_name(s).eq_ignore_ascii_case("DEF"))
+}
+
+/// The names whose binding the execution-free pass cannot settle. It
+/// registers each plain top-level `[ body ] 'NAME' DEF` in order, so a name
+/// is settled only when that is the one `DEF` of it in the source: a name
+/// defined twice is called under either body depending on where the call
+/// stands, and a `DEF` the pass does not read (inside a block, or after a
+/// computed body) may bind it when it runs. A `DEF` whose name is not a
+/// String literal could bind any name, so it unsettles every one.
+#[derive(Debug, Default)]
+pub(crate) struct UnsettledNames {
+    names: HashSet<String>,
+    every: bool,
+}
+
+impl UnsettledNames {
+    pub(crate) fn contains(&self, name: &str) -> bool {
+        self.every || self.names.contains(&name.to_uppercase())
+    }
+
+    fn of(tokens: &[Token], defs: &[(String, Vec<Token>, usize)]) -> Self {
+        let mut unsettled = UnsettledNames::default();
+        let mut seen = HashSet::new();
+        for (name, _, _) in defs {
+            let upper = name.to_uppercase();
+            if !seen.insert(upper.clone()) {
+                unsettled.names.insert(upper);
+            }
+        }
+        let read: HashSet<usize> = defs.iter().map(|(_, _, at)| *at).collect();
+        for (idx, token) in tokens.iter().enumerate() {
+            if read.contains(&idx) || !is_def_symbol(Some(token)) {
+                continue;
+            }
+            match idx.checked_sub(1).map(|prev| &tokens[prev]) {
+                Some(Token::String(name)) => {
+                    unsettled.names.insert(name.to_uppercase());
+                }
+                _ => unsettled.every = true,
+            }
+        }
+        unsettled
+    }
 }
 
 /// Build an interpreter from `source` by registering its top-level word
 /// definitions and imports **without executing any word body or top-level
 /// code**, returning it with the user words it defined, in source order.
 /// Shared by the `#:contract` checker and the `contract` reporter so both
-/// see the identical execution-free environment.
-pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<String>) {
+/// see the identical execution-free environment. The names it cannot bind to
+/// one body come back as [`UnsettledNames`]: what it registered for one of
+/// them is only the last body it read.
+pub(crate) fn build_definitions_interpreter(
+    source: &str,
+) -> (Interpreter, Vec<String>, UnsettledNames) {
     let mut interp = Interpreter::new();
     let mut names = Vec::new();
+    let mut unsettled = UnsettledNames::default();
     if let Ok(tokens) = crate::tokenizer::tokenize(source) {
-        for (name, body) in collect_top_level_defs(&tokens) {
+        let defs = collect_top_level_defs(&tokens);
+        unsettled = UnsettledNames::of(&tokens, &defs);
+        for (name, body, _) in defs {
             // A malformed body is not this pass's concern (the structural check
             // ran earlier); skip a definition that will not register.
             if crate::interpreter::execute_def::op_def_inner(&mut interp, &name, &body).is_ok() {
@@ -314,7 +368,7 @@ pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<S
         // them so they never leak into a caller's findings.
         interp.output_buffer.clear();
     }
-    (interp, names)
+    (interp, names, unsettled)
 }
 
 /// Build a check interpreter from `source` (no execution), then check every
@@ -338,12 +392,27 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         };
     }
 
-    let (mut interp, _names) = build_definitions_interpreter(source);
+    let (mut interp, _names, unsettled) = build_definitions_interpreter(source);
 
     let mut decl_outcomes = Vec::with_capacity(decls.len());
     for decl in &decls {
         let before = findings.len();
-        check_one(&mut interp, decl, &mut findings);
+        if unsettled.contains(&decl.name) {
+            // Checking the last body read would verify a declaration against
+            // a definition the calls before it never run.
+            findings.push(DeclFinding {
+                severity: Severity::Note,
+                message: format!(
+                    "`#:contract {}`: the word is defined more than once, or by a `DEF` \
+                     the check does not read before running, so the check cannot tell \
+                     which definition a call runs (unverified).",
+                    decl.name
+                ),
+                code: Some(GapCode::UnmodelledControlFlow.as_str()),
+            });
+        } else {
+            check_one(&mut interp, decl, &mut findings);
+        }
         let new_findings = &findings[before..];
         let outcome = if new_findings.iter().any(|f| f.severity == Severity::Error) {
             CheckOutcome::Error

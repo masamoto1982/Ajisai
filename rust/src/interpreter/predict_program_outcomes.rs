@@ -72,8 +72,16 @@ impl Interpreter {
     /// build_definitions_interpreter`) so a later call to a `DEF`'d name
     /// resolves against its real body — a name that is `DEF`'d but never
     /// called contributes nothing, which is more precise than assuming
-    /// every definition is reachable.
-    pub(crate) fn predict_program_outcomes(&mut self, tokens: &[Token]) -> OutcomePrediction {
+    /// every definition is reachable. `unsettled` names the Words that
+    /// registration could not bind to one body (defined twice, or by a `DEF`
+    /// it does not read): a call to one is an unknown arity, since the body
+    /// registered is only the last one read. Their vocabulary needs no such
+    /// care — every body is a literal in `tokens`, walked below.
+    pub(crate) fn predict_program_outcomes(
+        &mut self,
+        tokens: &[Token],
+        unsettled: &dyn Fn(&str) -> bool,
+    ) -> OutcomePrediction {
         let mut flow = FlowSim::new();
         let mut visiting: HashSet<String> = HashSet::new();
         let mut outcomes: BTreeSet<String> = BTreeSet::new();
@@ -102,9 +110,13 @@ impl Interpreter {
                         flow.feed_literal();
                     } else {
                         let canonical = crate::word_name::canonical_word_name(symbol);
-                        match self.infer_word_contract(&canonical) {
-                            Some(contract) => flow.feed_word(&contract.flow),
-                            None => flow.go_dynamic(),
+                        if unsettled(&canonical) {
+                            flow.go_dynamic();
+                        } else {
+                            match self.infer_word_contract(&canonical) {
+                                Some(contract) => flow.feed_word(&contract.flow),
+                                None => flow.go_dynamic(),
+                            }
                         }
                     }
                     // Its *outcomes* count either way: a block written here
@@ -149,7 +161,9 @@ mod tests {
     fn predict(source: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         let tokens = tokenize(source).expect("test source must tokenize");
-        interp.predict_program_outcomes(&tokens).outcomes
+        interp
+            .predict_program_outcomes(&tokens, &|_| false)
+            .outcomes
     }
 
     #[test]

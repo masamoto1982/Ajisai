@@ -48,9 +48,9 @@ pub(crate) fn predict_outcomes(source: &str, options: &ComputeOptions) -> Outcom
     let Ok(tokens) = crate::tokenizer::tokenize(source) else {
         return exact("error:malformedSource", &probe);
     };
-    let (mut interp, _names) = build_definitions_interpreter(source);
+    let (mut interp, _names, unsettled) = build_definitions_interpreter(source);
     options.apply(&mut interp);
-    let mut prediction = interp.predict_program_outcomes(&tokens);
+    let mut prediction = interp.predict_program_outcomes(&tokens, &|name| unsettled.contains(name));
     // A name nothing defines raises `unknownWord` when execution reaches it.
     // The walk already covers the reaching part (every Word that could fail
     // first is in the set); this adds the arrival itself. `resolve_words` is
