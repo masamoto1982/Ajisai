@@ -127,10 +127,9 @@ pub(crate) struct DispatchWitness {
 /// never was, though all three project for a reason the Word can name.
 ///
 /// `Literal` is excluded because it is the absence a Word *received*, not one
-/// it made: a `NIL` written in source, and — since a dense lane carries
-/// presence but no reason — any absence that has passed through a tensor. So
-/// `[ 1 NIL 3 ] [ 2 ] MUL` records nothing, which is right: `MUL` propagated that
-/// NIL, it did not produce it.
+/// it made: a `NIL` written in source, whether it stands alone or as a lane
+/// of a tensor. So `[ 1 NIL 3 ] [ 2 ] MUL` records nothing, which is right:
+/// `MUL` propagated that NIL, it did not produce it.
 ///
 /// The first reasoned absence in reading order names the event, keeping one
 /// event per Word call as the trace's shape requires.

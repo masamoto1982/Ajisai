@@ -173,11 +173,12 @@ impl DenseTensor {
         // `is_pure_integer` is the caller's claim about the same columns, so it
         // is recomputed rather than believed: a payload claiming purity for a
         // lane like `1/2` would otherwise send every integer fast path down a
-        // route its own guard had cleared.
-        let is_pure_integer = is_pure_integer
-            && denominators
-                .iter()
-                .all(|denominator| *denominator == 1 || *denominator == 0);
+        // route its own guard had cleared. An absent lane is not an integer
+        // lane either, as every in-process constructor reads it: a pure-integer
+        // tensor has no absent lane, and the column kernels skip their sentinel
+        // scan on that invariant.
+        let is_pure_integer =
+            is_pure_integer && denominators.iter().all(|denominator| *denominator == 1);
         Self::from_columns(numerators, denominators, shape, is_pure_integer, absences)
     }
 

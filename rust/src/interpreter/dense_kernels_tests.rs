@@ -73,9 +73,62 @@ fn hand_picked_programs_agree() {
         "-5000 5000 RANGE 4097 DIV",
         "[ -9223372036854775808 9223372036854775807 6 4 ] 2 DIV",
         "[ -9223372036854775808 9223372036854775807 6 4 ] -2 DIV",
-        // A zero divisor lane, a NIL lane, a mismatch, a one-lane Tensor.
+        // A zero divisor lane — in integer lanes, in rational lanes, under a
+        // scalar divisor, in every lane, in one lane, and carried onward —
+        // a NIL lane, a mismatch, a one-lane Tensor.
         "1 -3 3 RANGE DIV",
         "1 [ 1 0 2 ] DIV",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV",
+        "[ 1/2 3 5/3 ] [ 0 2 0 ] DIV",
+        "[ 1 1/2 ] [ 0 0 ] DIV",
+        "[ 1 2 3 ] 0 DIV",
+        "0 [ 0 0 ] DIV",
+        "[ 6 ] [ 0 ] DIV",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV FLOOR",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV 1 GET NIL-REASON",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV [ 0 1 2 ] DIV",
+        "[ -9223372036854775808 4 ] [ 0 -1 ] DIV",
+        "[ -9223372036854775808 4 ] [ -1 0 ] DIV",
+        // An absent operand lane passes through, leftmost first, on every
+        // kernel: integer lanes, rational lanes, a scalar on either side,
+        // both operands absent in one lane, an absent lane beside a zero
+        // divisor, a written NIL beside a computed one, and the Words after.
+        "[ 1 NIL 3 ] [ 10 20 30 ] ADD",
+        "[ 1 NIL 3 ] [ 10 NIL 30 ] SUB",
+        "[ 1 2 3 ] [ 10 NIL 30 ] MUL",
+        "[ 1 NIL 3 ] [ NIL 0 3 ] DIV",
+        "[ 1 NIL 0 ] [ 0 NIL 0 ] DIV",
+        "[ 1/2 NIL 3 ] [ 10 20 30 ] ADD",
+        "[ 1/2 3 ] [ NIL 1/3 ] MUL",
+        "[ 1/2 NIL ] [ 0 1/3 ] DIV",
+        "2 [ 1 NIL 3 ] ADD",
+        "2 [ 1 NIL 3 ] SUB",
+        "2 [ 1 NIL 3 ] DIV",
+        "[ 1 NIL 3 ] 0 DIV",
+        "1/2 [ 1 NIL 3 ] MUL",
+        "[ 1 NIL 3 ] 1/2 DIV",
+        "[ 1 NIL 3 ] [ 2 ] ADD",
+        "[ NIL ] [ 2 ] ADD",
+        "[ NIL ] 2 ADD",
+        "[ 1 NIL 3 ] [ 10 20 30 ] LT",
+        "[ 1 NIL 3 ] 2 GT",
+        "2 [ 1 NIL 3 ] GT",
+        "[ 1/2 NIL 3 ] [ 1/3 NIL 3 ] LT",
+        "[ 1 NIL 3 ] FLOOR",
+        "[ 1 NIL 3 ] ROUND",
+        "[ 1/2 NIL -3/2 ] FLOOR",
+        "[ 1/2 NIL -3/2 ] ROUND",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV [ 1 1 1 ] ADD 2 MUL 3 DIV FLOOR 0 GT",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV [ 1 NIL 3 ] ADD 1 GET NIL-REASON",
+        "[ 1 NIL 3 ] [ 1 0 2 ] DIV 1 GET NIL-REASON",
+        "[ 1 2 3 ] [ 1 0 2 ] DIV [ 1 NIL 3 ] [ 1 0 2 ] DIV EQ",
+        "[ 'x' 'y' ] [ ABSENT ] MAP 3 ADD",
+        "[ 'x' 'y' ] [ ABSENT ] MAP [ 1 0 ] DIV 0 GET NIL-REASON",
+        "[ 1 0 ] [ 'x' 'y' ] [ ABSENT ] MAP DIV",
+        "[ 9223372036854775807 NIL ] 1 ADD",
+        "[ 9223372036854775807 NIL ] [ 1 NIL ] ADD",
+        "[ -9223372036854775808 NIL ] -1 DIV",
         "[ 1 NIL 3 ] 2 MUL",
         "[ 1 2 3 ] [ 1 2 ] ADD",
         "[ 1 2 3 ] [ 2 ] ADD",
@@ -126,11 +179,118 @@ fn the_kernels_answer_where_they_apply() {
     assert_eq!(kernel_hits("1 1000 RANGE 2 DIV FLOOR"), 2);
     assert_eq!(kernel_hits("1 1000 RANGE 500 GT"), 1);
     assert_eq!(kernel_hits("1 1000 RANGE 1 1000 RANGE ADD"), 1);
-    assert_eq!(kernel_hits("1 [ 1 0 2 ] DIV"), 0);
-    assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 MUL"), 0);
+    assert_eq!(kernel_hits("1 [ 1 0 2 ] DIV"), 1);
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV"), 1);
+    assert_eq!(kernel_hits("[ 1/2 3 ] [ 0 2 ] DIV"), 1);
+    // The projected lane is an absent operand lane for the next Word, which
+    // passes it through on the kernel too.
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD"), 2);
+    assert_eq!(
+        kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD 2 MUL 3 DIV FLOOR 0 GT"),
+        6
+    );
+    assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 MUL"), 1);
+    assert_eq!(kernel_hits("[ 1 NIL 3 ] [ 1 0 2 ] DIV"), 1);
+    assert_eq!(kernel_hits("[ 1 NIL 3 ] FLOOR"), 1);
+    assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 GT"), 1);
     assert_eq!(kernel_hits("[ 9223372036854775807 1 ] 1 ADD"), 0);
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 2 ] ADD"), 0);
     assert_eq!(kernel_hits("2 3 ADD"), 0);
+}
+
+/// A zero divisor empties its own lane and nothing else — not the Tensor's
+/// columns. On every route a `DIV` result whose lanes fit a machine word is
+/// a dense Tensor, the absent lane the denominator-0 sentinel with its reason
+/// in the absence map; it used to be a boxed Vector on the lift and a nested
+/// Vector on the one-lane fast path, so one zero divisor cost the vector its
+/// representation for every Word after it.
+#[test]
+fn a_zero_divisor_keeps_the_result_dense() {
+    use crate::error::NilReason;
+    use crate::types::ValueData;
+    for (source, absent, shape) in [
+        ("[ 1 2 3 ] [ 1 0 2 ] DIV", vec![1], vec![3]),
+        ("[ 1/2 3 5/3 ] [ 0 2 0 ] DIV", vec![0, 2], vec![3]),
+        ("1 [ 1 0 2 ] DIV", vec![1], vec![3]),
+        ("[ 1 2 3 ] 0 DIV", vec![0, 1, 2], vec![3]),
+        ("[ 6 ] [ 0 ] DIV", vec![0], vec![1]),
+        ("[ [ 6 ] ] [ [ 0 ] ] DIV", vec![0], vec![1, 1]),
+        (
+            "[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 0 2 ] ] DIV",
+            vec![1, 2],
+            vec![2, 2],
+        ),
+    ] {
+        for dense in [true, false] {
+            let mut interp = Interpreter::new();
+            interp.set_dense_kernels_enabled(dense);
+            crate::agent::block_on(interp.execute(source)).expect(source);
+            let top = interp.get_stack().last().cloned().expect(source);
+            let ValueData::Tensor { data, shape: got } = &top.data else {
+                panic!("`{source}` (kernels {dense}) answered {top:?}, not a dense Tensor");
+            };
+            assert_eq!(
+                got.as_slice(),
+                shape.as_slice(),
+                "`{source}` (kernels {dense})"
+            );
+            assert!(!data.is_pure_integer, "`{source}` (kernels {dense})");
+            for lane in 0..data.len() {
+                let expected = absent.contains(&lane).then_some(NilReason::DivisionByZero);
+                assert_eq!(
+                    data.lane_reason(lane),
+                    expected,
+                    "`{source}` (kernels {dense}) lane {lane}"
+                );
+            }
+        }
+    }
+}
+
+/// An absent operand lane is carried, not re-minted: the result lane holds
+/// the operand's own absence, the leftmost operand's where both are absent,
+/// and the result stays a dense Tensor on every route. The error-flow trace
+/// is part of the equality (`observe`), so a carried lane that was minted
+/// again would already fail `hand_picked_programs_agree`; this pins the value.
+#[test]
+fn an_absent_lane_passes_through_dense() {
+    use crate::error::NilReason;
+    use crate::types::ValueData;
+    for (source, reasons) in [
+        (
+            "[ 1 NIL 3 ] [ 10 20 30 ] ADD",
+            vec![None, Some(NilReason::Literal), None],
+        ),
+        (
+            "[ 1 2 3 ] [ 1 0 2 ] DIV [ 10 NIL 30 ] MUL",
+            vec![None, Some(NilReason::DivisionByZero), None],
+        ),
+        (
+            "[ 10 NIL 30 ] [ 1 2 3 ] [ 1 0 2 ] DIV MUL",
+            vec![None, Some(NilReason::Literal), None],
+        ),
+        (
+            "[ 'x' 'y' ] [ ABSENT ] MAP [ 1 0 ] DIV",
+            vec![Some(NilReason::UserDeclared), Some(NilReason::UserDeclared)],
+        ),
+        (
+            "[ 1/2 NIL -3/2 ] FLOOR",
+            vec![None, Some(NilReason::Literal), None],
+        ),
+    ] {
+        for dense in [true, false] {
+            let mut interp = Interpreter::new();
+            interp.set_dense_kernels_enabled(dense);
+            crate::agent::block_on(interp.execute(source)).expect(source);
+            let top = interp.get_stack().last().cloned().expect(source);
+            let ValueData::Tensor { data, .. } = &top.data else {
+                panic!("`{source}` (kernels {dense}) answered {top:?}, not a dense Tensor");
+            };
+            let got: Vec<Option<NilReason>> =
+                (0..data.len()).map(|i| data.lane_reason(i)).collect();
+            assert_eq!(got, reasons, "`{source}` (kernels {dense})");
+        }
+    }
 }
 
 #[test]
@@ -191,6 +351,7 @@ fn kernel_lane() -> impl Strategy<Value = String> {
         3 => (-9i64..9, 1i64..9).prop_map(|(n, d)| format!("{n}/{d}")),
         1 => Just("4611686018427387904".to_string()),
         1 => Just("-9223372036854775808".to_string()),
+        1 => Just("NIL".to_string()),
     ]
 }
 

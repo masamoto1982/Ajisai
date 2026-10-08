@@ -122,15 +122,13 @@ const NIL_WORD: &str = "NIL";
 /// Widen `outcomes` to admit `nil:literal` whenever the program can produce
 /// *any* NIL — the closure that keeps prediction sound against reason loss.
 ///
-/// A reason is metadata on a whole `Value`, and a dense tensor lane holds
-/// presence but not a reason (`tensor_lane_ops`' module doc and
-/// `arithmetic_division::build_scalar_fast_projection` both say so in those
-/// words). A computed, reasoned NIL that crosses one of those lanes comes
-/// back reasonless, and a reasonless NIL reads back as `literal`:
+/// A reason is metadata on a whole `Value`. A dense tensor lane used to hold
+/// presence but not a reason, so a computed, reasoned NIL that crossed one
+/// came back reasonless, and a reasonless NIL reads back as `literal`:
 ///
 /// ```text
 /// [ 1 2 ] [ 1 0 ] DIV 1 GET NIL-REASON            -> 'divisionByZero'
-/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET NIL-REASON -> 'literal'
+/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET NIL-REASON -> 'literal'   (then)
 /// ```
 ///
 /// The second program contains no `NIL` token, so "a NIL literal is written
@@ -138,9 +136,10 @@ const NIL_WORD: &str = "NIL";
 /// exhaustive table (where every `nil:literal` cell does take `nilLiteral`
 /// as an input). Predicting from what the program can produce instead of
 /// from what it writes stays sound whatever the value representation does
-/// with reasons — including after that reason loss is fixed, since dropping
-/// an outcome the program cannot reach is the allowed direction (pitfall A)
-/// and adding one it can is not.
+/// with reasons — including now that a dense lane keeps its reason in the
+/// tensor's absence map (`DenseTensor::absences`) and that program answers
+/// `'divisionByZero'`, since dropping an outcome the program cannot reach is
+/// the allowed direction (pitfall A) and adding one it can is not.
 pub(crate) fn close_over_nil_reason_loss(outcomes: &mut BTreeSet<String>) {
     if outcomes.iter().any(|id| id.starts_with("nil:")) {
         outcomes.insert(NIL_LITERAL.to_string());

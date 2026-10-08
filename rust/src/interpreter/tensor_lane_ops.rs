@@ -1,15 +1,20 @@
 //! Element-wise broadcast for Words whose scalar law can project.
 //!
 //! The `Fraction`-level broadcasts in [`tensor_ops`] answer each lane with a
-//! number, which is all a dense tensor lane can hold: a lane records presence,
-//! not why something is absent. A Word whose scalar law may *project* — answer
-//! NIL for a well-formed operand (`LANG.FAILURE.TRICHOTOMY`) — therefore
-//! cannot lift through them without flattening every projection into an
-//! anonymous absence, or worse, into one failure for the whole operation.
+//! number: a `Fraction` records presence, not why something is absent. A Word
+//! whose scalar law may *project* — answer NIL for a well-formed operand
+//! (`LANG.FAILURE.TRICHOTOMY`) — therefore cannot lift through them without
+//! flattening every projection into an anonymous absence, or worse, into one
+//! failure for the whole operation.
 //!
 //! This module is the lift for those Words. It reuses `tensor_ops`' shape
 //! rules exactly, so the result shape never depends on whether the Word
-//! projected, and differs only in what a lane may answer with.
+//! projected, and differs only in what a lane may answer with. The lanes are
+//! decided as `Value`s, so each projection keeps its reason, and the result
+//! is then promoted back to a dense Tensor wherever its lanes fit one: a
+//! dense Tensor holds an absent lane as the denominator-0 sentinel and its
+//! reason in the tensor's absence map, so a projection empties its own lane
+//! without costing the vector around it its representation.
 //!
 //! [`tensor_ops`]: crate::interpreter::tensor_ops
 
@@ -92,7 +97,7 @@ where
 /// The `Fraction`-level broadcasts can only hand a lane a number, so a Word
 /// whose scalar law may *project* — answer NIL for a well-formed operand —
 /// cannot use them without flattening every projection into an anonymous
-/// absence: a dense lane records presence, not a reason. `SQRT` already lifts
+/// absence: a `Fraction` records presence, not a reason. `SQRT` already lifts
 /// this way through `lift_unary_numeric`, which is why a negative lane comes
 /// back as `NIL(domainMiss)` beside its neighbours. This is the binary
 /// counterpart, and `DIV` uses it so a zero divisor empties its own lane and
@@ -225,29 +230,43 @@ fn flat_leaf_values(value: &Value) -> Vec<Value> {
     out
 }
 
-/// Fold flat lane values back into `out_shape`.
+/// Fold flat lane values back into `shape`: the dense Tensor the flat path
+/// would have built when every lane fits one, else nested Vectors. An empty
+/// shape is the scalar case — one lane, and it *is* the result.
 ///
-/// The nested `Vector` form is kept deliberately: promoting back to a dense
-/// tensor is what would discard the per-lane reason this path exists to carry.
-/// An empty shape is the scalar case — one lane, and it *is* the result.
+/// The promotion is the point. These lanes were decided as `Value`s so that a
+/// projection could keep its reason, and a dense Tensor keeps it too: the
+/// lane is the denominator-0 sentinel, the reason sits in the absence map
+/// (`DenseTensor::absences`). Answering a boxed Vector here instead made one
+/// zero divisor cost the whole result its columns — every Word downstream
+/// then read a million boxed lanes to find the one that was absent — and made
+/// `DIV` the one Word whose result representation depended on whether it
+/// projected. The column kernels (`dense_kernels`) build exactly this Tensor
+/// without boxing a lane first; this is the general route reaching the same
+/// value, so the two agree lane for lane and map for map.
 fn nest_lane_values(mut values: Vec<Value>, shape: &[usize]) -> Value {
     if shape.is_empty() {
         return values.pop().unwrap_or_else(Value::nil);
     }
+    Value::from_vector_promoted(nest_children(values, shape))
+}
+
+/// The children of the Vector `shape` arranges `values` into, each inner
+/// axis already nested.
+fn nest_children(mut values: Vec<Value>, shape: &[usize]) -> Vec<Value> {
     if shape.len() == 1 {
-        return Value::from_children(values);
+        return values;
     }
     let inner_shape = &shape[1..];
     let inner_size: usize = inner_shape.iter().product();
     if inner_size == 0 {
-        return Value::from_children(Vec::new());
+        return Vec::new();
     }
-    let mut rest = values.split_off(0);
     let mut outer: Vec<Value> = Vec::with_capacity(shape[0]);
     for _ in 0..shape[0] {
-        let tail = rest.split_off(inner_size.min(rest.len()));
-        outer.push(nest_lane_values(rest, inner_shape));
-        rest = tail;
+        let tail = values.split_off(inner_size.min(values.len()));
+        outer.push(Value::from_children(nest_children(values, inner_shape)));
+        values = tail;
     }
-    Value::from_children(outer)
+    outer
 }

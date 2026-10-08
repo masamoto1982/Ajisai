@@ -46,8 +46,8 @@
       "summary": "厳密な積。`2/3 3/4 MUL`は`1/2`で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 1 2 3 ] [ 10 ] MUL`は`[ 10 20 30 ]`。数でないものは`nonNumeric`。"
     },
     "DIV": {
-      "source": "54d7ae399bd16e65",
-      "summary": "厳密な商(左を右で割る)。`1 3 DIV`は厳密に`1/3`。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 2 4 ] 2 DIV`は`[ 1 2 ]`。除数が0のレーンはNIL(divisionByZero)を投影する。数でないものは`nonNumeric`。"
+      "source": "263d4c590d6dad04",
+      "summary": "厳密な商(左を右で割る)。`1 3 DIV`は厳密に`1/3`。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 2 4 ] 2 DIV`は`[ 1 2 ]`。除数が0のレーンはNIL(divisionByZero)を自分のレーンだけに投影し、他のレーンには触れない。`[ 1 2 3 ] [ 1 0 2 ] DIV`は`[ 1 NIL 3/2 ]`で、隣のレーンは商のままであり、後続のワードは不在のレーンをそのまま通しながら残りを計算する(LANG.FAILURE.PASSTHROUGH)。だから`1 0 DIV 1 ADD NIL-REASON`は`'divisionByZero'`になる。数でないものは`nonNumeric`。"
     },
     "FLOOR": {
       "source": "5241afa119c18e10",

@@ -10,6 +10,8 @@
     { "name": "map-collatz-step", "route": "fused tier with BIND/SELECT", "setup": "0 999999 RANGE", "source": "[ 'N' BIND N 2 DIV N 3 MUL 1 ADD N 2 DIV FLOOR 2 MUL N EQ SELECT ] MAP", "elements": 1000000 },
     { "name": "vec-div-floor", "route": "column kernels", "setup": "0 999999 RANGE", "source": "7 DIV FLOOR", "elements": 1000000 },
     { "name": "vec-gt", "route": "column kernels", "setup": "0 999999 RANGE", "source": "500000 GT", "elements": 1000000 },
+    { "name": "vec-div-zero-lane", "route": "column kernels, one zero divisor lane projected in place", "setup": "1 1000000 RANGE -500000 499999 RANGE", "source": "DIV", "elements": 1000000 },
+    { "name": "vec-absent-lane-chain", "route": "column kernels carrying one absent lane through ADD MUL DIV FLOOR GT", "setup": "1 1000000 RANGE -500000 499999 RANGE DIV", "source": "1 ADD 2 MUL 3 DIV FLOOR 0 GT", "elements": 1000000 },
     { "name": "map-userword", "route": "User Word per element", "setup": "[ 3 MUL 1 ADD ] 'AFFINE' DEF 0 99999 RANGE", "source": "[ AFFINE ] MAP", "elements": 100000 },
     { "name": "map-userword-nested", "route": "two levels of User Words", "setup": "[ 2 MUL ] 'DBL' DEF [ DBL 1 ADD DBL ] 'G' DEF 0 99999 RANGE", "source": "[ G ] MAP", "elements": 100000 },
     { "name": "map-unfused-scalars", "route": "scalar Words in a block the fused walk declines (quickened)", "setup": "0 99999 RANGE", "source": "[ [ 7 ] LENGTH ADD 'X' BIND X 2 DIV FLOOR X 3 MUL X 0 LT SELECT 5 GT X 9 LT NOT AND ] MAP", "elements": 100000 },

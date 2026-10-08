@@ -958,7 +958,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &[],
         error_when: &["nonNumeric", "shapeMismatch"],
         syntax: Some("10 2 DIV"),
-        summary: "The exact quotient, left over right: `1 3 DIV` is exactly `1/3`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is `nonNumeric`.",
+        summary: "The exact quotient, left over right: `1 3 DIV` is exactly `1/3`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero) in its own lane and no other: `[ 1 2 3 ] [ 1 0 2 ] DIV` is `[ 1 NIL 3/2 ]`, the lanes beside it are quotients, and a Word after it passes the absent lane through while computing the rest (LANG.FAILURE.PASSTHROUGH), so `1 0 DIV 1 ADD NIL-REASON` is `'divisionByZero'`. A non-number is `nonNumeric`.",
         stack_effect: "[ a ] [ b ] -> [ a / b ]",
         hover_summary: "DIV — divide values",
         hover_syntax: "10 2 DIV",

@@ -17,6 +17,7 @@
 //! one is still a sane size.
 
 use std::cell::Cell;
+use std::collections::BTreeMap;
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::arithmetic::{ExactArithmeticSchema, ScalarFastWrap};
@@ -28,7 +29,7 @@ use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
-use crate::semantic::Recoverability;
+use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Value, ValueData};
@@ -165,7 +166,20 @@ pub(crate) fn check_result_size(interp: &Interpreter, value: &Value) -> Result<(
 // A remainder written out as `a - b * floor(a/b)` goes through the same
 // division, so a zero divisor answers the same way whichever phrase wraps it.
 pub(crate) fn division_by_zero_projection() -> Value {
-    Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
+    Value::nil_with_absence(division_by_zero_absence())
+}
+
+/// The absence a zero divisor projects, for a route that writes it into a
+/// dense lane rather than wrapping it as a `Value`: the column kernels keep
+/// their quotient columns and record this, keyed by lane, in the Tensor's
+/// absence map. One mint per lane, as `division_by_zero_projection` mints one
+/// per NIL, so the error-flow trace sees the same production either way.
+pub(crate) fn division_by_zero_absence() -> AbsenceMetadata {
+    AbsenceMetadata::with_reason(
+        NilReason::DivisionByZero,
+        AbsenceOrigin::DivisionByZero,
+        Recoverability::Recoverable,
+    )
 }
 
 /// The scalar law of `DIV` as a whole `Value`, for the lane-wise lift.
@@ -197,17 +211,19 @@ fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
 /// projected — `[ 6 ] [ 2 ] DIV` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] DIV` gave a
 /// scalar `NIL`.
 ///
-/// The projection is a reasoned NIL, so the wrap is rebuilt as a nested
-/// `Vector`: a dense lane could hold the absence but not the reason for it.
+/// The wrap is rebuilt as the dense Tensor `build_scalar_fast_result` builds
+/// for a quotient, its one lane absent and the reason in the absence map: the
+/// representation of a `DIV` result does not depend on whether it projected,
+/// on this route any more than on the column kernels or the general lift.
 pub(crate) fn build_scalar_fast_projection(wrap: &ScalarFastWrap) -> Value {
     match wrap {
         ScalarFastWrap::Scalar => division_by_zero_projection(),
         ScalarFastWrap::Tensor(shape) => {
-            let mut value = division_by_zero_projection();
-            for _ in shape {
-                value = Value::from_children(vec![value]);
-            }
-            value
+            let mut absences = BTreeMap::new();
+            absences.insert(0, division_by_zero_absence());
+            let tensor =
+                DenseTensor::from_columns(vec![0i64], vec![0i64], shape.clone(), false, absences);
+            Value::from_dense_tensor(tensor, shape.clone())
         }
     }
 }

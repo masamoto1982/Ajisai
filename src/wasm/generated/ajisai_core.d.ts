@@ -144,7 +144,7 @@ export function agent_infer_contracts(source: string): string;
 export function agent_predict_outcomes(source: string, step_limit?: number | null): string;
 
 /**
- * Benchmark hook for `scripts/speed-bench-wasm.mjs`: run `source` on a fresh
+ * Benchmark hook for `scripts/bench/speed-bench-wasm.mjs`: run `source` on a fresh
  * interpreter with every priced ceiling lifted (`agent::unbounded_interpreter`,
  * the same one `rust/examples/speed_bench.rs` times natively) and answer the
  * final stack depth. Nothing is converted to JS, so the caller's clock sees
