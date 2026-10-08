@@ -309,3 +309,13 @@ async fn a_bound_name_reads_as_one_value_not_an_unresolved_word() {
         assert!(contract.gaps.is_empty(), "`{src}`: {:?}", contract.gaps);
     }
 }
+
+/// A body pushing more values than `u16` counts has no statable arity:
+/// saturating reported `outputs=65535` as complete for 65,537 pushes.
+#[tokio::test]
+async fn an_arity_past_u16_is_a_gap_not_a_saturated_count() {
+    let body = vec!["1"; 65_537].join(" ");
+    let contract = contract_for(&format!("[ {body} ] 'W' DEF"), "W").await;
+    assert_eq!(contract.flow, ContractFlow::Dynamic);
+    assert_eq!(contract.confidence, ContractConfidence::Conservative);
+}

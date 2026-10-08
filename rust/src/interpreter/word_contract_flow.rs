@@ -55,7 +55,8 @@ pub(crate) struct FlowSim {
     /// body's arity varies either.
     dynamic: bool,
     /// This simulation could not model the body (a control directive whose
-    /// paths differ in height, or an unbalanced delimiter). Reported as a gap
+    /// paths differ in height, an unbalanced delimiter, or a count past
+    /// `u16::MAX`, which a contract cannot state). Reported as a gap
     /// so the declaration check can only ever produce a note.
     unmodelled: bool,
     /// Values the body needs beneath what it pushed for itself.
@@ -77,7 +78,17 @@ impl FlowSim {
     }
 
     fn push_value(&mut self) {
-        self.height = self.height.saturating_add(1);
+        self.add_height(1);
+    }
+
+    /// Raise the height by `n`. A count past what `u16` holds is no count at
+    /// all: saturating would leave `u16::MAX` standing as a proven arity for a
+    /// body that pushes more.
+    fn add_height(&mut self, n: u16) {
+        match self.height.checked_add(n) {
+            Some(height) => self.height = height,
+            None => self.unmodelled = true,
+        }
     }
 
     /// A `Number`/`String` literal token.
@@ -125,12 +136,15 @@ impl FlowSim {
             return;
         };
         if self.height < *consumes {
-            self.required = self.required.saturating_add(consumes - self.height);
+            match self.required.checked_add(consumes - self.height) {
+                Some(required) => self.required = required,
+                None => self.unmodelled = true,
+            }
             self.height = 0;
         } else {
             self.height -= consumes;
         }
-        self.height = self.height.saturating_add(*produces);
+        self.add_height(*produces);
     }
 
     /// A symbol that did not resolve, or a dependency whose own inference
