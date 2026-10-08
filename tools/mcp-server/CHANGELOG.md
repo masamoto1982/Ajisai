@@ -6,6 +6,14 @@ beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.8.1
+
+An engine rule changes and the Word summaries this server serves say so; no tool, envelope field or resource changes.
+
+### Changed
+
+- **A higher-order block leaves exactly one value.** `MAP`, `FILTER`, `FOLD` and `SCAN` used to take the top of what their block left and discard the rest, so `[ 1 2 3 ] [ 1 GT TRUE ] FILTER` kept every element on the strength of the `TRUE` written above the comparison, and `[ 1 2 3 ] [ 2 MUL 7 ] MAP` answered `[ 7 7 7 ]` — quiet wrong answers. A block that leaves a surplus is now the same `blockContractViolation` a block that leaves nothing has always been (`MAP: expected the block to leave one value, and it left 2`), and the run stops. LANG.COLLECTIONS.HIGHER, the four Words' summaries (`assets/words.json`, `word_contract`, the quickstart's Word table), the Reference and the conformance corpus state the rule the same way; the quickstart's generated half gains a §7 entry for it. A value computed along the way is consumed before the block ends or named with `BIND`, which leaves nothing. The packaged WASM engine is rebuilt with the rule.
+
 ## 0.8.0
 
 What a result carries changes, so this is a minor version: constant metadata leaves the envelope, a successful result too large to send is elided rather than refused, and `compute` checks `#:contract` declarations before it runs anything. The engine it speaks for is unchanged in version.

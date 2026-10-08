@@ -157,17 +157,20 @@ fn run_accumulator_walk(
         interp.stack.push(accumulator.clone());
         interp.stack.push(elem);
         match execute_executable_code(interp, &executable) {
-            Ok(_) => match interp.stack.pop() {
-                Some(result) => {
+            Ok(_) => match super::higher_order::block_result(interp) {
+                Ok(result) => {
                     if answer == Answer::Every {
                         visited.push(result.clone());
                     }
                     accumulator = result;
                 }
-                None => {
+                Err(left) => {
                     error = Some(AjisaiError::declared(
                         "blockContractViolation",
-                        "expected the block to leave one value, and it left none",
+                        super::higher_order::block_arity_message(
+                            "the block to leave one value",
+                            left,
+                        ),
                     ));
                     break;
                 }

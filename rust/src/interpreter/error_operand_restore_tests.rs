@@ -108,6 +108,8 @@ async fn exec_restores_its_operand_when_it_refuses_to_run() {
 async fn a_computed_scalar_runs_from_a_block_on_every_route() {
     let direct = stack_after("2 20000 POW").await;
     assert_eq!(stack_after("[ 2 ] 20000 POW EXEC").await, direct);
-    let mapped = stack_after("[ 1 ] [ 2 ] 20000 POW MAP 0 GET").await;
+    // The computed Scalar is appended to a block that consumes the element,
+    // so the block leaves the one value it owes (LANG.COLLECTIONS.HIGHER).
+    let mapped = stack_after("[ 1 ] [ 2 ] 20000 POW [ MUL ] CONCAT MAP 0 GET").await;
     assert_eq!(mapped, direct);
 }

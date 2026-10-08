@@ -69,8 +69,11 @@ async fn the_reported_steps_are_the_ones_the_ceiling_judged() {
     // step count this test means to exercise ever grows): 200 outer
     // iterations each folding 999 inner elements costs on the order of
     // 200,000 steps while every one `RANGE` ever produces stays at 999.
+    // The outer block adds the element to the accumulator *before* the
+    // inner fold, so it leaves the one value a block owes
+    // (LANG.COLLECTIONS.HIGHER) rather than the accumulator and a sum.
     let report = agent_json(
-        "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
+        "1 200 RANGE 0 [ ADD 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD",
         MCP_PROFILE,
     )
     .await;

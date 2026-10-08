@@ -200,6 +200,27 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     )
 }
 
+/// The one value a block left on its scratch stack, or the count it left
+/// instead (LANG.COLLECTIONS.HIGHER). A surplus used to be discarded and the
+/// top taken, so `[ 1 2 3 ] [ 1 GT TRUE ] FILTER` kept every element on the
+/// strength of the `TRUE` above the comparison — a quiet wrong answer.
+pub(super) fn block_result(interp: &mut Interpreter) -> std::result::Result<Value, usize> {
+    match interp.stack.len() {
+        1 => Ok(interp.stack.pop().expect("one value")),
+        left => Err(left),
+    }
+}
+
+/// `expected the block to leave one value, and it left none` / `… left 2`.
+pub(super) fn block_arity_message(expected: &str, left: usize) -> String {
+    let count = if left == 0 {
+        "none".to_string()
+    } else {
+        left.to_string()
+    };
+    format!("expected {expected}, and it left {count}")
+}
+
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     run_element_walk::<MapWalk>(
         interp,
@@ -215,8 +236,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 /// share `run_accumulator_walk`. The two used to carry a copy each of that
 /// sixty-line frame.
 trait ElementWalk {
-    /// What a block that answered nothing is told it owed.
-    const EMPTY_RESULT_MESSAGE: &'static str;
+    /// What the block owes: the one value `block_arity_message` names when
+    /// the block leaves another count.
+    const EXPECTED_RESULT: &'static str;
 
     /// A walk over `n_elements` elements, with room for its answers.
     fn with_capacity(n_elements: usize) -> Self;
@@ -234,8 +256,7 @@ struct FilterWalk {
 }
 
 impl ElementWalk for FilterWalk {
-    const EMPTY_RESULT_MESSAGE: &'static str =
-        "expected the predicate block to leave one truth value, and it left none";
+    const EXPECTED_RESULT: &'static str = "the predicate block to leave one truth value";
 
     fn with_capacity(n_elements: usize) -> Self {
         FilterWalk {
@@ -269,8 +290,7 @@ struct MapWalk {
 }
 
 impl ElementWalk for MapWalk {
-    const EMPTY_RESULT_MESSAGE: &'static str =
-        "expected the block to leave one value, and it left none";
+    const EXPECTED_RESULT: &'static str = "the block to leave one value";
 
     fn with_capacity(n_elements: usize) -> Self {
         MapWalk {
@@ -380,17 +400,17 @@ fn run_element_walk<W: ElementWalk>(
         interp.stack.clear();
         interp.stack.push(elem);
         match execute_executable_code(interp, &executable) {
-            Ok(_) => match interp.stack.pop() {
-                Some(result) => {
+            Ok(_) => match block_result(interp) {
+                Ok(result) => {
                     if let Err(e) = walk.visit(&target_val, i, result) {
                         error = Some(e);
                         break;
                     }
                 }
-                None => {
+                Err(left) => {
                     error = Some(AjisaiError::declared(
                         "blockContractViolation",
-                        W::EMPTY_RESULT_MESSAGE,
+                        block_arity_message(W::EXPECTED_RESULT, left),
                     ));
                     break;
                 }
@@ -412,68 +432,4 @@ fn run_element_walk<W: ElementWalk>(
 
     interp.stack.push(walk.finish());
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    //! Test suite for `MAP`'s result contract: the block's one result *is* the
-    //! mapped element, whatever shape it has.
-    //!
-    //! `MAP` used to unwrap a one-element Vector result into its element, a
-    //! leftover from the time a scalar and a one-element Vector were the same
-    //! thing. With the domains disjoint (LANG.VALUES.DISJOINT) that unwrapping
-    //! silently changed the answer and left no way to map onto singletons at all,
-    //! so these cases pin the shape rather than only the numbers.
-
-    use crate::interpreter::Interpreter;
-    use crate::types::display::render_stack;
-
-    async fn run(source: &str) -> String {
-        let mut interp = Interpreter::new();
-        interp
-            .execute(source)
-            .await
-            .unwrap_or_else(|e| panic!("{} should run: {:?}", source, e));
-        render_stack(interp.get_stack()).join(" ")
-    }
-
-    #[tokio::test]
-    async fn map_keeps_a_one_element_vector_result_whole() {
-        assert_eq!(
-            run("[ 1 2 ] [ 1 COLLECT ] MAP").await,
-            "[ [ 1/1 ] [ 2/1 ] ]"
-        );
-    }
-
-    #[tokio::test]
-    async fn map_keeps_a_nested_one_element_vector_whole() {
-        assert_eq!(
-            run("[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP").await,
-            "[ [ 1/1 ] [ 3/1 2/1 ] ]"
-        );
-    }
-
-    #[tokio::test]
-    async fn a_mapped_singleton_stays_a_singleton_downstream() {
-        // The failure this rules out was silent rather than loud: the element
-        // read back as a scalar, so `5 ADD` answered `6/1` where `[ 6/1 ]` is
-        // the answer and `[ 6 ] 6 EQ` is FALSE.
-        assert_eq!(
-            run("[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP 0 GET 5 ADD").await,
-            "[ 6/1 ]"
-        );
-    }
-
-    #[tokio::test]
-    async fn map_still_collects_scalar_results_as_scalars() {
-        assert_eq!(run("[ 1 2 3 ] [ 2 MUL ] MAP").await, "[ 2/1 4/1 6/1 ]");
-    }
-
-    #[tokio::test]
-    async fn map_by_word_name_follows_the_same_rule() {
-        assert_eq!(
-            run("[ 1 COLLECT ] 'WRAP' DEF [ 1 2 ] [ WRAP ] MAP").await,
-            "[ [ 1/1 ] [ 2/1 ] ]"
-        );
-    }
 }

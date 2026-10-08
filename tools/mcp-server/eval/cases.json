@@ -862,7 +862,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD"
+    "source": "1 200 RANGE 0 [ ADD 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    },
    "expect": {
     "/status": "error",

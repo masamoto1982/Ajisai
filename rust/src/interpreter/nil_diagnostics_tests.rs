@@ -380,7 +380,7 @@ mod nil_trace_tests {
     #[tokio::test]
     async fn a_lifted_failure_lands_in_a_dense_tensor() {
         assert!(
-            top_is_dense_tensor("[ 1 2 3 4 5 6 7 8 ] [ 9 0 DIV ] MAP").await,
+            top_is_dense_tensor("[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP").await,
             "MAP over a numeric vector must produce a dense Tensor for the \
              dense-absence gates below to mean anything"
         );
@@ -418,7 +418,7 @@ mod nil_trace_tests {
     /// wrong Word.
     #[tokio::test]
     async fn the_word_that_projected_the_lane_is_the_producer() {
-        let source = "[ 1 2 3 4 5 6 7 8 ] [ 4 -1 MUL SQRT ] MAP";
+        let source = "[ 1 2 3 4 5 6 7 8 ] [ -1 MUL SQRT ] MAP";
         assert!(top_is_dense_tensor(source).await);
         assert_eq!(traced_reasons(source, "MAP").await, Vec::new());
         assert_eq!(
@@ -466,7 +466,7 @@ mod nil_trace_tests {
     #[tokio::test]
     async fn a_dense_reasoned_absence_passed_through_is_not_traced_again() {
         assert_eq!(
-            traced_reasons("[ 1 2 3 4 5 6 7 8 ] [ 9 0 DIV ] MAP 1 ADD", "ADD").await,
+            traced_reasons("[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP 1 ADD", "ADD").await,
             Vec::new()
         );
     }

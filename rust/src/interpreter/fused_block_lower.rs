@@ -82,8 +82,9 @@ struct Lowering<'a> {
 }
 
 /// Lower `plan` for a walk that starts the block on `inputs` values, or
-/// `None` when any op is outside the fused subset or the block would
-/// underflow (an ERROR the ordinary route reports).
+/// `None` when any op is outside the fused subset, the block would underflow,
+/// or it would leave other than one value (each an ERROR the ordinary route
+/// reports).
 ///
 /// A name the plan could not resolve is a `FallbackToken`: it lowers to a
 /// `Load` when its frame bound it earlier, and — in the block's own frame —
@@ -106,7 +107,10 @@ pub(crate) fn lower(
         lane_pushes: Vec::new(),
     };
     lowering.line(&plan.line.ops, &mut HashMap::new(), true, interp.call_depth)?;
-    if lowering.depth == 0 {
+    // A block owes exactly one value (LANG.COLLECTIONS.HIGHER); any other
+    // count is the `blockContractViolation` the ordinary route reports, so a
+    // block that would leave none or a surplus is not fused.
+    if lowering.depth != 1 {
         return None;
     }
     let words = lowering.ops.iter().filter(|op| op.is_word()).count() as u64;

@@ -639,22 +639,36 @@
      to misread as "exactly one result" and the corpus previously showed it
      only incidentally, inside cases about other conditions. -->
 
-<section class="ajisai-case" id="core-map-block-may-leave-more-than-the-result" data-category="core">
-  <h3>MAP takes the block's top and discards what it left beneath</h3>
+<section class="ajisai-case" id="core-map-block-surplus-violates" data-category="core">
+  <h3>MAP refuses a block that leaves more than its one result</h3>
+  <!-- The surplus used to be discarded and the top taken: `[ 99/1 99/1 ]`,
+       a quiet wrong answer (LANG.COLLECTIONS.HIGHER). -->
   <pre class="ajisai-source">[ 1 2 ] [ 1 ADD 99 ] MAP</pre>
-  <pre class="ajisai-expect-result">[ 99/1 99/1 ]</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MAP: expected the block to leave one value, and it left 2</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-fold-block-may-leave-more-than-the-result" data-category="core">
-  <h3>FOLD takes the block's top as the next accumulator</h3>
+<section class="ajisai-case" id="core-fold-block-surplus-violates" data-category="core">
+  <h3>FOLD refuses a block that leaves more than the next accumulator</h3>
   <pre class="ajisai-source">[ 1 2 3 ] 0 [ ADD 99 ] FOLD</pre>
-  <pre class="ajisai-expect-result">99/1</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">FOLD: expected the block to leave one value, and it left 2</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-filter-block-surplus-violates" data-category="core">
+  <h3>FILTER refuses a predicate that leaves a value under its answer</h3>
+  <!-- The TRUE on top used to be the answer and the comparison below it was
+       discarded, so this kept every element. -->
+  <pre class="ajisai-source">[ 1 2 3 ] [ 1 GT TRUE ] FILTER</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">FILTER: expected the predicate block to leave one truth value, and it left 2</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-map-block-empty-stack-violates" data-category="core">
-  <h3>A block that leaves nothing is the one block-arity violation</h3>
+  <h3>A block that leaves nothing is a block-arity violation too</h3>
   <!-- PRINT consumes its operand and pushes nothing (LANG.EFFECTS.OUTPUT), so
        the block finishes with an empty stack. -->
   <pre class="ajisai-source">[ 1 2 ] [ PRINT ] MAP</pre>
@@ -698,7 +712,10 @@
 
 <section class="ajisai-case" id="core-filter-rejects-scalar-predicate" data-category="core">
   <h3>A FILTER predicate that yields a Scalar names the declared condition nonTruthValue</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 1 ] FILTER</pre>
+  <!-- `[ 1 ADD ]` leaves the one value a predicate owes, and it is a Scalar.
+       `[ 1 ]` would leave two (the element and the literal), which is the
+       block-arity violation above, not this condition. -->
+  <pre class="ajisai-source">[ 1 2 3 ] [ 1 ADD ] FILTER</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">FILTER: expected a truth value from the predicate block, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
