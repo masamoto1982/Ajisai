@@ -61,6 +61,11 @@ async fn a_literal_operand_pins_even_a_value_driven_materializer() {
     // on a literal-driven range into a false error instead.
     let cost = cost_of("[ 0 10 RANGE ] 'K' DEF", "K").await;
     assert_eq!(cost.collection, (CostClass::Const, true));
+
+    // Only both operands pin it: with the start from the caller,
+    // `-99000 R` materializes a hundred thousand elements.
+    let cost = cost_of("[ 10 RANGE ] 'R' DEF", "R").await;
+    assert_eq!(cost.collection, (CostClass::Unbounded, true));
 }
 
 #[tokio::test]
