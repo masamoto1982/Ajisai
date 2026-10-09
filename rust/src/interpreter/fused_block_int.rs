@@ -261,9 +261,9 @@ fn typed(block: &FusedBlock, inputs: &[Ty]) -> Option<Typed> {
 }
 
 /// Every element as `(type, i64)`, borrowed in place from a pure-integer
-/// dense Tensor's numerator column, or `None`. `is_pure_integer` is false for
-/// a Tensor with an absent lane (its denominator is 0), so a column it
-/// vouches for holds no NIL.
+/// dense Tensor's numerator column, or `None`. A dense Tensor holds numbers
+/// only (`dense_columns`), and `is_pure_integer` is false when any lane is a
+/// fraction or a point over zero, so a column it vouches for is integers.
 fn elements(target: &Value) -> Option<(Ty, Cow<'_, [i64]>)> {
     match &target.data {
         ValueData::Tensor { data, shape } if shape.len() == 1 && data.is_pure_integer => {
