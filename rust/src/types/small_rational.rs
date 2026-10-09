@@ -12,8 +12,16 @@
 //! work to `Fraction`. A rational's lowest-terms form with a positive
 //! denominator is unique, so these agree with `Fraction` wherever they
 //! answer; `fraction_gcd_tests` holds them to it.
+//!
+//! The `_total` forms take the three points over zero too — `(1, 0)`,
+//! `(-1, 0)` and `(0, 0)` — and a zero divisor, which the pair laws above
+//! do not (they assume a positive denominator). Such an operation is answered
+//! by the `Fraction`'s own total arithmetic (`fraction_extended`), whose
+//! answer is always one of the three points or zero, a small pair; every
+//! other is the pair law's. `order_total` is the one place the order of the
+//! three points is decided for the pair kernels.
 
-use crate::types::fraction::{binary_gcd_u128, binary_gcd_u64, compute_gcd_i64};
+use crate::types::fraction::{binary_gcd_u128, binary_gcd_u64, compute_gcd_i64, Fraction};
 use std::cmp::Ordering;
 
 /// A rational in lowest terms with a positive denominator.
@@ -237,4 +245,68 @@ pub(crate) fn order((an, ad): Pair, (bn, bd): Pair) -> Ordering {
         return x.cmp(&y);
     }
     (i128::from(an) * i128::from(bd)).cmp(&(i128::from(bn) * i128::from(ad)))
+}
+
+/// A lane over zero, or a zero divisor: the operation the pair laws above
+/// leave to the `Fraction`'s own total arithmetic.
+#[cold]
+#[inline(never)]
+fn over_zero(a: Pair, b: Pair, law: fn(&Fraction, &Fraction) -> Fraction) -> Option<Pair> {
+    law(
+        &Fraction::from_normalized_pair(a.0, a.1),
+        &Fraction::from_normalized_pair(b.0, b.1),
+    )
+    .extract_i64_pair()
+}
+
+/// [`add`] on every pair, a point over zero included.
+#[inline]
+pub(crate) fn add_total(a: Pair, b: Pair, subtract: bool) -> Option<Pair> {
+    if a.1 == 0 || b.1 == 0 {
+        return over_zero(
+            a,
+            b,
+            if subtract {
+                Fraction::sub
+            } else {
+                Fraction::add
+            },
+        );
+    }
+    add(a, b, subtract)
+}
+
+/// [`mul`] on every pair, a point over zero included.
+#[inline]
+pub(crate) fn mul_total(a: Pair, b: Pair) -> Option<Pair> {
+    if a.1 == 0 || b.1 == 0 {
+        return over_zero(a, b, Fraction::mul);
+    }
+    mul(a, b)
+}
+
+/// [`div`] on every pair, a point over zero and a zero divisor included.
+#[inline]
+pub(crate) fn div_total(a: Pair, b: Pair) -> Option<Pair> {
+    if a.1 == 0 || b.1 == 0 || b.0 == 0 {
+        return over_zero(a, b, Fraction::div);
+    }
+    div(a, b)
+}
+
+/// The order of two pairs, as `Fraction::order` decides it: `-1/0` below
+/// every rational and `1/0` above, and `None` when either is `0/0`, which is
+/// ordered against nothing (LANG.VALUES.EXACT). `±1/0` are ordered by the
+/// sign of their numerator.
+#[inline]
+pub(crate) fn order_total(a: Pair, b: Pair) -> Option<Ordering> {
+    if a.1 != 0 && b.1 != 0 {
+        return Some(order(a, b));
+    }
+    if a == (0, 0) || b == (0, 0) {
+        return None;
+    }
+    // Where each sits: -2 for `-1/0`, a rational's sign, 2 for `1/0`.
+    let place = |(n, d): Pair| if d == 0 { 2 * n } else { n.signum() };
+    Some(place(a).cmp(&place(b)))
 }
