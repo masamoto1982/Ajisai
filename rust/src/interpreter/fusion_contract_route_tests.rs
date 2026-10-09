@@ -85,6 +85,19 @@ const PROGRAMS: &[&str] = &[
     "[ [ 1 ] [ 2 ] ] [ DEPTH ] MAP",
     "[ 1 TRUE 3 ] [ 4 GCD ] MAP",
     "[ 4611686018427387904 9223372036854775807 ] [ 4611686018427387904 GCD ] MAP",
+    // The three points over zero are plain values on every route: `GCD`
+    // answers NIL for them (no plain answer), `NIL?` FALSE, `DEPTH` 0.
+    "1/0 6 GCD",
+    "0/0 0/0 GCD",
+    "6 -1/0 GCD",
+    "1/0 NIL?",
+    "0/0 NIL?",
+    "-1/0 DEPTH",
+    "[ 1/0 4 ] [ 6 GCD ] MAP",
+    "[ 1/0 0/0 -1/0 ] [ NIL? ] MAP",
+    "[ 1/0 2 ] [ DEPTH ] MAP",
+    "1 [ 0 1 2 ] DIV [ 'X' BIND X 2 GCD X NIL? SELECT ] MAP",
+    "[ 'X' BIND X 6 GCD X ADD ] 'F' DEF 1/0 F 0/0 F",
     // In segments: a User Word body, and a block that does not fuse (it
     // leaves a Vector).
     "[ 'X' BIND X 6 GCD X ADD ] 'F' DEF 5 F 12 F 1/2 F",
