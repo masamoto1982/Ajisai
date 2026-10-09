@@ -89,7 +89,7 @@ fn hand_picked_programs_agree() {
         "[ 1 2 3 ] [ 1 2 ADD ADD ] MAP",
         "[ 1 2 3 ] 10 [ SUB ] FOLD",
         "[ 1 2 3 ] 10 [ DIV ] FOLD",
-        // A zero divisor projects a NIL: the ordinary walk's to report.
+        // A zero divisor answers a point over zero (LANG.VALUES.EXACT).
         "[ 1 0 2 ] [ 1 SWAP DIV ] MAP",
         "[ 1 0 2 ] [ 5 DIV ] MAP",
         "[ 1 0 2 ] 1 [ DIV ] FOLD",
@@ -186,6 +186,104 @@ fn hand_picked_programs_agree() {
         "[ 1/2 1/3 ] 1/5 [ 'E' BIND 'A' BIND A E A E GT SELECT ] FOLD",
     ] {
         assert_same(source, Limits::default());
+    }
+}
+
+/// The three points over zero — `1/0`, `-1/0`, `0/0` — as elements, as
+/// literals, as seeds and as the quotient of a zero divisor: a number like
+/// any other on either route, with the same values, NILs and charges. Only an
+/// order asked of `0/0`, and a law with no plain answer, leave the fused walk.
+const OVER_ZERO: [&str; 32] = [
+    // Elements over zero.
+    "1 [ 0 1 2 ] DIV [ 2 MUL 1 ADD ] MAP",
+    "[ 1/0 -1/0 0/0 3 ] [ 1 ADD ] MAP",
+    "[ 1/0 -1/0 0/0 3/2 ] [ 2 MUL 1/3 SUB ] MAP",
+    "1 0 20 RANGE DIV [ 2 MUL 1 ADD ] MAP",
+    "1 0 20 RANGE DIV 0 MUL 1 21 RANGE ADD [ 2 MUL 1 ADD ] MAP",
+    // A zero divisor in the block.
+    "[ 1 0 2 ] [ 'X' BIND 1 X DIV ] MAP",
+    "[ 1 0 -2 ] [ 'X' BIND X X DIV ] MAP",
+    "[ 3 0 4 ] [ 'D' BIND 10 10 D DIV FLOOR D MUL SUB ] MAP",
+    "[ 1/2 0 -3/4 ] [ 0 DIV 1 ADD ] MAP",
+    // Order: `±1/0` are ordered, `0/0` is not.
+    "[ 1/0 -1/0 2 ] [ 1/2 GT ] FILTER",
+    "[ 1/0 -1/0 2 ] [ 1/2 LT ] MAP",
+    "[ 1/0 -1/0 2 ] [ 3 MIN ] MAP",
+    "[ 1/0 -1/0 2 ] [ 3 MAX ] MAP",
+    "[ 1/0 0/0 2 ] [ 1/2 GT ] FILTER",
+    "[ 0/0 1 ] [ 3 MIN ] MAP",
+    "[ 1 2 ] [ 0/0 LT ] MAP",
+    // Rounding: each point is its own floor and its own rounding.
+    "[ 1/0 -1/0 0/0 5/2 ] [ FLOOR ] MAP",
+    "[ 1/0 -1/0 0/0 5/2 ] [ ROUND ] MAP",
+    // Equality, and the finiteness test it makes.
+    "1 [ 0 1 2 ] DIV [ 0 MUL 0 EQ ] FILTER",
+    "[ 1/0 0/0 2 ] [ 0/0 EQ ] FILTER",
+    // Seeds over zero.
+    "[ 1 2 3 ] [ 1/0 ] [ ADD ] FOLD",
+    "[ 1 2 -3 ] 1/0 [ MUL ] SCAN",
+    "[ 1 2 3 ] 1/0 [ ADD ] FOLD",
+    "[ 1 2 3 ] [ -1/0 ] [ 0 MUL ADD ] SCAN",
+    // Literals and lanes over zero in the block.
+    "[ 1 2 3 ] [ 1/0 ADD ] MAP",
+    "[ 1 2 3 ] [ [ 1/0 ] MUL ] MAP",
+    "[ 1 0 3 ] [ 0/0 SWAP DIV ] MAP",
+    // Plain laws.
+    "[ 1/0 4 ] [ 6 GCD ] MAP",
+    "[ 1/0 0/0 ] [ NIL? ] MAP",
+    "[ 1/0 ] [ DEPTH ] MAP",
+    // POW on a base over zero.
+    "[ 1/0 -1/0 0/0 2 ] [ 3 POW ] MAP",
+    "[ 1/0 2 ] [ 'X' BIND X X 2 POW ADD ] MAP",
+];
+
+#[test]
+fn points_over_zero_agree() {
+    for source in OVER_ZERO {
+        assert_same(source, Limits::default());
+    }
+    for steps in [1, 5, 10, 11, 12] {
+        let limits = Limits {
+            steps: Some(steps),
+            ..Limits::default()
+        };
+        assert_same("1 [ 0 1 2 ] DIV [ 2 MUL 1 ADD ] MAP", limits);
+    }
+    for work in [0, 1, 3, 5, 6, 7] {
+        let limits = Limits {
+            work: Some(work),
+            ..Limits::default()
+        };
+        assert_same("[ 1/0 -1/0 0/0 3 ] [ 1 ADD ] MAP", limits);
+    }
+}
+
+/// A point over zero keeps the walk fused; only an order asked of `0/0`, a
+/// law that answers NIL (`GCD`) and Words outside the subset leave it.
+#[test]
+fn points_over_zero_stay_fused() {
+    for source in [
+        "1 [ 0 1 2 ] DIV [ 2 MUL 1 ADD ] MAP",
+        "[ 1/0 -1/0 0/0 3 ] [ 1 ADD ] MAP",
+        "[ 1/0 -1/0 2 ] [ 1/2 GT ] FILTER",
+        "[ 1/0 -1/0 0/0 5/2 ] [ FLOOR ] MAP",
+        "[ 1/0 -1/0 0/0 5/2 ] [ ROUND ] MAP",
+        "1 [ 0 1 2 ] DIV [ 0 MUL 0 EQ ] FILTER",
+        "[ 1 2 3 ] [ 1/0 ] [ ADD ] FOLD",
+        "[ 1 2 -3 ] 1/0 [ MUL ] SCAN",
+        "[ 1/0 0/0 ] [ NIL? ] MAP",
+        "[ 1/0 ] [ DEPTH ] MAP",
+        "[ 1 0 2 ] [ 'X' BIND 1 X DIV ] MAP",
+        "[ 1 2 3 ] [ 1/0 ADD ] MAP",
+    ] {
+        assert_eq!(fused_runs(source), 1, "`{source}` was not fused");
+    }
+    for source in [
+        "[ 1/0 0/0 2 ] [ 1/2 GT ] FILTER",
+        "[ 0/0 1 ] [ 3 MIN ] MAP",
+        "[ 1/0 4 ] [ 6 GCD ] MAP",
+    ] {
+        assert_eq!(fused_runs(source), 0, "`{source}` was fused");
     }
 }
 
@@ -296,6 +394,10 @@ fn literal() -> impl Strategy<Value = String> {
         Just("-9223372036854775808".to_string()),
         Just("4611686018427387904".to_string()),
         Just("0".to_string()),
+        // The three points over zero.
+        Just("1/0".to_string()),
+        Just("-1/0".to_string()),
+        Just("0/0".to_string()),
     ]
 }
 
@@ -383,6 +485,7 @@ fn typed_expr() -> impl Strategy<Value = (String, String)> {
         3 => (-9i64..10).prop_map(|n| n.to_string()),
         1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
         1 => Just("4611686018427387904".to_string()),
+        1 => prop_oneof![Just("1/0"), Just("-1/0"), Just("0/0")].prop_map(String::from),
     ];
     let bool_leaf = prop_oneof![Just("TRUE".to_string()), Just("FALSE".to_string())];
     (num_leaf, bool_leaf).prop_recursive(4, 24, 3, |inner| {
@@ -422,6 +525,7 @@ fn integer_vector() -> impl Strategy<Value = String> {
             8 => (-50i64..50).prop_map(|n| n.to_string()),
             1 => Just("9223372036854775807".to_string()),
             1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
+            1 => prop_oneof![Just("1/0"), Just("-1/0"), Just("0/0")].prop_map(String::from),
         ],
         1..16,
     )

@@ -35,11 +35,14 @@
 //! runs; it computes what the interpreted walk would have charged — the same
 //! steps, the same numeric work, the same metrics, the same epochs — and
 //! commits all of it only if the whole walk finishes without anything the
-//! fused form cannot reproduce exactly. An integer overflow falls to the
-//! general tier; a division by zero (a NIL projection), an operand of the
-//! wrong domain (an ERROR), a result past the size ceiling or a budget the
-//! walk would exhaust answers `None`, and the caller runs the ordinary walk
-//! from the start. Because a block is pure (LANG.DICTIONARY.ACYCLIC, no
+//! fused form cannot reproduce exactly. A number over zero — `1/0`, `-1/0`,
+//! `0/0`, met as an element, a literal or the quotient of a zero divisor —
+//! is a number like any other, answered by the `Fraction`'s total arithmetic
+//! (LANG.VALUES.EXACT). An integer overflow falls to the general tier; an
+//! order asked of `0/0` (a `domainMiss` NIL), an operand of the wrong domain
+//! (an ERROR), a result past the size ceiling or a budget the walk would
+//! exhaust answers `None`, and the caller runs the ordinary walk from the
+//! start. Because a block is pure (LANG.DICTIONARY.ACYCLIC, no
 //! effects), running it twice — once abandoned — is unobservable; and because
 //! the committed charges are the interpreted walk's own, which route ran is
 //! unobservable too (LANG.AUTHORITY.FREEDOM). `fused_block_tests` holds the
@@ -66,10 +69,11 @@ impl Plain {
             return None;
         }
         match &value.data {
-            // A point over zero is a number the plain tiers do not take:
-            // their pair laws assume a positive denominator, and the dispatch
-            // answers the three points by the Fraction's own total arithmetic.
-            ValueData::Scalar(f) if f.is_finite() => Some(Plain::Num(f.clone())),
+            // A point over zero is a number like any other: whatever meets
+            // one answers it by the `Fraction`'s own total arithmetic, as the
+            // dispatch does, and a tier whose pair laws assume a positive
+            // denominator answers the three points the same way.
+            ValueData::Scalar(f) => Some(Plain::Num(f.clone())),
             ValueData::Boolean(b) => Some(Plain::Bool(*b)),
             _ => None,
         }
@@ -387,8 +391,8 @@ impl FusedBlock {
     }
 }
 
-/// The lane of a one-lane seed — a dense Tensor of shape `[1]` holding a
-/// machine-word rational, which is what `[ 0 ]` is — when the column kernels
+/// The lane of a one-lane seed — a dense Tensor of shape `[1]`, which is
+/// what `[ 0 ]` is — when the column kernels
 /// that answer the interpreted walk's lane arithmetic are on.
 fn one_lane_seed(interp: &Interpreter, seed: &Value) -> Option<Plain> {
     if !interp.dense_kernels_enabled {
@@ -397,8 +401,8 @@ fn one_lane_seed(interp: &Interpreter, seed: &Value) -> Option<Plain> {
     one_lane_of(seed)
 }
 
-/// The lane of `value` when it is a one-lane Tensor holding a machine-word
-/// rational, as `[ 0 ]` is.
+/// The lane of `value` when it is a one-lane Tensor, as `[ 0 ]` is; a lane
+/// over zero (`[ 1/0 ]`) is a lane like any other.
 pub(crate) fn one_lane_of(value: &Value) -> Option<Plain> {
     if value.absence.is_some() {
         return None;
@@ -406,7 +410,7 @@ pub(crate) fn one_lane_of(value: &Value) -> Option<Plain> {
     let ValueData::Tensor { data, shape } = &value.data else {
         return None;
     };
-    if shape.as_slice() != [1] || data.len() != 1 || !data.all_finite() {
+    if shape.as_slice() != [1] || data.len() != 1 {
         return None;
     }
     Some(Plain::Num(data.fraction_at(0)))

@@ -16,7 +16,10 @@
 //! here is `Small`, which the meter prices at one limb, so each arithmetic
 //! Word costs `binary_numeric_work(1, 1)` and takes the scalar fast path, as
 //! `LT`/`GT` and a numeric `EQ` do, and every result fits 64 bits for the
-//! size ceiling. A zero divisor is the ordinary walk's NIL to project.
+//! size ceiling. Its pair laws assume a positive denominator, so a number
+//! over zero — an element, a literal, or the quotient of a zero divisor —
+//! sends the walk on to the general tier, which answers it by the
+//! `Fraction`'s total arithmetic.
 //!
 //! The results are the ones `Fraction` reaches: a rational's lowest-terms
 //! form with a positive denominator is unique, so any correct reduction
@@ -90,7 +93,8 @@ struct Program {
 
 fn plain_pair(p: &Plain) -> Option<(Ty, Pair)> {
     match p {
-        Plain::Num(f) => Some((Ty::Num, f.extract_i64_pair()?)),
+        Plain::Num(f) if f.is_finite() => Some((Ty::Num, f.extract_i64_pair()?)),
+        Plain::Num(_) => None,
         Plain::Bool(b) => Some((Ty::Bool, (i64::from(*b), 1))),
     }
 }

@@ -16,9 +16,12 @@
 //! - A Word run by its plain law (`fusion_contract`) charges what that law
 //!   reports, which is what its dispatch charges.
 //!
-//! An operand outside the domain a Word accepts is that Word's ERROR, and a
-//! zero divisor its NIL projection; both answer `None` here, for the ordinary
-//! walk to reproduce with its diagnostics.
+//! The three points over zero are numbers here like any other: `ADD`/`SUB`/
+//! `MUL`/`DIV` answer them, and a zero divisor, by the `Fraction`'s total
+//! arithmetic, as the fast path does. An operand outside the domain a Word
+//! accepts is that Word's ERROR, and an order asked of `0/0` its `domainMiss`
+//! NIL; both answer `None` here, for the ordinary walk to reproduce with its
+//! diagnostics.
 
 use crate::interpreter::fused_block::{Charges, Compare, FusedBlock, FusedWalk, Op, Plain};
 use crate::interpreter::runtime_limits::{
@@ -38,11 +41,7 @@ fn elements(target: &Value) -> Option<Vec<Plain>> {
     if let ValueData::Tensor { data, shape } = &target.data {
         if shape.len() == 1 {
             return (0..data.len())
-                .map(|i| {
-                    Some(data.fraction_at(i))
-                        .filter(Fraction::is_finite)
-                        .map(Plain::Num)
-                })
+                .map(|i| Some(Plain::Num(data.fraction_at(i))))
                 .collect();
         }
     }

@@ -19,8 +19,9 @@
 //!
 //! `DIV` followed directly by `FLOOR` is floor division on integers — `a b
 //! DIV FLOOR`, the quotient half of `a - b * floor(a / b)` — and runs as one,
-//! still charged as the two Words it is. A zero divisor is the ordinary
-//! walk's NIL to project.
+//! still charged as the two Words it is. A zero divisor's quotient is one of
+//! the three points over zero, which this tier does not hold: the walk goes
+//! on to the next tier, which answers it.
 
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::fused_block::{Charges, Compare, FusedBlock, FusedWalk, Op, Plain};
