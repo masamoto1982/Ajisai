@@ -577,8 +577,8 @@ A trace that fits is sent whole and the record is absent.
 
 `agent infer-contracts` returns, under `contracts`, one entry per user Word
 (`contract` prints the same entries for a person). Each entry reports
-a user Word's inferred `name`, `inputs`, `outputs`, `partiality`, `purity`,
-`determinism`, a `cost` object keyed by its three axes
+a user Word's inferred `name`, `inputs`, `outputs`, `partiality`, `field`
+(`"closed"`/`"leaving"`, LANG.CONTRACT.FIELD), `purity`, `determinism`, a `cost` object keyed by its three axes
 (`steps`/`numeric`/`collection`, each `"const"`/`"linear"`/`"superlinear"`/
 `"unbounded"`), `effects`, `confidence`, `gaps`, and a paste-ready `suggested`
 declaration — the same keys, in the same vocabulary, as a registered Word's

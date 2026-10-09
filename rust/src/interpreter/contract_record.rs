@@ -9,7 +9,7 @@
 //! declares projection reasons and ERROR conditions; only an
 //! inference has a confidence and gaps — so the Records differ in the keys
 //! only one side can supply, and agree on every key both can — `inputs`,
-//! `outputs`, `partiality`, `purity`, `determinism`, `cost`, `effects` — in
+//! `outputs`, `partiality`, `field`, `purity`, `determinism`, `cost`, `effects` — in
 //! name and in vocabulary: every key is a `spec/words.json` field name and
 //! every value a value that field admits. A program that asks
 //! `'purity' GET` of either gets an answer it can compare with the other's.
@@ -64,6 +64,7 @@ pub(crate) fn registered_contract_record(word: &GeneratedWord) -> Value {
         ("projection", texts(word.projection_reasons)),
         ("errorWhen", texts(word.error_when)),
         ("partiality", text(word.partiality.as_spec_str())),
+        ("field", text(word.field.as_spec_str())),
         ("purity", text(word.purity.as_spec_str())),
         ("determinism", text(word.determinism.as_spec_str())),
         (
@@ -103,6 +104,7 @@ pub(crate) fn inferred_contract_record(contract: &WordContract) -> Value {
         ("inputs", inputs),
         ("outputs", outputs),
         ("partiality", text(contract.partiality.as_spec_str())),
+        ("field", text(contract.field.as_spec_str())),
         ("purity", text(contract.purity.as_spec_str())),
         ("determinism", text(contract.determinism.as_spec_str())),
         ("cost", cost_record(steps.0, numeric.0, collection.0)),

@@ -17,10 +17,11 @@
 //! ```
 //!
 //! Grammar: `#:contract NAME [inputs=N] [outputs=N] [purity=P]
-//! [partiality=Q] [determinism=D] [cost AXIS=CLASS...]`. Every key is the
+//! [partiality=Q] [field=F] [determinism=D] [cost AXIS=CLASS...]`. Every key is the
 //! field of the same name in a contract Record (`CONTRACT`,
 //! `spec/words.json`) and every value one that field admits: `purity` is
 //! `pure`/`effectful`, `partiality` `total`/`partial`/`projecting`,
+//! `field` `closed`/`leaving` (LANG.CONTRACT.FIELD),
 //! `determinism` `deterministic`/`stateRelative`/`hostRelative`, and each
 //! `cost` axis (`steps`/`numeric`/`collection`) a class
 //! `const`/`linear`/`superlinear`/`unbounded`
@@ -34,6 +35,7 @@ use super::contract_gap::{
     check_cost_decl, declaration_json, fold_outcomes, gap_summary_json, CheckOutcome, CostDecl,
     GapCode,
 };
+use crate::coreword_registry::FieldClosure;
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractDeterminism, ContractFlow, ContractPartiality, ContractPurity,
 };
@@ -52,6 +54,9 @@ pub(crate) struct ContractDecl {
     pub outputs: Option<u16>,
     pub purity: Option<ContractPurity>,
     pub partiality: Option<ContractPartiality>,
+    /// A declared `closed` promises the Word never answers a point over zero
+    /// from operands that hold none (LANG.CONTRACT.FIELD).
+    pub field: Option<FieldClosure>,
     pub determinism: Option<ContractDeterminism>,
     /// Declared cost-class bounds, one per axis; each `None` axis is not
     /// checked (Phase 5).
@@ -383,7 +388,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
         }
     }
 
-    // `purity`, `partiality` and `determinism` are each a bound: the word may
+    // `purity`, `partiality`, `field` and `determinism` are each a bound: the word may
     // be tighter than declared, never looser.
     if let Some(declared) = decl.purity.filter(|d| contract.purity > *d) {
         findings.push(bound_finding(
@@ -399,6 +404,15 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
             &decl.name,
             &format!("partiality={}", declared.as_spec_str()),
             &format!("partiality={}", contract.partiality.as_spec_str()),
+            conservative,
+            code,
+        ));
+    }
+    if let Some(declared) = decl.field.filter(|d| contract.field > *d) {
+        findings.push(bound_finding(
+            &decl.name,
+            &format!("field={}", declared.as_spec_str()),
+            &format!("field={}", contract.field.as_spec_str()),
             conservative,
             code,
         ));

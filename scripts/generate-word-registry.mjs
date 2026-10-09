@@ -59,6 +59,17 @@ const CONTRACT_ENUMS = [
   { rustName: 'Family', field: 'family', doc: 'Semantic family the Word selects its shared laws from.' },
   { rustName: 'NilPolicy', field: 'nilPolicy', doc: 'How the Word behaves when an operand is NIL (LANG.FAILURE.PASSTHROUGH).' },
   { rustName: 'Partiality', field: 'partiality', doc: 'Whether well-formed application is total, partial, or NIL-projecting.' },
+  {
+    rustName: 'FieldClosure',
+    field: 'field',
+    doc: 'Whether the Word keeps numbers inside the field or can answer a point over zero (LANG.CONTRACT.FIELD).',
+    ordered: true,
+    parsed: true,
+    note:
+      'The variants are declared in the schema\'s own order, and that order **is** the\n'
+      + '/// order a contract widens along (`closed` < `leaving`): one `leaving` Word in a\n'
+      + '/// body makes the body `leaving`, which is what the derived `Ord` means here.',
+  },
   { rustName: 'Purity', field: 'purity', doc: 'Observational purity class (LANG.CONTRACT.REGISTRY).' },
   { rustName: 'Determinism', field: 'determinism', doc: 'What the Word\'s result may depend on beyond its operands.' },
   { rustName: 'VocabularyTier', field: 'vocabularyTier', doc: 'Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.' },
@@ -221,6 +232,7 @@ const rows = entries
         projection: ${projection(word.projection.when)},
         projection_reasons: ${projectionReasons(word.projection.reason)},
         partiality: ${enumRef('Partiality', word.partiality)},
+        field: ${enumRef('FieldClosure', word.field)},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
         cost: ${cost(word.cost)},
@@ -375,6 +387,10 @@ pub struct GeneratedWord {
     /// \`CONTRACT\` hands a program that asks what a Word can project.
     pub projection_reasons: &'static [&'static str],
     pub partiality: Partiality,
+    /// Whether the Word can answer a point over zero from operands that hold
+    /// none (LANG.CONTRACT.FIELD). Read by \`interpreter::word_contract\`,
+    /// which joins it along a body as it joins partiality.
+    pub field: FieldClosure,
     pub purity: Purity,
     pub determinism: Determinism,
     /// What the Word charges on each metered resource. Read by

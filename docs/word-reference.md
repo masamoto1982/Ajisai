@@ -176,7 +176,7 @@ The exact quotient, left over right: `1 3 DIV` is exactly `1/3`, and element-wis
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.CONTRACT.FIELD`
 - **Syntax:** `10 2 DIV`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -266,7 +266,7 @@ Exact power `x y POW`, element-wise over Vectors, answered inside the exact doma
 - **NIL policy:** `passthroughThenProject`; projection: negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → domainMiss, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`, `LANG.CONTRACT.FIELD`
 - **Syntax:** `2 10 POW`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -923,7 +923,7 @@ Parse text as a number, by the same grammar a source literal is read with: `'3/4
 - **NIL policy:** `passthroughThenProject`; projection: parseFailure,materializationBudgetExceeded → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.CONTRACT.FIELD`
 - **Syntax:** `'42' NUM`
 - **ERROR conditions:** `nonText`
 
@@ -1002,7 +1002,7 @@ A block run where it stands, its results left on the stack: `[ 1 2 ADD ] EXEC` i
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record: `[ SQRT ] 0 GET CONTRACT 'partiality' GET` is `'projecting'`. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record: `[ SQRT ] 0 GET CONTRACT 'partiality' GET` is `'projecting'`. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `field` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it, and `[ 0 DIV ] CONTRACT 'field' GET` is `'leaving'`: whether code can answer a point over zero from operands holding none is read before it runs (LANG.CONTRACT.FIELD). For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `field` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

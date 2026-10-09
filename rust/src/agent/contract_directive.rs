@@ -3,6 +3,7 @@
 
 use super::contract_decl::ContractDecl;
 use super::contract_gap::{parse_cost_terms, CostDecl};
+use crate::coreword_registry::FieldClosure;
 use crate::interpreter::word_contract::{ContractDeterminism, ContractPartiality, ContractPurity};
 
 /// Parse the `#:contract` directives out of `source`. Malformed directives
@@ -28,6 +29,7 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
             outputs: None,
             purity: None,
             partiality: None,
+            field: None,
             determinism: None,
             cost: CostDecl::default(),
             raw: raw.clone(),
@@ -97,6 +99,14 @@ fn parse_term(term: &str, decl: &mut ContractDecl) -> Result<(), String> {
                 "`total`, `partial` or `projecting`",
             )?)
         }
+        "field" => {
+            decl.field = Some(value(
+                key,
+                v,
+                FieldClosure::from_spec_str(v),
+                "`closed` or `leaving`",
+            )?)
+        }
         "determinism" => {
             decl.determinism = Some(value(
                 key,
@@ -113,6 +123,6 @@ fn parse_term(term: &str, decl: &mut ContractDecl) -> Result<(), String> {
 fn unknown_term(term: &str) -> String {
     format!(
         "unknown term `{term}` (expected `inputs=N`, `outputs=N`, `purity=…`, \
-         `partiality=…`, `determinism=…`, or `cost steps=… numeric=… collection=…`)"
+         `partiality=…`, `field=…`, `determinism=…`, or `cost steps=… numeric=… collection=…`)"
     )
 }

@@ -21,7 +21,9 @@ use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
 
-pub use crate::kernel::generated::{Determinism, GeneratedWord, NilPolicy, Partiality, Purity};
+pub use crate::kernel::generated::{
+    Determinism, FieldClosure, GeneratedWord, NilPolicy, Partiality, Purity,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +39,9 @@ pub struct CorewordMetadata {
     /// (`stateRelative`) and one that reads the host (`hostRelative`).
     pub determinism: Determinism,
     pub partiality: Partiality,
+    /// Declared in `spec/words.json`: whether the Word can answer a point over
+    /// zero from operands that hold none (LANG.CONTRACT.FIELD).
+    pub field: FieldClosure,
     /// Declared in `spec/words.json`.
     pub nil_policy: NilPolicy,
     /// Static flow-mass contract: arity / production (LANG.STACK.CONSUMPTION).
@@ -108,6 +113,7 @@ fn core_word_metadata(word: &GeneratedWord) -> CorewordMetadata {
         effects: word.effects.iter().map(|e| e.to_string()).collect(),
         determinism: word.determinism,
         partiality: word.partiality,
+        field: word.field,
         nil_policy: word.nil_policy,
         mass: mass_from_arity(word),
     }

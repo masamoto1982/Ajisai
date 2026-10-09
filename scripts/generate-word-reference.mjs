@@ -138,6 +138,7 @@ const LANGUAGES = {
       nilPolicy: 'NIL policy',
       projection: 'projection',
       partiality: 'Partiality',
+      field: 'Field',
       purity: 'Purity / determinism',
       effects: 'Effects',
       errors: 'ERROR conditions',
@@ -164,6 +165,7 @@ const LANGUAGES = {
       nilPolicy: 'NIL方針',
       projection: '投影',
       partiality: '部分性',
+      field: '体',
       purity: '純粋性 / 決定性',
       effects: '作用',
       errors: 'ERROR条件',
@@ -219,6 +221,7 @@ function htmlEntry(entry, lang) {
   rows.push(
     [labels.nilPolicy, `<code>${escapeHtml(entry.nilPolicy)}</code>; ${labels.projection}: ${htmlProjection(entry, lang)}`],
     [labels.partiality, `<code>${escapeHtml(entry.partiality)}</code>`],
+    [labels.field, `<code>${escapeHtml(entry.field)}</code> (LANG.CONTRACT.FIELD)`],
     [labels.purity, `<code>${escapeHtml(entry.purity)}</code> / <code>${escapeHtml(entry.determinism)}</code>`],
     [labels.effects, codeList(entry.effects, lang)],
   );

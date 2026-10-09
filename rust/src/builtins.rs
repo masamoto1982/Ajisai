@@ -5,7 +5,7 @@
 //! (`kernel::generated`, projected from `spec/words.json`); nothing is a
 //! second source of Core Word facts.
 
-use crate::coreword_registry::Partiality;
+use crate::coreword_registry::{FieldClosure, Partiality};
 use crate::kernel::generated::{
     generated_word, GeneratedWord, OperandRole, VocabularyTier, GENERATED_WORDS,
 };
@@ -144,6 +144,11 @@ fn derive_failure_text(word: &GeneratedWord) -> String {
         Partiality::Partial => lines.push(
             "May raise even on operands of the right kind: the block it runs,\nor the dictionary it changes, can refuse.",
         ),
+    }
+    if word.field == FieldClosure::Leaving {
+        lines.push(
+            "Leaves the field: from operands holding no point over zero it can\nanswer 1/0, -1/0 or 0/0, where the field laws stop (LANG.CONTRACT.FIELD).",
+        );
     }
     // One line per role the Word has (LANG.FAILURE.PASSTHROUGH), so the
     // hover says what a NIL does in each operand, not a single summary that

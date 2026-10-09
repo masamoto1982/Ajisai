@@ -163,6 +163,7 @@
     "projection",
     "errorWhen",
     "partiality",
+    "field",
     "purity",
     "determinism",
     "cost",
@@ -273,6 +274,14 @@
       "total",
       "partial",
       "projecting"
+     ]
+    },
+    "field": {
+     "description": "Whether the Word keeps numbers inside the field (LANG.CONTRACT.FIELD): `closed` when every number it answers lies in the field whenever every number it reads does, `leaving` when it can answer one of the three points over zero (`1/0`, `-1/0`, `0/0`) from operands that hold none. Only the total operations that reach past the field are `leaving` — `DIV` (`1 0 DIV`), `POW` (`0 -1 POW`) and `NUM` (`'1/0' NUM`); a Word that only carries, orders or rounds numbers is `closed`, and a Word that runs a block is `closed` itself, the block's own Words deciding for it. `rust/src/field_closure_laws.rs` holds one witness per `leaving` Word and runs every `closed` arithmetic Word over finite operands.",
+     "type": "string",
+     "enum": [
+      "closed",
+      "leaving"
      ]
     },
     "purity": {

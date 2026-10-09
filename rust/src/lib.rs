@@ -64,6 +64,9 @@ mod lexical_grammar_laws;
 mod identity_laws;
 
 #[cfg(test)]
+mod field_closure_laws;
+
+#[cfg(test)]
 mod arithmetic_operation_tests;
 
 #[cfg(test)]

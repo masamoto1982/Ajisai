@@ -89,7 +89,7 @@ async fn contract_answers_the_registered_record_of_a_core_word() {
     assert_eq!(top("[ MAP ] 0 GET CONTRACT 'inputs' GET").await, "2/1");
     assert_eq!(
         top("[ SORT ] 0 GET CONTRACT KEYS").await,
-        "[ 'name' 'vocabularyTier' 'inputs' 'outputs' 'nilPolicy' 'projection' 'errorWhen' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
+        "[ 'name' 'vocabularyTier' 'inputs' 'outputs' 'nilPolicy' 'projection' 'errorWhen' 'partiality' 'field' 'purity' 'determinism' 'cost' 'effects' ]"
     );
     assert_eq!(
         top("[ SORT ] 0 GET CONTRACT 'vocabularyTier' GET").await,
@@ -109,7 +109,7 @@ async fn contract_infers_a_user_word_and_a_block_in_one_shape() {
     );
     assert_eq!(
         top("[ 42 PRINT ] CONTRACT KEYS").await,
-        "[ 'inputs' 'outputs' 'partiality' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
+        "[ 'inputs' 'outputs' 'partiality' 'field' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
     );
     assert_eq!(top("[ 1 2 ADD ] CONTRACT 'purity' GET").await, "'pure'");
     // A key both shapes carry is answered in one vocabulary, so a block

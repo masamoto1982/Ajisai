@@ -41,6 +41,38 @@ LANG.VALUES.EXACT と、`spec/words.json`・`spec/outcomes.json`・`spec/grammar
 同じ場所（三つの点）で同じ大きさのまま表に出て、不在は本来の意味（部分関数の
 答えがないこと）だけを担う。三値論理には `0/0` の順序という一本の橋だけが残る。
 
+## 法則がどこで成り立つかを契約で読む
+
+全域除算の代償（三点で体の法則が崩れること）は、実行時にエラーとして現れない。
+`1/0` は数なので、合図なしに計算が進む。この代償を「特別扱いで法則を取り戻す」形で
+払うことは上で禁じた。代わりに採ったのは、**法則が成り立つ範囲を実行前に読める
+ようにする**ことである（LANG.CONTRACT.FIELD）。
+
+- すべての契約に `field` を加えた。`closed` は「読む数がすべて体の中なら、答える数も
+  すべて体の中」、`leaving` は「三点を含まない被演算子から三点を答えうる」。
+- Core Word で `leaving` なのは `DIV`・`POW`・`NUM` の三つだけ。いずれも失敗では
+  なく設計として体の外へ届く Word である。他はすべて `closed`。
+- User Word とブロックは、partiality と同じ歩査で `closed` < `leaving` の順に結合
+  する。三点を書いたリテラル（`[ 1/0 MIN ]`）も `leaving` にする。読めないコード
+  被演算子は弱い主張である `leaving` に倒す。
+- `#:contract W field=closed` は上界の宣言で、推論が `leaving` なら違反になる。
+
+これで全域除算と体の推論が衝突しなくなる。`closed` なコードに有限の被演算子を
+与えた範囲では、分配律も `x − x = 0` も成り立ち、人間・ツール・エージェントは
+その範囲で式を書き換えてよい。`leaving` の境界から先では、どこでも成り立つ法則
+（加法・乗法の結合律と交換律）だけが残る。三値論理への唯一の橋（`0/0` の順序が
+UNKNOWN になること）も、`leaving` の Word かリテラルを経由しなければ渡れないので、
+`closed` な本体が有限の入力に対して `0/0` の順序を問うことはない（算術が UNKNOWN を生む唯一の経路がふさがっている）と実行前に分かる。NIL が真偽位置で UNKNOWN と読まれる経路は別で、これは従来どおり残る。
+
+ゼロ除算を NIL や ERROR に戻す案は採らない。三点は数のまま流し、どこから
+流れ出しうるかだけを契約が名指す。それが「隠さず流す」という Ajisai の幹と
+全域除算を一致させる形である。
+
+実装: `rust/src/interpreter/word_contract.rs` の `pushes_point_over_zero` と
+`AccumulatedContract::widen_with`、`rust/src/agent/contract_decl.rs` の宣言
+検査、`rust/src/field_closure_laws.rs` の法則テスト（`leaving` の各 Word の証人と、
+`closed` な算術 Word が有限の被演算子から体を出ないことの掃引）。
+
 ## 実装の要点
 
 - `rust/src/types/fraction_extended.rs`: `extended_add` / `extended_mul` /

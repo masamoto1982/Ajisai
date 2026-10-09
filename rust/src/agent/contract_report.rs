@@ -24,6 +24,8 @@ pub(crate) struct WordReport {
     pub inputs: Option<u16>,
     pub outputs: Option<u16>,
     pub partiality: &'static str,
+    /// `closed` or `leaving` (LANG.CONTRACT.FIELD).
+    pub field: &'static str,
     pub purity: &'static str,
     pub determinism: &'static str,
     /// The inferred charged-cost class on each of the three axes
@@ -58,6 +60,7 @@ fn suggested_directive(name: &str, contract: &WordContract) -> String {
     }
     parts.push(format!("purity={}", contract.purity.as_spec_str()));
     parts.push(format!("partiality={}", contract.partiality.as_spec_str()));
+    parts.push(format!("field={}", contract.field.as_spec_str()));
     parts.push(format!(
         "determinism={}",
         contract.determinism.as_spec_str()
@@ -112,6 +115,7 @@ pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
             inputs,
             outputs,
             partiality: contract.partiality.as_spec_str(),
+            field: contract.field.as_spec_str(),
             purity: contract.purity.as_spec_str(),
             determinism: contract.determinism.as_spec_str(),
             cost_steps: CostClass::as_spec_str(contract.cost.steps.0),
@@ -142,6 +146,7 @@ pub(crate) fn reports_json(reports: &[WordReport]) -> serde_json::Value {
                     "inputs": arity_json(r.inputs),
                     "outputs": arity_json(r.outputs),
                     "partiality": r.partiality,
+                    "field": r.field,
                     "purity": r.purity,
                     "determinism": r.determinism,
                     "cost": {
