@@ -111,7 +111,7 @@
                     <p>Exact numbers, and a stack that carries them. When that form settled, the image that came to mind was "water poured into a vessel". What fills the vessel is only water that is never rounded. Yet there is no limit to the shapes of the ripples you can spread across its surface together with AI.</p>
                     <p>As it happens, there is a flower whose scientific name derives from "water vessel": the hydrangea, <em>ajisai</em> in Japanese. I started development in June in Japan, during tsuyu, the rainy season, when the rain goes on and on. Ajisai is a language made with that scene in mind.</p>
                     <h3>Numeric exactness</h3>
-                    <p>Every number is handled exactly. Values are held as exact rationals and as the algebraic irrationals that arise when those are closed under <code>SQRT</code> — the multi-quadratic normal form. Arithmetic and comparison both run without rounding error. The stack display <code>sqrt(2)</code> or <code>1/1+sqrt(2)</code> writes that normal form as a single token; nothing is truncated or approximated. The Playground's Stack area shows the same token as it is.</p>
+                    <p>Every number is handled exactly. Values are held as exact rationals and as the algebraic irrationals that arise when those are closed under <code>SQRT</code> — the multi-quadratic normal form. Arithmetic and comparison both run without rounding error. The stack display <code>sqrt(2)</code> or <code>1/1+sqrt(2)</code> writes that normal form as a single token; nothing is truncated or approximated. The Playground's Stack area shows the same token as it is. Division is no exception: dividing by zero does not stop the program but answers <code>NIL</code>, a value that remembers why (<a href="#division-by-zero">Dividing by zero</a>).</p>
                     <h3>What this Reference offers</h3>
                     <p>This Reference explains each feature together with a short, verified sample. Every example has an <strong>"Open in Playground"</strong> button: one click loads the code into the app's editor, so you can see the actual behavior immediately.</p>
                     <p>This Reference divides a program into its elements, and divides each element further for as long as it can be divided. What lies at the end of that division is the individual Word, and that is where the Reference ends.</p>
@@ -750,6 +750,66 @@
                     <h3>How irrationals are displayed, and the syntax rule</h3>
                     <p>Irrationals have one display form: the value's normal form written as a single token with no whitespace. <code>2 SQRT</code> is <code>sqrt(2)</code>, <code>1 2 SQRT ADD</code> is <code>1/1+sqrt(2)</code>, <code>2 SQRT 3 SQRT SUB</code> is <code>sqrt(2)-sqrt(3)</code>, and <code>8 SQRT</code> is <code>2/1*sqrt(2)</code> (the radicand is normalized to be square-free). Nothing is truncated or approximated, and inside a Vector it reads as a single element. The <code>stackDisplay</code> of the CLI and MCP hosts and the Playground's Stack area all show this same token. The CLI and MCP also list the same terms, structured, under <code>semantics.exactTerms</code>.</p>
                     <p class="ref-note">This is display-only output, not source syntax. Writing <code>sqrt(2)</code> in a program gives an unknown name. <code>(</code> <code>)</code> are name characters, not syntax, so written in a program they do not act as parentheses.</p>
+                    <h3 id="division-by-zero">Dividing by zero</h3>
+                    <p>Every number is a fraction, and <code>DIV</code> always answers. Dividing by zero does not stop the program: the answer is <code>NIL</code>, a value that says "there is no quotient here" and remembers why (<a href="#nil">the NIL rule</a>; <code>NIL-REASON</code> reads the reason as <code>'divisionByZero'</code>). That <code>NIL</code> travels like any other value. Arithmetic after it passes it along, a comparison that reads it answers "unknown" rather than <code>TRUE</code> or <code>FALSE</code> (<a href="#logic">three-valued logic</a>), and <code>SELECT</code> can replace it with a fallback whenever the program chooses to. In a Vector only the element that was divided by zero becomes <code>NIL</code>; the quotients beside it are ordinary quotients.</p>
+                    <p class="ref-note">Inside the machine that absent element keeps the same shape as its neighbours, a numerator and a denominator (<code>0/0</code>), with its reason recorded beside it. One zero divisor costs one element, never the whole Vector.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
+                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
+                                    <td class="notes">Only the element divided by zero is absent. The quotients beside it are quotients.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV 1 GT</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">There is no quotient to compare, so the comparison is unknown: the <code>NIL</code> stays, reason and all.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV 'S' BIND 0 S S NIL? SELECT</code></td>
+                                    <td><code>0/1</code></td>
+                                    <td class="notes">Name the quotient, then let <code>SELECT</code> choose: <code>0</code> when it is absent, the quotient otherwise.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
+                        </div>
+                    </div>
 
                     
                 </section>
