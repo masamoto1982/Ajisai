@@ -69,28 +69,28 @@
    "id": "nil-reason",
    "category": "nil",
    "prompts": {
-    "en": "What does dividing 1 by 0 give in Ajisai?",
-    "ja": "Ajisai で 1 を 0 で割ると何になりますか。"
+    "en": "What does the square root of -1 give in Ajisai?",
+    "ja": "Ajisai で -1 の平方根を取ると何になりますか。"
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 0 DIV"
+    "source": "-1 SQRT"
    },
    "expect": {
     "/status": "ok",
-    "/stack/0/semantics/absence/reason": "divisionByZero"
+    "/stack/0/semantics/absence/reason": "domainMiss"
    }
   },
   {
    "id": "nil-recovery",
    "category": "nil",
    "prompts": {
-    "en": "Divide 1 by 0 and recover from the absence with 42.",
-    "ja": "1 を 0 で割り、その不在から 42 で復帰してください。"
+    "en": "Take the square root of -1 and recover from the absence with 42.",
+    "ja": "-1 の平方根を取り、その不在から 42 で復帰してください。"
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 0 DIV 'S' BIND 42 S S NIL? SELECT"
+    "source": "-1 SQRT 'S' BIND 42 S S NIL? SELECT"
    },
    "expect": {
     "/status": "ok",
@@ -790,12 +790,12 @@
    "id": "nil-is-detectable",
    "category": "nil",
    "prompts": {
-    "en": "Divide 1 by 0 and then test whether the result is absent.",
-    "ja": "1 を 0 で割り、その結果が不在かどうかを判定してください。"
+    "en": "Take the square root of -1 and then test whether the result is absent.",
+    "ja": "-1 の平方根を取り、その結果が不在かどうかを判定してください。"
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 0 DIV NIL?"
+    "source": "-1 SQRT NIL?"
    },
    "expect": {
     "/status": "ok",

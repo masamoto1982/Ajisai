@@ -316,7 +316,7 @@ mod tests {
     /// the kind of operand the Word reads, which is what makes it true.
     #[test]
     fn totality_is_stated_over_the_kind_the_word_reads() {
-        let text = lookup_builtin_detail("SORT");
+        let text = lookup_builtin_detail("REVERSE");
         assert!(
             text.contains("Total: an operand of the kind it reads always produces a result"),
             "{text}"

@@ -166,10 +166,10 @@ async fn arithmetic_and_comparison_lift_over_values() {
         top("[ 'v' ] [ [ 1 2 ] ] RECORD 2 MUL").await,
         "[ 'v' ] [ [ 2/1 4/1 ] ] RECORD"
     );
-    // Division by zero empties the lane, not the Record.
+    // Division by zero is a number in its lane, and the Record is kept.
     assert_eq!(
-        top(&format!("{R} 0 DIV 'x' GET NIL-REASON")).await,
-        "'divisionByZero'"
+        top(&format!("{R} 0 DIV")).await,
+        "[ 'x' 'y' ] [ 1/0 1/0 ] RECORD"
     );
     assert_eq!(
         error_of(&format!("{R} [ 'y' 'x' ] [ 1 2 ] RECORD ADD")).await,

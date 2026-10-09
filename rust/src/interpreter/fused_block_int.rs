@@ -31,7 +31,6 @@ use crate::interpreter::Interpreter;
 use crate::types::fraction::{Fraction, FractionRepr};
 use crate::types::{DenseTensor, Value, ValueData};
 use std::borrow::Cow;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -296,7 +295,7 @@ fn promote_lanes(ty: Ty, lanes: Vec<i64>) -> Value {
     if ty == Ty::Int && !lanes.is_empty() {
         let shape = vec![lanes.len()];
         let ones = vec![1; lanes.len()];
-        let tensor = DenseTensor::from_columns(lanes, ones, shape.clone(), true, BTreeMap::new());
+        let tensor = DenseTensor::from_columns(lanes, ones, shape.clone(), true);
         return Value::new(
             ValueData::Tensor {
                 data: Arc::new(tensor),

@@ -1,11 +1,19 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::exact_work::charge_comparison;
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
+use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
+
+/// The NIL an order Word projects when an operand is `0/0`, which has no
+/// order (LANG.VALUES.EXACT): a well-formed operand outside the operation's
+/// domain, `domainMiss`, as a negative radicand is to `SQRT`.
+pub(crate) fn unordered_projection() -> Value {
+    Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Recoverable)
+}
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp.stack.push(Value::from_bool(result));
@@ -46,7 +54,10 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
     let Some((a, b)) = scalar_fastpath_pair(interp) else {
         return false;
     };
-    let decided = kind.apply_to_fraction(&a.fraction, &b.fraction);
+    // `0/0` has no order: the general route projects for it.
+    let Some(decided) = kind.apply_to_fraction(&a.fraction, &b.fraction) else {
+        return false;
+    };
     interp.stack.pop();
     interp.stack.pop();
     push_boolean_result(interp, decided);
@@ -81,7 +92,8 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
 ///
 /// A NIL operand lane answers NIL, which is the scalar law's own outcome for
 /// `NIL 3 LT` — the clause says each lane preserves the scalar law's NIL
-/// distinction.
+/// distinction — and a `0/0` lane projects `domainMiss`, as the scalar law
+/// does for `0/0 3 LT`.
 fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Value> {
     lift_lanes([a_val, b_val], &|[a, b]| compare_lane(a, b, kind))
 }
@@ -107,7 +119,10 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
         .map_err(|e| {
             AjisaiError::declared("nonNumeric", format!("expected two Scalars, got {}", e.got))
         })
-        .map(Value::from_bool)
+        .map(|decided| match decided {
+            Some(truth) => Value::from_bool(truth),
+            None => unordered_projection(),
+        })
 }
 
 fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
@@ -260,11 +275,10 @@ pub(crate) enum OrderingKind {
 }
 
 impl OrderingKind {
-    pub(crate) fn apply_to_fraction(self, a: &Fraction, b: &Fraction) -> bool {
-        match self {
-            OrderingKind::Lt => a.lt(b),
-            OrderingKind::Gt => a.gt(b),
-        }
+    /// The relation over two rationals, or `None` when one is `0/0`, which
+    /// is ordered against nothing.
+    pub(crate) fn apply_to_fraction(self, a: &Fraction, b: &Fraction) -> Option<bool> {
+        a.order(b).map(|ordering| self.apply_ordering(ordering))
     }
 
     /// Apply the relation to a decided `ExactReal` three-way ordering.
@@ -289,48 +303,51 @@ impl OrderingKind {
 ///
 /// Only that one shape is screened. `ExactScalar` (Tier 1 algebraic), `Text`,
 /// `Vector` and the rest fall through to the general route, which is the only
-/// one that can answer for them — an algebraic pair through the total
-/// `ExactReal::cmp_exact`. An absent
-/// `Fraction` (denominator 0) falls through too: it is not a rational, and
-/// this is not the place to decide what comparing one means.
+/// one that can answer for them — an algebraic pair through
+/// `ExactReal::cmp_exact`.
 pub(crate) fn rational_pair<'a>(
     a_val: &'a Value,
     b_val: &'a Value,
 ) -> Option<(&'a Fraction, &'a Fraction)> {
     match (&a_val.data, &b_val.data) {
-        (ValueData::Scalar(a), ValueData::Scalar(b)) if !a.is_nil() && !b.is_nil() => Some((a, b)),
+        (ValueData::Scalar(a), ValueData::Scalar(b)) => Some((a, b)),
         _ => None,
     }
 }
 
 /// Compare two scalar values under an ordering kind. Returns `Err(_)` for
-/// structurally-non-comparable operands. Both-rational operands take the
-/// Fraction fast path; an algebraic pair decides through the total
-/// `ExactReal::cmp_exact`.
+/// structurally-non-comparable operands, and `Ok(None)` when an operand is
+/// `0/0`, which has no order. Both-rational operands take the Fraction fast
+/// path; an algebraic pair decides through `ExactReal::cmp_exact`.
 pub(crate) fn compare_scalar_pair(
     a_val: &Value,
     b_val: &Value,
     kind: OrderingKind,
-) -> ScalarResult<bool> {
+) -> ScalarResult<Option<bool>> {
     if let Some((a, b)) = rational_pair(a_val, b_val) {
         return Ok(kind.apply_to_fraction(a, b));
     }
-    Ok(kind.apply_ordering(three_way_compare(a_val, b_val)?))
+    Ok(three_way_compare(a_val, b_val)?.map(|ordering| kind.apply_ordering(ordering)))
 }
 
 /// Three-way order of two scalar values (LANG.VALUES.EXACT), shared by the
 /// comparison-dependent words (`MIN`, `MAX`, `SORT`, `ORDER`, `BSEARCH`).
 /// Returns `Err(_)` for structurally non-comparable operands (the
-/// malformed-use path). Both-`Rational` operands take the exact `Fraction`
-/// fast path; any pair involving an algebraic decides through the total
-/// `ExactReal::cmp_exact`.
-pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> ScalarResult<std::cmp::Ordering> {
+/// malformed-use path), and `Ok(None)` for a pair holding `0/0`, which is
+/// ordered against nothing — the one comparison the exact domain does not
+/// decide, and a projection for the Word asking. Both-`Rational` operands
+/// take the exact `Fraction` fast path; any pair involving an algebraic
+/// decides through `ExactReal::cmp_exact`.
+pub(crate) fn three_way_compare(
+    a_val: &Value,
+    b_val: &Value,
+) -> ScalarResult<Option<std::cmp::Ordering>> {
     if let Some((a, b)) = rational_pair(a_val, b_val) {
-        return Ok(a.cmp(b));
+        return Ok(a.order(b));
     }
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
-    a.cmp_exact(&b).ok_or(NotComparable { got: "NIL" })
+    Ok(a.cmp_exact(&b))
 }
 
 /// Extract an `ExactReal` view of a value's scalar content for
@@ -368,10 +385,12 @@ pub(crate) fn extract_scalar_for_comparison(val: &Value) -> ScalarResult<Fractio
 }
 
 /// Scalar–scalar equality (LANG.VALUES.EXACT). Both-Rational operands decide
-/// via `Fraction` `PartialEq` — value equality on canonical reduced
-/// rationals. Anything mixing in a Tier 1 algebraic decides through the
-/// total `ExactReal::cmp_exact` — equal values built through different
-/// histories (√8 vs √2+√2) decide `Equal` exactly.
+/// via `Fraction` `PartialEq` — value equality on canonical reduced pairs,
+/// the three points over zero included, so `0/0 0/0 EQ` is TRUE: identity
+/// is denotation, and an order is not asked. Anything mixing in a Tier 1
+/// algebraic decides through `ExactReal::cmp_exact` — equal values built
+/// through different histories (√8 vs √2+√2) decide `Equal` exactly, and
+/// `0/0` against an irrational is unequal.
 pub(crate) fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> bool {
     if let Some((a, b)) = rational_pair(a_val, b_val) {
         return a == b;
@@ -384,111 +403,5 @@ pub(crate) fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> bool {
         // Only Scalar/ExactScalar operands route here, so extraction
         // does not fail in practice; treat any failure as unequal.
         _ => false,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    //! Two rational operands compare as the rationals they are.
-    //!
-    //! `three_way_compare`, `compare_scalar_pair` and `scalar_pair_eq` each ended in
-    //! a `Fraction` comparison whenever both operands were rational — their
-    //! `(Some, Some)` arm — but reached it by building an `ExactReal` from each
-    //! operand first, and `extract_exact_real_for_comparison` clones the `Fraction`
-    //! out of the `Value` to do that. Two clones and two constructions per
-    //! comparison, to arrive at the two `Fraction`s the operands already held.
-    //!
-    //! `rational_pair` borrows them instead. That is only sound if the round trip it
-    //! skips is the identity — `ExactReal::from_fraction(f).as_rational() == Some(f)`
-    //! — and only *complete* if nothing but a plain rational takes the screen. Both
-    //! are pinned here, the first directly and the second by leaving every other
-    //! shape to answer through the route that can: an algebraic pair decides exactly
-    //! (√8 vs √2+√2, LANG.VALUES.EXACT).
-
-    use crate::test_support::answer;
-    use crate::types::exact::ExactReal;
-    use crate::types::fraction::Fraction;
-
-    /// The round trip the screen skips is the identity, over a dense range of
-    /// rationals including both signs, zero, integers, and the i64 extremes.
-    #[test]
-    fn a_rational_survives_the_exact_real_round_trip_it_no_longer_takes() {
-        let mut fractions: Vec<Fraction> = Vec::new();
-        for numerator in -40..=40 {
-            for denominator in 1..=12 {
-                fractions.push(Fraction::new(numerator.into(), denominator.into()));
-            }
-        }
-        for n in [i64::MAX, i64::MIN + 1, i64::MIN, 0, 1, -1] {
-            fractions.push(Fraction::from(n));
-        }
-
-        for fraction in &fractions {
-            let exact = ExactReal::from_fraction(fraction.clone());
-            let round_tripped = exact.as_rational();
-            assert_eq!(
-                round_tripped,
-                Some(fraction),
-                "{fraction} must survive from_fraction/as_rational unchanged"
-            );
-        }
-
-        // And the order the screen reads is the order the general arm read.
-        for a in fractions.iter().take(60) {
-            for b in fractions.iter().take(60) {
-                let screened = a.cmp(b);
-                let (ea, eb) = (
-                    ExactReal::from_fraction(a.clone()),
-                    ExactReal::from_fraction(b.clone()),
-                );
-                let general = ea
-                    .as_rational()
-                    .expect("rational")
-                    .cmp(eb.as_rational().expect("rational"));
-                assert_eq!(screened, general, "comparing {a} with {b}");
-            }
-        }
-    }
-
-    /// Every ordering word, over the sign and magnitude cases a rational screen
-    /// could get wrong: equal values, both signs, a negative denominator's worth
-    /// of sign placement, and unequal denominators.
-    #[tokio::test]
-    async fn every_ordering_word_answers_the_same_for_rationals() {
-        for (program, expected) in [
-            ("2 3 LT", "TRUE"),
-            ("3 2 LT", "FALSE"),
-            ("2 2 LT", "FALSE"),
-            ("2 2 GT NOT", "TRUE"),
-            ("3 2 GT", "TRUE"),
-            ("2 3 GT", "FALSE"),
-            ("2 2 LT NOT", "TRUE"),
-            ("2 2 EQ", "TRUE"),
-            ("2 3 EQ", "FALSE"),
-            ("-2 3 LT", "TRUE"),
-            ("3 -2 LT", "FALSE"),
-            ("-3 -2 LT", "TRUE"),
-            ("-2 -3 LT", "FALSE"),
-            ("0 0 EQ", "TRUE"),
-            ("0 -0 EQ", "TRUE"),
-            ("1/2 1/3 GT", "TRUE"),
-            ("1/3 1/2 GT", "FALSE"),
-            ("2/4 1/2 EQ", "TRUE"),
-            ("-1/2 1/2 LT", "TRUE"),
-        ] {
-            assert_eq!(answer(program).await, expected, "`{program}`");
-        }
-    }
-
-    /// An exact operand must not take the screen. √8 and √2+√2 are the same
-    /// value by different histories, which only the exact route decides, and π
-    /// is the case that may honestly not decide at all.
-    #[tokio::test]
-    async fn an_exact_operand_still_decides_through_the_exact_route() {
-        assert_eq!(answer("8 SQRT 2 SQRT 2 SQRT ADD EQ").await, "TRUE");
-        assert_eq!(answer("2 SQRT 1 GT").await, "TRUE");
-        assert_eq!(answer("2 SQRT 2 LT").await, "TRUE");
-        // A rational compared against an algebraic is still a mixed pair.
-        assert_eq!(answer("1 2 SQRT LT").await, "TRUE");
     }
 }

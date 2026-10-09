@@ -12,13 +12,27 @@
     },
     {
       "name": "reason-carrying NIL is a successful value",
-      "source": "1 0 DIV",
+      "source": "-1 SQRT",
       "expect": {
         "/status": "ok",
         "/stackDisplay/0": "NIL",
         "/errorFlowTrace/0/kind": "nilProduced",
-        "/errorFlowTrace/0/word": "DIV",
-        "/errorFlowTrace/0/absence/reason": "divisionByZero"
+        "/errorFlowTrace/0/word": "SQRT",
+        "/errorFlowTrace/0/absence/reason": "domainMiss"
+      }
+    },
+    {
+      "name": "a quotient by zero is the dividend's sign over zero, a number",
+      "source": "100 0 DIV -5 0 DIV 0 0 DIV",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "1/0",
+        "/stackDisplay/1": "-1/0",
+        "/stackDisplay/2": "0/0",
+        "/stack/0/type": "number",
+        "/stack/0/value/numerator": "1",
+        "/stack/0/value/denominator": "0",
+        "/errorFlowTrace": []
       }
     },
     {
@@ -118,13 +132,24 @@
       }
     },
     {
-      "name": "a zero divisor projects its own lane and says why",
+      "name": "a zero divisor marks its own lane with the point over zero",
       "source": "[ 6 6 6 ] [ 1 2 0 ] DIV",
       "expect": {
         "/status": "ok",
-        "/stackDisplay/0": "[ 6/1 3/1 NIL ]",
-        "/stack/0/value/2/type": "nil",
-        "/stack/0/value/2/semantics/absence/reason": "divisionByZero"
+        "/stackDisplay/0": "[ 6/1 3/1 1/0 ]",
+        "/stack/0/value/2/type": "number",
+        "/stack/0/value/2/value/numerator": "1",
+        "/stack/0/value/2/value/denominator": "0"
+      }
+    },
+    {
+      "name": "an order asked of 0/0 projects domainMiss and reads as unknown",
+      "source": "0 0 DIV 1 LT",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "NIL",
+        "/stack/0/semantics/absence/reason": "domainMiss",
+        "/errorFlowTrace/0/word": "LT"
       }
     },
     {

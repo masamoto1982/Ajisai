@@ -148,11 +148,7 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     if push_rounded_dense(interp, crate::interpreter::dense_kernels::Rounding::Floor) {
         return Ok(());
     }
-    apply_unary_math(
-        interp,
-        |f| f.floor(),
-        |er| er.floor().expect("a number has a floor"),
-    )
+    apply_unary_math(interp, |f| f.floor(), |er| er.floor())
 }
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
@@ -162,11 +158,7 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     if push_rounded_dense(interp, crate::interpreter::dense_kernels::Rounding::Round) {
         return Ok(());
     }
-    apply_unary_math(
-        interp,
-        |f| f.round(),
-        |er| er.round().expect("a number has a nearest integer"),
-    )
+    apply_unary_math(interp, |f| f.round(), |er| er.round())
 }
 
 /// `[ shape ] value FILL` — a Vector of the given shape, every leaf `value`:

@@ -41,11 +41,11 @@ vi.mock('../workers/execution-worker-manager', () => ({
 const nil = (reason: string): Value =>
     ({ type: 'nil', value: null, semantics: { absence: { reason } } } as unknown as Value);
 
-const DIV_DIAGNOSIS: ProtocolDiagnosis = {
+const SQRT_DIAGNOSIS: ProtocolDiagnosis = {
     when: 'executeWord',
-    where: { kind: 'coreWord', word: 'DIV' },
+    where: { kind: 'coreWord', word: 'SQRT' },
     why: 'domain',
-    summary: 'executeWord / DIV (coreWord) / domain (nil:divisionByZero)',
+    summary: 'executeWord / SQRT (coreWord) / domain (nil:domainMiss)',
     evidence: [],
     candidates: [],
     nextChecks: []
@@ -57,7 +57,7 @@ const nilEvent = (word: string): ErrorFlowTraceEvent => ({
     stackLenBefore: 2,
     stackLenAfter: 1,
     message: `NIL produced by ${word}`,
-    diagnosis: DIV_DIAGNOSIS
+    diagnosis: SQRT_DIAGNOSIS
 });
 
 // The main-thread interpreter: a stack and a User dictionary, restored from a
@@ -166,17 +166,17 @@ describe('Run', () => {
 
     it('offers "Why NIL" for a NIL the run produced', async () => {
         const page = setup();
-        answerWith(async () => ok([nil('divisionByZero')], { errorFlowTrace: [nilEvent('DIV')] }));
+        answerWith(async () => ok([nil('domainMiss')], { errorFlowTrace: [nilEvent('SQRT')] }));
 
-        await page.controller.executeCode('1 0 DIV');
+        await page.controller.executeCode('-1 SQRT');
 
         expect(page.log).toContain('folded: Why NIL');
     });
 
     it('offers no "Why NIL" for a DEF that left an earlier NIL on top', async () => {
         const page = setup();
-        page.setStack([nil('divisionByZero')]);
-        answerWith(async () => ok([nil('divisionByZero')], {
+        page.setStack([nil('domainMiss')]);
+        answerWith(async () => ok([nil('domainMiss')], {
             output: 'Defined word: G\n',
             userWords: [{ name: 'G', definition: '2 MUL' }],
             errorFlowTrace: [nilEvent('DEF')]
@@ -202,7 +202,7 @@ describe('Step', () => {
                 message: 'Unknown word: FOO',
                 // An ERROR's diagnosis is the result's; the trace's error event
                 // does not repeat it.
-                diagnosis: DIV_DIAGNOSIS,
+                diagnosis: SQRT_DIAGNOSIS,
                 errorFlowTrace: [{ ...nilEvent('FOO'), kind: 'wordError', diagnosis: undefined }]
             };
         });

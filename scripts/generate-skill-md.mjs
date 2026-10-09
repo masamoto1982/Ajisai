@@ -371,23 +371,27 @@ function renderForbiddenPatterns() {
 
 function verifiedNilSection() {
   // Verify the documented NIL behavior against the real CLI before writing it.
-  const projected = expectOk('1 0 DIV');
-  if (projected.stackDisplay.join(' ') !== 'NIL') fail('division by zero must project to NIL');
+  const projected = expectOk('-1 SQRT');
+  if (projected.stackDisplay.join(' ') !== 'NIL') fail('a negative radicand must project to NIL');
   const event = projected.errorFlowTrace.find((e) => e.kind === 'nilProduced');
-  if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk("1 0 DIV 'S' BIND 99 S S NIL? SELECT");
+  if (!event || event.absence?.reason !== 'domainMiss') fail('nilProduced trace event missing');
+  const fallback = expectOk("-1 SQRT 'S' BIND 99 S S NIL? SELECT");
   if (fallback.stackDisplay.join(' ') !== '99/1') fail('the fallback must replace NIL');
   // Lifted over a vector the same law projects lane by lane, so the top stays
-  // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
+  // a vector. Written with a scalar operand it would read as `NIL`, which
   // taught the collapse rather than the lane law.
-  const lifted = expectOk('[ 6 6 ] [ 1 0 ] DIV');
-  if (lifted.stackDisplay.join(' ') !== '[ 6/1 NIL ]') {
-    fail('a zero divisor must empty only its own lane');
+  const lifted = expectOk('[ 4 -1 ] SQRT');
+  if (lifted.stackDisplay.join(' ') !== '[ 2/1 NIL ]') {
+    fail('a negative radicand must empty only its own lane');
   }
+  // Division is not where NIL comes from: a quotient by zero is a number.
+  const byZero = expectOk('100 0 DIV -5 0 DIV 0 0 DIV');
+  if (byZero.stackDisplay.join(' ') !== '1/0 -1/0 0/0') fail('a quotient by zero is its sign over zero');
   return {
     reason: event.absence.reason,
     fallbackStack: fallback.stackDisplay[0],
     liftedStack: lifted.stackDisplay[0],
+    byZeroStack: byZero.stackDisplay.join(' '),
   };
 }
 
@@ -476,13 +480,20 @@ ${renderContractDeclarations()}
 
 ## 4. NIL — absence is a value, not an exception
 
-Failed partial operations *project to NIL*: \`1 0 DIV\` succeeds (exit 0) and
+Failed partial operations *project to NIL*: \`-1 SQRT\` succeeds (exit 0) and
 pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND 99 S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
-- Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
+Division by zero is **not** a projection: every number is a pair over a
+non-negative denominator, and a quotient by zero is the dividend's sign over
+zero — \`100 0 DIV -5 0 DIV 0 0 DIV\` → stack \`${nil.byZeroStack}\`. The three
+points \`1/0\`, \`-1/0\`, \`0/0\` are numbers: they add, multiply, divide and
+compare by \`EQ\`. \`0/0\` absorbs everything it meets and has no place in the
+order, so \`LT\` / \`GT\` / \`MIN\` / \`MAX\` / \`SORT\` project \`domainMiss\` on it.
+
+- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`-1 SQRT 'S' BIND 99 S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
+- Over a vector the projection is **per lane, not per value**: \`[ 4 -1 ] SQRT\` → stack \`${nil.liftedStack}\`. The lane that had no root is the only one emptied.
 - That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (NIL projection rule); check for it where it matters instead of letting it propagate to the end.
 

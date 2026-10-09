@@ -70,8 +70,12 @@ const fail = (message) => fatal('semantics-table', message);
 
 const DOMAINS = [
   { id: 'scalarOne', source: '1', motivatedBy: [] },
-  { id: 'scalarZero', source: '0', motivatedBy: ['divisionByZero'] },
+  { id: 'scalarZero', source: '0', motivatedBy: [] },
   { id: 'scalarNegative', source: '-1', motivatedBy: ['domainMiss'] },
+  // `0/0` is a number with no place in the order (LANG.VALUES.EXACT): the
+  // one scalar the order Words — LT GT MIN MAX SORT ORDER BSEARCH — project
+  // on, and the one FORMAT has no digits for.
+  { id: 'scalarNullity', source: '0/0', motivatedBy: ['domainMiss'] },
   { id: 'scalarLarge', source: '999', motivatedBy: ['indexOutOfBounds'] },
   { id: 'booleanTrue', source: 'TRUE', motivatedBy: [] },
   { id: 'textShort', source: "'a'", motivatedBy: [] },

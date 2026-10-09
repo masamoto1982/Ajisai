@@ -111,7 +111,7 @@
                     <p>Exact numbers, and a stack that carries them. When that form settled, the image that came to mind was "water poured into a vessel". What fills the vessel is only water that is never rounded. Yet there is no limit to the shapes of the ripples you can spread across its surface together with AI.</p>
                     <p>As it happens, there is a flower whose scientific name derives from "water vessel": the hydrangea, <em>ajisai</em> in Japanese. I started development in June in Japan, during tsuyu, the rainy season, when the rain goes on and on. Ajisai is a language made with that scene in mind.</p>
                     <h3>Numeric exactness</h3>
-                    <p>Every number is handled exactly. Values are held as exact rationals and as the algebraic irrationals that arise when those are closed under <code>SQRT</code> — the multi-quadratic normal form. Arithmetic and comparison both run without rounding error. The stack display <code>sqrt(2)</code> or <code>1/1+sqrt(2)</code> writes that normal form as a single token; nothing is truncated or approximated. The Playground's Stack area shows the same token as it is. Division is no exception: dividing by zero does not stop the program but answers <code>NIL</code>, a value that remembers why (<a href="#division-by-zero">Dividing by zero</a>).</p>
+                    <p>Every number is handled exactly. Values are held as exact rationals and as the algebraic irrationals that arise when those are closed under <code>SQRT</code> — the multi-quadratic normal form. Arithmetic and comparison both run without rounding error. The stack display <code>sqrt(2)</code> or <code>1/1+sqrt(2)</code> writes that normal form as a single token; nothing is truncated or approximated. The Playground's Stack area shows the same token as it is. Division is no exception: it is total, so dividing by zero does not stop the program but answers the dividend's sign over zero — one of the three numbers <code>1/0</code>, <code>-1/0</code>, <code>0/0</code> (<a href="#division-by-zero">Dividing by zero</a>).</p>
                     <h3>What this Reference offers</h3>
                     <p>This Reference explains each feature together with a short, verified sample. Every example has an <strong>"Open in Playground"</strong> button: one click loads the code into the app's editor, so you can see the actual behavior immediately.</p>
                     <p>This Reference divides a program into its elements, and divides each element further for as long as it can be divided. What lies at the end of that division is the individual Word, and that is where the Reference ends.</p>
@@ -348,9 +348,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV</code></td>
+                                    <td><code>-1 SQRT</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">Division by zero is not a trap; it becomes a reasoned <code>NIL</code>.</td>
+                                    <td class="notes">A negative radicand is not a trap; it becomes a reasoned <code>NIL</code>.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -751,8 +751,8 @@
                     <p>Irrationals have one display form: the value's normal form written as a single token with no whitespace. <code>2 SQRT</code> is <code>sqrt(2)</code>, <code>1 2 SQRT ADD</code> is <code>1/1+sqrt(2)</code>, <code>2 SQRT 3 SQRT SUB</code> is <code>sqrt(2)-sqrt(3)</code>, and <code>8 SQRT</code> is <code>2/1*sqrt(2)</code> (the radicand is normalized to be square-free). Nothing is truncated or approximated, and inside a Vector it reads as a single element. The <code>stackDisplay</code> of the CLI and MCP hosts and the Playground's Stack area all show this same token. The CLI and MCP also list the same terms, structured, under <code>semantics.exactTerms</code>.</p>
                     <p class="ref-note">This is display-only output, not source syntax. Writing <code>sqrt(2)</code> in a program gives an unknown name. <code>(</code> <code>)</code> are name characters, not syntax, so written in a program they do not act as parentheses.</p>
                     <h3 id="division-by-zero">Dividing by zero</h3>
-                    <p>Every number is a fraction, and <code>DIV</code> always answers. Dividing by zero does not stop the program: the answer is <code>NIL</code>, a value that says "there is no quotient here" and remembers why (<a href="#nil">the NIL rule</a>; <code>NIL-REASON</code> reads the reason as <code>'divisionByZero'</code>). That <code>NIL</code> travels like any other value. Arithmetic after it passes it along, a comparison that reads it answers "unknown" rather than <code>TRUE</code> or <code>FALSE</code> (<a href="#logic">three-valued logic</a>), and <code>SELECT</code> can replace it with a fallback whenever the program chooses to. In a Vector only the element that was divided by zero becomes <code>NIL</code>; the quotients beside it are ordinary quotients.</p>
-                    <p class="ref-note">Inside the machine the absent quotient keeps the same shape as its neighbours: the dividend over the zero that refused it, <code>100/0</code> for <code>100 0 DIV</code>, with its reason recorded beside it. One zero divisor costs one element, never the whole Vector.</p>
+                    <p>Every number is a reduced pair of integers over a non-negative denominator, and <code>DIV</code> is total: it is multiplication by the reciprocal, and every number has one. Dividing by zero does not stop the program and produces no absence: the answer is the dividend's sign over zero. Because the gcd of <code>n</code> and <code>0</code> is <code>|n|</code>, every pair over zero reduces to one of exactly three numbers — <code>1/0</code>, <code>-1/0</code> and <code>0/0</code> — so <code>100 0 DIV</code> is <code>1/0</code> for the same reason <code>4/2</code> is <code>2/1</code>, and <code>1/0</code> is a literal as <code>1/2</code> is. The three points compute by the same pair formulas as every other number: <code>1/0 5 ADD</code> is <code>1/0</code>, <code>1 1/0 DIV</code> is <code>0</code>, <code>1/0 1/0 ADD</code> is <code>0/0</code>. <code>-1/0</code> lies below every other number and <code>1/0</code> above; <code>0/0</code> absorbs everything it meets and has no place in the order, so a comparison that asks for one projects <code>NIL</code> (<code>domainMiss</code>) and reads as "unknown" (<a href="#logic">three-valued logic</a>). In a Vector only the element that was divided by zero becomes a point over zero; the quotients beside it are ordinary quotients.</p>
+                    <p class="ref-note">At the three points, and nowhere else, the laws of a field that mention zero give way: <code>0 1/0 MUL</code> is <code>0/0</code>, not <code>0</code>; <code>1/0 1/0 SUB</code> is <code>0/0</code>, not <code>0</code>; and the distributive law fails there. The machine does not restore them by special case. A program that must not reach the points tests its divisor first; one that reaches them keeps computing, and <code>EQ</code> still decides, since <code>0/0 0/0 EQ</code> is <code>TRUE</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -762,8 +762,8 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
-                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
-                                    <td class="notes">Only the element divided by zero is absent. The quotients beside it are quotients.</td>
+                                    <td><code>[ 1/1 1/0 3/2 ]</code></td>
+                                    <td class="notes">Only the element divided by zero is a point over zero. The quotients beside it are quotients.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -781,8 +781,13 @@
                             <tbody>
                                 <tr>
                                     <td><code>1 0 DIV 1 GT</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes"><code>1/0</code> lies above every other number, so the order decides.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>0 0 DIV 1 GT</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">There is no quotient to compare, so the comparison is unknown: the <code>NIL</code> stays, reason and all.</td>
+                                    <td class="notes"><code>0/0</code> has no place in the order, so the comparison is unknown: a <code>NIL</code> whose reason is <code>domainMiss</code>.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -799,9 +804,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV 'S' BIND 0 S S NIL? SELECT</code></td>
+                                    <td><code>0 'D' BIND 0 1 D DIV D 0 EQ SELECT</code></td>
                                     <td><code>0/1</code></td>
-                                    <td class="notes">Name the quotient, then let <code>SELECT</code> choose: <code>0</code> when it is absent, the quotient otherwise.</td>
+                                    <td class="notes">Name the divisor, then let <code>SELECT</code> choose: <code>0</code> when it is zero, the quotient otherwise. The point over zero is a value, so the program decides whether it wants it.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1285,8 +1290,8 @@ FILTER</code></td>
                                     <td class="notes">A value is digested by its meaning.</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' GET</code></td>
-                                    <td><code>[ 'divisionByZero' ]</code></td>
+                                    <td><code>[ SQRT ] 0 GET CONTRACT 'projection' GET</code></td>
+                                    <td><code>[ 'domainMiss' ]</code></td>
                                     <td class="notes">Reads the registered contract without running anything.</td>
                                 </tr>
                                 <tr>
@@ -1333,7 +1338,7 @@ FILTER</code></td>
 <h3 id="family-dictionary">Contracts: Dictionary and names</h3>
 <div class="word-entry" id="word-CONTRACT">
 <h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The contract of a Word or of a block, as a Record: <code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code> is <code>'projecting'</code>. For a Symbol naming a Core Word it is the registered record of <code>spec/words.json</code> (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — <code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>, so <code>[ DIV ] 0 GET CONTRACT 'cost' GET</code> asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference <code>ajisai check --contract</code> runs from outside the language — keyed <code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code> — the same keys, in the same vocabulary, so the two compare directly — and <code>confidence</code> <code>gaps</code>, where <code>confidence</code> and <code>gaps</code> carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so <code>[ 42 PRINT ] CONTRACT</code> reports <code>consoleWrite</code> under <code>effects</code> without printing. A Symbol that names no Word projects <code>notFound</code>; an operand that is neither a Symbol nor a block is an ERROR (<code>notASymbol</code>).</p>
+<p>The contract of a Word or of a block, as a Record: <code>[ SQRT ] 0 GET CONTRACT 'partiality' GET</code> is <code>'projecting'</code>. For a Symbol naming a Core Word it is the registered record of <code>spec/words.json</code> (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — <code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>, so <code>[ DIV ] 0 GET CONTRACT 'cost' GET</code> asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference <code>ajisai check --contract</code> runs from outside the language — keyed <code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code> — the same keys, in the same vocabulary, so the two compare directly — and <code>confidence</code> <code>gaps</code>, where <code>confidence</code> and <code>gaps</code> carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so <code>[ 42 PRINT ] CONTRACT</code> reports <code>consoleWrite</code> under <code>effects</code> without printing. A Symbol that names no Word projects <code>notFound</code>; an operand that is neither a Symbol nor a block is an ERROR (<code>notASymbol</code>).</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
@@ -1509,7 +1514,7 @@ FILTER</code></td>
                         <li><strong>Rounding</strong>: <code>FLOOR</code> (round down), <code>ROUND</code> (round half up). Ceiling is written <code>x -1 MUL FLOOR -1 MUL</code>.</li>
                         <li><strong>Rounding to a grid</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code> rounds a value to a multiple of <code>1/d</code>. Use it to stop denominators from growing in loops and iterative computations. See <a href="#iterative">The cost of iteration</a> for more.</li>
                     </ul>
-                    <p class="ref-note">Division by zero does not crash the program; only the affected element becomes <code>NIL</code>, and it carries its reason. The elements beside it are quotients, and every Word after the division computes those while passing the absent element through. See <a href="#nil">The NIL rule</a> for more.</p>
+                    <p class="ref-note">Division by zero does not crash the program and produces no absence: the affected element becomes its sign over zero, a number, and the elements beside it are quotients. Every Word after the division computes with the point by the same pair formulas. See <a href="#division-by-zero">Dividing by zero</a> for more.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1519,18 +1524,18 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
-                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
-                                    <td class="notes">A zero divisor empties exactly its own element.</td>
+                                    <td><code>[ 1/1 1/0 3/2 ]</code></td>
+                                    <td class="notes">A zero divisor marks exactly its own element.</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD</code></td>
-                                    <td><code>[ 2/1 NIL 5/2 ]</code></td>
-                                    <td class="notes">The next Word computes the quotients and carries the absence along.</td>
+                                    <td><code>[ 2/1 1/0 5/2 ]</code></td>
+                                    <td class="notes">The next Word computes the quotients, and <code>1/0 1 ADD</code> is <code>1/0</code> by the pair formula.</td>
                                 </tr>
                                 <tr>
-                                    <td><code>1 0 DIV 1 ADD NIL-REASON</code></td>
-                                    <td><code>'divisionByZero'</code></td>
-                                    <td class="notes">The reason travels with the absence, however far it goes.</td>
+                                    <td><code>1 0 DIV 0 MUL</code></td>
+                                    <td><code>0/0</code></td>
+                                    <td class="notes">Zero times the point over zero is <code>0/0</code>, the one number that absorbs everything: the field's law that <code>0 x MUL</code> is <code>0</code> gives way here.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1540,7 +1545,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3 id="powers">Powers, and reading integers and rationals: <code>POW</code>, <code>GCD</code>, <code>RATIO</code></h3>
-                    <p><code>x y POW</code> answers within the exact field. An integer exponent stays in the base's layer (<code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>), and an exponent <code>p/2</code> on a non-negative rational base stays in the field as a power of a square root (<code>2 1/2 POW</code> is exactly the same value as <code>2 SQRT</code>). Any other exponent — a denominator other than 1 or 2, <code>p/2</code> on an irrational base, an irrational exponent — leaves the field, so it projects <code>domainMiss</code>, even when the answer would be rational (<code>8 1/3 POW</code>). A negative power of <code>0</code> projects <code>divisionByZero</code>; a <code>p/2</code> power of a negative base has no real answer and projects <code>domainMiss</code>; an exponent too large for the machine to hold projects <code>spaceExhausted</code>.</p>
+                    <p><code>x y POW</code> answers within the exact field. An integer exponent stays in the base's layer (<code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>), and an exponent <code>p/2</code> on a non-negative rational base stays in the field as a power of a square root (<code>2 1/2 POW</code> is exactly the same value as <code>2 SQRT</code>). Any other exponent — a denominator other than 1 or 2, <code>p/2</code> on an irrational base, an irrational exponent — leaves the field, so it projects <code>domainMiss</code>, even when the answer would be rational (<code>8 1/3 POW</code>). A negative power of <code>0</code> is a point over zero, since division is total (<code>0 -1 POW</code> is <code>1/0</code>); a <code>p/2</code> power of a negative base has no real answer and projects <code>domainMiss</code>; an exponent too large for the machine to hold projects <code>spaceExhausted</code>.</p>
                     <p><code>GCD</code> answers the non-negative greatest common divisor of two integers. Euclid's algorithm is an input-dependent iteration, which cannot be written by definition in this language, where iteration runs only over a Vector that already exists — the machine performs this computation all the time to keep every rational in lowest terms, and this Word merely makes it visible. <code>RATIO</code> opens a rational into a two-element Vector of its reduced numerator and denominator. Since the answer is a Vector, arithmetic lifts over it directly. A non-integer argument (<code>GCD</code>) or an irrational (<code>RATIO</code>) projects <code>domainMiss</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1757,7 +1762,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV TRUE AND</code></td>
+                                    <td><code>-1 SQRT TRUE AND</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">The left operand became <code>NIL</code>, so its absence reaches the result. Recover where needed by <a href="#recovery">choosing a fallback value</a>.</td>
                                 </tr>
@@ -1850,7 +1855,7 @@ FILTER</code></td>
 <h3 id="family-comparison">Contracts: Comparison</h3>
 <div class="word-entry" id="word-EQ">
 <h4><code>EQ</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: <code>1 1/1 EQ</code> is <code>TRUE</code>, <code>2 SQRT 2 SQRT MUL 2 EQ</code> is <code>TRUE</code>, and <code>[ 1 2 ] [ 1 2 ] EQ</code> is <code>TRUE</code> — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): <code>1 0 DIV 1 EQ</code> is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so <code>[ NIL ] [ NIL ] EQ</code> is <code>TRUE</code>; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in <code>1 COLLECT</code> first.</p>
+<p>Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: <code>1 1/1 EQ</code> is <code>TRUE</code>, <code>2 SQRT 2 SQRT MUL 2 EQ</code> is <code>TRUE</code>, <code>100 0 DIV 1/0 EQ</code> is <code>TRUE</code>, <code>0/0 0/0 EQ</code> is <code>TRUE</code>, and <code>[ 1 2 ] [ 1 2 ] EQ</code> is <code>TRUE</code> — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): <code>-1 SQRT 1 EQ</code> is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so <code>[ NIL ] [ NIL ] EQ</code> is <code>TRUE</code>; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in <code>1 COLLECT</code> first.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1 1 EQ</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
@@ -1865,40 +1870,40 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-LT">
 <h4><code>LT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Whether the left number is less than the right: <code>1 2 LT</code> is <code>TRUE</code>, element-wise over Vectors, <code>[ 1 5 ] 3 LT</code> is <code>[ TRUE FALSE ]</code>. Order over the exact field always decides (LANG.VALUES.EXACT), irrationals included: <code>2 SQRT 3/2 LT</code> is <code>TRUE</code>. Only numbers are ordered; anything else is <code>nonNumeric</code>.</p>
+<p>Whether the left number is less than the right: <code>1 2 LT</code> is <code>TRUE</code>, element-wise over Vectors, <code>[ 1 5 ] 3 LT</code> is <code>[ TRUE FALSE ]</code>. Order over the exact domain decides (LANG.VALUES.EXACT), irrationals included — <code>2 SQRT 3/2 LT</code> is <code>TRUE</code> — and <code>-1/0</code> lies below every other number and <code>1/0</code> above. <code>0/0</code> alone has no order, so a comparison asking it projects NIL(domainMiss): <code>0/0 1 LT</code> is the UNKNOWN that absence reads as in truth position (LANG.VALUES.TRUTH). Only numbers are ordered; anything else is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1 2 LT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-GT">
 <h4><code>GT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Whether the left number is greater than the right: <code>2 1 GT</code> is <code>TRUE</code>, element-wise over Vectors, <code>[ 1 5 ] 3 GT</code> is <code>[ FALSE TRUE ]</code>. Order over the exact field always decides (LANG.VALUES.EXACT). Only numbers are ordered; anything else is <code>nonNumeric</code>.</p>
+<p>Whether the left number is greater than the right: <code>2 1 GT</code> is <code>TRUE</code>, element-wise over Vectors, <code>[ 1 5 ] 3 GT</code> is <code>[ FALSE TRUE ]</code>. Order over the exact domain decides (LANG.VALUES.EXACT), irrationals included — <code>2 SQRT 3/2 LT</code> is <code>TRUE</code> — and <code>-1/0</code> lies below every other number and <code>1/0</code> above. <code>0/0</code> alone has no order, so a comparison asking it projects NIL(domainMiss): <code>0/0 1 GT</code> is the UNKNOWN that absence reads as in truth position (LANG.VALUES.TRUTH). Only numbers are ordered; anything else is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>2 1 GT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <h3 id="family-exactArithmetic">Contracts: Exact arithmetic</h3>
 <div class="word-entry" id="word-ADD">
 <h4><code>ADD</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The exact sum: <code>1/3 1/6 ADD</code> is <code>1/2</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 1 2 ] 10 ADD</code> is <code>[ 11 12 ]</code>. Nothing is rounded: <code>2 SQRT 2 SQRT ADD</code> is <code>8 SQRT</code>. A non-number is <code>nonNumeric</code>.</p>
+<p>The exact sum: <code>1/3 1/6 ADD</code> is <code>1/2</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 1 2 ] 10 ADD</code> is <code>[ 11 12 ]</code>. Nothing is rounded: <code>2 SQRT 2 SQRT ADD</code> is <code>8 SQRT</code>. The pair formula decides the three points over zero too: <code>1/0 5 ADD</code> is <code>1/0</code> and <code>1/0 1/0 ADD</code> is <code>0/0</code> (LANG.VALUES.EXACT). A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1 2 ADD</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a + b ]</span></dd>
@@ -1930,7 +1935,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-MUL">
 <h4><code>MUL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The exact product: <code>2/3 3/4 MUL</code> is <code>1/2</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 1 2 3 ] [ 10 ] MUL</code> is <code>[ 10 20 30 ]</code>. A non-number is <code>nonNumeric</code>.</p>
+<p>The exact product: <code>2/3 3/4 MUL</code> is <code>1/2</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 1 2 3 ] [ 10 ] MUL</code> is <code>[ 10 20 30 ]</code>. The pair formula decides the three points over zero too: <code>1/0 -2 MUL</code> is <code>-1/0</code> and <code>1/0 0 MUL</code> is <code>0/0</code> (LANG.VALUES.EXACT). A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>2 4 MUL</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a * b ]</span></dd>
@@ -1946,23 +1951,23 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DIV">
 <h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The exact quotient, left over right: <code>1 3 DIV</code> is exactly <code>1/3</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 2 4 ] 2 DIV</code> is <code>[ 1 2 ]</code>. A zero divisor projects NIL(divisionByZero) in its own lane and no other: <code>[ 1 2 3 ] [ 1 0 2 ] DIV</code> is <code>[ 1 NIL 3/2 ]</code>, the lanes beside it are quotients, and a Word after it passes the absent lane through while computing the rest (LANG.FAILURE.PASSTHROUGH), so <code>1 0 DIV 1 ADD NIL-REASON</code> is <code>'divisionByZero'</code>. A non-number is <code>nonNumeric</code>.</p>
+<p>The exact quotient, left over right: <code>1 3 DIV</code> is exactly <code>1/3</code>, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), <code>[ 2 4 ] 2 DIV</code> is <code>[ 1 2 ]</code>. Division is total (LANG.VALUES.EXACT): it is multiplication by the reciprocal, and every number has one. A zero divisor answers the dividend's sign over zero in its own lane and no other — <code>[ 1 -2 0 ] 0 DIV</code> is <code>[ 1/0 -1/0 0/0 ]</code>, and <code>1 1/0 DIV</code> is <code>0</code> — the lanes beside it are quotients, and a Word after it computes with the point by the same pair formulas, so <code>1 0 DIV 2 MUL</code> is <code>1/0</code> and <code>1 0 DIV 0 MUL</code> is <code>0/0</code>. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>10 2 DIV</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>divisorEqualsZero</code> → <code>divisionByZero</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FLOOR">
 <h4><code>FLOOR</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The greatest integer not above the number: <code>7/3 FLOOR</code> is <code>2</code> and <code>-7/3 FLOOR</code> is <code>-3</code>, element-wise over Vectors. Irrationals floor exactly: <code>2 SQRT FLOOR</code> is <code>1</code>. A non-number is <code>nonNumeric</code>.</p>
+<p>The greatest integer not above the number: <code>7/3 FLOOR</code> is <code>2</code> and <code>-7/3 FLOOR</code> is <code>-3</code>, element-wise over Vectors. Irrationals floor exactly: <code>2 SQRT FLOOR</code> is <code>1</code>. No integer lies at or beyond the three points over zero, so each is its own floor: <code>1/0 FLOOR</code> is <code>1/0</code>. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>7/3 FLOOR</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ floor x ]</span></dd>
@@ -1978,7 +1983,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-ROUND">
 <h4><code>ROUND</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>The nearest integer, a tie going away from zero: <code>5/2 ROUND</code> is <code>3</code> and <code>-5/2 ROUND</code> is <code>-3</code>, element-wise over Vectors. FORMAT rounds its last digit the same way. A non-number is <code>nonNumeric</code>.</p>
+<p>The nearest integer, a tie going away from zero: <code>5/2 ROUND</code> is <code>3</code> and <code>-5/2 ROUND</code> is <code>-3</code>, element-wise over Vectors. FORMAT rounds its last digit the same way. Each of the three points over zero is its own rounding, as it is its own floor. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>5/2 ROUND</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ round x ]</span></dd>
@@ -1994,39 +1999,39 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-MIN">
 <h4><code>MIN</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>The smaller of two numbers: <code>1 2 MIN</code> is <code>1</code>, and element-wise over Vectors with broadcasting, <code>[ 3 1 ] 2 MIN</code> is <code>[ 2 1 ]</code>. A non-number is <code>nonNumeric</code>.</p>
+<p>The smaller of two numbers: <code>1 2 MIN</code> is <code>1</code>, and element-wise over Vectors with broadcasting, <code>[ 3 1 ] 2 MIN</code> is <code>[ 2 1 ]</code>. The order is the exact domain's (LANG.VALUES.EXACT): <code>-1/0 5 MIN</code> is <code>-1/0</code>, and <code>0/0</code>, which has no order, projects NIL(domainMiss) as LT does. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1 2 MIN</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ min ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-MAX">
 <h4><code>MAX</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>The larger of two numbers: <code>1 2 MAX</code> is <code>2</code>, and element-wise over Vectors with broadcasting, <code>[ -1 2 -3 ] 0 MAX</code> is <code>[ 0 2 0 ]</code>. A non-number is <code>nonNumeric</code>.</p>
+<p>The larger of two numbers: <code>1 2 MAX</code> is <code>2</code>, and element-wise over Vectors with broadcasting, <code>[ -1 2 -3 ] 0 MAX</code> is <code>[ 0 2 0 ]</code>. The order is the exact domain's (LANG.VALUES.EXACT): <code>1/0 5 MAX</code> is <code>1/0</code>, and <code>0/0</code>, which has no order, projects NIL(domainMiss) as GT does. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1 2 MAX</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ max ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-SQRT">
 <h4><code>SQRT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The exact square root of a non-negative number: <code>4 SQRT</code> is <code>2</code>, and <code>2 SQRT</code> is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so <code>2 SQRT 2 SQRT MUL</code> is <code>2</code>. The radicand is reduced to its square-free part, so one number has one form however it was built: <code>8 SQRT</code> is <code>2 SQRT 2 MUL</code>. That reduction factors the radicand and is charged to the run's numeric work; a radicand the remaining work cannot factor is <code>resourceLimitExceeded</code>. Element-wise over Vectors, and a negative radicand projects NIL(domainMiss): <code>[ 4 -1 ] SQRT</code> is <code>[ 2 NIL ]</code> with the second lane absent for that reason. A non-number is <code>nonNumeric</code>.</p>
+<p>The exact square root of a non-negative number: <code>4 SQRT</code> is <code>2</code>, and <code>2 SQRT</code> is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so <code>2 SQRT 2 SQRT MUL</code> is <code>2</code>. The radicand is reduced to its square-free part, so one number has one form however it was built: <code>8 SQRT</code> is <code>2 SQRT 2 MUL</code>. That reduction factors the radicand and is charged to the run's numeric work; a radicand the remaining work cannot factor is <code>resourceLimitExceeded</code>. <code>1/0</code> and <code>0/0</code> are their own roots. Element-wise over Vectors, and a negative radicand, <code>-1/0</code> included, projects NIL(domainMiss): <code>[ 4 -1 ] SQRT</code> is <code>[ 2 NIL ]</code> with the second lane absent for that reason. A non-number is <code>nonNumeric</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>2 SQRT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ sqrt(x) ]</span></dd>
@@ -2042,13 +2047,13 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-POW">
 <h4><code>POW</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Exact power <code>x y POW</code>, element-wise over Vectors, answered inside the exact field. An integer exponent keeps the result in the base's own tier: <code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>, <code>2 -1 POW</code> is <code>1/2</code>. An exponent <code>p/2</code> over a non-negative rational base stays in the field too — <code>2 1/2 POW</code> is exactly what <code>2 SQRT</code> answers, and <code>2 3/2 POW</code> is <code>2 2 SQRT MUL</code>. <code>0 y POW</code> with a negative <code>y</code> projects <code>divisionByZero</code>; a negative base under <code>p/2</code> has no real value and projects <code>domainMiss</code>; every other exponent — a denominator other than 1 or 2, <code>p/2</code> over an irrational base, an irrational exponent — leaves the field and projects <code>domainMiss</code> as well (<code>8 1/3 POW</code>, <code>2 2 SQRT POW</code>); an exponent past what the machine will materialize projects <code>spaceExhausted</code>. <code>SQRT</code> remains the Word that builds the field; <code>POW</code> is not its sugar.</p>
+<p>Exact power <code>x y POW</code>, element-wise over Vectors, answered inside the exact domain. An integer exponent keeps the result in the base's own tier: <code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>, <code>2 -1 POW</code> is <code>1/2</code>, and since division is total <code>0 -1 POW</code> is <code>1/0</code> and <code>1/0 -1 POW</code> is <code>0</code> (LANG.VALUES.EXACT). An exponent <code>p/2</code> over a non-negative rational base stays in the field too — <code>2 1/2 POW</code> is exactly what <code>2 SQRT</code> answers, and <code>2 3/2 POW</code> is <code>2 2 SQRT MUL</code>. A negative base under <code>p/2</code> has no real value and projects <code>domainMiss</code>; every other exponent — a denominator other than 1 or 2, <code>p/2</code> over an irrational base, an irrational exponent, an exponent over zero — leaves the field and projects <code>domainMiss</code> as well (<code>8 1/3 POW</code>, <code>2 2 SQRT POW</code>, <code>2 1/0 POW</code>); an exponent past what the machine will materialize projects <code>spaceExhausted</code>. <code>SQRT</code> remains the Word that builds the field; <code>POW</code> is not its sugar.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>2 10 POW</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] [ y ] -&gt; [ x^y ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>divisionByZero</code>, <code>domainMiss</code>, <code>spaceExhausted</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>domainMiss</code>, <code>spaceExhausted</code></dd>
 <dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
@@ -2058,7 +2063,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GCD">
 <h4><code>GCD</code> <span class="word-tier">Standard · operational</span></h4>
-<p>The greatest common divisor of two integers, non-negative, element-wise over Vectors: <code>12 18 GCD</code> is <code>6</code>, <code>0 0 GCD</code> is <code>0</code>. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects <code>domainMiss</code>.</p>
+<p>The greatest common divisor of two integers, non-negative, element-wise over Vectors: <code>12 18 GCD</code> is <code>6</code>, <code>0 0 GCD</code> is <code>0</code>. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every number reduced, so the Word only exposes it. A non-integer operand — a fraction, an irrational, or a point over zero — projects <code>domainMiss</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>12 18 GCD</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ gcd ]</span></dd>
@@ -2074,7 +2079,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-RATIO">
 <h4><code>RATIO</code> <span class="word-tier">Standard · operational</span></h4>
-<p>A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: <code>6/4 RATIO</code> is <code>[ 3 2 ]</code>, <code>-3 RATIO</code> is <code>[ -3 1 ]</code>, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (<code>2 SQRT</code>) has no numerator and projects <code>domainMiss</code>.</p>
+<p>A number opened into its reduced numerator and denominator, as a two-element Vector with the denominator non-negative: <code>6/4 RATIO</code> is <code>[ 3 2 ]</code>, <code>-3 RATIO</code> is <code>[ -3 1 ]</code>, and <code>100 0 DIV RATIO</code> is <code>[ 1 0 ]</code>, since every pair over zero reduces to its sign over zero (LANG.VALUES.EXACT); element-wise over Vectors. The language advertises exact fractions; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (<code>2 SQRT</code>) has no numerator and projects <code>domainMiss</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>6/4 RATIO</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ q ] -&gt; [ [ numerator denominator ] ]</span></dd>
@@ -2600,34 +2605,34 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SORT">
 <h4><code>SORT</code> <span class="word-tier">Standard · operational</span></h4>
-<p>A copy of a Vector of numbers in ascending order: <code>[ 3 1 2 ] SORT</code> is <code>[ 1 2 3 ]</code>. Order is exact, irrationals included. Only numbers are ordered (<code>nonNumeric</code>), and a non-Vector is <code>nonVector</code>. ORDER answers the permutation instead.</p>
+<p>A copy of a Vector of numbers in ascending order: <code>[ 3 1 2 ] SORT</code> is <code>[ 1 2 3 ]</code>. Order is exact, irrationals included, with <code>-1/0</code> first and <code>1/0</code> last; a Vector holding <code>0/0</code>, which has no order, has no sorted form and projects NIL(domainMiss) (LANG.VALUES.EXACT). Only numbers are ordered (<code>nonNumeric</code>), and a non-Vector is <code>nonVector</code>. ORDER answers the permutation instead.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 3 1 2 ] SORT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ vec ] -&gt; [ sorted ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>unorderedElement</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.VALUES.EXACT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-ORDER">
 <h4><code>ORDER</code> <span class="word-tier">Standard · operational</span></h4>
-<p>The indices that would sort a Vector of numbers ascending: <code>[ 30 10 20 ] ORDER</code> is <code>[ 1 2 0 ]</code>, so gathering by it sorts: <code>[ 30 10 20 ] 'V' BIND V V ORDER GET</code> is <code>[ 10 20 30 ]</code>. Ties keep their original order: <code>[ 2 1 2 1 ] ORDER</code> is <code>[ 1 3 0 2 ]</code>. Only numbers are ordered (<code>nonNumeric</code>), and a non-Vector is <code>nonVector</code>.</p>
+<p>The indices that would sort a Vector of numbers ascending: <code>[ 30 10 20 ] ORDER</code> is <code>[ 1 2 0 ]</code>, so gathering by it sorts: <code>[ 30 10 20 ] 'V' BIND V V ORDER GET</code> is <code>[ 10 20 30 ]</code>. Ties keep their original order: <code>[ 2 1 2 1 ] ORDER</code> is <code>[ 1 3 0 2 ]</code>. A Vector holding <code>0/0</code>, which has no order, projects NIL(domainMiss) as SORT does (LANG.VALUES.EXACT). Only numbers are ordered (<code>nonNumeric</code>), and a non-Vector is <code>nonVector</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 30 10 20 ] ORDER</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ vec ] -&gt; [ permutation ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>unorderedElement</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.VALUES.EXACT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-UNIQUE">
@@ -2712,18 +2717,18 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-BSEARCH">
 <h4><code>BSEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>The index of each key in an ascending vector, found by halving: <code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2 ]</code>, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises <code>unsortedInput</code>, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.</p>
+<p>The index of each key in an ascending vector, found by halving: <code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2 ]</code>, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises <code>unsortedInput</code>, since a binary search over unordered data would answer something rather than nothing, and one holding <code>0/0</code>, which has no order, projects NIL(domainMiss), as does a key of <code>0/0</code> in its own lane (LANG.VALUES.EXACT). Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ sorted ] [ keys ] -&gt; [ indices ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>notFound</code> → <code>notFound</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>notFound,unorderedOperand</code> → <code>notFound</code>, <code>domainMiss</code></dd>
 <dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonVector</code>, <code>unsortedInput</code>, <code>nonNumeric</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.VALUES.EXACT</code></dd>
 </dl>
 </div>
 <!-- END generated word contracts: vector-ops -->
@@ -3406,7 +3411,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-NUM">
 <h4><code>NUM</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Parse text as a number, by the same grammar a source literal is read with: <code>'3/4' NUM</code> is <code>3/4</code>, <code>'0.25' NUM</code> is <code>1/4</code>. Text that spells no number — <code>'abc'</code>, <code>'.5'</code>, <code>'1_000'</code>, <code>'1/0'</code> — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (<code>'1e99999999'</code>), projects NIL(spaceExhausted). A non-String operand is an ERROR (<code>nonText</code>); a Vector of Strings lifts.</p>
+<p>Parse text as a number, by the same grammar a source literal is read with: <code>'3/4' NUM</code> is <code>3/4</code>, <code>'0.25' NUM</code> is <code>1/4</code>, and <code>'5/0' NUM</code> is <code>1/0</code>, the pair reduced to its sign over zero (LANG.VALUES.EXACT). Text that spells no number — <code>'abc'</code>, <code>'.5'</code>, <code>'1_000'</code> — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (<code>'1e99999999'</code>), projects NIL(spaceExhausted). A non-String operand is an ERROR (<code>nonText</code>); a Vector of Strings lifts.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>'42' NUM</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ text ] -&gt; [ n ]</span></dd>
@@ -3422,7 +3427,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-STR">
 <h4><code>STR</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Write a Scalar, String or Boolean as the text that reads back as it: <code>42 STR</code> is <code>'42'</code>, <code>1/3 STR</code> is <code>'1/3'</code>, <code>TRUE STR</code> is <code>'TRUE'</code>. A Symbol is written as its bare name — <code>[ ADD ] 0 GET STR</code> is <code>'ADD'</code> — and that text is a String, not the Symbol: no Word turns it back into one, so a name held as text is never called (LANG.DICTIONARY.ACYCLIC). The operand is a leaf, so a Vector or Record lifts — <code>[ 1 2 ] STR</code> is <code>[ '1' '2' ]</code> — and STR is NUM's inverse element by element: <code>1/3 STR NUM</code> is <code>1/3</code>, as <code>x STR NUM</code> gives back every number with a lexeme. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.</p>
+<p>Write a Scalar, String or Boolean as the text that reads back as it: <code>42 STR</code> is <code>'42'</code>, <code>1/3 STR</code> is <code>'1/3'</code>, <code>1 0 DIV STR</code> is <code>'1/0'</code>, <code>TRUE STR</code> is <code>'TRUE'</code>. A Symbol is written as its bare name — <code>[ ADD ] 0 GET STR</code> is <code>'ADD'</code> — and that text is a String, not the Symbol: no Word turns it back into one, so a name held as text is never called (LANG.DICTIONARY.ACYCLIC). The operand is a leaf, so a Vector or Record lifts — <code>[ 1 2 ] STR</code> is <code>[ '1' '2' ]</code> — and STR is NUM's inverse element by element: <code>1/3 STR NUM</code> is <code>1/3</code>, as <code>x STR NUM</code> gives back every number with a lexeme. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>42 STR</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
@@ -3437,18 +3442,18 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-FORMAT">
 <h4><code>FORMAT</code> <span class="word-tier">Standard · operational</span></h4>
-<p>Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as <code>ROUND</code> does: <code>1/3 5 FORMAT</code> is <code>'0.33333'</code>, <code>5/2 0 FORMAT</code> is <code>'3'</code>, <code>2 SQRT 3 FORMAT</code> is <code>'1.414'</code>. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and <code>STR</code> refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (<code>invalidInteger</code> otherwise) and the value a scalar (<code>nonNumeric</code> otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.</p>
+<p>Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as <code>ROUND</code> does: <code>1/3 5 FORMAT</code> is <code>'0.33333'</code>, <code>5/2 0 FORMAT</code> is <code>'3'</code>, <code>2 SQRT 3 FORMAT</code> is <code>'1.414'</code>. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and <code>STR</code> refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. No decimal lies at or beyond the three points over zero, so <code>1/0</code>, <code>-1/0</code> and <code>0/0</code> project NIL(domainMiss) (LANG.VALUES.EXACT); STR writes their lexemes. The digit count is a non-negative integer (<code>invalidInteger</code> otherwise) and the value a scalar (<code>nonNumeric</code> otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1/3 5 FORMAT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] [ digits ] -&gt; [ text ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>noDecimalForValue</code> → <code>domainMiss</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>invalidInteger</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-JSON-DECODE">
@@ -3469,7 +3474,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-ENCODE">
 <h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>Write a value as JSON text, the inverse of <code>JSON-DECODE</code>: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean <code>true</code>/<code>false</code>, a NIL <code>null</code>. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — <code>1/4</code> is <code>0.25</code> — and every other rational is written as its Ajisai lexeme inside a string, <code>1/3</code> as <code>&quot;1/3&quot;</code>, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects <code>domainMiss</code>. Decoding what this Word writes gives back the value it was given, and a rational written as a lexeme comes back as that String, from which <code>NUM</code> recovers the number.</p>
+<p>Write a value as JSON text, the inverse of <code>JSON-DECODE</code>: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean <code>true</code>/<code>false</code>, a NIL <code>null</code>. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — <code>1/4</code> is <code>0.25</code> — and every other number is written as its Ajisai lexeme inside a string, <code>1/3</code> as <code>&quot;1/3&quot;</code> and <code>1/0</code> as <code>&quot;1/0&quot;</code>, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects <code>domainMiss</code>. Decoding what this Word writes gives back the value it was given, and a number written as a lexeme comes back as that String, from which <code>NUM</code> recovers the number.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>
@@ -3909,7 +3914,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV NIL?</code></td>
+                                    <td><code>-1 SQRT NIL?</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes"><code>NIL?</code> consumes the top value and pushes its answer in its place.</td>
                                 </tr>
@@ -3928,8 +3933,8 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV NIL-REASON</code></td>
-                                    <td><code>'divisionByZero'</code></td>
+                                    <td><code>-1 SQRT NIL-REASON</code></td>
+                                    <td><code>'domainMiss'</code></td>
                                     <td class="notes">The reason is a protocol string, so a program can branch on why a value is missing.</td>
                                 </tr>
                             </tbody>
@@ -3984,7 +3989,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>-1 SQRT 'S' BIND 99 S S NIL? SELECT</code></td>
                                     <td><code>99/1</code></td>
                                     <td class="notes">The value was absent, so the fallback is chosen.</td>
                                 </tr>
@@ -4033,9 +4038,9 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-NIL_3f">
 <h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Whether a value is absent: <code>1 0 DIV NIL?</code> is <code>TRUE</code> and <code>5 NIL?</code> is <code>FALSE</code>. It asks about the whole value, so a Vector holding a NIL is present: <code>[ 1 NIL ] NIL?</code> is <code>FALSE</code>. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).</p>
+<p>Whether a value is absent: <code>-1 SQRT NIL?</code> is <code>TRUE</code> and <code>5 NIL?</code> is <code>FALSE</code>; a quotient by zero is a number, so <code>1 0 DIV NIL?</code> is <code>FALSE</code> (LANG.VALUES.EXACT). It asks about the whole value, so a Vector holding a NIL is present: <code>[ 1 NIL ] NIL?</code> is <code>FALSE</code>. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).</p>
 <dl class="word-contract">
-<dt>Syntax</dt><dd><code>1 0 DIV NIL?</code></dd>
+<dt>Syntax</dt><dd><code>-1 SQRT NIL?</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
@@ -4048,9 +4053,9 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-NIL-REASON">
 <h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>The reason an absence carries, as text: <code>1 0 DIV NIL-REASON</code> is <code>'divisionByZero'</code>, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.</p>
+<p>The reason an absence carries, as text: <code>-1 SQRT NIL-REASON</code> is <code>'domainMiss'</code>, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.</p>
 <dl class="word-contract">
-<dt>Syntax</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
+<dt>Syntax</dt><dd><code>-1 SQRT NIL-REASON</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>

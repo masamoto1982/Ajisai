@@ -8,15 +8,6 @@ use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AbsenceOrigin {
     Literal,
-    /// Division by zero produced a reasoned NIL under the NIL Projection Rule
-    /// (LANG.FAILURE.PROJECT). Used together with `NilReason::DivisionByZero`.
-    ///
-    /// Every construction path reaches this through
-    /// `absence_origin_for_reason`, which is the sole derivation of an origin
-    /// from a reason: `DIV` and `POW` by way of `Value::nil_with_reason`,
-    /// `nil_with_reason` for the rest. Call sites cannot name an origin
-    /// directly, so a reason and its origin cannot drift apart.
-    DivisionByZero,
     NilPropagation,
     NotFound,
     InvalidEncoding,
@@ -82,7 +73,7 @@ thread_local! {
 /// the NIL it was passed from (LANG.VALUES.DENOTATION) — so a count of mints is
 /// kept beside it. A Word that ran while the count stood still produced no
 /// absence, whatever its result carries; that is how the error-flow trace tells
-/// the Word that answered `divisionByZero` from the ones that merely handed it
+/// the Word that answered `domainMiss` from the ones that merely handed it
 /// on (`Interpreter::trace_nil_outcome`). Diagnostic only: nothing a program
 /// can observe reads it.
 pub fn minted_absence_count() -> u64 {
@@ -154,7 +145,6 @@ impl AbsenceOrigin {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             AbsenceOrigin::Literal => "literal",
-            AbsenceOrigin::DivisionByZero => "divisionByZero",
             AbsenceOrigin::NilPropagation => "nilPropagation",
             AbsenceOrigin::NotFound => "notFound",
             AbsenceOrigin::InvalidEncoding => "invalidEncoding",
@@ -203,10 +193,6 @@ mod tests {
 
     #[test]
     fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
-        assert_eq!(
-            AbsenceOrigin::DivisionByZero.as_protocol_str(),
-            "divisionByZero"
-        );
         assert_eq!(Recoverability::Recoverable.as_protocol_str(), "recoverable");
         assert_eq!(
             ErrorCategory::RecursionLimitExceeded.as_protocol_str(),

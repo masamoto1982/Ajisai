@@ -67,8 +67,8 @@ async fn contract_answers_the_registered_record_of_a_core_word() {
     assert_eq!(top("[ DIV ] 0 GET CONTRACT 'inputs' GET").await, "2/1");
     assert_eq!(top("[ DIV ] 0 GET CONTRACT 'outputs' GET").await, "1/1");
     assert_eq!(
-        top("[ DIV ] 0 GET CONTRACT 'projection' GET").await,
-        "[ 'divisionByZero' ]"
+        top("[ SQRT ] 0 GET CONTRACT 'projection' GET").await,
+        "[ 'domainMiss' ]"
     );
     assert_eq!(
         top("[ DIV ] 0 GET CONTRACT 'errorWhen' GET").await,

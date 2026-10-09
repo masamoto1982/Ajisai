@@ -83,24 +83,34 @@ impl<'a> Elements<'a> {
         }
     }
 
-    /// Whether the elements ascend, compared as `SORT` compares them. A flat,
-    /// all-present, pure-integer Tensor compares its numerator column: every
-    /// lane is an integer there, and `compare_for_sort` orders integers as
-    /// integers, so the column answers what the pairwise comparison would.
-    fn check_ascending(&self) -> Result<bool> {
+    /// Whether the elements ascend, compared as `SORT` compares them. A flat
+    /// pure-integer Tensor compares its numerator column: every lane is an
+    /// integer there, and `compare_for_sort` orders integers as integers, so
+    /// the column answers what the pairwise comparison would. `None` when an
+    /// element is `0/0`, which has no order to ascend in.
+    fn check_ascending(&self) -> Result<Option<bool>> {
         if let Elements::Lanes(_, data) = self {
-            if data.is_pure_integer && data.all_lanes_valid() {
-                return Ok(data.numerators.windows(2).all(|pair| pair[0] <= pair[1]));
+            if data.is_pure_integer {
+                return Ok(Some(
+                    data.numerators.windows(2).all(|pair| pair[0] <= pair[1]),
+                ));
             }
         }
-        for index in 1..self.len() {
-            if compare_for_sort(&self.get(index - 1), &self.get(index))?
-                == std::cmp::Ordering::Greater
-            {
-                return Ok(false);
+        for index in 0..self.len() {
+            let element = self.get(index);
+            let previous = if index == 0 {
+                self.get(index)
+            } else {
+                self.get(index - 1)
+            };
+            let Some(ordering) = compare_for_sort(&previous, &element)? else {
+                return Ok(None);
+            };
+            if ordering == std::cmp::Ordering::Greater {
+                return Ok(Some(false));
             }
         }
-        Ok(true)
+        Ok(Some(true))
     }
 }
 
@@ -146,26 +156,36 @@ pub fn op_member(interp: &mut Interpreter) -> Result<()> {
 enum Found {
     At(usize),
     Absent,
+    /// The key is `0/0`, which no order places (LANG.VALUES.EXACT).
+    Unordered,
 }
 
 /// The first index in ascending `sorted` whose element equals `key`, by
 /// halving. `compare_for_sort` decides; a structurally non-comparable key is
-/// its `nonNumeric`.
+/// its `nonNumeric`, and a key with no order is `Unordered`.
 fn lower_bound(sorted: &Elements<'_>, key: &Value) -> Result<Found> {
     let (mut lo, mut hi) = (0usize, sorted.len());
     while lo < hi {
         let mid = lo + (hi - lo) / 2;
         match compare_for_sort(&sorted.get(mid), key)? {
-            std::cmp::Ordering::Less => lo = mid + 1,
-            _ => hi = mid,
+            Some(std::cmp::Ordering::Less) => lo = mid + 1,
+            Some(_) => hi = mid,
+            None => return Ok(Found::Unordered),
         }
     }
     if lo == sorted.len() {
-        return Ok(Found::Absent);
+        // An empty vector asks nothing of the key; a key with no order is
+        // still answered as one, so `[ ] 0/0 BSEARCH` and `[ 1 ] 0/0 BSEARCH`
+        // agree.
+        return Ok(match compare_for_sort(key, key)? {
+            Some(_) => Found::Absent,
+            None => Found::Unordered,
+        });
     }
     match compare_for_sort(&sorted.get(lo), key)? {
-        std::cmp::Ordering::Equal => Ok(Found::At(lo)),
-        _ => Ok(Found::Absent),
+        Some(std::cmp::Ordering::Equal) => Ok(Found::At(lo)),
+        Some(_) => Ok(Found::Absent),
+        None => Ok(Found::Unordered),
     }
 }
 
@@ -200,16 +220,23 @@ fn bsearch_answer(interp: &mut Interpreter, sorted: &Value, keys: &Value) -> Res
         .probe()
         .saturating_mul(sorted.len() as u64);
     collection_meter::charge(interp, units)?;
-    if !sorted.check_ascending()? {
-        return Err(AjisaiError::declared(
-            "unsortedInput",
-            "expected an ascending Vector, got one that is not in order",
-        ));
+    match sorted.check_ascending()? {
+        Some(true) => {}
+        Some(false) => {
+            return Err(AjisaiError::declared(
+                "unsortedInput",
+                "expected an ascending Vector, got one that is not in order",
+            ));
+        }
+        // A Vector holding `0/0` has no order, so nothing can be searched in
+        // it: a well-formed operand outside the Word's domain.
+        None => return Ok(crate::interpreter::comparison::unordered_projection()),
     }
 
     let lane = |found: Found| match found {
         Found::At(index) => Value::from_int(index as i64),
         Found::Absent => Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable),
+        Found::Unordered => crate::interpreter::comparison::unordered_projection(),
     };
     Ok(match keys.as_vector_view() {
         Some(keys) => {

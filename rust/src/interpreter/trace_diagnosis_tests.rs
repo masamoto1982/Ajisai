@@ -6,8 +6,7 @@ use crate::error::NilReason;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase, ResourceLimitFacts};
 use crate::interpreter::Interpreter;
 
-const REASONS: [NilReason; 7] = [
-    NilReason::DivisionByZero,
+const REASONS: [NilReason; 6] = [
     NilReason::NotFound,
     NilReason::InvalidEncoding,
     NilReason::IndexOutOfBounds,

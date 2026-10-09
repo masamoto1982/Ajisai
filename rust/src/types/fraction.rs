@@ -129,8 +129,11 @@ impl Fraction {
 impl PartialEq for Fraction {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        if self.is_nil() || other.is_nil() {
-            return self.is_nil() && other.is_nil();
+        // A pair over zero is one of three reduced pairs (`fraction_extended`),
+        // so it compares as the pair it is: cross-multiplying would make
+        // `1/0` and `-1/0` equal, both products being 0.
+        if !self.is_finite() || !other.is_finite() {
+            return self.extract_i64_pair() == other.extract_i64_pair();
         }
         match (&self.repr, &other.repr) {
             (FractionRepr::Small(a, b), FractionRepr::Small(c, d)) => {
@@ -170,8 +173,11 @@ impl Eq for Fraction {}
 /// which `repr` it arrived in, so the two stay consistent with each other.
 impl std::hash::Hash for Fraction {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        if self.is_nil() {
+        if let FractionRepr::Small(n, 0) = &self.repr {
+            // One of the three points: hashed as the pair it is, which is
+            // what `==` compares.
             state.write_u8(0);
+            n.hash(state);
             return;
         }
         state.write_u8(1);
@@ -213,7 +219,8 @@ impl Fraction {
     }
 
     /// A `Fraction` from a pair the caller already knows is in lowest terms
-    /// with a positive denominator.
+    /// with a non-negative denominator — one of the three pairs over zero
+    /// included.
     ///
     /// `Fraction::new` reaches the same answer by widening both halves to
     /// `BigInt`, narrowing them straight back, and running a Euclidean gcd —
@@ -230,8 +237,8 @@ impl Fraction {
     #[inline]
     pub(crate) fn from_normalized_pair(numerator: i64, denominator: i64) -> Self {
         debug_assert!(
-            denominator > 0,
-            "from_normalized_pair needs a positive denominator, got {numerator}/{denominator}"
+            denominator > 0 || (denominator == 0 && (-1..=1).contains(&numerator)),
+            "from_normalized_pair needs a reduced pair with a non-negative denominator, got {numerator}/{denominator}"
         );
         debug_assert!(
             {
@@ -245,12 +252,14 @@ impl Fraction {
                     }
                     a
                 }
-                gcd(numerator as i128, denominator as i128) == 1 || numerator == 0
+                gcd(numerator as i128, denominator as i128) == 1
+                    || numerator == 0
+                    || denominator == 0
             },
             "from_normalized_pair needs lowest terms, got {numerator}/{denominator}"
         );
         debug_assert!(
-            numerator != 0 || denominator == 1,
+            numerator != 0 || denominator <= 1,
             "zero normalizes to 0/1, got {numerator}/{denominator}"
         );
         Fraction {
@@ -258,9 +267,12 @@ impl Fraction {
         }
     }
 
+    /// The reduced pair `numerator / denominator`. A zero denominator is a
+    /// pair like any other: it reduces to the numerator's sign over zero
+    /// (`fraction_extended`), so `100/0` is `1/0`.
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() {
-            panic!("Division by zero");
+            return Self::over_zero(numerator.sign().cmp(&num_bigint::Sign::NoSign));
         }
 
         if numerator.is_zero() {
@@ -295,7 +307,7 @@ impl Fraction {
     #[cfg(test)]
     pub fn create_unreduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
         if denominator.is_zero() {
-            panic!("Division by zero");
+            return Self::new(numerator, denominator);
         }
         if denominator < BigInt::zero() {
             numerator = -numerator;
@@ -358,8 +370,8 @@ impl Fraction {
         }
     }
 
-    /// True for the number zero. An absent number is not zero, whatever its
-    /// numerator: `0/0` is as absent as `5/0`, and neither is a zero divisor.
+    /// True for the number zero. `0/0` is not zero: its denominator is 0, and
+    /// it is one of the three points of `fraction_extended`.
     #[inline]
     pub fn is_zero(&self) -> bool {
         match &self.repr {
@@ -459,7 +471,9 @@ impl Fraction {
 
     #[inline]
     pub(crate) fn create_from_i128(num: i128, den: i128) -> Self {
-        debug_assert!(den != 0);
+        if den == 0 {
+            return Self::over_zero(num.cmp(&0));
+        }
         // Both halves in machine words — every `Small` sum, difference and
         // product that did not overflow — reduce with 64-bit divisions; the
         // `i128` ones below are a software routine (`__divti3`) per divide.
@@ -544,17 +558,8 @@ impl Fraction {
         if let Some(pos) = s.find('/') {
             let num: BigInt = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
             let den: BigInt = BigInt::from_str(&s[pos + 1..]).map_err(|e| e.to_string())?;
-            // A fraction literal denotes a rational (LANG.SOURCE.TEXT); `n/0` denotes
-            // none, so it is rejected here rather than reaching `Fraction::new`,
-            // which panics on a zero denominator. This is distinct from the
-            // runtime `DIV`-by-zero totality rule (a NIL `DivisionByZero`):
-            // that governs the *operation*, whereas this is a malformed
-            // *literal*.
-            if den.is_zero() {
-                return Err(format!(
-                    "zero denominator: '{s}' is not a valid fraction literal (the denominator must be non-zero)"
-                ));
-            }
+            // `n/0` denotes a number like any other pair (LANG.SOURCE.TEXT):
+            // `Fraction::new` reduces it to the sign of `n` over zero.
             Ok(Fraction::new(num, den))
         } else if let Some(dot_pos) = s.find('.') {
             // Strip an optional leading sign up front so that signed
@@ -600,45 +605,6 @@ impl Fraction {
                 repr: FractionRepr::big(num, BigInt::one()),
             })
         }
-    }
-
-    #[inline]
-    pub fn lt(&self, other: &Fraction) -> bool {
-        self.cmp(other) == std::cmp::Ordering::Less
-    }
-
-    #[inline]
-    pub fn gt(&self, other: &Fraction) -> bool {
-        self.cmp(other) == std::cmp::Ordering::Greater
-    }
-}
-
-impl PartialOrd for Fraction {
-    #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Fraction {
-    #[inline]
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
-            if b == d {
-                return a.cmp(&c);
-            }
-            let lhs = (a as i128) * (d as i128);
-            let rhs = (c as i128) * (b as i128);
-            return lhs.cmp(&rhs);
-        }
-        let (an, ad): (BigInt, BigInt) = self.to_bigint_pair();
-        let (bn, bd): (BigInt, BigInt) = other.to_bigint_pair();
-        if ad == bd {
-            return an.cmp(&bn);
-        }
-        let lhs: BigInt = an * &bd;
-        let rhs: BigInt = bn * &ad;
-        lhs.cmp(&rhs)
     }
 }
 
@@ -776,15 +742,18 @@ mod literal_parsing_tests {
     }
 
     #[test]
-    fn zero_denominator_fraction_literal_is_an_error_not_a_panic() {
-        // `n/0` denotes no rational (LANG.SOURCE.TEXT). It must surface as a clean
-        // parse error, never a `Fraction::new` "Division by zero" panic.
-        for src in ["3/0", "0/0", "-5/0"] {
-            assert!(
-                Fraction::from_str(src).is_err(),
-                "`{src}` must be rejected as a malformed fraction literal"
-            );
-        }
+    fn zero_denominator_fraction_literal_reduces_to_its_sign_over_zero() {
+        // `n/0` denotes one of the three points (LANG.SOURCE.TEXT), reduced
+        // like every other pair.
+        assert_eq!(
+            Fraction::from_str("3/0").unwrap(),
+            Fraction::positive_infinity()
+        );
+        assert_eq!(Fraction::from_str("0/0").unwrap(), Fraction::nullity());
+        assert_eq!(
+            Fraction::from_str("-5/0").unwrap(),
+            Fraction::negative_infinity()
+        );
     }
 
     #[test]

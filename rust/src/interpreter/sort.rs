@@ -14,30 +14,39 @@ fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value>
 ///
 /// Shared so the two Words cannot disagree about an ordering: `xs ORDER` and
 /// `xs SORT` are the same comparison sequence, read two ways. The exact
-/// comparison (LANG.VALUES.EXACT) decides every pair; `Err(_)` is malformed
-/// use (a structurally non-comparable element, LANG.FAILURE.ERROR).
-pub(crate) fn order_indices(items: &[Value]) -> Result<Vec<usize>> {
+/// comparison (LANG.VALUES.EXACT) decides every pair of Scalars but one:
+/// `0/0` has no order, so a Vector holding it has no sorted form, and the
+/// answer is `None` — the projection `SORT` and `ORDER` make for it.
+/// `Err(_)` is malformed use (a structurally non-comparable element,
+/// LANG.FAILURE.ERROR).
+pub(crate) fn order_indices(items: &[Value]) -> Result<Option<Vec<usize>>> {
     // Whether a pair orders depends only on whether each of its elements is an
     // orderable Scalar, so one pass comparing each element with itself finds
-    // the first malformed one before the sort runs. The sort's comparator must
-    // be a total order — the standard sort panics on one that reports `Equal`
-    // for a pair it could not order — and after this pass it cannot fail.
+    // the first malformed one, and the first `0/0`, before the sort runs. The
+    // sort's comparator must be a total order — the standard sort panics on
+    // one that reports `Equal` for a pair it could not order — and after this
+    // pass it cannot fail.
     for item in items {
-        compare_for_sort(item, item)?;
+        if compare_for_sort(item, item)?.is_none() {
+            return Ok(None);
+        }
     }
 
     let mut perm: Vec<usize> = (0..items.len()).collect();
     perm.sort_by(|&i, &j| {
-        compare_for_sort(&items[i], &items[j]).unwrap_or(std::cmp::Ordering::Equal)
+        compare_for_sort(&items[i], &items[j])
+            .ok()
+            .flatten()
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
-    Ok(perm)
+    Ok(Some(perm))
 }
 
 /// `three_way_compare`, with an operand the exact order is not defined on
 /// raised as `nonNumeric`: the order is an order of Scalars, and every Word
 /// that asks for one (LT/GT, MIN/MAX, SORT/ORDER/BSEARCH) names the fault the
-/// same way.
-pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
+/// same way. `None` for a pair holding `0/0`, which the Word projects.
+pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<Option<std::cmp::Ordering>> {
     three_way_compare(a, b).map_err(|e| {
         AjisaiError::declared(
             "nonNumeric",
@@ -60,15 +69,15 @@ pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<std::cmp::Orderin
 /// indistinguishable, so the stability the permutation sort provides is not
 /// observable. Sorting 262,144 of them cost 86 ms.
 ///
-/// Declines for anything but a flat, all-present, pure-integer buffer: a
-/// rational lane still sorts by value rather than by numerator, an absent lane
-/// raises the question of where NIL orders, rank above 1 sorts *rows*, and an
-/// empty buffer must answer with the empty `Vector` the route below pushes.
+/// Declines for anything but a flat, pure-integer buffer: a rational lane
+/// still sorts by value rather than by numerator, rank above 1 sorts *rows*,
+/// and an empty buffer must answer with the empty `Vector` the route below
+/// pushes.
 fn dense_integer_sort(interp: &mut Interpreter, value: &Value) -> Result<Option<()>> {
     let ValueData::Tensor { data, shape } = &value.data else {
         return Ok(None);
     };
-    if shape.len() != 1 || !data.is_pure_integer || !data.all_lanes_valid() || data.is_empty() {
+    if shape.len() != 1 || !data.is_pure_integer || data.is_empty() {
         return Ok(None);
     }
 
@@ -125,9 +134,15 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     }
 
     match order_indices(&children) {
-        Ok(perm) => {
+        Ok(Some(perm)) => {
             let sorted_v: Vec<Value> = reorder_values_by_permutation(&children, &perm);
             interp.stack.push(Value::from_vector(sorted_v));
+            Ok(())
+        }
+        Ok(None) => {
+            interp
+                .stack
+                .push(crate::interpreter::comparison::unordered_projection());
             Ok(())
         }
         Err(e) => {
@@ -148,7 +163,9 @@ mod tests {
     }
 
     fn ordered(items: &[Value]) -> Vec<usize> {
-        order_indices(items).unwrap_or_else(|e| panic!("unexpected malformed: {e}"))
+        order_indices(items)
+            .unwrap_or_else(|e| panic!("unexpected malformed: {e}"))
+            .expect("an orderable vector")
     }
 
     #[test]

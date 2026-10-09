@@ -32,6 +32,8 @@ const EDGE_CASES = [
   "FOO",
   "1 ADD",
   "1 0 DIV",
+  "-1 SQRT",
+  "0 0 DIV 1 LT",
   "NIL",
   "[ FOO ] 'W' DEF",
   "[ FOO ] 'W' DEF W",

@@ -125,15 +125,6 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // character needs special treatment — `1/2` is a number because the
         // whole token parses as one, and `/` is a name for the same reason.
         if let Some(token) = parse_number_from_string(token_str) {
-            // `n/0` has the shape of a number and denotes none. Refused here,
-            // with the other source errors, so a program that holds one is
-            // refused before it runs rather than halfway through it.
-            if has_zero_denominator(token_str) {
-                return Err(format!(
-                    "zero denominator: '{}' is not a valid fraction literal (the denominator must be non-zero)",
-                    token_str
-                ));
-            }
             tokens.push(token);
             spans.push(span);
             continue;
@@ -356,13 +347,6 @@ fn string_literal_content(text: &str) -> Option<&str> {
 /// like every other token boundary.
 fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace()
-}
-
-/// Whether a numeric lexeme is a rational whose denominator is zero.
-fn has_zero_denominator(lexeme: &str) -> bool {
-    lexeme
-        .split_once('/')
-        .is_some_and(|(_, den)| den.chars().all(|c| c == '0'))
 }
 
 /// How many digits the number a numeric lexeme denotes can take to write out:

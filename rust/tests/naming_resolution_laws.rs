@@ -235,10 +235,10 @@ fn destructuring_requires_one_name_per_element() {
 #[test]
 fn binding_preserves_an_absence_and_its_reason() {
     assert_eq!(
-        obs("1 0 DIV 'B' BIND B NIL-REASON B NIL-REASON"),
-        vec!["'divisionByZero'", "'divisionByZero'"]
+        obs("-1 SQRT 'B' BIND B NIL-REASON B NIL-REASON"),
+        vec!["'domainMiss'", "'domainMiss'"]
     );
-    assert_eq!(obs("1 0 DIV 'B' BIND B B 2 COLLECT"), vec!["[ NIL NIL ]"]);
+    assert_eq!(obs("-1 SQRT 'B' BIND B B 2 COLLECT"), vec!["[ NIL NIL ]"]);
 }
 
 /// A Word call is a barrier frame: its body reads its own bindings and its

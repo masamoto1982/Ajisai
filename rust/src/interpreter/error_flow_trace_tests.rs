@@ -7,7 +7,7 @@ use crate::interpreter::Interpreter;
 #[tokio::test]
 async fn nil_produced_event_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -20,14 +20,14 @@ async fn nil_produced_event_has_execute_word_diagnosis() {
     assert_eq!(diagnosis.why.as_protocol_str(), "domain");
     assert_eq!(
         event.absence.as_ref().and_then(|a| a.reason.as_ref()),
-        Some(&NilReason::DivisionByZero)
+        Some(&NilReason::DomainMiss)
     );
 }
 
 #[tokio::test]
 async fn projection_produced_by_word_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -39,10 +39,10 @@ async fn projection_produced_by_word_has_execute_word_diagnosis() {
 
     assert_eq!(diagnosis.when.as_protocol_str(), "executeWord");
     assert_eq!(diagnosis.why.as_protocol_str(), "domain");
-    assert_eq!(diagnosis.where_.word.as_deref(), Some("DIV"));
+    assert_eq!(diagnosis.where_.word.as_deref(), Some("SQRT"));
     assert_eq!(
         event.absence.as_ref().and_then(|a| a.reason.as_ref()),
-        Some(&NilReason::DivisionByZero)
+        Some(&NilReason::DomainMiss)
     );
 }
 
@@ -67,7 +67,7 @@ async fn stack_underflow_has_stack_shape_diagnosis() {
 #[tokio::test]
 async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -84,8 +84,8 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
         .expect("the reasoned NIL has a reason");
 
     assert_eq!(event.kind.as_protocol_str(), "nilProduced");
-    assert_eq!(reason.as_protocol_str(), "divisionByZero");
-    assert_eq!(absence.origin.as_protocol_str(), "divisionByZero");
+    assert_eq!(reason.as_protocol_str(), "domainMiss");
+    assert_eq!(absence.origin.as_protocol_str(), "domainMiss");
     assert_eq!(absence.recoverability.as_protocol_str(), "recoverable");
     assert!(absence.diagnosis.is_none());
 }
@@ -93,7 +93,7 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
 #[tokio::test]
 async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
@@ -106,13 +106,13 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
         .as_ref()
         .expect("NilProduced event should carry a diagnosis");
     // A NIL is not an error: it names no error category, and so no repair.
-    // `divisionByZero` is a NIL reason in spec/outcomes.json and never a
-    // category, which is what this event used to report it as.
+    // `domainMiss` is a NIL reason in spec/outcomes.json and never a
+    // category.
     assert_eq!(event.error_category, None);
     let payload = diagnosis.ai_payload(event.error_category.as_ref());
     assert_eq!(payload.category, None);
     assert_eq!(payload.repair, None);
-    assert_eq!(payload.word.as_deref(), Some("DIV"));
+    assert_eq!(payload.word.as_deref(), Some("SQRT"));
     assert_eq!(payload.family.as_deref(), Some("exactArithmetic"));
     // The NIL's reason is the event's absence, where every host reads it.
     assert_eq!(
@@ -121,16 +121,16 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
             .as_ref()
             .and_then(|absence| absence.reason.as_ref())
             .map(|reason| reason.as_protocol_str()),
-        Some("divisionByZero")
+        Some("domainMiss")
     );
     assert!(diagnosis
         .next_checks
         .iter()
-        .any(|check| check.code == "checkDivisor"));
+        .any(|check| check.code == "checkOperandDomain"));
     assert!(
         diagnosis
             .summary
-            .starts_with("executeWord / DIV / domain (nil:divisionByZero)"),
+            .starts_with("executeWord / SQRT / domain (nil:domainMiss)"),
         "{}",
         diagnosis.summary
     );
@@ -139,17 +139,17 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
 #[tokio::test]
 async fn error_flow_trace_records_direct_projection_from_word() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
     let trace = interp.drain_error_flow_trace();
     assert!(
         trace
             .iter()
             .any(|e| e.kind == ErrorFlowEventKind::NilProduced
-                && e.word.as_deref() == Some("DIV")
+                && e.word.as_deref() == Some("SQRT")
                 && e.error_category.is_none()
                 && e.absence.as_ref().and_then(|a| a.reason.as_ref())
-                    == Some(&NilReason::DivisionByZero)),
-        "expected NilProduced(DIV) with reason divisionByZero, got {:?}",
+                    == Some(&NilReason::DomainMiss)),
+        "expected NilProduced(SQRT) with reason domainMiss, got {:?}",
         trace
     );
 }
@@ -157,7 +157,7 @@ async fn error_flow_trace_records_direct_projection_from_word() {
 #[tokio::test]
 async fn error_flow_trace_drain_clears_log() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
     let first = interp.drain_error_flow_trace();
     assert!(!first.is_empty());
     let second = interp.drain_error_flow_trace();
@@ -165,19 +165,36 @@ async fn error_flow_trace_drain_clears_log() {
 }
 
 #[tokio::test]
-async fn direct_projection_carries_division_by_zero_reason() {
+async fn direct_projection_carries_domain_miss_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
         1,
-        "stack after `10 0 /` should follow DIV's normal NIL-projection stack effect"
+        "stack after `-10 SQRT` should follow SQRT's normal NIL-projection stack effect"
     );
     let top = stack.last().unwrap();
     assert!(top.is_nil());
     let reason = top.nil_reason().cloned();
-    assert_eq!(reason, Some(NilReason::DivisionByZero));
+    assert_eq!(reason, Some(NilReason::DomainMiss));
+}
+
+/// Division by zero is not a projection: it produces a number, and the
+/// trace records nothing for it.
+#[tokio::test]
+async fn division_by_zero_is_not_traced_as_a_production() {
+    let mut interp = Interpreter::new();
+    interp.execute("10 0 DIV").await.unwrap();
+    let trace = interp.drain_error_flow_trace();
+    assert!(
+        trace
+            .iter()
+            .all(|e| e.kind != ErrorFlowEventKind::NilProduced),
+        "a quotient by zero is a number, got {:?}",
+        trace
+    );
+    assert_eq!(format!("{}", interp.get_stack()[0]), "1/0");
 }
 
 /// A failure is attributed to the Word that raised it, and the Words it
@@ -282,8 +299,8 @@ mod production_attribution_tests {
 
     #[tokio::test]
     async fn a_nil_passed_through_data_operands_is_produced_once() {
-        let events = productions("1 0 DIV 2 ADD 3 MUL 1 EQ").await;
-        assert_eq!(producers(&events), vec!["DIV"]);
+        let events = productions("-1 SQRT 2 ADD 3 MUL 1 EQ").await;
+        assert_eq!(producers(&events), vec!["SQRT"]);
     }
 
     /// An element operand carries a NIL as an ordinary value, so a Word that
@@ -291,8 +308,8 @@ mod production_attribution_tests {
     #[tokio::test]
     async fn a_nil_carried_as_an_element_is_not_produced_again() {
         assert_eq!(
-            producers(&productions("1 0 DIV 1 COLLECT [ 2 ] CONCAT 0 GET").await),
-            vec!["DIV"]
+            producers(&productions("-1 SQRT 1 COLLECT [ 2 ] CONCAT 0 GET").await),
+            vec!["SQRT"]
         );
     }
 
@@ -300,8 +317,8 @@ mod production_attribution_tests {
     /// result was passed through the body's Words and through the Word.
     #[tokio::test]
     async fn a_user_word_that_passes_a_nil_through_did_not_produce_it() {
-        let events = productions("[ 2 DIV ] 'HALVE' DEF 1 0 DIV HALVE").await;
-        assert_eq!(producers(&events), vec!["DIV"]);
+        let events = productions("[ 2 DIV ] 'HALVE' DEF -1 SQRT HALVE").await;
+        assert_eq!(producers(&events), vec!["SQRT"]);
         assert_eq!(inside(&events[0]), None);
     }
 
@@ -312,13 +329,15 @@ mod production_attribution_tests {
     /// must read alike (LANG.AUTHORITY.FREEDOM).
     #[tokio::test]
     async fn a_nil_produced_inside_a_user_word_names_the_producer_and_the_frames() {
-        let compiled = productions("[ 0 DIV ] 'HALVE' DEF [ HALVE ] 'OUTER' DEF 1 OUTER").await;
-        assert_eq!(producers(&compiled), vec!["DIV"]);
+        let compiled =
+            productions("[ -1 MUL SQRT ] 'HALVE' DEF [ HALVE ] 'OUTER' DEF 1 OUTER").await;
+        assert_eq!(producers(&compiled), vec!["SQRT"]);
         assert_eq!(inside(&compiled[0]), Some("HALVE,OUTER"));
 
         let interpreted =
-            productions("[ 0 DIV [ ADD ] DROP ] 'TWICE' DEF [ TWICE ] 'OUTER' DEF 1 OUTER").await;
-        assert_eq!(producers(&interpreted), vec!["DIV"]);
+            productions("[ -1 MUL SQRT [ ADD ] DROP ] 'TWICE' DEF [ TWICE ] 'OUTER' DEF 1 OUTER")
+                .await;
+        assert_eq!(producers(&interpreted), vec!["SQRT"]);
         assert_eq!(inside(&interpreted[0]), Some("TWICE,OUTER"));
     }
 
@@ -326,8 +345,8 @@ mod production_attribution_tests {
     /// Word's, once per application, inside the higher-order Word.
     #[tokio::test]
     async fn a_nil_produced_in_an_applied_block_is_the_block_words() {
-        let events = productions("[ 1 2 ] [ 0 DIV ] MAP").await;
-        assert_eq!(producers(&events), vec!["DIV", "DIV"]);
+        let events = productions("[ 1 2 ] [ -1 MUL SQRT ] MAP").await;
+        assert_eq!(producers(&events), vec!["SQRT", "SQRT"]);
         assert!(events.iter().all(|event| inside(event) == Some("MAP")));
     }
 }

@@ -290,12 +290,12 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     return node;
 };
 
-// A NIL's reason is its observable content (LANG.VALUES.NIL): `1 0 DIV` is a
-// NIL whose reason is `divisionByZero`, and a Stack that shows only `NIL`
+// A NIL's reason is its observable content (LANG.VALUES.NIL): `-1 SQRT` is a
+// NIL whose reason is `domainMiss`, and a Stack that shows only `NIL`
 // leaves the reader to find out why in an Output area that may not be on
 // screen. The canonical text stays `NIL` — the display the engine writes —
 // and the reason is the tooltip the pointer finds on it. Drawn in the line
-// as `NIL · divisionByZero`, it read as two values side by side; the tooltip
+// as `NIL · domainMiss`, it read as two values side by side; the tooltip
 // keeps the `NIL` so that it reads whole on its own. Exported for
 // `output-display-renderer.test.ts`.
 export const describeNilNode = (item: Value): string => {
@@ -751,7 +751,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
     // A report that belongs in the record but not in the reader's way, folded
     // the way the cost summary is.
     //
-    // A reasoned NIL is a value, not a failure: `1 0 DIV` answered what the
+    // A reasoned NIL is a value, not a failure: `-1 SQRT` answered what the
     // language says it answers. Printed in full, its diagnosis would put a
     // correct ten-line answer under a heading that reads like an error report.
     // Folding it puts the reason one click away and leaves the stance of the

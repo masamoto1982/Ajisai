@@ -21,7 +21,7 @@ async fn compute_is_source_only_and_returns_the_cli_envelope() {
 #[tokio::test]
 async fn a_long_error_flow_trace_is_sent_under_a_byte_budget() {
     let json = compute(
-        "0 5000 RANGE [ 0 DIV ] MAP LENGTH 1 0 DIV",
+        "0 5000 RANGE [ 1 ADD -1 MUL SQRT ] MAP LENGTH -1 SQRT",
         ComputeOptions::agent(None),
     )
     .await
@@ -36,11 +36,11 @@ async fn a_long_error_flow_trace_is_sent_under_a_byte_budget() {
         trace.len() as u64 + elided["omitted"].as_u64().unwrap(),
         5002
     );
-    // The last event — the top-level `DIV` — is kept.
-    assert_eq!(trace.last().unwrap()["stackLenBefore"], 3);
+    // The last event — the top-level `SQRT` — is kept.
+    assert_eq!(trace.last().unwrap()["stackLenBefore"], 2);
 
     // A trace that fits is sent whole, with no record.
-    let json = compute("1 0 DIV", ComputeOptions::agent(None))
+    let json = compute("-1 SQRT", ComputeOptions::agent(None))
         .await
         .to_json();
     assert_eq!(json["errorFlowTrace"].as_array().unwrap().len(), 1);
@@ -85,7 +85,8 @@ async fn compute_names_the_outcome_id_it_produced() {
     for (source, expected) in [
         ("1 2 ADD", "value"),
         ("", "value"),
-        ("1 0 DIV", "nil:divisionByZero"),
+        ("-1 SQRT", "nil:domainMiss"),
+        ("1 0 DIV", "value"),
         ("FROBNICATE", "error:unknownWord"),
         ("[ 1 2", "error:malformedSource"),
     ] {

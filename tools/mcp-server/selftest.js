@@ -529,7 +529,7 @@ check(
 // is the whole reason the text is the serialized result rather than prose.
 for (const [label, call] of [
   ["a value", { name: "compute", arguments: { source: "1 3 DIV" } }],
-  ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 DIV" } }],
+  ["a reason-carrying NIL", { name: "compute", arguments: { source: "-1 SQRT" } }],
   ["a language error", { name: "compute", arguments: { source: "FROBNICATE" } }],
   ["a host failure", { name: "compute", arguments: { source: 42 } }],
 ]) {
@@ -549,7 +549,8 @@ for (const [label, call] of [
 // prediction is checked against a run with one `includes`.
 for (const [source, expected] of [
   ["1 3 DIV", "value"],
-  ["1 0 DIV", "nil:divisionByZero"],
+  ["-1 SQRT", "nil:domainMiss"],
+  ["1 0 DIV", "value"],
   ["NIL", "nil:literal"],
   ["FROBNICATE", "error:unknownWord"],
   ["1 ADD", "error:stackUnderflow"],

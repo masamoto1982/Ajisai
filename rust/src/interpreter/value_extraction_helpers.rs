@@ -9,7 +9,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
             ValueData::Text(s) => s.chars().collect(),
-            ValueData::Nil(_) => vec![],
+            ValueData::Nil => vec![],
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {

@@ -49,9 +49,10 @@ pub fn boolean_src() -> impl Strategy<Value = String> {
     ]
 }
 
-/// Pushes a reasoned NIL via the NIL Projection Rule (division by zero, LANG.FAILURE.PROJECT).
+/// Pushes a reasoned NIL via the NIL Projection Rule (a negative radicand,
+/// LANG.FAILURE.PROJECT).
 pub fn nil_src() -> impl Strategy<Value = String> {
-    small().prop_map(|n| format!("{n} 0 DIV"))
+    small().prop_map(|n| format!("{n} {n} MUL -1 MUL -1 ADD SQRT"))
 }
 
 /// Radicands that are **not** perfect squares, so `√n` stays a genuine
@@ -173,7 +174,7 @@ pub fn completing_block_body() -> impl Strategy<Value = String> {
         (small(), small()).prop_map(|(a, b)| format!("{a} {b} MUL")),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
         small().prop_map(|a| format!("{a} [ 1 ADD ] EXEC")),
-        small().prop_map(|a| format!("{a} 0 DIV")), // div-by-zero → NIL, still completes
+        small().prop_map(|a| format!("{a} 0 DIV")), // div-by-zero → a point over zero, still completes
         Just("TRUE FALSE AND".to_string()),
         Just("[ 3 1 2 ] 0 GET".to_string()),
     ]

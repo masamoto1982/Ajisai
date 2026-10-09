@@ -78,7 +78,7 @@ Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SE
 
 ## `EQ`
 
-Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.
+Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, `100 0 DIV 1/0 EQ` is `TRUE`, `0/0 0/0 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `-1 SQRT 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
@@ -92,37 +92,37 @@ Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: 
 
 ## `LT`
 
-Whether the left number is less than the right: `1 2 LT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 LT` is `[ TRUE FALSE ]`. Order over the exact field always decides (LANG.VALUES.EXACT), irrationals included: `2 SQRT 3/2 LT` is `TRUE`. Only numbers are ordered; anything else is `nonNumeric`.
+Whether the left number is less than the right: `1 2 LT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 LT` is `[ TRUE FALSE ]`. Order over the exact domain decides (LANG.VALUES.EXACT), irrationals included — `2 SQRT 3/2 LT` is `TRUE` — and `-1/0` lies below every other number and `1/0` above. `0/0` alone has no order, so a comparison asking it projects NIL(domainMiss): `0/0 1 LT` is the UNKNOWN that absence reads as in truth position (LANG.VALUES.TRUTH). Only numbers are ordered; anything else is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: unorderedOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `1 2 LT`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `GT`
 
-Whether the left number is greater than the right: `2 1 GT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 GT` is `[ FALSE TRUE ]`. Order over the exact field always decides (LANG.VALUES.EXACT). Only numbers are ordered; anything else is `nonNumeric`.
+Whether the left number is greater than the right: `2 1 GT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 GT` is `[ FALSE TRUE ]`. Order over the exact domain decides (LANG.VALUES.EXACT), irrationals included — `2 SQRT 3/2 LT` is `TRUE` — and `-1/0` lies below every other number and `1/0` above. `0/0` alone has no order, so a comparison asking it projects NIL(domainMiss): `0/0 1 GT` is the UNKNOWN that absence reads as in truth position (LANG.VALUES.TRUTH). Only numbers are ordered; anything else is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: unorderedOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `2 1 GT`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `ADD`
 
-The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 ] 10 ADD` is `[ 11 12 ]`. Nothing is rounded: `2 SQRT 2 SQRT ADD` is `8 SQRT`. A non-number is `nonNumeric`.
+The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 ] 10 ADD` is `[ 11 12 ]`. Nothing is rounded: `2 SQRT 2 SQRT ADD` is `8 SQRT`. The pair formula decides the three points over zero too: `1/0 5 ADD` is `1/0` and `1/0 1/0 ADD` is `0/0` (LANG.VALUES.EXACT). A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -152,7 +152,7 @@ The exact difference, left minus right: `5 3 SUB` is `2`, and element-wise over 
 
 ## `MUL`
 
-The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 3 ] [ 10 ] MUL` is `[ 10 20 30 ]`. A non-number is `nonNumeric`.
+The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 3 ] [ 10 ] MUL` is `[ 10 20 30 ]`. The pair formula decides the three points over zero too: `1/0 -2 MUL` is `-1/0` and `1/0 0 MUL` is `0/0` (LANG.VALUES.EXACT). A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -167,22 +167,22 @@ The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with br
 
 ## `DIV`
 
-The exact quotient, left over right: `1 3 DIV` is exactly `1/3`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero) in its own lane and no other: `[ 1 2 3 ] [ 1 0 2 ] DIV` is `[ 1 NIL 3/2 ]`, the lanes beside it are quotients, and a Word after it passes the absent lane through while computing the rest (LANG.FAILURE.PASSTHROUGH), so `1 0 DIV 1 ADD NIL-REASON` is `'divisionByZero'`. A non-number is `nonNumeric`.
+The exact quotient, left over right: `1 3 DIV` is exactly `1/3`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. Division is total (LANG.VALUES.EXACT): it is multiplication by the reciprocal, and every number has one. A zero divisor answers the dividend's sign over zero in its own lane and no other — `[ 1 -2 0 ] 0 DIV` is `[ 1/0 -1/0 0/0 ]`, and `1 1/0 DIV` is `0` — the lanes beside it are quotients, and a Word after it computes with the point by the same pair formulas, so `1 0 DIV 2 MUL` is `1/0` and `1 0 DIV 0 MUL` is `0/0`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `10 2 DIV`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `FLOOR`
 
-The greatest integer not above the number: `7/3 FLOOR` is `2` and `-7/3 FLOOR` is `-3`, element-wise over Vectors. Irrationals floor exactly: `2 SQRT FLOOR` is `1`. A non-number is `nonNumeric`.
+The greatest integer not above the number: `7/3 FLOOR` is `2` and `-7/3 FLOOR` is `-3`, element-wise over Vectors. Irrationals floor exactly: `2 SQRT FLOOR` is `1`. No integer lies at or beyond the three points over zero, so each is its own floor: `1/0 FLOOR` is `1/0`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -197,7 +197,7 @@ The greatest integer not above the number: `7/3 FLOOR` is `2` and `-7/3 FLOOR` i
 
 ## `ROUND`
 
-The nearest integer, a tie going away from zero: `5/2 ROUND` is `3` and `-5/2 ROUND` is `-3`, element-wise over Vectors. FORMAT rounds its last digit the same way. A non-number is `nonNumeric`.
+The nearest integer, a tie going away from zero: `5/2 ROUND` is `3` and `-5/2 ROUND` is `-3`, element-wise over Vectors. FORMAT rounds its last digit the same way. Each of the three points over zero is its own rounding, as it is its own floor. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `exactArithmetic`
@@ -212,37 +212,37 @@ The nearest integer, a tie going away from zero: `5/2 ROUND` is `3` and `-5/2 RO
 
 ## `MIN`
 
-The smaller of two numbers: `1 2 MIN` is `1`, and element-wise over Vectors with broadcasting, `[ 3 1 ] 2 MIN` is `[ 2 1 ]`. A non-number is `nonNumeric`.
+The smaller of two numbers: `1 2 MIN` is `1`, and element-wise over Vectors with broadcasting, `[ 3 1 ] 2 MIN` is `[ 2 1 ]`. The order is the exact domain's (LANG.VALUES.EXACT): `-1/0 5 MIN` is `-1/0`, and `0/0`, which has no order, projects NIL(domainMiss) as LT does. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: unorderedOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `1 2 MIN`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `MAX`
 
-The larger of two numbers: `1 2 MAX` is `2`, and element-wise over Vectors with broadcasting, `[ -1 2 -3 ] 0 MAX` is `[ 0 2 0 ]`. A non-number is `nonNumeric`.
+The larger of two numbers: `1 2 MAX` is `2`, and element-wise over Vectors with broadcasting, `[ -1 2 -3 ] 0 MAX` is `[ 0 2 0 ]`. The order is the exact domain's (LANG.VALUES.EXACT): `1/0 5 MAX` is `1/0`, and `0/0`, which has no order, projects NIL(domainMiss) as GT does. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: unorderedOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `1 2 MAX`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `SQRT`
 
-The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so `2 SQRT 2 SQRT MUL` is `2`. The radicand is reduced to its square-free part, so one number has one form however it was built: `8 SQRT` is `2 SQRT 2 MUL`. That reduction factors the radicand and is charged to the run's numeric work; a radicand the remaining work cannot factor is `resourceLimitExceeded`. Element-wise over Vectors, and a negative radicand projects NIL(domainMiss): `[ 4 -1 ] SQRT` is `[ 2 NIL ]` with the second lane absent for that reason. A non-number is `nonNumeric`.
+The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so `2 SQRT 2 SQRT MUL` is `2`. The radicand is reduced to its square-free part, so one number has one form however it was built: `8 SQRT` is `2 SQRT 2 MUL`. That reduction factors the radicand and is charged to the run's numeric work; a radicand the remaining work cannot factor is `resourceLimitExceeded`. `1/0` and `0/0` are their own roots. Element-wise over Vectors, and a negative radicand, `-1/0` included, projects NIL(domainMiss): `[ 4 -1 ] SQRT` is `[ 2 NIL ]` with the second lane absent for that reason. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -257,13 +257,13 @@ The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is
 
 ## `POW`
 
-Exact power `x y POW`, element-wise over Vectors, answered inside the exact field. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`. An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2 2 SQRT MUL`. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.
+Exact power `x y POW`, element-wise over Vectors, answered inside the exact domain. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`, and since division is total `0 -1 POW` is `1/0` and `1/0 -1 POW` is `0` (LANG.VALUES.EXACT). An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2 2 SQRT MUL`. A negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent, an exponent over zero — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`, `2 1/0 POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → divisionByZero, domainMiss, spaceExhausted
+- **NIL policy:** `passthroughThenProject`; projection: negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → domainMiss, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
@@ -272,7 +272,7 @@ Exact power `x y POW`, element-wise over Vectors, answered inside the exact fiel
 
 ## `GCD`
 
-The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects `domainMiss`.
+The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every number reduced, so the Word only exposes it. A non-integer operand — a fraction, an irrational, or a point over zero — projects `domainMiss`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
@@ -287,7 +287,7 @@ The greatest common divisor of two integers, non-negative, element-wise over Vec
 
 ## `RATIO`
 
-A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`.
+A number opened into its reduced numerator and denominator, as a two-element Vector with the denominator non-negative: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, and `100 0 DIV RATIO` is `[ 1 0 ]`, since every pair over zero reduces to its sign over zero (LANG.VALUES.EXACT); element-wise over Vectors. The language advertises exact fractions; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
@@ -494,31 +494,31 @@ How deeply Vectors nest: anything that is not a Vector — a number, a text, a t
 
 ## `SORT`
 
-A copy of a Vector of numbers in ascending order: `[ 3 1 2 ] SORT` is `[ 1 2 3 ]`. Order is exact, irrationals included. Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`. ORDER answers the permutation instead.
+A copy of a Vector of numbers in ascending order: `[ 3 1 2 ] SORT` is `[ 1 2 3 ]`. Order is exact, irrationals included, with `-1/0` first and `1/0` last; a Vector holding `0/0`, which has no order, has no sorted form and projects NIL(domainMiss) (LANG.VALUES.EXACT). Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`. ORDER answers the permutation instead.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: unorderedElement → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`, `LANG.VALUES.EXACT`
 - **Syntax:** `[ 3 1 2 ] SORT`
 - **ERROR conditions:** `nonVector`, `nonNumeric`
 
 ## `ORDER`
 
-The indices that would sort a Vector of numbers ascending: `[ 30 10 20 ] ORDER` is `[ 1 2 0 ]`, so gathering by it sorts: `[ 30 10 20 ] 'V' BIND V V ORDER GET` is `[ 10 20 30 ]`. Ties keep their original order: `[ 2 1 2 1 ] ORDER` is `[ 1 3 0 2 ]`. Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`.
+The indices that would sort a Vector of numbers ascending: `[ 30 10 20 ] ORDER` is `[ 1 2 0 ]`, so gathering by it sorts: `[ 30 10 20 ] 'V' BIND V V ORDER GET` is `[ 10 20 30 ]`. Ties keep their original order: `[ 2 1 2 1 ] ORDER` is `[ 1 3 0 2 ]`. A Vector holding `0/0`, which has no order, projects NIL(domainMiss) as SORT does (LANG.VALUES.EXACT). Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: unorderedElement → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`, `LANG.VALUES.EXACT`
 - **Syntax:** `[ 30 10 20 ] ORDER`
 - **ERROR conditions:** `nonVector`, `nonNumeric`
 
@@ -629,16 +629,16 @@ Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Members
 
 ## `BSEARCH`
 
-The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
+The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing, and one holding `0/0`, which has no order, projects NIL(domainMiss), as does a key of `0/0` in its own lane (LANG.VALUES.EXACT). Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
+- **NIL policy:** `passthroughThenProject`; projection: notFound,unorderedOperand → notFound, domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`, `LANG.VALUES.EXACT`
 - **Syntax:** `[ 1 3 5 7 ] [ 5 ] BSEARCH`
 - **ERROR conditions:** `nonVector`, `unsortedInput`, `nonNumeric`
 
@@ -914,7 +914,7 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 
 ## `NUM`
 
-Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'`, `'1/0'` — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (`'1e99999999'`), projects NIL(spaceExhausted). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.
+Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`, and `'5/0' NUM` is `1/0`, the pair reduced to its sign over zero (LANG.VALUES.EXACT). Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (`'1e99999999'`), projects NIL(spaceExhausted). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
@@ -929,7 +929,7 @@ Parse text as a number, by the same grammar a source literal is read with: `'3/4
 
 ## `STR`
 
-Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. A Symbol is written as its bare name — `[ ADD ] 0 GET STR` is `'ADD'` — and that text is a String, not the Symbol: no Word turns it back into one, so a name held as text is never called (LANG.DICTIONARY.ACYCLIC). The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `1/3 STR NUM` is `1/3`, as `x STR NUM` gives back every number with a lexeme. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
+Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `1 0 DIV STR` is `'1/0'`, `TRUE STR` is `'TRUE'`. A Symbol is written as its bare name — `[ ADD ] 0 GET STR` is `'ADD'` — and that text is a String, not the Symbol: no Word turns it back into one, so a name held as text is never called (LANG.DICTIONARY.ACYCLIC). The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `1/3 STR NUM` is `1/3`, as `x STR NUM` gives back every number with a lexeme. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
@@ -943,16 +943,16 @@ Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is
 
 ## `FORMAT`
 
-Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidInteger` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.
+Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. No decimal lies at or beyond the three points over zero, so `1/0`, `-1/0` and `0/0` project NIL(domainMiss) (LANG.VALUES.EXACT); STR writes their lexemes. The digit count is a non-negative integer (`invalidInteger` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: noDecimalForValue → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `1/3 5 FORMAT`
 - **ERROR conditions:** `nonNumeric`, `invalidInteger`, `shapeMismatch`
 
@@ -973,7 +973,7 @@ Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object beco
 
 ## `JSON-ENCODE`
 
-Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other rational is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. Decoding what this Word writes gives back the value it was given, and a rational written as a lexeme comes back as that String, from which `NUM` recovers the number.
+Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other number is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"` and `1/0` as `"1/0"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. Decoding what this Word writes gives back the value it was given, and a number written as a lexeme comes back as that String, from which `NUM` recovers the number.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
@@ -1002,7 +1002,7 @@ A block run where it stands, its results left on the stack: `[ 1 2 ADD ] EXEC` i
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record: `[ DIV ] 0 GET CONTRACT 'partiality' GET` is `'projecting'`. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record: `[ SQRT ] 0 GET CONTRACT 'partiality' GET` is `'projecting'`. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
@@ -1045,7 +1045,7 @@ The absence written into the program: `NIL NIL?` is `TRUE`, and its reason is `l
 
 ## `NIL?`
 
-Whether a value is absent: `1 0 DIV NIL?` is `TRUE` and `5 NIL?` is `FALSE`. It asks about the whole value, so a Vector holding a NIL is present: `[ 1 NIL ] NIL?` is `FALSE`. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).
+Whether a value is absent: `-1 SQRT NIL?` is `TRUE` and `5 NIL?` is `FALSE`; a quotient by zero is a number, so `1 0 DIV NIL?` is `FALSE` (LANG.VALUES.EXACT). It asks about the whole value, so a Vector holding a NIL is present: `[ 1 NIL ] NIL?` is `FALSE`. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
@@ -1055,11 +1055,11 @@ Whether a value is absent: `1 0 DIV NIL?` is `TRUE` and `5 NIL?` is `FALSE`. It 
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 DIV NIL?`
+- **Syntax:** `-1 SQRT NIL?`
 
 ## `NIL-REASON`
 
-The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero'`, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.
+The reason an absence carries, as text: `-1 SQRT NIL-REASON` is `'domainMiss'`, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
@@ -1069,7 +1069,7 @@ The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`, `LANG.FAILURE.PROJECT`
-- **Syntax:** `1 0 DIV NIL-REASON`
+- **Syntax:** `-1 SQRT NIL-REASON`
 
 ## `ABSENT`
 

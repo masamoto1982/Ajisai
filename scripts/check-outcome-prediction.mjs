@@ -61,13 +61,13 @@ const ADVERSARIAL = [
   // claim `error:unknownWord` *exactly*.
   'ADD FROBNICATE',
   "'a' 1 ADD FROBNICATE",
-  '1 0 DIV FROBNICATE',
+  '-1 SQRT FROBNICATE',
   'FROBNICATE',
   // A block can be pushed by one Word and executed by another, so a literal
   // that is inert *where it is written* still runs later. Prediction used to
   // skip anything a data literal contained.
   "[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC",
-  "[ [ 1 0 DIV ] ] 'G' DEF G EXEC",
+  "[ [ -1 SQRT ] ] 'G' DEF G EXEC",
   '[ 1 ADD ] EXEC',
   '[ 1 2 ADD ] 1 GET EXEC',
   // A String is not a code operand, so neither of these runs `DEL`: both
@@ -86,12 +86,16 @@ const ADVERSARIAL = [
   '1 2 ADD',
   '[ 1 2 3 ] [ 2 MUL ] MAP',
   "[ 1 ADD ] 'INC' DEF 5 INC",
-  "1 0 DIV 'S' BIND 9 S S NIL? SELECT",
+  "-1 SQRT 'S' BIND 9 S S NIL? SELECT",
+  // Division is total: the points over zero are numbers that flow on.
+  '1 0 DIV 1 ADD',
+  '0 0 DIV 1 LT',
+  '[ 1 0/0 ] SORT',
   // Reason loss: a lane holds an absence but not the reason for it, so a
   // computed NIL that crosses one twice comes back reasonless and reads as
   // `nil:literal` — with no NIL written anywhere in the source. Prediction
   // must admit that (word_outcome_vocabulary::close_over_nil_reason_loss).
-  '[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET',
+  '[ 4 -1 ] SQRT [ 1 1 ] DIV 1 GET',
   'NIL 1 ADD',
 ];
 
@@ -109,6 +113,7 @@ const ADVERSARIAL = [
 const SWEEP_OPERANDS = [
   '1',
   '0',
+  '0/0',
   "'a'",
   'TRUE',
   'NIL',

@@ -19,10 +19,11 @@ use num_bigint::BigInt;
 use num_traits::{One, Signed};
 use std::cmp::Ordering;
 
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::runtime_limits::{binary_numeric_work, exact_work_bits};
 use crate::interpreter::value_extraction_helpers::{exact_real_of, extract_operands};
 use crate::interpreter::Interpreter;
+use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -69,7 +70,7 @@ fn round_scaled(x: &ExactReal, digits: u64) -> BigInt {
         return f.mul(&scale).round().numerator();
     }
     let scaled = x.mul(&ExactReal::from_fraction(scale));
-    let floor = scaled.floor().expect("an algebraic value has a floor");
+    let floor = scaled.floor();
     let floor_int = floor
         .as_rational()
         .expect("a floor is an integer")
@@ -128,6 +129,16 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
     if let Err(e) = interp.charge_numeric_work(format_work(&x, digits)) {
         interp.stack.extend(operands);
         return Err(e);
+    }
+    // No decimal lies at or beyond the three points over zero, so there is
+    // no text to render: a well-formed operand outside the operation's
+    // domain projects `domainMiss`, as `STR` does for an irrational.
+    if !x.is_finite() {
+        interp.stack.push(Value::nil_with_reason(
+            NilReason::DomainMiss,
+            Recoverability::Recoverable,
+        ));
+        return Ok(());
     }
     let n = round_scaled(&x, digits);
     interp.stack.push(Value::from_string(&spell(&n, digits)));

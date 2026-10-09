@@ -279,9 +279,6 @@ pub fn fraction_work_bits(f: &Fraction) -> u64 {
 
 /// The width a fraction actually occupies: the wider of its two halves.
 pub fn fraction_result_bits(f: &Fraction) -> u64 {
-    if f.is_nil() {
-        return 0;
-    }
     // Read where it lies: `numerator()` answers an owned `BigInt`, so asking a
     // wide value for its halves copied both just to count their bits.
     f.magnitude_bits()

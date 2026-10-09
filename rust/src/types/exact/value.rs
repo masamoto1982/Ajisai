@@ -1,11 +1,12 @@
 //! The exact-real scalar value behind `ValueData::ExactScalar` (LANG.VALUES.EXACT).
 //!
 //! An enum over the two numeric cost tiers: Tier 0 rationals (`Fraction`,
-//! an absent one included) and Tier 1 algebraic numbers. The variant
-//! is a cost class, never an observable property (LANG.AUTHORITY.FREEDOM): values
-//! demote to the cheapest tier that holds them exactly, so an
-//! `Algebraic` payload is always irrational. Sign, floor and order are
-//! decidable over both, so every comparison here is total.
+//! the three points over zero included) and Tier 1 algebraic numbers. The
+//! variant is a cost class, never an observable property
+//! (LANG.AUTHORITY.FREEDOM): values demote to the cheapest tier that holds
+//! them exactly, so an `Algebraic` payload is always irrational. Sign, floor
+//! and order are decidable over both, so every comparison here decides —
+//! except one asked of `0/0`, which has no order (`Fraction::order`).
 //!
 //! Its rational view (`best_rational_approximation`) is derived by
 //! continued-fraction convergents, computed here and never stored — the
@@ -20,8 +21,8 @@ use std::cmp::Ordering;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExactReal {
-    /// Tier 0: an exact rational (the nil fraction doubles as the absent
-    /// value, exactly as in `Fraction` itself).
+    /// Tier 0: an exact rational, or one of the three points over zero
+    /// (`fraction_extended`).
     Rational(Fraction),
     /// Tier 1: an algebraic irrational in multiquadratic normal form.
     /// Invariant: never rational (rational results demote eagerly). Boxed:
@@ -101,11 +102,35 @@ impl ExactReal {
         self.as_rational().cloned()
     }
 
+    /// Whether the value is a rational or an algebraic irrational, rather
+    /// than one of the three points over zero.
     #[inline]
-    pub fn is_nil(&self) -> bool {
+    pub fn is_finite(&self) -> bool {
         match self {
-            Self::Rational(f) => f.is_nil(),
-            Self::Algebraic(_) => false,
+            Self::Rational(f) => f.is_finite(),
+            Self::Algebraic(_) => true,
+        }
+    }
+
+    /// The sign of the value, decidable over the whole domain.
+    pub fn signum(&self) -> Ordering {
+        match self {
+            Self::Rational(f) => f.signum(),
+            Self::Algebraic(a) => a.sign(),
+        }
+    }
+
+    /// The value as the rational an operation over the three points reads:
+    /// itself for a rational, and its sign for an irrational, since only the
+    /// sign of a finite operand reaches such a result (`fraction_extended`).
+    fn extended_view(&self) -> Fraction {
+        match self {
+            Self::Rational(f) => f.clone(),
+            Self::Algebraic(a) => match a.sign() {
+                Ordering::Greater => Fraction::from(1),
+                Ordering::Less => Fraction::from(-1),
+                Ordering::Equal => Fraction::from(0),
+            },
         }
     }
 
@@ -128,23 +153,9 @@ impl ExactReal {
         }
     }
 
-    // ---- Arithmetic (field operations, nil-propagating) ----
+    // ---- Arithmetic (the four operations, total) ----
 
-    /// The absent operand a law passes through, leftmost first, as it is:
-    /// an absent rational keeps its pair (`Fraction::over_zero`), so what a
-    /// zero divisor refused to divide travels through the arithmetic after
-    /// it. `None` when both operands are present.
-    fn absent_operand(&self, other: &Self) -> Option<Self> {
-        if self.is_nil() {
-            return Some(self.clone());
-        }
-        if other.is_nil() {
-            return Some(other.clone());
-        }
-        None
-    }
-
-    /// Negation. Preserves nil.
+    /// Negation.
     pub fn neg(&self) -> Self {
         match self {
             Self::Rational(f) => Self::Rational(f.neg()),
@@ -201,30 +212,21 @@ impl ExactReal {
         }
     }
 
-    /// Reciprocal `1/x`. `Rational(nil)` for nil; `None` for an exactly
-    /// zero operand — decided algebraically, with no budget, because an
-    /// `Algebraic` is never zero.
-    pub fn reciprocal(&self) -> Option<Self> {
+    /// Reciprocal `1/x`, total: the reciprocal of zero is `1/0`
+    /// (`Fraction::reciprocal`), and an `Algebraic` is never zero.
+    pub fn reciprocal(&self) -> Self {
         match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return Some(Self::Rational(f.clone()));
-                }
-                if f.is_zero() {
-                    return None;
-                }
-                let (n, d) = f.to_bigint_pair();
-                Some(Self::Rational(Fraction::new(d, n)))
-            }
-            Self::Algebraic(a) => Some(Self::from_result(a.reciprocal())),
+            Self::Rational(f) => Self::Rational(f.reciprocal()),
+            Self::Algebraic(a) => Self::from_result(a.reciprocal()),
         }
     }
 
-    /// Addition. Nil-propagating; demotes to `Rational` whenever the sum
-    /// is rational (cheapest-tier-wins).
+    /// Addition; demotes to `Rational` whenever the sum is rational
+    /// (cheapest-tier-wins). An operand over zero decides the sum by the
+    /// pair formulas, to which a finite operand contributes its sign alone.
     pub fn add(&self, other: &Self) -> Self {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !self.is_finite() || !other.is_finite() {
+            return Self::Rational(self.extended_view().add(&other.extended_view()));
         }
         match (self, other) {
             (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.add(b)),
@@ -237,8 +239,8 @@ impl ExactReal {
 
     /// Subtraction `self − other`.
     pub fn sub(&self, other: &Self) -> Self {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !self.is_finite() || !other.is_finite() {
+            return Self::Rational(self.extended_view().sub(&other.extended_view()));
         }
         match (self, other) {
             (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.sub(b)),
@@ -248,8 +250,8 @@ impl ExactReal {
 
     /// Multiplication.
     pub fn mul(&self, other: &Self) -> Self {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !self.is_finite() || !other.is_finite() {
+            return Self::Rational(self.extended_view().mul(&other.extended_view()));
         }
         match (self, other) {
             (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.mul(b)),
@@ -260,80 +262,68 @@ impl ExactReal {
         }
     }
 
-    /// Division `self / other`. `Rational(nil)` for nil operands; `None`
-    /// for a zero divisor, which is decidable.
-    pub fn div(&self, other: &Self) -> Option<Self> {
-        if let Some(absent) = self.absent_operand(other) {
-            return Some(absent);
-        }
-        if other.is_structurally_zero() {
-            return None;
+    /// Division `self / other`, total: multiplication by the reciprocal. A
+    /// zero divisor answers the dividend's sign over zero.
+    pub fn div(&self, other: &Self) -> Self {
+        if !self.is_finite() || !other.is_finite() || other.is_structurally_zero() {
+            return Self::Rational(self.extended_view().div(&other.extended_view()));
         }
         match (self, other) {
-            (Self::Rational(a), Self::Rational(b)) => Some(Self::Rational(a.div(b))),
-            (Self::Rational(q), Self::Algebraic(b)) => Some(Self::from_result(b.recip_scaled(q))),
+            (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.div(b)),
+            (Self::Rational(q), Self::Algebraic(b)) => Self::from_result(b.recip_scaled(q)),
             (Self::Algebraic(a), Self::Rational(q)) => {
-                let inv = Fraction::new(q.denominator(), q.numerator());
-                Some(Self::from_result(a.mul_fraction(&inv)))
+                Self::from_result(a.mul_fraction(&q.reciprocal()))
             }
-            (Self::Algebraic(a), Self::Algebraic(b)) => Some(Self::from_result(a.div(b))),
+            (Self::Algebraic(a), Self::Algebraic(b)) => Self::from_result(a.div(b)),
         }
     }
 
     // ---- Observations ----
 
-    /// Three-way comparison (LANG.VALUES.EXACT). Total over every non-nil
-    /// pair — order in the field is decidable — and `None` only when an
-    /// operand is the absent value, which has no order.
+    /// Three-way comparison (LANG.VALUES.EXACT). Order in the field is
+    /// decidable, `-1/0` lies below it and `1/0` above, so every pair
+    /// decides — except one holding `0/0`, which has no order: `None`.
     pub fn cmp_exact(&self, other: &Self) -> Option<Ordering> {
-        if self.is_nil() || other.is_nil() {
-            return None;
+        if !self.is_finite() || !other.is_finite() {
+            return self.extended_view().order(&other.extended_view());
         }
         Some(match (self, other) {
-            (Self::Rational(a), Self::Rational(b)) => a.cmp(b),
+            (Self::Rational(a), Self::Rational(b)) => a.cmp_finite(b),
             (Self::Rational(q), Self::Algebraic(b)) => b.cmp_fraction(q).reverse(),
             (Self::Algebraic(a), Self::Rational(q)) => a.cmp_fraction(q),
             (Self::Algebraic(a), Self::Algebraic(b)) => a.cmp(b),
         })
     }
 
-    /// Floor as an exact real. `None` for nil.
-    pub fn floor(&self) -> Option<ExactReal> {
+    /// Floor as an exact real. Each of the three points over zero is its
+    /// own floor (`Fraction::floor`).
+    pub fn floor(&self) -> ExactReal {
         match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return None;
-                }
-                Some(Self::from_bigint(f.numerator().div_floor(&f.denominator())))
-            }
-            Self::Algebraic(a) => Some(Self::from_bigint(a.floor_int())),
+            Self::Rational(f) => Self::Rational(f.floor()),
+            Self::Algebraic(a) => Self::from_bigint(a.floor_int()),
         }
     }
 
     /// Round to the nearest integer, ties away from zero (matching
-    /// `Fraction::round`). `None` for nil.
-    pub fn round(&self) -> Option<ExactReal> {
+    /// `Fraction::round`).
+    pub fn round(&self) -> ExactReal {
         match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return None;
-                }
-                Some(Self::Rational(f.round()))
-            }
-            Self::Algebraic(a) => Some(Self::from_bigint(a.round_int())),
+            Self::Rational(f) => Self::Rational(f.round()),
+            Self::Algebraic(a) => Self::from_bigint(a.round_int()),
         }
     }
 
     /// Best rational approximation within a denominator bound: the
     /// deepest principal convergent whose denominator does not exceed
-    /// `max_denominator`. `None` for nil or a bound below 1.
+    /// `max_denominator`. `None` for one of the three points over zero,
+    /// which no rational approximates, or a bound below 1.
     pub fn best_rational_approximation(&self, max_denominator: &BigInt) -> Option<Fraction> {
         if max_denominator < &BigInt::one() {
             return None;
         }
         match self {
             Self::Rational(f) => {
-                if f.is_nil() {
+                if !f.is_finite() {
                     return None;
                 }
                 if &f.denominator() <= max_denominator {

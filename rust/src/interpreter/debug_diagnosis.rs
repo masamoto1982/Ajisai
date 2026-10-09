@@ -204,8 +204,8 @@ impl CauseClass {
 fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
     match reason {
         // A well-formed operand outside the operation's domain: a negative
-        // radicand, a zero divisor.
-        NilReason::DomainMiss | NilReason::DivisionByZero => CauseClass::Domain,
+        // radicand, an order asked of `0/0`.
+        NilReason::DomainMiss => CauseClass::Domain,
         // A budget rather than a mistake: the materialization ceiling answers
         // to "the request is too big", not "the program is wrong" — the
         // distinction `ResourceLimit` exists for.
@@ -403,7 +403,7 @@ fn build_summary(
         .unwrap_or_else(|| locus.kind.as_protocol_str().to_string());
     // The outcome in the ids spec/outcomes.json and `outcomes` use, not the
     // engine's own type names: this line used to read
-    // `ExecuteWord / DIV / Domain (divisionByZero) nil=DivisionByZero`, four
+    // `ExecuteWord / SQRT / Domain (domainMiss) nil=DomainMiss`, four
     // spellings for one fact, two of them Rust `Debug` output.
     let outcome = match (nil_reason, category) {
         (Some(reason), _) => format!("nil:{}", reason.as_protocol_str()),

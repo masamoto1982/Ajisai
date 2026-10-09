@@ -158,20 +158,12 @@
       "note": "Ordered after the two exact matches, so it catches every remaining lexeme in which a delimiter is glued to anything — '[1', '2]', ']^'. A delimiter is a word like any other and must stand alone."
     },
     {
-      "id": "zeroDenominator",
-      "match": {
-        "pattern": "zeroDenominator"
-      },
-      "condition": "zeroDenominator",
-      "note": "Ordered before the number rule. A rational whose denominator is zero has the shape of a number and denotes none, so it is neither a Number nor a name: it is refused with the other source errors, before the program runs, rather than halfway through it when the literal is reached."
-    },
-    {
       "id": "number",
       "match": {
         "pattern": "numeric"
       },
       "emits": "Number",
-      "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and a bare '/' is a name for exactly the same reason."
+      "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and a bare '/' is a name for exactly the same reason. A denominator of zero is accepted like any other: '1/0' denotes one of the three points over zero (LANG.VALUES.EXACT)."
     },
     {
       "id": "symbol",
@@ -190,6 +182,7 @@
       "A sign must be followed by an ASCII digit, which is what leaves a bare '-' or '+' an ordinary name.",
       "A decimal carries at least one digit on both sides of the point: '0.5' and '5.0' are numbers, '.5' and '5.' are not. The point is therefore never the first or last character of a number, which keeps a lone '.' unambiguously a name.",
       "A rational takes no fraction and no exponent: after the denominator the lexeme must end.",
+      "A denominator may be zero: '1/0', '-5/0' and '0/0' are numbers, each denoting the reduced pair its sign over zero gives (LANG.VALUES.EXACT), so a lexeme of the rational shape is a number whatever its denominator.",
       "This is the single definition of what text denotes a number. A conversion from Text to a Scalar accepts exactly these lexemes and projects everything else to NIL, so the language has one numeric grammar rather than one per entry point."
     ],
     "examples": {
@@ -206,7 +199,10 @@
         "1e5",
         "1E5",
         "1e-5",
-        "1.5e+3"
+        "1.5e+3",
+        "1/0",
+        "0/0",
+        "-5/0"
       ],
       "rejectedAsName": [
         ".5",
@@ -223,10 +219,6 @@
         "/",
         "１"
       ]
-    },
-    "zeroDenominator": {
-      "pattern": "^[+-]?[0-9]+/0+$",
-      "note": "The numeric lexemes that denote no rational. A conversion from Text reads the same grammar and answers these with the NIL it answers any text that is not a number."
     }
   },
   "stringLiteral": {
@@ -249,14 +241,6 @@
       "summary": "A string literal ran to end of input without a closing quote followed by whitespace.",
       "messageContains": "Unclosed literal",
       "witness": "'foo"
-    },
-    {
-      "id": "zeroDenominator",
-      "phase": "scan",
-      "errorCategory": "malformedSource",
-      "summary": "A rational literal's denominator was zero.",
-      "messageContains": "zero denominator",
-      "witness": "1/0"
     },
     {
       "id": "bracketMustStandAlone",

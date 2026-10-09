@@ -136,9 +136,21 @@ fn sqrt_normalizes_like_the_historical_constructor() {
         Algebraic::sqrt_of_fraction(&frac(0, 1)),
         Some(AlgebraicResult::Rational(frac(0, 1)))
     );
-    // Negative and nil inputs are rejected.
+    // A negative radicand is rejected, -1/0 included; 1/0 and 0/0 are their
+    // own roots.
     assert_eq!(Algebraic::sqrt_of_fraction(&frac(-2, 1)), None);
-    assert_eq!(Algebraic::sqrt_of_fraction(&Fraction::nil()), None);
+    assert_eq!(
+        Algebraic::sqrt_of_fraction(&Fraction::negative_infinity()),
+        None
+    );
+    assert_eq!(
+        Algebraic::sqrt_of_fraction(&Fraction::positive_infinity()),
+        Some(AlgebraicResult::Rational(Fraction::positive_infinity()))
+    );
+    assert_eq!(
+        Algebraic::sqrt_of_fraction(&Fraction::nullity()),
+        Some(AlgebraicResult::Rational(Fraction::nullity()))
+    );
 }
 
 #[test]

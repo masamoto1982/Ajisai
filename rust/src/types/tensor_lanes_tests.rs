@@ -1,38 +1,28 @@
 //! A row of a dense tensor (`Value::child`, `DenseTensor::lanes`) against
-//! the row built lane by lane, as it was: every lane read as a `Fraction`,
-//! the absences inside the row rebased, and the whole packed again by
-//! `Value::from_tensor_with_absences`. The two must be the same value down
-//! to its columns, its purity flag and the reason of every absent lane.
-
-use std::collections::BTreeMap;
+//! the row built lane by lane, as it was: every lane read as a `Fraction`
+//! and the whole packed again by `Value::from_tensor`. The two must be the
+//! same value down to its columns and its purity flag.
 
 use proptest::prelude::*;
 
 use super::fraction::Fraction;
 use super::{DenseTensor, Value, ValueData};
-use crate::error::NilReason;
-use crate::semantic::Recoverability;
 
 fn reference_row(data: &DenseTensor, shape: &[usize], index: usize) -> Value {
     let rest: Vec<usize> = shape[1..].to_vec();
     let stride: usize = rest.iter().product();
     let start = index * stride;
     let slice: Vec<Fraction> = (start..start + stride)
-        .map(|lane| data.fraction_or_nil(lane))
+        .map(|lane| data.fraction_at(lane))
         .collect();
-    let absences = data
-        .absences()
-        .filter(|(lane, _)| *lane >= start && *lane < start + stride)
-        .map(|(lane, metadata)| (lane - start, metadata.clone()))
-        .collect();
-    Value::from_tensor_with_absences(slice, rest, absences)
+    Value::from_tensor(slice, rest)
 }
 
-/// A lane: a small rational, or NIL for one of a few reasons.
-fn lane() -> impl Strategy<Value = Option<(i64, i64, u8)>> {
+/// A lane: a small rational, or one of the three points over zero.
+fn lane() -> impl Strategy<Value = Fraction> {
     prop_oneof![
-        6 => (-50i64..50, 1i64..4).prop_map(|(n, d)| Some((n, d, 0))),
-        1 => (0u8..3).prop_map(|r| Some((0, 0, r + 1))),
+        6 => (-50i64..50, 1i64..4).prop_map(|(n, d)| Fraction::new(n.into(), d.into())),
+        1 => (-1i64..=1).prop_map(|sign| Fraction::new(sign.into(), 0.into())),
     ]
 }
 
@@ -45,25 +35,8 @@ proptest! {
         lanes in prop::collection::vec(lane(), 64),
     ) {
         let len: usize = dims.iter().product();
-        let mut fractions = Vec::with_capacity(len);
-        let mut absences = BTreeMap::new();
-        for (index, lane) in lanes.iter().cycle().take(len).enumerate() {
-            match lane {
-                Some((n, d, 0)) => fractions.push(Fraction::new((*n).into(), (*d).into())),
-                Some((_, _, reason)) => {
-                    fractions.push(Fraction::nil());
-                    let reason = match reason {
-                        1 => NilReason::DivisionByZero,
-                        2 => NilReason::IndexOutOfBounds,
-                        _ => NilReason::NotFound,
-                    };
-                    let nil = Value::nil_with_reason(reason, Recoverability::Recoverable);
-                    absences.insert(index, nil.absence.as_deref().cloned().unwrap());
-                }
-                None => unreachable!(),
-            }
-        }
-        let tensor = DenseTensor::from_fractions_with_absences(fractions, dims.clone(), absences)
+        let fractions: Vec<Fraction> = lanes.iter().cycle().take(len).cloned().collect();
+        let tensor = DenseTensor::from_fractions(fractions, dims.clone())
             .expect("small lanes pack");
         let value = Value::new(
             ValueData::Tensor {

@@ -280,35 +280,37 @@ mod number_sign_guards {
     }
 }
 
-/// A malformed numeric literal is a source error, refused before anything runs.
+/// A pair over zero is a number, read where every other number is.
 ///
-/// `1/0` has the shape of a number and denotes none. It used to tokenize as a
-/// Number and fail only when reached, so `1 PRINT 1/0` printed and then failed —
-/// a source error surfacing halfway through a run, the one source error that
-/// did. The lexical grammar (`spec/grammar.json`) is total: text is either one
-/// token sequence or one source error, decided before evaluation. The zero
-/// denominator is now one of those errors, like an unclosed string.
+/// `1/0` denotes one of the three points over zero (LANG.VALUES.EXACT), so it
+/// tokenizes as a Number and runs like one: `1 PRINT 1/0` prints and then
+/// leaves `1/0`. It used to be the one source error that surfaced halfway
+/// through a run, and then a source error refused up front; now it is a
+/// value, and nothing is refused.
 ///
 /// Split out of `tokenizer_regression_tests` rather than added to it — that file
 /// is a regression corpus for the lexer's token stream, this is a question about
-/// when a refusal happens, and the 500-line budget
+/// what a literal denotes, and the 500-line budget
 /// (docs/dev/specification-implementation-rules.md) wanted the split anyway.
 #[cfg(test)]
-mod malformed_numeric_literal_tests {
+mod zero_denominator_literal_tests {
     use crate::interpreter::Interpreter;
 
-    /// Nothing before the bad literal runs: the program is refused whole.
+    /// Everything before the literal runs, and the literal is a value.
     #[tokio::test]
-    async fn nothing_before_a_malformed_literal_runs() {
-        for source in ["1 PRINT 1/0", "'hi' PRINT 1/0"] {
+    async fn a_program_holding_a_literal_over_zero_runs_whole() {
+        for (source, expected) in [("1 PRINT 1/0", "1/1\n"), ("'hi' PRINT 1/0", "hi\n")] {
             let mut interp = Interpreter::new();
-            let result = interp.execute(source).await;
-            assert!(result.is_err(), "`{source}` must be refused");
-            assert!(
-                interp.host_effects().is_empty(),
-                "`{source}` must be refused before its PRINT runs"
+            interp
+                .execute(source)
+                .await
+                .unwrap_or_else(|e| panic!("`{source}` must run: {e}"));
+            assert_eq!(interp.collect_output(), expected, "`{source}`");
+            assert_eq!(
+                interp.get_stack().last().map(|v| v.to_string()),
+                Some("1/0".to_string()),
+                "`{source}` must leave 1/0"
             );
-            assert_eq!(interp.collect_output(), "", "`{source}` printed");
         }
     }
 
@@ -346,28 +348,29 @@ mod malformed_numeric_literal_tests {
         );
     }
 
-    /// And the refusal is the same wherever the literal is written — bare,
-    /// inside a vector literal, and in a `DEF` body.
+    /// And the value is the same wherever the literal is written — bare,
+    /// inside a vector literal, and in a `DEF` body: the pair reduced to its
+    /// sign over zero.
     #[tokio::test]
-    async fn a_malformed_literal_is_refused_with_the_parses_own_message() {
-        for source in [
-            "1/0",
-            "0/0",
-            "-1/0",
-            "[ 1/0 ]",
-            "1/0 2 ADD",
-            "[ 1/0 MUL ] 'W' DEF",
+    async fn a_literal_over_zero_reduces_to_its_point_wherever_it_is_written() {
+        for (source, expected) in [
+            ("1/0", "1/0"),
+            ("0/0", "0/0"),
+            ("-1/0", "-1/0"),
+            ("7/00", "1/0"),
+            ("[ 1/0 ]", "[ 1/0 ]"),
+            ("1/0 2 ADD", "1/0"),
+            ("[ 1/0 MUL ] 'W' DEF -3 W", "-1/0"),
         ] {
             let mut interp = Interpreter::new();
-            let error = interp
+            interp
                 .execute(source)
                 .await
-                .expect_err(&format!("`{source}` must be refused"));
-            let text = format!("{error:?}");
-            assert!(
-                text.contains("MalformedSource") && text.contains("zero denominator"),
-                "`{source}` must be refused as a malformed source with the \
-                 parse's own reason, got: {text}"
+                .unwrap_or_else(|e| panic!("`{source}` must run: {e}"));
+            assert_eq!(
+                interp.get_stack().last().map(|v| v.to_string()),
+                Some(expected.to_string()),
+                "`{source}`"
             );
         }
     }

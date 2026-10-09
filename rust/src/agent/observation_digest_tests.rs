@@ -46,8 +46,10 @@ fn equal_values_digest_equally() {
         Value::from_bool(false),
         Value::from_string(""),
         Value::from_string("A"),
-        Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
+        Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Unknown),
         Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown),
+        Value::from_fraction(Fraction::positive_infinity()),
+        Value::from_fraction(Fraction::nullity()),
         sqrt_of(2),
         sqrt_of(3),
         sqrt_of(12),
@@ -167,10 +169,10 @@ async fn unknown_is_observed_as_a_nil() {
 /// (LANG.VALUES.NIL), so two differently-caused NILs must digest apart.
 #[test]
 fn nil_reasons_separate_digests() {
-    let division = Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
+    let domain = Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Unknown);
     let missing = Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown);
-    assert_ne!(division, missing);
-    assert_ne!(digest_of(&division), digest_of(&missing));
+    assert_ne!(domain, missing);
+    assert_ne!(digest_of(&domain), digest_of(&missing));
 }
 
 /// Two ABSENT NILs are the same value exactly when their Texts are equal

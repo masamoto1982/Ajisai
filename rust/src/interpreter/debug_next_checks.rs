@@ -106,54 +106,14 @@ pub(crate) fn build_next_checks(
 
     match why {
         CauseClass::Domain => {
-            if matches!(nil_reason, Some(NilReason::DivisionByZero)) {
-                // Name the Word that actually met the zero rather than
-                // hard-coding `DIV`: any Word that declares the same
-                // `divisorEqualsZero` condition must send the reader to an
-                // operand of the Word it actually called.
-                let word_label = word.unwrap_or("the word");
-                out.push(check(
-                    "checkDivisor",
-                    ("Check divisor", "除数を確認する"),
-                    (
-                        &format!("Inspect the right operand of {}.", word_label),
-                        &format!("{} の右オペランドを確認する", word_label),
-                    ),
-                ));
-                // Name the Words that actually recover an absence. This
-                // check has twice named a Word the dictionary would reject —
-                // first `SAFE`, which never existed, then `OR-NIL`, which was
-                // retired — and a diagnosis is the one surface an agent is
-                // told to follow literally, so a stale spelling here costs
-                // more than saying nothing. `word_recovery_tests` holds every
-                // Word a check names to the dictionary, which is what stops
-                // that class of staleness coming back silently.
-                out.push(check(
-                    "checkZeroIsExpected",
-                    ("Check zero is expected", "0 が正常値かを確認する"),
-                    (
-                        "If 0 is a legitimate value here, name the quotient with BIND and choose a fallback with NIL? and SELECT, or guard the divisor.",
-                        "0 が正常値としてあり得るなら商を BIND で名付け、NIL? と SELECT で代替値を選ぶか、除数を事前に確認する",
-                    ),
-                ));
-                out.push(check(
-                    "checkDivisorOrigin",
-                    ("Check divisor origin", "除数の生成元を確認する"),
-                    (
-                        "If 0 is anomalous, inspect the Word that produced the right operand.",
-                        "0 が異常値なら、右オペランドを生成した直前の word を確認する",
-                    ),
-                ));
-            } else {
-                out.push(check(
-                    "checkOperandDomain",
-                    ("Check operand domain", "オペランドの値域を確認する"),
-                    (
-                        "Check whether the operand left the domain the operation admits.",
-                        "演算が許す値域の外に入っていないか確認する",
-                    ),
-                ));
-            }
+            out.push(check(
+                "checkOperandDomain",
+                ("Check operand domain", "オペランドの値域を確認する"),
+                (
+                    "Check whether the operand left the domain the operation admits.",
+                    "演算が許す値域の外に入っていないか確認する",
+                ),
+            ));
         }
         CauseClass::StackShape => {
             let word_label = word.unwrap_or("the word");

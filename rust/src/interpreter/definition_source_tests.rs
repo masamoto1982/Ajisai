@@ -113,7 +113,7 @@ async fn a_nested_record_rebuilds_inside_out() {
 async fn a_reasoned_nil_has_no_source_and_is_refused() {
     let mut interp = Interpreter::new();
     let error = interp
-        .execute("1 0 DIV 1 COLLECT 'Z' DEF")
+        .execute("-1 SQRT 1 COLLECT 'Z' DEF")
         .await
         .expect_err("no source denotes a reasoned NIL");
     assert!(
@@ -125,7 +125,7 @@ async fn a_reasoned_nil_has_no_source_and_is_refused() {
         ),
         "{error}"
     );
-    assert!(error.to_string().contains("divisionByZero"), "{error}");
+    assert!(error.to_string().contains("domainMiss"), "{error}");
     assert!(!interp.user_words.contains_key("Z"));
 
     interp.execute("NIL 1 COLLECT 'L' DEF").await.unwrap();
@@ -169,7 +169,7 @@ async fn a_value_carried_whole_through_exec_is_written_as_source() {
 async fn a_reasoned_nil_reaching_def_through_exec_is_refused() {
     let mut interp = Interpreter::new();
     let error = interp
-        .execute("1 0 DIV 1 COLLECT 1 COLLECT [ 'Z' DEF ] CONCAT EXEC")
+        .execute("-1 SQRT 1 COLLECT 1 COLLECT [ 'Z' DEF ] CONCAT EXEC")
         .await
         .expect_err("no source denotes a reasoned NIL");
     assert!(

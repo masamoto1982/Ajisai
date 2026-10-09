@@ -3,8 +3,8 @@
 // "each lane preserves the exactness, truth, NIL, and ERROR distinctions of
 // the scalar law").
 //
-// The scalar law is passthrough with the reason intact — `1 0 DIV 1 ADD` is still
-// `NIL(divisionByZero)`. This checks the lifted law says the same thing, lane
+// The scalar law is passthrough with the reason intact — `-1 SQRT 1 ADD` is still
+// `NIL(domainMiss)`. This checks the lifted law says the same thing, lane
 // for lane: a program that puts a reasoned NIL into a collection and then runs
 // element-wise Words over it must still report that reason, and must still
 // report an absence at all.
@@ -12,15 +12,15 @@
 // Both halves are needed, and neither sees the other's failure:
 //
 //   - The *reason* check catches a lane whose absence survived but whose
-//     reason did not. Every lane law that takes `Fraction` operands loses it:
-//     a `Fraction` records absence as a zero denominator and carries nothing
-//     about why, so the lane comes back reasonless — which reads as
-//     `nil:literal`, "a NIL the program wrote rather than computed"
-//     (spec/outcomes.json), for a NIL the program computed and never wrote.
-//   - The *count* check catches a lane that stopped being an absence. The
-//     exact-real lift read a NIL lane as `ExactReal::from_fraction(Fraction::
-//     nil())` — a number whose denominator happens to be zero — computed with
-//     it, and answered an observable `0/0` scalar. There is no reason to
+//     reason did not. A lane law that rebuilds a collection from numbers
+//     only can drop the reason on the way: the lane comes back reasonless —
+//     which reads as `nil:literal`, "a NIL the program wrote rather than
+//     computed" (spec/outcomes.json), for a NIL the program computed and
+//     never wrote.
+//   - The *count* check catches a lane that stopped being an absence. A
+//     dense tensor holds numbers only (LANG.VALUES.EXACT), so a lift that
+//     read a NIL lane as some number — a pair over zero, say — would compute
+//     with it and answer an observable `0/0` scalar. There is no reason to
 //     compare there because there is no NIL left to carry one, so the reason
 //     check passes such a lane in silence.
 //
@@ -54,16 +54,16 @@ const fail = report.fail;
 // only *that* a lane was absent; now that it records why, that vector is
 // stored densely like any other and takes the same path as a computed one.
 const PRODUCERS = [
-  ['[ 1 2 ] [ 1 0 ] DIV', 'divisionByZero', [2]],
-  ['[ 6 6 6 ] [ 1 2 0 ] DIV', 'divisionByZero', [3]],
-  ['[ 6 ] [ 1 2 0 ] DIV', 'divisionByZero', [3]],
+  ['[ 1 -2 ] SQRT', 'domainMiss', [2]],
+  ['[ 4 9 -1 ] SQRT', 'domainMiss', [3]],
+  ['[ 1 ] [ 4 9 -1 ] MUL SQRT', 'domainMiss', [3]],
   ['[ 4 -1 ] SQRT', 'domainMiss', [2]],
   ['[ -1 -4 ] SQRT', 'domainMiss', [2]],
   ["[ '1' 'a' ] [ NUM ] MAP", 'invalidEncoding', [2]],
-  ['[ 1 2 3 ] [ 0 DIV ] MAP', 'divisionByZero', [3]],
-  ['[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV', 'divisionByZero', [2]],
-  ['[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 1 1 ] ] DIV', 'divisionByZero', [2, 2]],
-  ['[ 1 [ 2 3 ] ] 0 DIV', 'divisionByZero', null],
+  ['[ 1 2 3 ] [ -1 MUL SQRT ] MAP', 'domainMiss', [3]],
+  ['[ 2 3 ] [ SQRT ] MAP [ 1 -1 ] SQRT MUL', 'domainMiss', [2]],
+  ['[ [ 1 -2 ] [ 3 4 ] ] SQRT', 'domainMiss', [2, 2]],
+  ['[ -1 [ -2 -3 ] ] SQRT', 'domainMiss', null],
   ['[ 1 NIL 3 ] [ 2 ] MUL', 'literal', [3]],
 ];
 

@@ -85,12 +85,13 @@ fn a_user_word_call_consumes_its_operands() {
 // ───────────────── projecting words project onto NIL for domain misses ──────
 
 /// `Projecting`/`CreatesNil` words project a well-formed domain miss onto NIL
-/// rather than raising (LANG.CONTRACT.REGISTRY, NIL Projection Rule LANG.FAILURE.PROJECT): division by
-/// zero and an out-of-range `GET` both yield NIL, not an error.
+/// rather than raising (LANG.CONTRACT.REGISTRY, NIL Projection Rule LANG.FAILURE.PROJECT): a
+/// negative radicand and an out-of-range `GET` both yield NIL, not an error.
+/// Division by zero is total and yields a number (LANG.VALUES.EXACT).
 #[test]
 fn projecting_words_project_onto_nil_for_domain_misses() {
-    assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
-    assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
+    assert_eq!(obs("-1 SQRT"), vec!["NIL"]);
+    assert_eq!(obs("1 0 DIV"), vec!["1/0"]);
     // GET consumes what it reads (LANG.STACK.CONSUMPTION): both
     // operands leave the stack and the projected NIL is all that remains.
     assert_eq!(obs("[ 1 2 3 ] 9 GET"), vec!["NIL"]);
@@ -156,23 +157,31 @@ fn key_word_contracts_match_spec_7_14() {
     assert_eq!(add.partiality, Partiality::Total);
     assert_eq!(add.nil_policy, NilPolicy::Passthrough);
 
-    // DIV declares `passthroughThenProject`, not `createsNil`: a NIL operand
-    // passes through unchanged, and it is a *well-formed* operand pair with a
-    // zero divisor that projects onto a fresh reasoned NIL. The hand-written
-    // table could not say both, so it said only the second.
+    // DIV is total (LANG.VALUES.EXACT): a quotient by zero is the dividend's
+    // sign over zero, a number, so there is nothing to project. A NIL operand
+    // passes through unchanged, exactly as it does for ADD.
     let div = c("DIV");
-    assert_eq!(div.partiality, Partiality::Projecting);
-    assert_eq!(div.nil_policy, NilPolicy::PassthroughThenProject);
+    assert_eq!(div.partiality, Partiality::Total);
+    assert_eq!(div.nil_policy, NilPolicy::Passthrough);
 
-    // EQ/LT declare a blanket `passthrough` and are total: a NIL operand
-    // passes through unchanged, and order and equality decide over every
-    // number the language holds (LANG.VALUES.EXACT), so they project nothing
-    // of their own.
-    for cmp in ["EQ", "LT"] {
-        let m = c(cmp);
-        assert_eq!(m.partiality, Partiality::Total, "{cmp}");
-        assert_eq!(m.nil_policy, NilPolicy::Passthrough, "{cmp}");
-    }
+    // SQRT declares `passthroughThenProject`, not `createsNil`: a NIL operand
+    // passes through unchanged, and it is a *well-formed* negative radicand
+    // that projects onto a fresh reasoned NIL. The hand-written table could
+    // not say both, so it said only the second.
+    let sqrt = c("SQRT");
+    assert_eq!(sqrt.partiality, Partiality::Projecting);
+    assert_eq!(sqrt.nil_policy, NilPolicy::PassthroughThenProject);
+
+    // EQ declares a blanket `passthrough` and is total: equality decides over
+    // every number the language holds (LANG.VALUES.EXACT). LT does not: `0/0`
+    // has no place in the order, so LT passes a NIL through and projects
+    // `domainMiss` on a well-formed operand it cannot order.
+    let eq = c("EQ");
+    assert_eq!(eq.partiality, Partiality::Total);
+    assert_eq!(eq.nil_policy, NilPolicy::Passthrough);
+    let lt = c("LT");
+    assert_eq!(lt.partiality, Partiality::Projecting);
+    assert_eq!(lt.nil_policy, NilPolicy::PassthroughThenProject);
 
     // `AND`/`NOT` declare `kleeneAbsorbing`, not a blanket `passthrough`:
     // a NIL operand does not always survive to the result (FALSE absorbs it

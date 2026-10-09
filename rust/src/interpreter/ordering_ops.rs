@@ -77,12 +77,19 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
     }
 
     match order_indices(&items) {
-        Ok(perm) => {
+        Ok(Some(perm)) => {
             let out: Vec<Value> = perm
                 .into_iter()
                 .map(|i| Value::from_int(i as i64))
                 .collect();
             interp.stack.push(Value::from_vector(out));
+            Ok(())
+        }
+        // A Vector holding `0/0` has no order to answer (LANG.VALUES.EXACT).
+        Ok(None) => {
+            interp
+                .stack
+                .push(crate::interpreter::comparison::unordered_projection());
             Ok(())
         }
         Err(e) => {
@@ -167,10 +174,9 @@ fn dense_integer_distinct_with_counts(
     let ValueData::Tensor { data, shape } = &value.data else {
         return Ok(None);
     };
-    // A rational lane is not identified by its numerator, an absent lane asks
-    // whether two NILs are the same value (their reasons decide, and a dense
-    // lane's reason lives elsewhere), and rank above 1 reports distinct *rows*.
-    if shape.len() != 1 || !data.is_pure_integer || !data.all_lanes_valid() {
+    // A rational lane is not identified by its numerator, and rank above 1
+    // reports distinct *rows*.
+    if shape.len() != 1 || !data.is_pure_integer {
         return Ok(None);
     }
 

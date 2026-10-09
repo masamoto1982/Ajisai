@@ -31,7 +31,6 @@ use crate::types::fraction::{Fraction, FractionRepr};
 use crate::types::small_rational::{self, add, div, mul, order};
 use crate::types::{DenseTensor, Value, ValueData};
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -273,14 +272,10 @@ impl Elements<'_> {
 
 fn elements(target: &Value) -> Option<(Ty, Elements<'_>)> {
     match &target.data {
-        ValueData::Tensor { data, shape }
-            if shape.len() == 1 && (data.is_pure_integer || data.all_lanes_valid()) =>
-        {
-            Some((
-                Ty::Num,
-                Elements::Columns(&data.numerators, &data.denominators),
-            ))
-        }
+        ValueData::Tensor { data, shape } if shape.len() == 1 && data.all_finite() => Some((
+            Ty::Num,
+            Elements::Columns(&data.numerators, &data.denominators),
+        )),
         ValueData::Vector(items) => {
             let lanes: Vec<(Ty, Pair)> = items
                 .iter()
@@ -335,7 +330,7 @@ fn promote_columns(ty: Ty, columns: Columns) -> Value {
     }
     let shape = vec![nums.len()];
     let integer = dens.iter().all(|d| *d == 1);
-    let tensor = DenseTensor::from_columns(nums, dens, shape.clone(), integer, BTreeMap::new());
+    let tensor = DenseTensor::from_columns(nums, dens, shape.clone(), integer);
     Value::new(
         ValueData::Tensor {
             data: Arc::new(tensor),

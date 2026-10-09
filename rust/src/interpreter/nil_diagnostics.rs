@@ -18,8 +18,9 @@
 //!     Unknown (U) is a NIL read in truth position (LANG.VALUES.TRUTH), so it
 //!     is an absence: `NIL?` answers TRUE for it and `NIL-REASON` reports the
 //!     reason it arrived with. Excluding U here briefly made
-//!     `1 0 DIV TRUE AND NIL-REASON` answer that it had no reason while the protocol
-//!     published `absence.reason = divisionByZero` for the same value.
+//!     `'x' NUM TRUE AND NIL-REASON` answer that it had no reason while the
+//!     protocol published `absence.reason = invalidEncoding` for the same
+//!     value.
 //!
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose
@@ -101,8 +102,8 @@ pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
 // A reasoned NIL flows like any other value (LANG.FAILURE.PASSTHROUGH): an
 // absent data operand is the result, reason unchanged, and the primitive does
 // not run; an element operand's absence travels with the element. Reading the
-// result alone, every Word downstream of `1 0 DIV` looked like the one that
-// answered `divisionByZero` — `1 0 DIV 2 ADD 3 MUL` recorded three
+// result alone, every Word downstream of `-1 SQRT` looked like the one that
+// answered `domainMiss` — `-1 SQRT 2 ADD 3 MUL` recorded three
 // `nilProduced` events, the last for `MUL` — and a host that shows the latest
 // event blamed the last Word the NIL passed. The Word that produced an absence
 // is the one that *minted* it (`crate::semantic::minted_absence_count`), and a
@@ -123,8 +124,8 @@ pub(crate) struct DispatchWitness {
 /// Looking only at the value itself missed every lifted projection. A Word
 /// lifted over a collection projects per lane (`LANG.COLLECTIONS.LIFT`), so
 /// the absence it produced sits inside the result rather than being the
-/// result: `6 0 DIV` was traced and `[ 6 ] [ 0 ] DIV` was not, and `[ 4 -1 ] SQRT`
-/// never was, though all three project for a reason the Word can name.
+/// result: `-1 SQRT` was traced and `[ 4 -1 ] SQRT` was not, though both
+/// project for a reason the Word can name.
 ///
 /// `Literal` is excluded because it is the absence a Word *received*, not one
 /// it made: a `NIL` written in source, whether it stands alone or as a lane
@@ -141,32 +142,14 @@ pub(crate) fn projected_nil_reason(value: &Value) -> Option<NilReason> {
             Some(reason) => Some(*reason),
         };
     }
-    // A dense tensor already keeps *why* each absent lane is absent, in a map
-    // holding only the absent ones. Materializing every lane to look for it
-    // read the rare fact out of the common one: `as_vector_view` on a `Tensor`
-    // rebuilds the whole buffer as boxed `Value`s, and this runs after every
-    // Word. The map is the same evidence, in lane order, sized to the failures
-    // rather than to the data.
-    if let ValueData::Tensor { data, .. } = &value.data {
-        return dense_projected_nil_reason(data);
+    // A dense tensor holds numbers alone, so it carries no absence to find;
+    // this runs after every Word, and materializing a million lanes to learn
+    // that would read the rare fact out of the common one.
+    if matches!(value.data, ValueData::Tensor { .. }) {
+        return None;
     }
     let lanes = value.as_vector_view()?;
     lanes.iter().find_map(projected_nil_reason)
-}
-
-/// [`projected_nil_reason`] for a dense tensor, read from its absence map.
-///
-/// Equivalent to the materialized walk lane by lane: `absences()` yields the
-/// absent lanes in ascending lane order and screens each against the presence
-/// sentinel, which is exactly the order and the filter a walk over the boxed
-/// lanes applied. A lane the tensor was never told a reason for carries none,
-/// and is skipped here as `with_reasonless_unknown` was skipped there.
-fn dense_projected_nil_reason(data: &crate::types::DenseTensor) -> Option<NilReason> {
-    data.absences()
-        .find_map(|(_, metadata)| match metadata.reason {
-            Some(NilReason::Literal) | None => None,
-            Some(reason) => Some(reason),
-        })
 }
 
 /// The absence envelope of the same value [`projected_nil_reason`] answered
@@ -179,16 +162,9 @@ fn projected_absence_metadata(value: &Value) -> Option<crate::semantic::AbsenceM
             Some(_) => value.normalized_absence_metadata(),
         };
     }
-    // Same lane, same map, same reason as `projected_nil_reason` picked — see
-    // `dense_projected_nil_reason`. The two must agree on *which* lane they
-    // describe, which is why both read the absence map in its lane order.
-    if let ValueData::Tensor { data, .. } = &value.data {
-        return data
-            .absences()
-            .find_map(|(_, metadata)| match metadata.reason {
-                Some(NilReason::Literal) | None => None,
-                Some(_) => Some(metadata.clone()),
-            });
+    // As `projected_nil_reason`: a dense tensor carries no absence.
+    if matches!(value.data, ValueData::Tensor { .. }) {
+        return None;
     }
     let lanes = value.as_vector_view()?;
     lanes.iter().find_map(projected_absence_metadata)

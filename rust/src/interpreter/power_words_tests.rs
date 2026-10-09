@@ -58,8 +58,16 @@ async fn pow_projects_an_exponent_outside_the_field() {
 
 #[tokio::test]
 async fn pow_projects_what_has_no_value() {
-    assert_eq!(top("0 -1 POW NIL-REASON").await, "'divisionByZero'");
-    assert_eq!(top("0 -1/2 POW NIL-REASON").await, "'divisionByZero'");
+    // Division is total, so a zero base under a negative exponent is the
+    // reciprocal of zero: `1/0`.
+    assert_eq!(top("0 -1 POW").await, "1/0");
+    assert_eq!(top("0 -1/2 POW").await, "1/0");
+    assert_eq!(top("1/0 -1 POW").await, "0/1");
+    assert_eq!(top("1/0 2 POW").await, "1/0");
+    assert_eq!(top("-1/0 2 POW").await, "1/0");
+    assert_eq!(top("0/0 3 POW").await, "0/0");
+    assert_eq!(top("0/0 1/2 POW").await, "0/0");
+    assert_eq!(top("2 1/0 POW NIL-REASON").await, "'domainMiss'");
     assert_eq!(top("-8 1/3 POW NIL-REASON").await, "'domainMiss'");
     assert_eq!(top("-2 1/2 POW NIL-REASON").await, "'domainMiss'");
     assert_eq!(top("-2 SQRT 3/2 POW NIL-REASON").await, "'domainMiss'");

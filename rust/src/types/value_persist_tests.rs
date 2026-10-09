@@ -90,21 +90,22 @@ fn nested_vector_round_trips() {
 }
 
 #[test]
-fn tensor_with_nil_lane_round_trips() {
+fn tensor_with_a_lane_over_zero_round_trips() {
     let tensor = Value::from_tensor(
         vec![
             Fraction::from(1),
-            Fraction::nil(),
-            Fraction::from(3),
+            Fraction::nullity(),
+            Fraction::negative_infinity(),
             Fraction::from(4),
         ],
         vec![4],
     );
     assert!(
-        matches!(&tensor.data, ValueData::Tensor { data, .. } if !data.is_valid(1)),
-        "the fixture must actually carry an absent lane"
+        matches!(&tensor.data, ValueData::Tensor { data, .. } if !data.all_finite()),
+        "the fixture must actually carry a lane over zero"
     );
     assert_value_roundtrip(tensor);
+    assert_value_roundtrip(Value::from_fraction(Fraction::positive_infinity()));
 }
 #[test]
 fn multi_slot_stack_round_trips_in_order() {
@@ -183,23 +184,24 @@ fn a_restored_tensor_lane_carries_its_sign_on_the_numerator() {
 }
 
 #[test]
-fn a_restored_tensor_keeps_its_absent_lanes_absent() {
-    // The 0 denominator is the absence sentinel, not a rational: normalizing
-    // must step over it rather than try to reduce it.
+fn a_restored_tensor_reduces_a_lane_over_zero_to_its_point() {
+    // A 0 denominator is a pair like any other: an untrusted `100/0` is the
+    // `1/0` it spells (LANG.VALUES.EXACT), reduced at the boundary.
     let value = Value::from_int_tensor(vec![7, 8]);
     let restored = decode_tampered_tensor(
         &value,
         r#""nums":[7,8],"dens":[1,1]"#,
-        r#""nums":[7,0],"dens":[1,0]"#,
+        r#""nums":[7,100],"dens":[1,0]"#,
     );
     assert_eq!(
         restored.child(0).map(|c| format!("{c}")),
         Some("7/1".to_string()),
         "the present lane is untouched"
     );
-    assert!(
-        restored.child(1).is_some_and(|c| c.is_nil()),
-        "a 0 denominator stays the absence sentinel"
+    assert_eq!(
+        restored.child(1).map(|c| format!("{c}")),
+        Some("1/0".to_string()),
+        "a pair over zero reduces to its sign over zero"
     );
 }
 

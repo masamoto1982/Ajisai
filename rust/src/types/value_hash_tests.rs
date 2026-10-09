@@ -148,11 +148,11 @@ fn nils_with_different_reasons_stay_distinct() {
     // agree. `Value::hash` folds `nil_reason` in for this — without it,
     // `UNIQUE` over a vector of differently-caused NILs would collapse
     // them into one.
-    let division = Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
+    let domain = Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Unknown);
     let missing = Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown);
-    assert_ne!(division, missing, "different reasons are different values");
+    assert_ne!(domain, missing, "different reasons are different values");
     assert_ne!(
-        hash_of(&division),
+        hash_of(&domain),
         hash_of(&missing),
         "distinct NIL reasons should not share a bucket needlessly"
     );
@@ -200,8 +200,12 @@ fn every_pair_in_a_mixed_corpus_agrees() {
         Value::from_string(""),
         Value::from_string("A"),
         Value::from_string("hello"),
-        Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
+        Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Unknown),
         Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown),
+        Value::from_fraction(Fraction::positive_infinity()),
+        Value::from_fraction(Fraction::negative_infinity()),
+        Value::from_fraction(Fraction::nullity()),
+        Value::from_fraction(Fraction::new(BigInt::from(100), BigInt::from(0))),
         sqrt_of(2),
         sqrt_of(3),
         sqrt_of(12),

@@ -12,6 +12,7 @@
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::test_support::{error_of, run_ok, top};
+use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
 fn vector_children(value: &Value) -> &[Value] {
@@ -75,11 +76,11 @@ async fn irrational_vector_length_mismatch_errors() {
     );
 }
 
-/// A per-lane division by zero becomes a recoverable DivisionByZero
-/// projection, matching the scalar `√x 0 /` NIL Projection Rule rather than
-/// aborting the vector.
+/// A per-lane division by zero is the point over zero that lane's sign
+/// names, matching the scalar `√x 0 DIV` → `1/0` (LANG.VALUES.EXACT) rather
+/// than aborting the vector.
 #[tokio::test]
-async fn irrational_vector_div_by_zero_lane_projects_to_nil() {
+async fn irrational_vector_div_by_zero_lane_is_the_point_over_zero() {
     let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
@@ -89,11 +90,10 @@ async fn irrational_vector_div_by_zero_lane_projects_to_nil() {
         "first lane √2 / 1 must stay exact, got {:?}",
         children[0]
     );
-    assert!(children[1].is_nil(), "second lane √3 / 0 must be NIL");
     assert_eq!(
-        children[1].nil_reason().cloned(),
-        Some(NilReason::DivisionByZero),
-        "div-by-zero lane must carry NilReason::DivisionByZero"
+        children[1],
+        Value::from_fraction(Fraction::positive_infinity()),
+        "√3 / 0 is the sign of √3 over zero"
     );
 }
 
@@ -173,9 +173,9 @@ async fn an_empty_axis_against_a_longer_one_still_mismatches() {
 #[tokio::test]
 async fn an_absent_lane_survives_the_exact_real_broadcast() {
     for code in [
-        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV [ 1 1 ] ADD",
-        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV [ 1 1 ] MUL",
-        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV 2 ADD",
+        "[ 2 3 ] [ SQRT ] MAP [ -1 -4 ] SQRT ADD",
+        "[ 2 3 ] [ SQRT ] MAP [ -1 -4 ] SQRT MUL",
+        "[ 2 3 ] [ SQRT ] MAP [ -1 -4 ] SQRT [ 1 1 ] ADD ADD",
     ] {
         let stack = run_ok(code).await;
         let lane = stack[0]
@@ -184,11 +184,12 @@ async fn an_absent_lane_survives_the_exact_real_broadcast() {
         assert!(lane.is_nil(), "`{code}` lane 1 must stay NIL, got {lane:?}");
         assert_eq!(
             lane.nil_reason().cloned(),
-            Some(NilReason::DivisionByZero),
+            Some(NilReason::DomainMiss),
             "`{code}` lane 1 must keep the reason it was created with"
         );
-        // The exact lane beside it is untouched.
-        assert!(is_exact_real_lane(&stack[0].child(0).unwrap()));
+        // The exact lane beside it is NIL too: the leftmost absent operand
+        // decides, and here it is the right operand's lane.
+        assert!(stack[0].child(0).unwrap().is_nil());
     }
 }
 

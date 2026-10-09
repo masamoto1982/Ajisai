@@ -211,13 +211,13 @@ jobs:
       - name: A NIL lane keeps its reason through the element-wise lift
         # LANG.COLLECTIONS.LIFT: "each lane preserves the exactness, truth,
         # NIL, and ERROR distinctions of the scalar law". The scalar law is
-        # passthrough with the reason intact (`1 0 / 1 +` is still
-        # NIL(divisionByZero)); this executes the lifted law and checks it
+        # passthrough with the reason intact (`-1 SQRT 1 ADD` is still
+        # NIL(domainMiss)); this executes the lifted law and checks it
         # says the same thing lane for lane. Catches both ways a lane can
-        # lose: the reason going missing (a `Fraction` lane records absence
-        # with no reason, so the NIL re-reports as `literal`) and the absence
-        # itself going missing (the exact-real lift computed with a NIL lane
-        # and answered an observable 0/0 scalar).
+        # lose: the reason going missing (a lane rebuilt from numbers only
+        # drops it, so the NIL re-reports as `literal`) and the absence
+        # itself going missing (a lift that read a NIL lane as some number
+        # would compute with it and answer an observable scalar).
         run: npm run nil-reason-lift:check
 
       - name: Check formalization coverage

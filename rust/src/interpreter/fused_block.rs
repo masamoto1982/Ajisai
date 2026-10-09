@@ -66,7 +66,10 @@ impl Plain {
             return None;
         }
         match &value.data {
-            ValueData::Scalar(f) if !f.is_nil() => Some(Plain::Num(f.clone())),
+            // A point over zero is a number the plain tiers do not take:
+            // their pair laws assume a positive denominator, and the dispatch
+            // answers the three points by the Fraction's own total arithmetic.
+            ValueData::Scalar(f) if f.is_finite() => Some(Plain::Num(f.clone())),
             ValueData::Boolean(b) => Some(Plain::Bool(*b)),
             _ => None,
         }
@@ -403,11 +406,10 @@ pub(crate) fn one_lane_of(value: &Value) -> Option<Plain> {
     let ValueData::Tensor { data, shape } = &value.data else {
         return None;
     };
-    if shape.as_slice() != [1] || data.len() != 1 || data.absences().next().is_some() {
+    if shape.as_slice() != [1] || data.len() != 1 || !data.all_finite() {
         return None;
     }
-    let lane = data.get_small_fraction(0)?;
-    (!lane.is_nil()).then_some(Plain::Num(lane))
+    Some(Plain::Num(data.fraction_at(0)))
 }
 
 /// The one-lane value the interpreted walk holds for `lane`: a one-lane
@@ -421,7 +423,7 @@ fn one_lane(lane: Fraction) -> Option<Value> {
     let Some((n, d)) = lane.extract_i64_pair() else {
         return Some(Value::from_vector(vec![Value::from_fraction(lane)]));
     };
-    let data = crate::types::DenseTensor::from_columns([n], [d], [1], d == 1, Default::default());
+    let data = crate::types::DenseTensor::from_columns([n], [d], [1], d == 1);
     Some(Value::new(
         ValueData::Tensor {
             data: std::sync::Arc::new(data),
@@ -454,7 +456,7 @@ fn rewrap_one_lane(walk: FusedWalk, value: &Value) -> Option<Value> {
             // their columns under the shape `[n, 1]`, so those columns are
             // the tiers' own.
             if let ValueData::Tensor { data, shape } = &value.data {
-                if shape.len() == 1 && data.absences().next().is_none() {
+                if shape.len() == 1 {
                     let dims = vec![shape[0], 1];
                     let integer = data.denominators.iter().all(|&d| d == 1);
                     let tensor = crate::types::DenseTensor::from_columns(
@@ -462,7 +464,6 @@ fn rewrap_one_lane(walk: FusedWalk, value: &Value) -> Option<Value> {
                         data.denominators.clone(),
                         dims.clone(),
                         integer,
-                        Default::default(),
                     );
                     return Some(Value::new(
                         ValueData::Tensor {
