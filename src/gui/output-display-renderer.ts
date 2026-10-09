@@ -51,7 +51,12 @@ const splitSign = (numerator: string): { readonly negative: boolean; readonly ma
 // value on the stack is whole and unmodified, every Word still sees all of it,
 // and `LENGTH` remains the way to ask how long it really is.
 
-/** Elements drawn from any one collection before the rest is summarized. */
+/**
+ * Elements drawn from any one collection before the rest is summarized. The
+ * engine hands the Stack area no more than this of any Vector
+ * (`rust/src/agent/stack_view.rs`, `VIEW_ELEMENTS_PER_COLLECTION`), so it
+ * may not grow past 100 without that growing too.
+ */
 export const MAX_RENDERED_ELEMENTS_PER_COLLECTION = 100;
 
 /**
@@ -132,9 +137,13 @@ const formatElementAt = (item: Value, depth: number): string => {
 // Whether a value holds a Record anywhere inside it, so that no bracket
 // literal denotes it and the Vector around it is drawn as the phrase that
 // builds it.
+// A vector cut to its leading elements says whether its left-out elements
+// hold one (`truncated.holdsRecord`).
 const holdsRecord = (item: Value): boolean =>
     item.type === 'record'
-    || (item.type === 'vector' && Array.isArray(item.value) && (item.value as Value[]).some(holdsRecord));
+    || (item.type === 'vector' && (
+        item.truncated?.holdsRecord === true
+        || (Array.isArray(item.value) && (item.value as Value[]).some(holdsRecord))));
 
 // One element of a `COLLECT` phrase: a Symbol is written `[ NAME ] 0 GET`,
 // which reads the name out of a literal rather than calling it; everything
@@ -201,16 +210,19 @@ const NIL: Value = { type: 'nil' } as Value;
 // A collection's literal as DOM: `open`, the drawn children each preceded by
 // a space, the elision marker for the rest, a space, `close` — the same
 // spacing as the canonical text (`[ 1 2 ]`), which is source that rebuilds
-// the value. Every child is drawn under the one render budget.
+// the value. Every child is drawn under the one render budget. `length` is the
+// collection's element count, which a vector cut to its leading elements
+// states rather than holds (`truncated.length`).
 const renderCollectionNode = (
     node: HTMLElement,
     open: string,
     close: string,
     children: readonly Value[],
+    length: number,
     depth: number,
     budget: RenderBudget
 ): HTMLElement => {
-    const { shown, elided } = planCollectionRender(children.length, budget);
+    const { shown, elided } = planCollectionRender(length, budget);
     node.dataset.depth = String(depth);
     node.appendChild(createBracketSpan(open, depth));
     for (let index = 0; index < shown; index++) {
@@ -232,10 +244,11 @@ const renderCollectionNode = (
 const renderPhraseNode = (
     node: HTMLElement,
     children: readonly Value[],
+    length: number,
     depth: number,
     budget: RenderBudget
 ): HTMLElement => {
-    const { shown, elided } = planCollectionRender(children.length, budget);
+    const { shown, elided } = planCollectionRender(length, budget);
     node.dataset.depth = String(depth);
     for (let index = 0; index < shown; index++) {
         if (index > 0) node.append(' ');
@@ -253,7 +266,7 @@ const renderPhraseNode = (
         if (shown > 0) node.append(' ');
         node.appendChild(createElisionSpan(elided));
     }
-    node.append(`${shown > 0 || elided > 0 ? ' ' : ''}${children.length} COLLECT`);
+    node.append(`${shown > 0 || elided > 0 ? ' ' : ''}${length} COLLECT`);
     return node;
 };
 
@@ -264,8 +277,9 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
         const children = item.value as Value[];
-        if (children.some(holdsRecord)) return renderPhraseNode(node, children, depth, budget);
-        return renderCollectionNode(node, '[', ']', children, depth, budget);
+        const length = item.truncated?.length ?? children.length;
+        if (holdsRecord(item)) return renderPhraseNode(node, children, length, depth, budget);
+        return renderCollectionNode(node, '[', ']', children, length, depth, budget);
     }
 
     // A Record is drawn as the phrase that builds it: its keys and its
@@ -562,7 +576,7 @@ const vectorToLatex = (elements: Value[]): string | null => {
     const rows: string[][] = [];
     let width: number | null = null;
     for (const element of elements) {
-        if (element.type !== 'vector' || !Array.isArray(element.value)) return null;
+        if (element.type !== 'vector' || !Array.isArray(element.value) || element.truncated) return null;
         const row = (element.value as Value[]).map(numberElementToLatex);
         if (!row.every((tex): tex is string => tex !== null)) return null;
         if (width === null) width = row.length;
@@ -620,7 +634,9 @@ export const valueToLatex = (item: Value): string | null => {
             return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;
         }
         case 'vector':
-            return Array.isArray(item.value) ? vectorToLatex(item.value as Value[]) : null;
+            // A vector cut to its leading elements is longer than any matrix
+            // drawn here, and its matrix would be missing rows.
+            return Array.isArray(item.value) && !item.truncated ? vectorToLatex(item.value as Value[]) : null;
         default:
             return null;
     }

@@ -43,7 +43,8 @@
           ]
         },
         "semantics": { "$ref": "#/$defs/semantics" },
-        "elided": { "$ref": "#/$defs/elided" }
+        "elided": { "$ref": "#/$defs/elided" },
+        "truncated": { "$ref": "#/$defs/truncated" }
       }
     },
     "semantics": {
@@ -101,6 +102,18 @@
         "approxBytes": { "type": "integer", "minimum": 0 },
         "elements": { "type": "integer", "minimum": 0 },
         "algebraicTerms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "truncated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["length", "holdsNil", "holdsRecord", "digest"],
+      "description": "Present only in the playground's stack view (AjisaiInterpreter.collect_stack, rust/src/agent/stack_view.rs), on a vector cut to its first 100 elements, the most the playground draws of one collection; never in a CLI/MCP agent report. `value` holds those leading elements, each a full observedValue (cut in turn if it is a long vector). This field describes what was left out, so a host decides from the view what it would decide from the whole value: `length` is the vector's element count; `holdsNil` and `holdsRecord` say whether a NIL or a Record sits anywhere in the left-out elements; `digest` is a 64-bit hash of the left-out elements under value equality, so the views of two different values differ. Presentation only: the value on the stack stays whole.",
+      "properties": {
+        "length": { "type": "integer", "minimum": 101 },
+        "holdsNil": { "type": "boolean" },
+        "holdsRecord": { "type": "boolean" },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
       }
     },
     "integerString": {

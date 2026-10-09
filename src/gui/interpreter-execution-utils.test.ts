@@ -563,6 +563,22 @@ describe('checkRunLeftOwnNil', () => {
         expect(checkRunLeftOwnNil(view(), view({ stack: [nil('domainMiss'), num(5)] }))).toBe(true);
     });
 
+    // The engine cuts a long Vector to the elements the Stack area draws and
+    // states what the rest holds (rust/src/agent/stack_view.rs).
+    const cut = (holdsNil: boolean, digest: string): Value =>
+        ({ type: 'vector', value: [num(1)], truncated: { length: 1000, holdsNil, holdsRecord: false, digest } } as Value);
+
+    it('sees a NIL in the part of a long Vector the view left out', () => {
+        expect(checkRunLeftOwnNil(view(), view({ stack: [cut(true, 'a')] }))).toBe(true);
+        expect(checkRunLeftOwnNil(view(), view({ stack: [cut(false, 'a')] }))).toBe(false);
+    });
+
+    it('tells a long Vector changed past the cut from one left alone', () => {
+        const before = view({ stack: [cut(true, 'a')] });
+        expect(checkRunLeftOwnNil(before, view({ stack: [cut(true, 'a')] }))).toBe(false);
+        expect(checkRunLeftOwnNil(before, view({ stack: [cut(true, 'b')] }))).toBe(true);
+    });
+
     it('sees a NIL lane in a Vector the run produced', () => {
         expect(checkRunLeftOwnNil(view(), view({ stack: [vector(num(1), nil('domainMiss'))] }))).toBe(true);
     });

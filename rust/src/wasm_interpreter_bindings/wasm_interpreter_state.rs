@@ -1,4 +1,4 @@
-use super::{set_js_prop, value_to_js, AjisaiInterpreter, UserWordData};
+use super::{set_js_prop, stack_to_js, AjisaiInterpreter, UserWordData};
 use crate::agent::sorted_user_word_names;
 use crate::builtins;
 use serde_wasm_bindgen::to_value;
@@ -8,11 +8,7 @@ use wasm_bindgen::prelude::*;
 impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_stack(&self) -> JsValue {
-        let js_array = js_sys::Array::new();
-        for value in self.interpreter.get_stack().iter() {
-            js_array.push(&value_to_js(value));
-        }
-        js_array.into()
+        stack_to_js(self.interpreter.get_stack().as_slice())
     }
 
     #[wasm_bindgen]

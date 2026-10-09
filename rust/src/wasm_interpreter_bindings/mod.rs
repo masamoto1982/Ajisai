@@ -19,7 +19,6 @@ use crate::agent::report::{ai_payload_json, diagnosis_json, failed_run_diagnosis
 use crate::agent::{api, contract_violation};
 use crate::error::ErrorCategory;
 use crate::interpreter::Interpreter;
-use crate::types::value_protocol::{value_to_protocol, ProtocolNode, ProtocolValue};
 use crate::types::Value;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -141,7 +140,6 @@ impl AjisaiInterpreter {
                 // long session does not keep every payload it ever printed.
                 self.interpreter.take_host_effects();
                 set_js_prop(&obj, "output", &(output.into()));
-                set_js_prop(&obj, "stack", &(self.collect_stack()));
                 set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
@@ -255,71 +253,17 @@ pub(crate) struct UserWordData {
     pub(crate) description: Option<String>,
 }
 
-// The pure Value -> protocol mapping (`ProtocolNode`,
-// `value_to_protocol`) lives in `crate::types::value_protocol` so the native
-// CLI shares the exact same wire format. Extracting it out of the `JsValue`
-// glue also lets the entire decision be unit / MC/DC / property tested
-// natively (AQ-REQ-003, `types/value_protocol_tests.rs`), with
-// `protocol_to_js` reduced to a mechanical shim.
-
-/// Mechanical shim: render a `ProtocolNode` into the `JsValue` the GUI
-/// receives. Carries no decision logic — every behavioral choice lives in
-/// `value_to_protocol`, which is verified natively.
+/// The stack as the JS array the playground draws: the bounded view of each
+/// value (`agent::stack_view`), every Vector cut to the elements the
+/// playground can draw, with what it left out stated about the whole value.
 ///
-/// The `semantics` bag is the one rendering both hosts share
-/// (`agent::report::semantics_json`), converted rather than rebuilt: this
-/// boundary used to build it by hand, field by field, and the two copies had
-/// drifted — the WASM absence dropped `origin` and `recoverability`, and its
-/// diagnosis omitted `progress` from a resource limit — two spellings of one
-/// protocol, where LANG.OBSERVATION.PROTOCOL promises one.
-fn protocol_to_js(node: &ProtocolNode) -> JsValue {
-    let obj = js_sys::Object::new();
-    set_js_prop(
-        &obj,
-        "semantics",
-        &json_to_js(crate::agent::report::semantics_json(&node.semantics)),
-    );
-    set_js_prop(&obj, "type", &node.type_str.into());
-    match &node.value {
-        ProtocolValue::Null => set_js_prop(&obj, "value", &JsValue::NULL),
-        ProtocolValue::Bool(b) => set_js_prop(&obj, "value", &(*b).into()),
-        ProtocolValue::Text(s) => set_js_prop(&obj, "value", &s.clone().into()),
-        ProtocolValue::Number {
-            numerator,
-            denominator,
-        } => {
-            let num_obj = js_sys::Object::new();
-            set_js_prop(&num_obj, "numerator", &numerator.clone().into());
-            set_js_prop(&num_obj, "denominator", &denominator.clone().into());
-            set_js_prop(&obj, "value", &num_obj.into());
-        }
-        ProtocolValue::Children(kids) => {
-            let arr = js_sys::Array::new();
-            for kid in kids {
-                arr.push(&protocol_to_js(kid));
-            }
-            set_js_prop(&obj, "value", &arr.into());
-        }
-        ProtocolValue::Record { keys, values } => {
-            let record_obj = js_sys::Object::new();
-            let key_arr = js_sys::Array::new();
-            for key in keys {
-                key_arr.push(&protocol_to_js(key));
-            }
-            let value_arr = js_sys::Array::new();
-            for value in values {
-                value_arr.push(&protocol_to_js(value));
-            }
-            set_js_prop(&record_obj, "keys", &key_arr.into());
-            set_js_prop(&record_obj, "values", &value_arr.into());
-            set_js_prop(&obj, "value", &record_obj.into());
-        }
-    }
-    obj.into()
-}
-
-fn value_to_js(value: &Value) -> JsValue {
-    protocol_to_js(&value_to_protocol(value))
+/// Rendered as one JSON text and handed to the JS engine's own parser. It used
+/// to be every element, built node by node through `js_sys` at about 7 µs per
+/// element: a run that left `0 999999 RANGE` on the stack spent some seven
+/// seconds converting it, against a few milliseconds computing it.
+fn stack_to_js(stack: &[Value]) -> JsValue {
+    let text = crate::agent::stack_view::stack_view_json(stack).to_string();
+    js_sys::JSON::parse(&text).expect("serde_json writes valid JSON")
 }
 
 // ── One-shot agent entry points ──────────────────────────────────────────

@@ -63,6 +63,7 @@ const protocolDefNames = {
   absence: "protocolAbsence",
   exactTerm: "exactTerm",
   elided: "protocolElided",
+  truncated: "protocolTruncated",
   integerString: "integerString",
   positiveIntegerString: "positiveIntegerString",
   nonNegativeIntegerString: "nonNegativeIntegerString",
