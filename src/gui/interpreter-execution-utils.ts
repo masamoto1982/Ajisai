@@ -377,8 +377,11 @@ export const detectExecutionSurfaceChanges = (
 const checkHoldsNil = (value: Value | undefined): boolean => {
     if (!value) return false;
     if (value.type === 'nil') return true;
-    if (value.type === 'vector' && Array.isArray(value.value)) {
-        return (value.value as Value[]).some(checkHoldsNil);
+    if (value.type === 'vector') {
+        // A vector cut to its leading elements states whether the rest holds
+        // one (`truncated.holdsNil`).
+        if (value.truncated?.holdsNil) return true;
+        return Array.isArray(value.value) && (value.value as Value[]).some(checkHoldsNil);
     }
     if (value.type === 'record') {
         const { keys, values } = readRecordParts(value.value);

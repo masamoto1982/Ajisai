@@ -31,6 +31,11 @@ mod profile_liveness_tests;
 pub(crate) mod report;
 #[cfg(test)]
 mod resource_usage_tests;
+// The playground's stack view: read only through the WASM boundary.
+#[cfg(any(feature = "wasm", test))]
+pub(crate) mod stack_view;
+#[cfg(test)]
+mod stack_view_tests;
 
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;

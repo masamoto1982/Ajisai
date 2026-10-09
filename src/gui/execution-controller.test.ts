@@ -97,7 +97,6 @@ const createFakeInterpreter = () => {
 const ok = (stack: Value[], overrides: Partial<ExecuteResult> = {}): ExecuteResult => ({
     status: 'OK',
     output: '',
-    stack,
     stackSnapshot: JSON.stringify(stack),
     userWords: [],
     ...overrides

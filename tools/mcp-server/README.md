@@ -301,8 +301,8 @@ these say which one, what it is set to, and what size crossed it.
 All execution tools call the same host-neutral Rust agent boundary
 (`rust/src/agent`) through one of two interchangeable backends
 (`tools/mcp-server/backend/`): a native `ajisai` subprocess per call, or the
-same agent code compiled to WASM and run inside a `worker_threads` Worker per
-call. Both return the identical result envelope — verified case by case in
+same agent code compiled to WASM and run in a fresh WebAssembly instance per
+call, inside a reused `worker_threads` Worker. Both return the identical result envelope — verified case by case in
 `backend/parity-test.js` — so Node never reinterprets command-specific results.
 
 The backend is chosen **once, at startup**, and named in `mcp.backend.kind`

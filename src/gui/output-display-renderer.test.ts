@@ -408,6 +408,14 @@ describe('valueToLatex zero-denominator robustness', () => {
 // in. That form *is* the value, so the math view draws it rather than the best
 // rational approximation the same node also carries: `\sqrt{3}` says the whole
 // number where `\approx \frac{708158977}{408855776}` only gestures at it.
+describe('valueToLatex: a cut Vector', () => {
+    test('a Vector the engine cut to its leading elements has no matrix', () => {
+        const cut = { ...vec(num(1), num(2)), truncated: { length: 1000, holdsNil: false, holdsRecord: false, digest: '0' } };
+        expect(valueToLatex(cut)).toBeNull();
+        expect(valueToLatex(vec(cut))).toBeNull();
+    });
+});
+
 describe('valueToLatex exact normal form', () => {
     function irrational(
         approximation: Value,
@@ -512,6 +520,25 @@ describe('renderStack', () => {
     test('a stack within the budget is drawn whole, with no marker', () => {
         const items = draw([num(1), num(2)]);
         expect(items.map(textOf)).toEqual(['1/1', '2/1']);
+    });
+
+    // The engine hands over a long Vector cut to the elements drawn, with its
+    // real length in `truncated` (rust/src/agent/stack_view.rs).
+    const truncated = (length: number, overrides: Partial<NonNullable<Value['truncated']>> = {}): Value => ({
+        ...vec(...Array.from({ length: MAX_RENDERED_ELEMENTS_PER_COLLECTION }, (_, i) => num(i))),
+        truncated: { length, holdsNil: false, holdsRecord: false, digest: '0000000000000000', ...overrides }
+    });
+
+    test('a cut Vector counts the elements left out from its real length', () => {
+        const [item] = draw([truncated(1_000_000)]);
+        const text = textOf(item!);
+        expect(text.startsWith('[ 0/1 1/1 ')).toBe(true);
+        expect(text.endsWith(`99/1 ${formatElision(1_000_000 - MAX_RENDERED_ELEMENTS_PER_COLLECTION)} ]`)).toBe(true);
+    });
+
+    test('a cut Vector whose left-out part holds a Record is drawn as a COLLECT phrase', () => {
+        const [item] = draw([truncated(500, { holdsRecord: true })]);
+        expect(textOf(item!).endsWith(' 500 COLLECT')).toBe(true);
     });
 
     // `100 0 DIV` leaves `1/0`, a number drawn as the pair it is; the node

@@ -297,8 +297,6 @@ export interface ExecuteResult {
     /** On an ERROR result, its diagnosis — the one copy the report carries. */
     diagnosis?: ProtocolDiagnosis;
 
-    // The observation-format stack, for display only.
-    stack?: Value[];
     // The lossless snapshot (opaque string from `snapshot_stack`) attached by
     // the execution worker, and the only format used to sync the post-run stack
     // back into the main-thread interpreter, so exact values (CodeBlock,
@@ -333,6 +331,24 @@ export interface Value {
     type: string;
     value: any | Fraction | Value[];
     semantics?: ProtocolValueSemantics;
+    /**
+     * On a vector in `collect_stack`'s view, cut to its leading elements (the
+     * most the Stack area draws of one collection): what was left out, stated
+     * about the whole value (spec/host-protocol.schema.json, `truncated`).
+     * `value` then holds only the leading elements.
+     */
+    truncated?: TruncatedVector;
+}
+
+export interface TruncatedVector {
+    /** The vector's element count. */
+    length: number;
+    /** Whether a NIL sits anywhere in the left-out elements. */
+    holdsNil: boolean;
+    /** Whether a Record sits anywhere in the left-out elements. */
+    holdsRecord: boolean;
+    /** A hash of the left-out elements, so views of different values differ. */
+    digest: string;
 }
 
 // The shape of the generated wasm-bindgen module (`wasm/generated/ajisai_core.js`):
