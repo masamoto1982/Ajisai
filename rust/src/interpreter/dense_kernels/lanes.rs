@@ -15,9 +15,6 @@ pub(super) enum Lanes<'a> {
         /// Every lane is an integer, so the integer kernels apply to the
         /// numerators alone.
         integer: bool,
-        /// Every lane is a rational: no lane is one of the three points over
-        /// zero, whose pair laws are the `Fraction`'s own.
-        finite: bool,
     },
     Splat(i64, i64),
 }
@@ -29,7 +26,6 @@ impl Lanes<'_> {
                 Some(Lanes::Columns {
                     tensor: data,
                     integer: data.is_pure_integer,
-                    finite: data.all_finite(),
                 })
             }
             ValueData::Scalar(f) if value.absence.is_none() => {
@@ -51,14 +47,6 @@ impl Lanes<'_> {
         match self {
             Lanes::Columns { integer, .. } => integer,
             Lanes::Splat(_, d) => d == 1,
-        }
-    }
-
-    /// Whether every lane is a rational.
-    pub(super) fn finite(self) -> bool {
-        match self {
-            Lanes::Columns { finite, .. } => finite,
-            Lanes::Splat(_, d) => d != 0,
         }
     }
 

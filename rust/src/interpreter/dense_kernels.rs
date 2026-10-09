@@ -32,7 +32,6 @@ mod lanes;
 
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::comparison::OrderingKind;
-use crate::types::fraction::Fraction;
 use crate::types::small_rational;
 use crate::types::Column;
 use crate::types::Value;
@@ -170,30 +169,18 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
             return integer_quotients(a, b, n);
         }
     }
-    let finite = a.finite() && b.finite();
     let mut out = Out::with_capacity(n);
     for i in 0..n {
         let (x, y) = (a.at(i), b.at(i));
-        // A lane over zero, or a zero divisor, is the `Fraction`'s own law:
-        // its answer is one of the three points or zero, a small pair. A lane
-        // that outgrows a machine word is a boxed Vector, the general route's
-        // to make.
-        if (!finite && (x.1 == 0 || y.1 == 0))
-            || (matches!(schema, ExactArithmeticSchema::Div) && y.0 == 0)
-        {
-            let answer = schema.fraction(
-                &Fraction::from_normalized_pair(x.0, x.1),
-                &Fraction::from_normalized_pair(y.0, y.1),
-            );
-            let (rn, rd) = answer.extract_i64_pair()?;
-            out.push(rn, rd);
-            continue;
-        }
+        // A lane over zero, or a zero divisor, is the `Fraction`'s own law
+        // (`small_rational`'s total forms): its answer is one of the three
+        // points or zero, a small pair. A lane that outgrows a machine word
+        // is a boxed Vector, the general route's to make.
         let (rn, rd) = match schema {
-            ExactArithmeticSchema::Add => small_rational::add(x, y, false),
-            ExactArithmeticSchema::Sub => small_rational::add(x, y, true),
-            ExactArithmeticSchema::Mul => small_rational::mul(x, y),
-            ExactArithmeticSchema::Div => small_rational::div(x, y),
+            ExactArithmeticSchema::Add => small_rational::add_total(x, y, false),
+            ExactArithmeticSchema::Sub => small_rational::add_total(x, y, true),
+            ExactArithmeticSchema::Mul => small_rational::mul_total(x, y),
+            ExactArithmeticSchema::Div => small_rational::div_total(x, y),
         }?;
         out.push(rn, rd);
     }
@@ -201,9 +188,9 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
 }
 
 /// `a LT b` / `a GT b` lane by lane: the Vector of Booleans `lift_lanes`
-/// builds, or `None` for the general route — which a lane over zero takes,
-/// since `0/0` has no order to answer (LANG.VALUES.EXACT). Denominators are
-/// positive, so the cross products order the lanes, and they fit `i128`.
+/// builds, or `None` for the general route — which a `0/0` lane takes, since
+/// it has no order to answer (LANG.VALUES.EXACT). `±1/0` are ordered below
+/// and above every rational (`small_rational::order_total`).
 pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     hit(ordering_lanes(kind, a, b))
 }
@@ -211,21 +198,17 @@ pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value
 fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     let (a, b) = (Lanes::of(a)?, Lanes::of(b)?);
     let n = paired(a, b)?;
-    if !a.finite() || !b.finite() {
-        return None;
-    }
-    let integer = a.integer() && b.integer();
-    let decide = |i: usize| -> Value {
-        let ordering = if integer {
+    let decide = |i: usize| -> Option<Value> {
+        let ordering = if a.integer() && b.integer() {
             a.num(i).cmp(&b.num(i))
         } else {
-            let (an, ad) = a.at(i);
-            let (bn, bd) = b.at(i);
-            (i128::from(an) * i128::from(bd)).cmp(&(i128::from(bn) * i128::from(ad)))
+            small_rational::order_total(a.at(i), b.at(i))?
         };
-        Value::from_bool(kind.apply_ordering(ordering))
+        Some(Value::from_bool(kind.apply_ordering(ordering)))
     };
-    Some(Value::from_vector((0..n).map(decide).collect()))
+    Some(Value::from_vector(
+        (0..n).map(decide).collect::<Option<_>>()?,
+    ))
 }
 
 /// Which rounding `rounded` applies.
