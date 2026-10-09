@@ -73,6 +73,24 @@ fn hand_picked_programs_agree() {
         "-5000 5000 RANGE 4097 DIV",
         "[ -9223372036854775808 9223372036854775807 6 4 ] 2 DIV",
         "[ -9223372036854775808 9223372036854775807 6 4 ] -2 DIV",
+        // The reciprocal floor division: both sides of 2^52, numerators a
+        // reciprocal rounds past, and a divisor below the table's bound.
+        "[ 4503599627370495 4503599627370496 4503599627370497 -4503599627370497 ] 7 DIV",
+        "[ 9007199254740993 -9007199254740993 9223372036854775807 ] 4095 DIV",
+        "[ -1 -7 -8 7 8 0 ] 7 DIV",
+        "[ -1 -7 -8 7 8 0 ] -7 DIV",
+        "[ 4503599627370495 4503599627370497 -4503599627370497 ] 7 DIV FLOOR",
+        "[ 9223372036854775807 -9223372036854775808 ] 3 DIV FLOOR",
+        // A rational Tensor shifted by an integer, on either side, over
+        // zero and past a machine word.
+        "1 1000 RANGE 7 DIV 1 ADD",
+        "1 1000 RANGE 7 DIV 1 SUB",
+        "1 1 1000 RANGE 7 DIV SUB",
+        "[ 1/2 1/0 -1/0 0/0 ] 3 ADD",
+        "3 [ 1/2 1/0 -1/0 0/0 ] SUB",
+        "[ 9223372036854775807/2 1/3 ] 2 ADD",
+        "[ -9223372036854775807/2 1/3 ] 2 SUB",
+        "-9223372036854775808 [ 1/2 1/3 ] SUB",
         // A zero divisor lane — in integer lanes, in rational lanes, under a
         // scalar divisor, in every lane, in one lane, and carried onward —
         // a NIL lane, a mismatch, a one-lane Tensor.
@@ -408,5 +426,59 @@ proptest! {
             observe(&source, false, None),
             "`{}`", source
         );
+    }
+}
+
+fn check_floor_divmod(x: i64, m: i64) {
+    let got = crate::interpreter::dense_kernels::floor_divmod(x, m, 1.0 / m as f64);
+    assert_eq!(got, (x.div_euclid(m), x.rem_euclid(m)), "{x} by {m}");
+}
+
+#[test]
+fn the_reciprocal_floor_division_is_exact_at_its_edges() {
+    let edge = 1i64 << 52;
+    for m in [1, 2, 3, 7, 4095, 4096, 1 << 26, edge - 1, edge, i64::MAX] {
+        for x in [
+            0,
+            1,
+            -1,
+            m - 1,
+            m,
+            m + 1,
+            -m,
+            -m - 1,
+            edge - 1,
+            edge,
+            -(edge - 1),
+            -edge,
+            edge - 1 - (edge - 1) % m.max(1),
+            i64::MAX,
+            i64::MIN,
+        ] {
+            check_floor_divmod(x, m);
+        }
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(4096))]
+
+    #[test]
+    fn the_reciprocal_floor_division_agrees(
+        x in prop_oneof![any::<i64>(), -(1i64 << 53)..(1i64 << 53)],
+        m in prop_oneof![1i64..5000, 1i64..(1i64 << 53), 1i64..i64::MAX],
+    ) {
+        check_floor_divmod(x, m);
+    }
+}
+
+#[test]
+fn a_vector_of_truths_is_the_vector_of_its_booleans() {
+    use crate::types::Value;
+    for truths in [vec![], vec![true], vec![false, true, true, false]] {
+        let built = Value::from_truths(truths.iter().copied());
+        let boxed = Value::from_vector(truths.iter().map(|&t| Value::from_bool(t)).collect());
+        assert_eq!(format!("{built:?}"), format!("{boxed:?}"));
+        assert_eq!(built.nesting(), boxed.nesting());
     }
 }

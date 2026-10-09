@@ -214,14 +214,16 @@ pub struct Value {
     pub absence: Option<Box<AbsenceMetadata>>,
     /// How many containers deep this value nests, computed once when the
     /// value is built (`Value::new`). Private so that no value can be built
-    /// around it: every construction goes through `Value::new`, and every
-    /// in-place change of `data` recomputes it (`value_children.rs`).
+    /// around it: every construction goes through `Value::new` (or
+    /// `Value::from_truths`, whose nesting is known without asking), and
+    /// every in-place change of `data` recomputes it (`value_children.rs`).
     nesting: u32,
 }
 
 impl Value {
-    /// A value from its parts. The one constructor: every other one goes
-    /// through here, so a value's nesting is always the one its data has.
+    /// A value from its parts. The one general constructor: every other one
+    /// but `from_truths` goes through here, so a value's nesting is always
+    /// the one its data has.
     #[inline]
     pub fn new(data: ValueData, absence: Option<AbsenceMetadata>) -> Self {
         let nesting = data.nesting();
@@ -243,6 +245,26 @@ impl Value {
     #[inline]
     pub fn nesting(&self) -> u32 {
         self.nesting
+    }
+
+    /// A Vector of Booleans, one per truth: what `Value::from_vector` of
+    /// `Value::from_bool`s builds, without the pass over the children that
+    /// finds their deepest nesting. A Boolean nests 0 deep, so the Vector
+    /// nests 1 deep however many it holds. Built for comparisons over a
+    /// whole Tensor (`dense_kernels`), whose answers run to millions of lanes.
+    pub(crate) fn from_truths(truths: impl Iterator<Item = bool>) -> Self {
+        let children = truths
+            .map(|truth| Self {
+                data: ValueData::Boolean(truth),
+                absence: None,
+                nesting: 0,
+            })
+            .collect();
+        Self {
+            data: ValueData::Vector(Arc::new(children)),
+            absence: None,
+            nesting: 1,
+        }
     }
 
     /// Raise the kept nesting to at least `nesting`, after a child was added
@@ -381,6 +403,19 @@ impl NumberLiteral {
     /// The literal as written.
     pub fn lexeme(&self) -> &str {
         &self.lexeme
+    }
+
+    /// How many digits the number this denotes can take to write out
+    /// (`tokenizer::denoted_digit_count`). An `i64` lexeme is a sign and
+    /// digits, so that is its length less the sign, with no scan.
+    pub(crate) fn denoted_digits(&self) -> u64 {
+        match self.integer {
+            Some(_) => {
+                let signed = self.lexeme.starts_with(['-', '+']);
+                (self.lexeme.len() - usize::from(signed)) as u64
+            }
+            None => crate::tokenizer::denoted_digit_count(&self.lexeme),
+        }
     }
 
     /// The rational this denotes, or the message its own parse reports.

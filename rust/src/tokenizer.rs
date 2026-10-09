@@ -35,10 +35,12 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
     let words = ascii_word_count(input);
     let mut tokens = Vec::with_capacity(words);
     let mut spans: Vec<SourceSpan> = Vec::with_capacity(words);
-    // A name written again shares the text of its first spelling: a program
-    // names a few Words and bindings many times, and each fresh `Arc<str>`
-    // was an allocation here and a free when the tokens were dropped.
-    let mut names: crate::fast_hash::FastMap<&str, std::sync::Arc<str>> = Default::default();
+    // A lexeme written again is the token its first spelling read as: a
+    // program writes a few Words, bindings and numbers many times, and each
+    // fresh reading parsed the number again and allocated its text, which
+    // was then freed when the tokens were dropped. What a lexeme reads as
+    // depends on nothing but the lexeme, so the copy is the token.
+    let mut seen: crate::fast_hash::FastMap<&str, Token> = Default::default();
 
     // One pass over the text, by character: `pos` is the byte offset of the
     // next character and `here` its line and column, so a token's span is the
@@ -99,6 +101,11 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         let start = cursor.pos;
         cursor.skip_word();
         let token_str = &input[start..cursor.pos];
+        if let Some(token) = seen.get(token_str) {
+            tokens.push(token.clone());
+            spans.push(span);
+            continue;
+        }
 
         // The two structural words of `spec/grammar.json`'s one delimiter
         // pair: like every other Ajisai word (and like Forth's own `[` and
@@ -124,14 +131,10 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // grammar accepts the entire lexeme, otherwise a name. This is why no
         // character needs special treatment — `1/2` is a number because the
         // whole token parses as one, and `/` is a name for the same reason.
-        if let Some(token) = parse_number_from_string(token_str) {
-            tokens.push(token);
-            spans.push(span);
-            continue;
-        }
-
-        let name = names.entry(token_str).or_insert_with(|| token_str.into());
-        tokens.push(Token::Symbol(name.clone()));
+        let token =
+            parse_number_from_string(token_str).unwrap_or_else(|| Token::Symbol(token_str.into()));
+        seen.insert(token_str, token.clone());
+        tokens.push(token);
         spans.push(span);
     }
 
