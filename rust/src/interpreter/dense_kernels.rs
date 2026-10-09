@@ -198,17 +198,16 @@ pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value
 fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     let (a, b) = (Lanes::of(a)?, Lanes::of(b)?);
     let n = paired(a, b)?;
-    let decide = |i: usize| -> Option<Value> {
-        let ordering = if a.integer() && b.integer() {
-            a.num(i).cmp(&b.num(i))
-        } else {
-            small_rational::order_total(a.at(i), b.at(i))?
-        };
-        Some(Value::from_bool(kind.apply_ordering(ordering)))
-    };
-    Some(Value::from_vector(
-        (0..n).map(decide).collect::<Option<_>>()?,
-    ))
+    let truth = |ordering| Value::from_bool(kind.apply_ordering(ordering));
+    if a.integer() && b.integer() {
+        return Some(Value::from_vector(
+            (0..n).map(|i| truth(a.num(i).cmp(&b.num(i)))).collect(),
+        ));
+    }
+    let lanes = (0..n)
+        .map(|i| Some(truth(small_rational::order_total(a.at(i), b.at(i))?)))
+        .collect::<Option<_>>()?;
+    Some(Value::from_vector(lanes))
 }
 
 /// Which rounding `rounded` applies.
