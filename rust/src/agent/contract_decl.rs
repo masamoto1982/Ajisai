@@ -409,10 +409,19 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
         ));
     }
     if let Some(declared) = decl.field.filter(|d| contract.field > *d) {
+        // Name where the body leaves, so the finding says what to change.
+        let inferred = match contract.field_exits.as_slice() {
+            [] => format!("field={}", contract.field.as_spec_str()),
+            exits => format!(
+                "field={}` at `{}",
+                contract.field.as_spec_str(),
+                exits.join("`, `")
+            ),
+        };
         findings.push(bound_finding(
             &decl.name,
             &format!("field={}", declared.as_spec_str()),
-            &format!("field={}", contract.field.as_spec_str()),
+            &inferred,
             conservative,
             code,
         ));

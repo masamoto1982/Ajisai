@@ -1909,6 +1909,13 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-contract-field-literal-operand" data-category="core">
+  <h3>A literal divisor or exponent that cannot leave the field keeps the call closed</h3>
+  <pre class="ajisai-source">[ 2 DIV 2 POW ] CONTRACT 'field' GET [ 0 DIV ] CONTRACT 'field' GET [ -1 POW ] CONTRACT 'field' GET</pre>
+  <pre class="ajisai-expect-result">'closed' 'leaving' 'leaving'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-contract-field-registered" data-category="core">
   <h3>The registered field of DIV and of ADD</h3>
   <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'field' GET [ ADD ] 0 GET CONTRACT 'field' GET</pre>

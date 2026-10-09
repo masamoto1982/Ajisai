@@ -322,6 +322,7 @@ impl Interpreter {
     pub(crate) fn widen_with_code_operand_symbol(
         &mut self,
         symbol: &str,
+        prev: Option<&Token>,
         visiting: &mut HashSet<String>,
         acc: &mut AccumulatedContract,
         complete: &mut bool,
@@ -335,7 +336,7 @@ impl Interpreter {
         if let Some(dep_contract) =
             self.dependency_contract(&dep_name, &dep_def, visiting, acc, complete)
         {
-            acc.widen_with(&dep_contract);
+            acc.widen_with_call(&dep_name, &dep_contract, prev);
         }
     }
 

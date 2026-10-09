@@ -106,6 +106,7 @@ pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
 mod word_candidates;
 pub mod word_contract;
+mod word_contract_field;
 mod word_contract_flow;
 #[cfg(test)]
 mod word_contract_tests;

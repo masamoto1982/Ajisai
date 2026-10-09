@@ -15,8 +15,9 @@ use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
     get_coreword_metadata, Determinism, FieldClosure, MassContract, Partiality, Purity,
 };
-use crate::types::{Token, Value, ValueData, WordDefinition};
+use crate::types::{Token, WordDefinition};
 
+use super::word_contract_field::pushes_point_over_zero;
 use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
 use super::word_contract_widen::{classify_vector_positions, runs_unread_code, LiteralContext};
 pub use super::word_contract_widen::{
@@ -43,6 +44,11 @@ pub struct WordContract {
     /// none (LANG.CONTRACT.FIELD): `leaving` as soon as one Word it calls is,
     /// or one literal it pushes lies over zero; `closed` otherwise.
     pub field: FieldClosure,
+    /// What makes the word `leaving`, in body order: the Words it calls that
+    /// can leave the field there and the literals it writes over zero. Empty
+    /// when the word is `closed`, and when only a code operand the walk could
+    /// not read made it `leaving` (the gaps name that instead).
+    pub field_exits: Vec<String>,
     /// Sound upper bound on the word's space growth (Phase 2.2; `word_space`).
     pub space: SpaceClass,
     /// True when the bound is provably attained, licensing a declaration error.
@@ -90,6 +96,7 @@ impl WordContract {
             determinism: ContractDeterminism::HostRelative,
             partiality: ContractPartiality::Projecting,
             field: FieldClosure::Leaving,
+            field_exits: Vec::new(),
             space: SpaceClass::Unbounded,
             space_exact: false,
             cost: CostBound::CONSERVATIVE,
@@ -111,6 +118,7 @@ impl WordContract {
             determinism: ContractDeterminism::Deterministic,
             partiality: ContractPartiality::Total,
             field: FieldClosure::Closed,
+            field_exits: Vec::new(),
             space: SpaceClass::Const,
             space_exact: true,
             cost: CostBound::IDENTITY,
@@ -175,7 +183,8 @@ pub(crate) struct AccumulatedContract {
     effects: Vec<String>,
     determinism: ContractDeterminism,
     partiality: ContractPartiality,
-    field: FieldClosure,
+    pub(super) field: FieldClosure,
+    pub(super) field_exits: Vec<String>,
     confidence: ContractConfidence,
     pub(crate) gaps: Vec<GapCode>,
 }
@@ -189,6 +198,7 @@ impl AccumulatedContract {
             determinism: contract.determinism,
             partiality: contract.partiality,
             field: contract.field,
+            field_exits: contract.field_exits.clone(),
             confidence: contract.confidence,
             gaps: contract.gaps.clone(),
         }
@@ -222,32 +232,6 @@ impl AccumulatedContract {
     }
 }
 
-/// Whether a literal token pushes one of the three points over zero, at any
-/// depth. A body that writes `1/0` leaves the field as surely as one that
-/// writes `1 0 DIV` (LANG.CONTRACT.FIELD). A lexeme that does not parse is
-/// not counted: running it raises before anything is pushed.
-fn pushes_point_over_zero(token: &Token) -> bool {
-    match token {
-        Token::Number(literal) => literal.value().is_some_and(|f| !f.is_finite()),
-        Token::Value(value) => holds_point_over_zero(value),
-        _ => false,
-    }
-}
-
-fn holds_point_over_zero(value: &Value) -> bool {
-    match &value.data {
-        ValueData::Scalar(f) => !f.is_finite(),
-        ValueData::Vector(items) => items.iter().any(holds_point_over_zero),
-        ValueData::Tensor { data, .. } => !data.all_finite(),
-        ValueData::Record(record) => record
-            .keys()
-            .iter()
-            .chain(record.values())
-            .any(holds_point_over_zero),
-        _ => false,
-    }
-}
-
 pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
     let key = leaf_cache_key(format!("static:{}:{}", name, def.registration_order));
     let Some(meta) = get_coreword_metadata(name) else {
@@ -262,6 +246,7 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         determinism: meta.determinism.into(),
         partiality: meta.partiality.into(),
         field: meta.field,
+        field_exits: Vec::new(),
         space,
         space_exact,
         cost,
@@ -337,7 +322,7 @@ impl Interpreter {
             match token {
                 Token::Number(_) | Token::String(_) | Token::Value(_) => {
                     if pushes_point_over_zero(token) {
-                        acc.field = FieldClosure::Leaving;
+                        acc.note_literal_over_zero(token);
                     }
                     flow.feed_literal();
                     sim.feed_literal();
@@ -358,6 +343,7 @@ impl Interpreter {
                         }
                         self.widen_with_code_operand_symbol(
                             symbol,
+                            idx.checked_sub(1).map(|i| &def.body[i]),
                             visiting,
                             &mut acc,
                             &mut complete,
@@ -406,7 +392,11 @@ impl Interpreter {
                         DepSpace::of_user_word(&dep_contract)
                     });
                     cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
-                    acc.widen_with(&dep_contract);
+                    acc.widen_with_call(
+                        &dep_name,
+                        &dep_contract,
+                        idx.checked_sub(1).map(|i| &def.body[i]),
+                    );
                 }
                 Token::VectorStart | Token::VectorEnd => {
                     flow.feed_structural(token);
@@ -443,6 +433,7 @@ impl Interpreter {
             determinism: acc.determinism,
             partiality: acc.partiality,
             field: acc.field,
+            field_exits: acc.field_exits,
             space,
             space_exact,
             cost,

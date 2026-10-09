@@ -56,6 +56,17 @@ LANG.VALUES.EXACT と、`spec/words.json`・`spec/outcomes.json`・`spec/grammar
   する。三点を書いたリテラル（`[ 1/0 MIN ]`）も `leaving` にする。読めないコード
   被演算子は弱い主張である `leaving` に倒す。
 - `#:contract W field=closed` は上界の宣言で、推論が `leaving` なら違反になる。
+- 直前に書いた数リテラルが体を出る原因の被演算子を決めるとき、その呼び出しは
+  体を出ない。`DIV` の除数が有限で非零のリテラル、`POW` の指数が有限で非負の
+  リテラルの場合である。そのリテラルは呼び出し時にスタックの先頭にあることが
+  確定しているので、評価せずに読める。`[ 2 DIV ]`（半分にする）や `[ 2 POW ]`
+  （二乗）は `closed` になり、`[ LENGTH DIV ]` のように計算した除数は `leaving`
+  のまま残る。平均 `MEAN` が `leaving` になるのはこの計算した除数のためで、
+  空ベクトルを渡すと実際に `0/0` が返る。推論が指す場所と三点が生まれる場所が
+  一致している。
+- `leaving` な本体の報告は、体を出る場所（呼んでいる Word と三点のリテラル）を
+  本体に書かれた順に `fieldExits` として示す。`field=closed` の違反メッセージも
+  その場所を示す。
 
 これで全域除算と体の推論が衝突しなくなる。`closed` なコードに有限の被演算子を
 与えた範囲では、分配律も `x − x = 0` も成り立ち、人間・ツール・エージェントは
@@ -68,8 +79,8 @@ UNKNOWN になること）も、`leaving` の Word かリテラルを経由し�
 流れ出しうるかだけを契約が名指す。それが「隠さず流す」という Ajisai の幹と
 全域除算を一致させる形である。
 
-実装: `rust/src/interpreter/word_contract.rs` の `pushes_point_over_zero` と
-`AccumulatedContract::widen_with`、`rust/src/agent/contract_decl.rs` の宣言
+実装: `rust/src/interpreter/word_contract_field.rs` の `pushes_point_over_zero`・
+`literal_operand_keeps_field`・`AccumulatedContract::widen_with_call`、`rust/src/agent/contract_decl.rs` の宣言
 検査、`rust/src/field_closure_laws.rs` の法則テスト（`leaving` の各 Word の証人と、
 `closed` な算術 Word が有限の被演算子から体を出ないことの掃引）。
 

@@ -302,6 +302,9 @@ fn cmd_contract(path: &str) -> i32 {
             if !r.effects.is_empty() {
                 println!("    effects: {}", r.effects.join(", "));
             }
+            if !r.field_exits.is_empty() {
+                println!("    leaves the field at: {}", r.field_exits.join(", "));
+            }
             println!(
                 "    cost: steps={} numeric={} collection={}",
                 r.cost_steps, r.cost_numeric, r.cost_collection

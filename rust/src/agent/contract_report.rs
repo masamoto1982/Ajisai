@@ -26,6 +26,8 @@ pub(crate) struct WordReport {
     pub partiality: &'static str,
     /// `closed` or `leaving` (LANG.CONTRACT.FIELD).
     pub field: &'static str,
+    /// The Words and literals that make the word `leaving`, in body order.
+    pub field_exits: Vec<String>,
     pub purity: &'static str,
     pub determinism: &'static str,
     /// The inferred charged-cost class on each of the three axes
@@ -116,6 +118,7 @@ pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
             outputs,
             partiality: contract.partiality.as_spec_str(),
             field: contract.field.as_spec_str(),
+            field_exits: contract.field_exits.clone(),
             purity: contract.purity.as_spec_str(),
             determinism: contract.determinism.as_spec_str(),
             cost_steps: CostClass::as_spec_str(contract.cost.steps.0),
@@ -147,6 +150,7 @@ pub(crate) fn reports_json(reports: &[WordReport]) -> serde_json::Value {
                     "outputs": arity_json(r.outputs),
                     "partiality": r.partiality,
                     "field": r.field,
+                    "fieldExits": r.field_exits,
                     "purity": r.purity,
                     "determinism": r.determinism,
                     "cost": {

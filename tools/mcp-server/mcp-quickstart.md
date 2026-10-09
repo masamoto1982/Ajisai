@@ -290,8 +290,10 @@ must not exceed), and `cost steps=… numeric=… collection=…` with a class f
 `const` `linear` `superlinear` `unbounded`. A key left out is not checked.
 `field=closed` promises the body never answers a point over zero (`1/0`
 `-1/0` `0/0`) from operands holding none: only `DIV`, `POW`, `NUM` and a
-literal over zero leave the field, and inside `closed` code the field laws —
-distributivity, `x x SUB` is `0` — hold over finite operands
+literal over zero leave the field, and a `DIV` by a non-zero literal (`2 DIV`)
+or a `POW` to a non-negative literal (`2 POW`) does not. Inside `closed` code
+the field laws — distributivity, `x x SUB` is `0` — hold over finite operands,
+and `infer_contracts` names a `leaving` body's exits under `fieldExits`
 (LANG.CONTRACT.FIELD). `check` verifies the line against the body without running anything, and
 `compute` runs the same check first:
 
