@@ -86,12 +86,28 @@ async fn scalar_comparison_serializes_as_boolean() {
     assert_eq!(field(&node, "value").as_bool(), Some(true));
 }
 
-/// A reasoned NIL (division by zero) crosses the boundary as a `nil`-typed node.
+/// A reasoned NIL (a negative radicand) crosses the boundary as a `nil`-typed node.
 #[wasm_bindgen_test]
 async fn projected_nil_serializes_as_nil() {
-    let stack = stack_of("1 0 DIV").await;
+    let stack = stack_of("-1 SQRT").await;
     assert_eq!(stack.length(), 1);
     assert_eq!(type_of(&stack.get(0)), "nil");
+}
+
+/// A quotient by zero is a number (LANG.VALUES.EXACT): it crosses the boundary
+/// as a `number` node whose denominator is `"0"`, never as a `nil`.
+#[wasm_bindgen_test]
+async fn quotient_by_zero_serializes_as_a_number_over_zero() {
+    let stack = stack_of("100 0 DIV").await;
+    assert_eq!(stack.length(), 1);
+    let node = stack.get(0);
+    assert_eq!(type_of(&node), "number");
+    let value = field(&node, "value");
+    assert_eq!(field(&value, "numerator").as_string().as_deref(), Some("1"));
+    assert_eq!(
+        field(&value, "denominator").as_string().as_deref(),
+        Some("0")
+    );
 }
 
 /// An ExactScalar (√2) under the default `RawNumber` role crosses the boundary
@@ -144,9 +160,9 @@ async fn exact_rational_is_not_marked_approximate() {
 // it is untrusted: it can be tampered with in IndexedDB or arrive across the
 // worker boundary. A malformed payload must surface a recoverable error rather
 // than panic the module into an unrecoverable trap. The two inputs that trap
-// most easily are a zero denominator (`Fraction::new` panics on one; the codec
-// reads it as the absent number it spells) and a
-// deeply nested vector (unbounded recursion overflows the wasm stack).
+// most easily were a zero denominator (`Fraction::new` used to panic on one;
+// it is now the point over zero it spells, LANG.VALUES.EXACT) and a deeply
+// nested vector (unbounded recursion overflows the wasm stack).
 // ---------------------------------------------------------------------------
 
 /// One stack slot in the persistence wire format: the given value payload.
@@ -179,16 +195,25 @@ fn restore_stack_snapshot_accepts_valid_rational() {
 
 #[wasm_bindgen_test]
 fn restore_stack_snapshot_survives_a_zero_denominator() {
-    // A zero denominator is an absent number (the numerator over zero, as a
-    // quotient by zero is kept) rather than a number: decoding reads it as
-    // that absence, so the payload decodes instead of panicking in
-    // `Fraction::new`.
+    // A zero denominator is a number like any other pair (LANG.VALUES.EXACT):
+    // `7/0` decodes as the point over zero it spells, `1/0`, instead of
+    // panicking in `Fraction::new`.
     let mut interp = AjisaiInterpreter::new();
-    let snapshot = snapshot_of("{\"t\":\"Scalar\",\"n\":\"1\",\"d\":\"0\"}");
+    let snapshot = snapshot_of("{\"t\":\"Scalar\",\"n\":\"7\",\"d\":\"0\"}");
     let result = interp.restore_stack_snapshot(&snapshot);
     assert!(
         result.is_ok(),
-        "a zero denominator must decode as an absent number, not panic: {result:?}"
+        "a zero denominator must decode as the point over zero, not panic: {result:?}"
+    );
+    let stack = js_sys::Array::from(&interp.collect_stack());
+    assert_eq!(stack.length(), 1);
+    let node = stack.get(0);
+    assert_eq!(type_of(&node), "number");
+    let value = field(&node, "value");
+    assert_eq!(field(&value, "numerator").as_string().as_deref(), Some("1"));
+    assert_eq!(
+        field(&value, "denominator").as_string().as_deref(),
+        Some("0")
     );
 }
 
