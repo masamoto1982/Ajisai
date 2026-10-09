@@ -178,7 +178,14 @@
        "closed",
        "leaving"
       ],
-      "description": "LANG.CONTRACT.FIELD: `leaving` when the body can answer a point over zero (`1/0` `-1/0` `0/0`) from operands holding none — it calls DIV, POW or NUM, writes a literal over zero, or runs code the inference cannot read — and `closed` otherwise, in which case the field laws hold over finite operands."
+      "description": "LANG.CONTRACT.FIELD: `leaving` when the body can answer a point over zero (`1/0` `-1/0` `0/0`) from operands holding none — it calls DIV, POW or NUM, writes a literal over zero, or runs code the inference cannot read — and `closed` otherwise, in which case the field laws hold over finite operands. A `DIV` by a finite non-zero literal or a `POW` to a finite non-negative literal exponent stays `closed`."
+     },
+     "fieldExits": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Where a `leaving` body leaves the field, in body order: the Words it calls there and the literals it writes over zero. Empty for a `closed` body."
      },
      "purity": {
       "enum": [

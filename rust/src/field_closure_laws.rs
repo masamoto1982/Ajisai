@@ -14,9 +14,14 @@
 //! 3. a one-Word block infers the field its Word declares, so the inference
 //!    reads the declaration rather than a second copy of it;
 //! 4. a `#:contract` declaration of `field=closed` is a bound the check holds a
-//!    body to before anything runs.
+//!    body to before anything runs;
+//! 5. a `DIV` by a finite non-zero literal and a `POW` to a finite
+//!    non-negative literal exponent are inferred `closed`, and running every
+//!    such call over finite operands confirms it never leaves the field;
+//! 6. a `leaving` body names where it leaves.
 
 use crate::agent::api::check;
+use crate::agent::contract_report::report_contracts;
 use crate::coreword_registry::FieldClosure;
 use crate::interpreter::Interpreter;
 use crate::kernel::generated::{Arity, Family, GENERATED_WORDS};
@@ -207,4 +212,76 @@ fn a_leaving_field_declaration_admits_a_closed_body() {
 fn a_field_value_outside_the_vocabulary_is_malformed() {
     let source = "[ 1 ADD ] 'W' DEF\n#:contract W field=finite";
     assert_ne!(decl_exit_code(source), 0);
+}
+
+/// Literal operands the inference may read past `DIV` / `POW`.
+const LITERAL_DIVISORS: &[&str] = &["1", "-2", "3/4", "-1/2", "7"];
+const LITERAL_EXPONENTS: &[&str] = &["0", "1", "2", "3", "1/2", "3/2"];
+
+#[tokio::test]
+async fn a_literal_operand_that_cannot_leave_the_field_keeps_the_call_closed() {
+    for (word, literals) in [("DIV", LITERAL_DIVISORS), ("POW", LITERAL_EXPONENTS)] {
+        for literal in literals {
+            let block = format!("[ {literal} {word} ]");
+            let stack = stack_of(&format!("{block} CONTRACT 'field' GET"))
+                .await
+                .expect("CONTRACT runs");
+            assert!(
+                matches!(&stack[0].data, ValueData::Text(t) if &**t == "closed"),
+                "{block} must infer closed"
+            );
+            // The inference's claim, checked by running it.
+            for operand in FINITE_OPERANDS {
+                let code = format!("{operand} {literal} {word}");
+                if let Some(stack) = stack_of(&code).await {
+                    assert!(
+                        !stack.iter().any(holds_point_over_zero),
+                        "`{code}` left the field although {block} is inferred closed"
+                    );
+                }
+            }
+        }
+    }
+    for block in [
+        "[ 0 DIV ]",
+        "[ -1 POW ]",
+        "[ 1/0 DIV ]",
+        "[ [ 1 ] LENGTH DIV ]",
+        "[ 2 SQRT DIV ]",
+    ] {
+        let stack = stack_of(&format!("{block} CONTRACT 'field' GET"))
+            .await
+            .expect("CONTRACT runs");
+        assert!(
+            matches!(&stack[0].data, ValueData::Text(t) if &**t == "leaving"),
+            "{block} must stay leaving: its operand is not a literal that decides it"
+        );
+    }
+}
+
+#[test]
+fn a_leaving_body_names_where_it_leaves() {
+    let reports = report_contracts(
+        "[ 'xs' BIND xs 0 [ ADD ] FOLD xs LENGTH DIV ] 'MEAN' DEF\n\
+         [ 2 DIV ] 'HALF' DEF\n\
+         [ MEAN HALF 1/0 MIN ] 'BOTH' DEF",
+    );
+    let exits = |name: &str| {
+        reports
+            .iter()
+            .find(|r| r.name == name)
+            .map(|r| (r.field, r.field_exits.clone()))
+            .unwrap_or_else(|| panic!("no report for {name}"))
+    };
+    assert_eq!(exits("MEAN"), ("leaving", vec!["DIV".to_string()]));
+    assert_eq!(exits("HALF"), ("closed", Vec::new()));
+    assert_eq!(
+        exits("BOTH"),
+        ("leaving", vec!["MEAN".to_string(), "1/0".to_string()])
+    );
+    let decls = field_decls("[ [ 1 ] LENGTH DIV ] 'W' DEF\n#:contract W field=closed");
+    assert!(
+        decls.to_string().contains("at `DIV`"),
+        "the violation names the exit: {decls}"
+    );
 }
