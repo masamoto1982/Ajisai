@@ -287,6 +287,7 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     }
     node.textContent = formatValue(item, depth);
     if (item.type === 'nil') annotateNilNode(node, item);
+    if (item.type === 'number') annotatePointNode(node, item);
     return node;
 };
 
@@ -311,6 +312,36 @@ const annotateNilNode = (node: HTMLElement, item: Value): void => {
     node.classList.add('stack-node-nil');
     if (label === 'NIL') return;
     node.classList.add('stack-node-nil-reasoned');
+    node.title = label;
+};
+
+// The three points over zero (LANG.VALUES.EXACT) are numbers, drawn in the
+// number's own ink as the pairs they are: `1/0`, `-1/0`, `0/0`. Nothing in
+// the text says they are the points where the field's laws give way, so a
+// reader who has not met them yet would take `1/0` for a malformed fraction.
+// Like a reasoned NIL, the node invites the pointer and the tooltip says
+// where the point stands; the canonical text stays what the engine writes.
+// Exported for `output-display-renderer.test.ts`.
+export const describePointNode = (item: Value): string | null => {
+    if (item.type !== 'number' || item.semantics?.exactTerms) return null;
+    const fraction = checkFractionObject(item.value);
+    if (!fraction) return null;
+    const numerator = String(fraction.numerator);
+    const denominator = String(fraction.denominator);
+    if (!/^-?0+$/.test(denominator)) return null;
+    const text = `${numerator}/${denominator}`;
+    if (/^-?0+$/.test(numerator)) {
+        return `${text} · the point with no order: it absorbs every operation`;
+    }
+    return numerator.startsWith('-')
+        ? `${text} · the point below every other number`
+        : `${text} · the point above every other number`;
+};
+
+const annotatePointNode = (node: HTMLElement, item: Value): void => {
+    const label = describePointNode(item);
+    if (label === null) return;
+    node.classList.add('stack-node-point');
     node.title = label;
 };
 
@@ -404,11 +435,11 @@ const checkFractionShape = (value: unknown): Fraction | null => {
     const numerator = String(candidate.numerator ?? '');
     const denominator = String(candidate.denominator ?? '');
     if (!INTEGER_PATTERN.test(numerator) || !INTEGER_PATTERN.test(denominator)) return null;
-    // A zero denominator is not a faithful rational (it is NIL occupancy /
-    // malformed state, never a canonical number). Reject it here so the math
-    // view falls back to the canonical text rendering instead of dividing by
-    // zero inside `scientificLatex`. Matches INTEGER_PATTERN-allowed forms like
-    // "0", "-0" and "0000000000".
+    // A zero denominator is one of the three points over zero
+    // (LANG.VALUES.EXACT), a number with no decimal or scientific form.
+    // Reject it here so the math view falls back to the canonical text
+    // rendering instead of dividing by zero inside `scientificLatex`.
+    // Matches INTEGER_PATTERN-allowed forms like "0", "-0" and "0000000000".
     if (/^-?0+$/.test(denominator)) return null;
     return { numerator, denominator };
 };

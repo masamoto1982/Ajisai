@@ -1217,6 +1217,17 @@ footer {
     text-underline-offset: 0.15em;
 }
 
+/* One of the three points over zero (`1/0`, `-1/0`, `0/0`, LANG.VALUES.EXACT).
+   It is a number and keeps the number's ink; the same dotted underline and
+   help cursor as a reasoned NIL say that the tooltip has something to add,
+   which is where the point stands (src/gui/output-display-renderer.ts,
+   `describePointNode`). */
+.stack-node-point {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.15em;
+}
+
 /* The undrawn tail of a large collection (the render budget in src/gui/output-display-renderer.ts),
    styled as commentary so it cannot be read as part of the value. */
 .stack-elision {

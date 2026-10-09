@@ -14,6 +14,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
     describeNilNode,
+    describePointNode,
     formatValue,
     MAX_RENDERED_ELEMENTS_PER_COLLECTION,
     MAX_RENDERED_ELEMENTS_PER_STACK,
@@ -149,6 +150,41 @@ describe('a NIL in the Stack carries its reason', () => {
 
     test('a NIL the host sent no reason for is a bare NIL', () => {
         expect(describeNilNode(nil())).toBe('NIL');
+    });
+});
+
+describe('a point over zero in the Stack says where it stands', () => {
+    const point = (numerator: string, denominator = '0'): Node =>
+        ({ type: 'number', value: { numerator, denominator }, semantics: {} }) as Node;
+
+    test('100 0 DIV is 1/0, the point above every other number', () => {
+        expect(render(point('1'))).toBe('1/0');
+        expect(describePointNode(point('1'))).toBe('1/0 · the point above every other number');
+    });
+
+    test('-5 0 DIV is -1/0, the point below every other number', () => {
+        expect(describePointNode(point('-1'))).toBe('-1/0 · the point below every other number');
+    });
+
+    test('0 0 DIV is 0/0, the point with no order', () => {
+        expect(describePointNode(point('0'))).toBe(
+            '0/0 · the point with no order: it absorbs every operation'
+        );
+    });
+
+    test('an ordinary fraction has nothing to add', () => {
+        expect(describePointNode(point('1', '2'))).toBeNull();
+        expect(describePointNode(num(3))).toBeNull();
+    });
+
+    test('an irrational is never a point, whatever its approximation carries', () => {
+        const root = { type: 'number', value: { numerator: '1', denominator: '0' },
+            semantics: { exactTerms: [{ numerator: '1', denominator: '1', radicand: '2' }] } } as Node;
+        expect(describePointNode(root)).toBeNull();
+    });
+
+    test('a NIL is not a point', () => {
+        expect(describePointNode({ type: 'nil', value: null, semantics: {} } as Node)).toBeNull();
     });
 });
 
@@ -432,7 +468,12 @@ describe('renderStack', () => {
         dataset: Record<string, string> = {};
         children: Array<FakeElement | string> = [];
         parentElement: FakeElement | null = null;
-        classList = { add() { /* not observed */ }, remove() { /* not observed */ }, toggle() { /* not observed */ } };
+        classes: string[] = [];
+        classList = {
+            add: (name: string) => { this.classes.push(name); },
+            remove() { /* not observed */ },
+            toggle() { /* not observed */ }
+        };
         appendChild(child: FakeElement) { this.children.push(child); return child; }
         append(...children: Array<FakeElement | string>) { this.children.push(...children); }
         replaceChildren() { this.children = []; }
@@ -471,5 +512,25 @@ describe('renderStack', () => {
     test('a stack within the budget is drawn whole, with no marker', () => {
         const items = draw([num(1), num(2)]);
         expect(items.map(textOf)).toEqual(['1/1', '2/1']);
+    });
+
+    // `100 0 DIV` leaves `1/0`, a number drawn as the pair it is; the node
+    // carries the affordance and the tooltip that say where the point stands,
+    // at the top level and inside a Vector alike. An ordinary number carries
+    // neither.
+    test('a point over zero is drawn as a number with a tooltip, wherever it sits', () => {
+        const items = draw([num(1, 0), vec(num(2), num(0, 0)), num(3)]);
+        expect(items.map(textOf)).toEqual(['1/0', '[ 2/1 0/0 ]', '3/1']);
+        // Each stack item wraps its value node.
+        const nodes = items.map(item => item.children[0] as FakeElement);
+        expect(nodes[0]!.classes).toContain('stack-node-point');
+        expect(nodes[0]!.classes).not.toContain('stack-node-nil');
+        expect(nodes[0]!.title).toBe('1/0 · the point above every other number');
+        const lanes = nodes[1]!.children.filter((c): c is FakeElement => typeof c !== 'string');
+        const nullity = lanes.find(lane => lane.textContent === '0/0')!;
+        expect(nullity.classes).toContain('stack-node-point');
+        expect(nullity.title).toBe('0/0 · the point with no order: it absorbs every operation');
+        expect(nodes[2]!.classes).not.toContain('stack-node-point');
+        expect(nodes[2]!.title).toBe('');
     });
 });
