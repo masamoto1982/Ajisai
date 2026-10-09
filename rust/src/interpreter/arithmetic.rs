@@ -135,7 +135,7 @@ fn push_exact_real_schema_result(
     // route was chosen — see `charge_binary_schema`.
     let result = match schema.exact_real(&a_exact, &b_exact) {
         Some(r) => Value::from_exact_real(r),
-        None => division_by_zero_projection(),
+        None => division_by_zero_projection(a_exact.to_fraction()),
     };
     // Bound accumulation: reject a result whose term count or coefficient
     // bit-length crosses the ceiling, before it is consumed and pushed (so a
@@ -246,7 +246,7 @@ fn push_scalar_fastpath_result(
     // route was chosen — see `charge_binary_schema`.
     let result = match schema.fraction(&a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
-        Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.wrap),
+        Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.fraction, &a.wrap),
         Err(error) => return Err(error),
     };
     // Bound accumulation, so the operand feeding the next multiply is still a
@@ -342,7 +342,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Text(_) => None,
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
-        ValueData::Nil => None,
+        ValueData::Nil(_) => None,
         ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
     }
 }
@@ -388,9 +388,9 @@ fn apply_exact_real_recursive_broadcast(
 fn exact_real_lane(a: &Value, b: &Value, schema: ExactArithmeticSchema) -> Result<Value> {
     // Absence before arithmetic, for the reason the rational lift gives
     // (`tensor_lane_ops::lane_nil_passthrough`) and one more:
-    // `ExactReal::from_fraction(Fraction::nil())` is a *number* whose
+    // `ExactReal::from_fraction` of an absent pair is a *number* whose
     // denominator happens to be zero, so the exact law answered a NIL lane
-    // with an observable `0/0` scalar — an absence that had stopped being one.
+    // with an observable scalar — an absence that had stopped being one.
     if let Some(nil) = lane_nil_passthrough(a, b) {
         return Ok(nil);
     }
@@ -411,7 +411,7 @@ fn exact_real_lane(a: &Value, b: &Value, schema: ExactArithmeticSchema) -> Resul
     };
     Ok(match schema.exact_real(&ea, &eb) {
         Some(result) => Value::from_exact_real(result),
-        None => division_by_zero_projection(),
+        None => division_by_zero_projection(ea.to_fraction()),
     })
 }
 
@@ -421,7 +421,12 @@ fn exact_broadcast_leaf(value: &Value) -> Option<ExactReal> {
     match &value.data {
         ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
         ValueData::ExactScalar(er) => Some(er.clone()),
-        ValueData::Nil => Some(ExactReal::from_fraction(Fraction::nil())),
+        // As `tensor_ops::broadcast_leaf`: an absent number is its pair, and
+        // an absence that is not a number has no exact-real form. The
+        // lane-wise lift settles absence before either is asked.
+        ValueData::Nil(pair) => pair
+            .as_ref()
+            .map(|pair| ExactReal::from_fraction(pair.clone())),
         _ => None,
     }
 }
@@ -486,14 +491,10 @@ pub(crate) fn push_exact_real_broadcast_result(
     // this shape, lane for lane.
     let result = if let Some((a_lanes, b_lanes)) = exact_flat_leaf_lanes(a, b) {
         let n = a_lanes.len();
-        let lanes: Vec<Option<ExactReal>> = (0..n)
-            .map(|i| schema.exact_real(&a_lanes[i], &b_lanes[i]))
-            .collect();
-        let children: Vec<Value> = lanes
-            .into_iter()
-            .map(|lane| match lane {
+        let children: Vec<Value> = (0..n)
+            .map(|i| match schema.exact_real(&a_lanes[i], &b_lanes[i]) {
                 Some(result) => Value::from_exact_real(result),
-                None => division_by_zero_projection(),
+                None => division_by_zero_projection(a_lanes[i].to_fraction()),
             })
             .collect();
         Value::from_children(children)

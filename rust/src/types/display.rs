@@ -44,7 +44,7 @@ impl fmt::Display for Value {
 /// `COLLECT` phrase it is written as `[ NAME ] 0 GET`, which does.
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
-        ValueData::Nil => "NIL".to_string(),
+        ValueData::Nil(_) => "NIL".to_string(),
         // A String renders quoted at every depth, from its domain alone, or
         // as the phrase that joins its pieces when no literal spells it.
         ValueData::Text(s) => format_text(s),

@@ -749,7 +749,7 @@
                     <p class="ref-note">これは表示専用の出力であり、ソースコードの構文ではありません。<code>sqrt(2)</code>をプログラムに書いても未知の名前です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
                     <h3 id="division-by-zero">ゼロで割る</h3>
                     <p>すべての数は分数であり、<code>DIV</code>は必ず答えを返します。ゼロで割ってもプログラムは止まりません。答えは<code>NIL</code>、「ここに商はない」ということを理由とともに覚えている値です(<a href="#nil">NILの規則</a>。理由は<code>NIL-REASON</code>で<code>'divisionByZero'</code>と読めます)。この<code>NIL</code>はほかの値と同じように運ばれます。あとに続く算術はそのまま通し、それを読んだ比較は<code>TRUE</code>でも<code>FALSE</code>でもなく「不明」と答え(<a href="#logic">三値論理</a>)、プログラムが望めば<code>SELECT</code>で代わりの値に置き換えられます。ベクトルでは、ゼロで割られた要素だけが<code>NIL</code>になり、隣の要素は普通の商のままです。</p>
-                    <p class="ref-note">機械の内側では、この不在の要素も隣の分数と同じ形、分子と分母の組(<code>0/0</code>)のまま、理由を添えて保持されます。ゼロの除数1つの代償は要素1つ分であり、ベクトル全体ではありません。</p>
+                    <p class="ref-note">機械の内側では、この不在の商も隣の分数と同じ形のままです。割られた数を、それを拒んだゼロの上に置いた組、<code>100 0 DIV</code>なら<code>100/0</code>として、理由を添えて保持されます。ゼロの除数1つの代償は要素1つ分であり、ベクトル全体ではありません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

@@ -132,11 +132,11 @@ fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec
         let len = shape.first().copied().unwrap_or_else(|| data.len());
         (offset..offset + len)
             .map(|lane| {
-                // `from_dense_lane` turns the denominator-0 absence sentinel a
-                // lane stores into `ValueData::Nil` *carrying the reason
-                // stored beside it*, so an absent lane is reported as `nil`
-                // rather than as the unreadable number `0/0`, and says why it
-                // is absent (LANG.VALUES.NIL).
+                // `from_dense_lane` turns an absent lane — denominator 0, the
+                // dividend over it — into `ValueData::Nil` *carrying the
+                // reason stored beside it*, so the lane is reported as `nil`
+                // rather than as an unreadable number, and says why it is
+                // absent (LANG.VALUES.NIL).
                 let leaf = Value::from_dense_lane(data, lane);
                 let (type_str, value) = match &leaf.data {
                     ValueData::Scalar(f) => ("number", number_protocol_value(f)),
@@ -171,7 +171,7 @@ fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec
 /// (LANG.VALUES.DISJOINT); nothing about how the value was produced reaches it.
 pub(crate) fn value_to_protocol(value: &Value) -> ProtocolNode {
     let (type_str, protocol_value) = match &value.data {
-        ValueData::Nil => ("nil", ProtocolValue::Null),
+        ValueData::Nil(_) => ("nil", ProtocolValue::Null),
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large

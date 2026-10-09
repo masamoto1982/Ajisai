@@ -62,7 +62,7 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
 
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
-            ValueData::Nil => vec!["NIL".to_string()],
+            ValueData::Nil(_) => vec!["NIL".to_string()],
             ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
             ValueData::ExactScalar(er) => {
@@ -74,9 +74,8 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
             }
             ValueData::Vector(children) => children.iter().flat_map(collect_fractions).collect(),
             // Through the lane, not its `Fraction`: `format_fraction_to_string`
-            // renders the denominator-0 absence sentinel as the unreadable
-            // number `0/0`. `[ 1 NIL ] STR` is `'1 NIL'`, and used to be only
-            // because a vector holding a NIL was never stored densely.
+            // would render an absent lane as the unreadable number its pair
+            // spells. `[ 1 2 ] [ 1 0 ] DIV STR` is `'1 NIL'`.
             ValueData::Tensor { data, .. } => (0..data.len())
                 .flat_map(|lane| collect_fractions(&Value::from_dense_lane(data, lane)))
                 .collect(),
@@ -111,7 +110,7 @@ fn has_no_exact_lexeme(value: &Value) -> bool {
         | ValueData::Text(_)
         | ValueData::Scalar(_)
         | ValueData::Tensor { .. }
-        | ValueData::Nil
+        | ValueData::Nil(_)
         | ValueData::Symbol(_) => false,
     }
 }

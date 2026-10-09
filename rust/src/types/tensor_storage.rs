@@ -17,8 +17,11 @@ use crate::semantic::AbsenceMetadata;
 
 /// A dense numeric tensor in struct-of-arrays form.
 ///
-/// *Whether* a lane is absent is recorded once, as the denominator-0 sentinel
-/// [`Fraction::nil`] stores. There used to be a second record beside it — a
+/// *Whether* a lane is absent is recorded once, as a denominator of 0: an
+/// absent number, its numerator the dividend a zero divisor refused
+/// (`Fraction::over_zero`), so `[ 100 5 ] [ 0 0 ] DIV` holds `100/0` and
+/// `5/0`. An absence that was never a division holds no pair and is never a
+/// lane. There used to be a second record of presence beside the columns — a
 /// `valid_mask` bitmap with one bit per lane — and the two were never
 /// cross-checked: every production write path stored the sentinel and left the
 /// mask fully set, while every read trusted the mask alone and handed the 0
@@ -68,21 +71,21 @@ pub struct DenseTensor {
 /// One value identity, whichever representation holds it.
 impl PartialEq for DenseTensor {
     fn eq(&self, other: &Self) -> bool {
-        if self.numerators != other.numerators
-            || self.denominators != other.denominators
+        if self.denominators != other.denominators
             || self.shape != other.shape
             || self.is_pure_integer != other.is_pure_integer
         {
             return false;
         }
-        // The denominators matched, so the two agree on *which* lanes are
-        // absent; only the reasons are left to compare, and only there.
-        (0..self.len())
-            .filter(|index| !self.is_valid(*index))
-            .all(|index| {
+        // Same absent lanes; a present lane is its number, an absent one its reason.
+        (0..self.len()).all(|index| {
+            if self.is_valid(index) {
+                self.numerators[index] == other.numerators[index]
+            } else {
                 self.lane_reason(index) == other.lane_reason(index)
                     && self.lane_detail(index) == other.lane_detail(index)
-            })
+            }
+        })
     }
 }
 
@@ -141,9 +144,9 @@ impl DenseTensor {
     ///
     /// So the check moves to the boundary, where it runs once per lane per
     /// restore instead of once per lane per read. A lane whose pair is not
-    /// already normal is normalized here; the absence sentinel (denominator 0)
-    /// is left exactly as it is, since it is not a rational and `from_columns`
-    /// reconciles it against the absence map.
+    /// already normal is normalized here; an absent lane (denominator 0) is
+    /// left exactly as it is, numerator and all, since it is not a rational
+    /// and `from_columns` reconciles it against the absence map.
     pub fn from_untrusted_columns(
         numerators: Vec<i64>,
         denominators: Vec<i64>,
@@ -341,8 +344,10 @@ impl DenseTensor {
         ))
     }
 
+    /// The lane as a `Fraction`: its number, or the pair an absent lane holds.
     pub fn fraction_or_nil(&self, index: usize) -> Fraction {
-        self.get_small_fraction(index).unwrap_or_else(Fraction::nil)
+        self.get_small_fraction(index)
+            .unwrap_or_else(|| Fraction::from(self.numerators[index]).over_zero())
     }
 
     pub fn to_fractions(&self) -> Vec<Fraction> {
@@ -351,8 +356,7 @@ impl DenseTensor {
 
     /// `true` when lane `index` holds a present value.
     ///
-    /// A denominator of 0 is [`Fraction::nil`] — the absence sentinel every
-    /// write path stores — not a rational, so the lane is absent.
+    /// A denominator of 0 is absence (`Fraction::is_nil`), whatever the numerator.
     pub fn is_valid(&self, index: usize) -> bool {
         matches!(self.denominators.get(index), Some(denominator) if *denominator != 0)
     }

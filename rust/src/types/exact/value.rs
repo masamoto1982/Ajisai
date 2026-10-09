@@ -1,7 +1,7 @@
 //! The exact-real scalar value behind `ValueData::ExactScalar` (LANG.VALUES.EXACT).
 //!
 //! An enum over the two numeric cost tiers: Tier 0 rationals (`Fraction`,
-//! including the nil sentinel) and Tier 1 algebraic numbers. The variant
+//! an absent one included) and Tier 1 algebraic numbers. The variant
 //! is a cost class, never an observable property (LANG.AUTHORITY.FREEDOM): values
 //! demote to the cheapest tier that holds them exactly, so an
 //! `Algebraic` payload is always irrational. Sign, floor and order are
@@ -130,6 +130,20 @@ impl ExactReal {
 
     // ---- Arithmetic (field operations, nil-propagating) ----
 
+    /// The absent operand a law passes through, leftmost first, as it is:
+    /// an absent rational keeps its pair (`Fraction::over_zero`), so what a
+    /// zero divisor refused to divide travels through the arithmetic after
+    /// it. `None` when both operands are present.
+    fn absent_operand(&self, other: &Self) -> Option<Self> {
+        if self.is_nil() {
+            return Some(self.clone());
+        }
+        if other.is_nil() {
+            return Some(other.clone());
+        }
+        None
+    }
+
     /// Negation. Preserves nil.
     pub fn neg(&self) -> Self {
         match self {
@@ -194,7 +208,7 @@ impl ExactReal {
         match self {
             Self::Rational(f) => {
                 if f.is_nil() {
-                    return Some(Self::Rational(Fraction::nil()));
+                    return Some(Self::Rational(f.clone()));
                 }
                 if f.is_zero() {
                     return None;
@@ -209,8 +223,8 @@ impl ExactReal {
     /// Addition. Nil-propagating; demotes to `Rational` whenever the sum
     /// is rational (cheapest-tier-wins).
     pub fn add(&self, other: &Self) -> Self {
-        if self.is_nil() || other.is_nil() {
-            return Self::Rational(Fraction::nil());
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
         match (self, other) {
             (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.add(b)),
@@ -223,8 +237,8 @@ impl ExactReal {
 
     /// Subtraction `self − other`.
     pub fn sub(&self, other: &Self) -> Self {
-        if self.is_nil() || other.is_nil() {
-            return Self::Rational(Fraction::nil());
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
         match (self, other) {
             (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.sub(b)),
@@ -234,8 +248,8 @@ impl ExactReal {
 
     /// Multiplication.
     pub fn mul(&self, other: &Self) -> Self {
-        if self.is_nil() || other.is_nil() {
-            return Self::Rational(Fraction::nil());
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
         match (self, other) {
             (Self::Rational(a), Self::Rational(b)) => Self::Rational(a.mul(b)),
@@ -249,8 +263,8 @@ impl ExactReal {
     /// Division `self / other`. `Rational(nil)` for nil operands; `None`
     /// for a zero divisor, which is decidable.
     pub fn div(&self, other: &Self) -> Option<Self> {
-        if self.is_nil() || other.is_nil() {
-            return Some(Self::Rational(Fraction::nil()));
+        if let Some(absent) = self.absent_operand(other) {
+            return Some(absent);
         }
         if other.is_structurally_zero() {
             return None;

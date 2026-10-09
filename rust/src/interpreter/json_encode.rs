@@ -105,7 +105,7 @@ fn write_rational(out: &mut String, f: &Fraction) {
 /// Append `value`'s JSON image, or answer `None` when it has none.
 fn encode(out: &mut String, value: &Value) -> Option<()> {
     match &value.data {
-        ValueData::Nil => out.push_str("null"),
+        ValueData::Nil(_) => out.push_str("null"),
         ValueData::Boolean(b) => out.push_str(if *b { "true" } else { "false" }),
         ValueData::Text(s) => write_string(out, s),
         ValueData::Scalar(f) => write_rational(out, f),

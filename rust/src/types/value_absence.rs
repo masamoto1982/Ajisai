@@ -18,7 +18,6 @@
 //! promotion route the runtime takes, while this walk remains as the
 //! independently written oracle `dense_columns_tests` checks it against.
 
-#[cfg(test)]
 use super::fraction::Fraction;
 use super::{Value, ValueData};
 use crate::error::NilReason;
@@ -55,12 +54,34 @@ impl Value {
 
     #[inline]
     pub fn nil_literal() -> Self {
-        Self::new(ValueData::Nil, Some(AbsenceMetadata::literal()))
+        Self::new(ValueData::Nil(None), Some(AbsenceMetadata::literal()))
     }
 
+    /// An absence that is not a number: no pair, and `absence` for why.
     #[inline]
     pub fn nil_with_absence(absence: AbsenceMetadata) -> Self {
-        Self::new(ValueData::Nil, Some(absence))
+        Self::new(ValueData::Nil(None), Some(absence))
+    }
+
+    /// An absent number: `pair` is the dividend a zero divisor refused, over
+    /// that zero (`Fraction::over_zero`, denominator 0), and `absence` is why.
+    #[inline]
+    pub fn absent_number(pair: Fraction, absence: AbsenceMetadata) -> Self {
+        debug_assert!(
+            pair.is_nil(),
+            "an absent number has denominator 0, got {pair:?}"
+        );
+        Self::new(ValueData::Nil(Some(pair)), Some(absence))
+    }
+
+    /// The pair an absent number holds — `None` for a present value, and for
+    /// an absence that was never a division.
+    #[inline]
+    pub fn absent_pair(&self) -> Option<&Fraction> {
+        match &self.data {
+            ValueData::Nil(pair) => pair.as_ref(),
+            _ => None,
+        }
     }
 
     #[inline]
@@ -85,11 +106,15 @@ impl Value {
         }
     }
 
+    /// The absent `source` carried whole — its pair and its reason — for a
+    /// Word that passes it through (LANG.FAILURE.PASSTHROUGH). A present
+    /// `source` gives a written NIL.
     #[inline]
     pub fn nil_inheriting_absence_from(source: &Self) -> Self {
-        match source.normalized_absence_metadata() {
-            Some(absence) => Self::nil_with_absence(absence),
-            None => Self::nil(),
+        match (source.absent_pair(), source.normalized_absence_metadata()) {
+            (Some(pair), Some(absence)) => Self::absent_number(pair.clone(), absence),
+            (None, Some(absence)) => Self::nil_with_absence(absence),
+            (_, None) => Self::nil(),
         }
     }
 
@@ -229,11 +254,12 @@ fn append_dense_value(
             data.push(fraction.clone());
             Some(Vec::new())
         }
-        // A NIL is a rank-0 numeric lane: the absence sentinel, and the reason
-        // for it stored beside the lane. Storing the reason is what makes this
-        // arm possible — see [`DenseCollect`].
-        ValueData::Nil => {
-            data.push(Fraction::nil());
+        // An absent number is a rank-0 numeric lane: the dividend over zero,
+        // and the reason for it stored beside the lane. Storing the reason is
+        // what makes this arm possible — see [`DenseCollect`]. An absence
+        // that is not a number has no lane to be, and keeps the vector nested.
+        ValueData::Nil(pair) => {
+            data.push(pair.clone()?);
             if let Some(metadata) = value.absence_metadata() {
                 absences.insert(offset, metadata.clone());
             }

@@ -56,7 +56,7 @@ impl Slot {
     #[inline]
     pub(crate) fn of(value: &Value) -> Option<Self> {
         match (&value.data, &value.absence) {
-            // A zero denominator is the absent sentinel, not a number.
+            // A zero denominator is an absent number, not a number.
             (
                 ValueData::Scalar(Fraction {
                     repr: FractionRepr::Small(n, d),

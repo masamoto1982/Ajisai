@@ -5,8 +5,11 @@ pub(crate) use self::dense_columns::ScalarColumns;
 #[cfg(test)]
 mod dense_columns_tests;
 pub mod display;
+#[cfg(test)]
+mod dividend_over_zero_tests;
 pub mod exact;
 pub mod fraction;
+mod fraction_absence;
 pub(crate) mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_arithmetic_tests;
@@ -76,7 +79,15 @@ pub enum ValueData {
         data: Arc<DenseTensor>,
         shape: Arc<Vec<usize>>,
     },
-    Nil,
+    /// An absent value. A quotient by zero is absent *as a number*: the
+    /// dividend over the zero that refused it, a fraction whose denominator
+    /// is 0 (`100 0 DIV` holds `100/0`, `Fraction::over_zero`; `0 0 DIV` is
+    /// the one `0/0`). An absence that was never a division — a written
+    /// `NIL`, an index past the end, a key not found, a negative radicand —
+    /// holds no pair. The pair is the machine's record, not the program's:
+    /// why the value is absent lives in `Value::absence`, and that reason is
+    /// the whole of what a program can observe (LANG.VALUES.NIL).
+    Nil(Option<Fraction>),
     /// A bare name in code position — a Word reference that is data until
     /// something executes it. Promoted from the hidden `'symbol'` tag
     /// REFLECT's canonical wire format used to carry (LANG.SOURCE.REFLECTION,
@@ -117,7 +128,7 @@ impl PartialEq for ValueData {
             | (ValueData::Tensor { data, shape }, ValueData::Vector(v)) => {
                 tensor_eq_vector(data, shape, v)
             }
-            (ValueData::Nil, ValueData::Nil) => true,
+            (ValueData::Nil(_), ValueData::Nil(_)) => true,
             // A Symbol equals a Symbol with the same name, and nothing else —
             // in particular not a Text of the same spelling: `[ FOO ] { FOO }
             // EQ` and `[ FOO ] [ 'FOO' ] EQ` are both false (LANG.VALUES.
@@ -182,11 +193,15 @@ impl std::hash::Hash for ValueData {
             ValueData::Tensor { data, shape } => {
                 state.write_u8(HASH_TAG_DENSE);
                 shape.hash(state);
-                let leaves: Vec<Fraction> = data.iter().collect();
+                // A lane hashes as its number or as absent — never as the
+                // dividend an absent lane keeps, which is not its identity.
+                let leaves: Vec<Option<Fraction>> = (0..data.len())
+                    .map(|i| data.get_small_fraction(i))
+                    .collect();
                 leaves.hash(state);
                 dense_lane_reasons(data).hash(state);
             }
-            ValueData::Nil => state.write_u8(HASH_TAG_NIL),
+            ValueData::Nil(_) => state.write_u8(HASH_TAG_NIL),
             ValueData::Symbol(name) => {
                 state.write_u8(HASH_TAG_SYMBOL);
                 name.hash(state);
@@ -271,7 +286,7 @@ impl ValueData {
             ValueData::Boolean(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
-            | ValueData::Nil
+            | ValueData::Nil(_)
             | ValueData::Symbol(_)
             | ValueData::Text(_) => 0,
         }

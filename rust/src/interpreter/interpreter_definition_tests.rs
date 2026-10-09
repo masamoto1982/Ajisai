@@ -187,7 +187,7 @@ async fn test_nil_is_value() {
     assert!(nil.is_nil(), "Value::nil() should be NIL");
     assert!(nil.shape().is_empty(), "NIL should be scalar (empty shape)");
     assert!(
-        matches!(nil.data, ValueData::Nil),
+        matches!(nil.data, ValueData::Nil(_)),
         "NIL should be ValueData::Nil"
     );
 }

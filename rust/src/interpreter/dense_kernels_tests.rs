@@ -189,10 +189,15 @@ fn the_kernels_answer_where_they_apply() {
         kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD 2 MUL 3 DIV FLOOR 0 GT"),
         6
     );
-    assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 MUL"), 1);
-    assert_eq!(kernel_hits("[ 1 NIL 3 ] [ 1 0 2 ] DIV"), 1);
-    assert_eq!(kernel_hits("[ 1 NIL 3 ] FLOOR"), 1);
-    assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 GT"), 1);
+    // A quotient by zero is an absent *number* — its dividend over zero —
+    // and stays a lane; a written NIL is not a number and keeps a Vector
+    // nested, off the kernels.
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV 2 MUL"), 2);
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV [ 1 0 2 ] DIV"), 2);
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV FLOOR"), 2);
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV 2 GT"), 2);
+    assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 MUL"), 0);
+    assert_eq!(kernel_hits("[ 1 NIL 3 ] FLOOR"), 0);
     assert_eq!(kernel_hits("[ 9223372036854775807 1 ] 1 ADD"), 0);
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 2 ] ADD"), 0);
     assert_eq!(kernel_hits("2 3 ADD"), 0);
@@ -256,26 +261,29 @@ fn a_zero_divisor_keeps_the_result_dense() {
 fn an_absent_lane_passes_through_dense() {
     use crate::error::NilReason;
     use crate::types::ValueData;
+    // The absent lanes are quotients by zero — the absence a dense Tensor
+    // holds, as the dividend over zero — made by one `DIV` and carried by the
+    // Word under test. A written `NIL` is not a number and never a lane.
     for (source, reasons) in [
         (
-            "[ 1 NIL 3 ] [ 10 20 30 ] ADD",
-            vec![None, Some(NilReason::Literal), None],
-        ),
-        (
-            "[ 1 2 3 ] [ 1 0 2 ] DIV [ 10 NIL 30 ] MUL",
+            "[ 1 2 3 ] [ 1 0 1 ] DIV [ 10 20 30 ] ADD",
             vec![None, Some(NilReason::DivisionByZero), None],
         ),
         (
-            "[ 10 NIL 30 ] [ 1 2 3 ] [ 1 0 2 ] DIV MUL",
-            vec![None, Some(NilReason::Literal), None],
+            "[ 1 2 3 ] [ 1 0 2 ] DIV [ 10 20 30 ] [ 1 0 1 ] DIV MUL",
+            vec![None, Some(NilReason::DivisionByZero), None],
         ),
         (
-            "[ 'x' 'y' ] [ ABSENT ] MAP [ 1 0 ] DIV",
-            vec![Some(NilReason::UserDeclared), Some(NilReason::UserDeclared)],
+            "[ 10 20 30 ] [ 1 1 0 ] DIV [ 1 2 3 ] [ 1 0 2 ] DIV MUL",
+            vec![
+                None,
+                Some(NilReason::DivisionByZero),
+                Some(NilReason::DivisionByZero),
+            ],
         ),
         (
-            "[ 1/2 NIL -3/2 ] FLOOR",
-            vec![None, Some(NilReason::Literal), None],
+            "[ 1/2 3 -3/2 ] [ 1 0 1 ] DIV FLOOR",
+            vec![None, Some(NilReason::DivisionByZero), None],
         ),
     ] {
         for dense in [true, false] {
