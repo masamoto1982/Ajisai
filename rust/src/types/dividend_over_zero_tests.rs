@@ -360,9 +360,17 @@ fn the_pair_survives_a_save_and_a_restore() {
 }
 
 #[test]
-fn a_saved_number_never_has_a_zero_denominator() {
-    // An absent number is saved as a `Nil` with its dividend, never as a
-    // `Scalar`, so a zero denominator there is a malformed payload.
-    let payload = r#"[{"t":"Scalar","n":"1","d":"0"}]"#;
-    assert!(decode_stack(payload).is_err());
+fn a_saved_number_with_a_zero_denominator_is_the_absent_number_it_spells() {
+    // The codec saves an absent number as a `Nil` with its dividend, never as
+    // a `Scalar`; a payload is untrusted, though, and one that spells `1/0`
+    // decodes as that absent number rather than as a number or a trap.
+    for payload in [
+        r#"[{"t":"Scalar","n":"1","d":"0"}]"#,
+        r#"[{"t":"ExactRat","n":"1","d":"0"}]"#,
+    ] {
+        let restored = decode_stack(payload).expect(payload);
+        assert!(restored[0].is_nil(), "{payload}");
+        assert_eq!(pair_of(&restored[0]), Some((1, 0)), "{payload}");
+        assert_eq!(restored[0].nil_reason(), None, "{payload}");
+    }
 }

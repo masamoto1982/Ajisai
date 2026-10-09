@@ -54,13 +54,28 @@ fn frac_to_parts(f: &Fraction) -> (String, String) {
 fn frac_from_parts(num: &str, den: &str) -> Result<Fraction, String> {
     let numerator = BigInt::from_str(num).map_err(|e| format!("bad numerator: {e}"))?;
     let denominator = BigInt::from_str(den).map_err(|e| format!("bad denominator: {e}"))?;
-    // A number has a nonzero denominator: an absent number is persisted as a
-    // `Nil` with its dividend, never as a `Scalar`, so a zero here is a
-    // malformed payload rather than an absence to rebuild.
+    // A zero denominator is an absent number — the numerator over zero, as
+    // `Fraction::over_zero` writes a quotient by zero — and `Fraction::new`
+    // panics on one. The codec never writes a number that way (an absent
+    // number saves as a `Nil` with its dividend), but the payload is
+    // untrusted, so one that arrives decodes as the absence it spells
+    // (`absent_data`) rather than trapping the module.
     if denominator.is_zero() {
-        return Err("a number has a nonzero denominator".to_string());
+        return Ok(Fraction::from_bigint_pair(numerator, BigInt::zero()));
     }
     Ok(Fraction::new(numerator, denominator))
+}
+
+/// A number payload whose pair is absent (denominator 0) is the absent
+/// number holding that pair, never a `Scalar` wrapping an unreadable one —
+/// as `Value::from_fraction` reads the same pair. `Err(f)` hands a present
+/// number back to its own arm.
+fn absent_data(f: Fraction) -> Result<ValueData, Fraction> {
+    if f.is_nil() {
+        Ok(ValueData::Nil(Some(f)))
+    } else {
+        Err(f)
+    }
 }
 
 /// The pair an absent number was saved with: its dividend over zero.
@@ -237,10 +252,11 @@ fn encode_data(data: &ValueData) -> PersistData {
 fn decode_data(data: &PersistData) -> Result<ValueData, String> {
     Ok(match data {
         PersistData::Bool { v } => ValueData::Boolean(*v),
-        PersistData::Scalar { n, d } => ValueData::Scalar(frac_from_parts(n, d)?),
-        PersistData::ExactRat { n, d } => {
-            ValueData::ExactScalar(ExactReal::Rational(frac_from_parts(n, d)?))
+        PersistData::Scalar { n, d } => {
+            absent_data(frac_from_parts(n, d)?).unwrap_or_else(ValueData::Scalar)
         }
+        PersistData::ExactRat { n, d } => absent_data(frac_from_parts(n, d)?)
+            .unwrap_or_else(|f| ValueData::ExactScalar(ExactReal::Rational(f))),
         PersistData::ExactAlg { terms } => {
             // Replay ∑ cₘ·√m through the public exact arithmetic. The
             // multiquadratic normal form is canonical, so the accumulated

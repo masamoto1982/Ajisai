@@ -144,7 +144,8 @@ async fn exact_rational_is_not_marked_approximate() {
 // it is untrusted: it can be tampered with in IndexedDB or arrive across the
 // worker boundary. A malformed payload must surface a recoverable error rather
 // than panic the module into an unrecoverable trap. The two inputs that trap
-// most easily are a zero denominator (`Fraction::new` panics on one) and a
+// most easily are a zero denominator (`Fraction::new` panics on one; the codec
+// reads it as the absent number it spells) and a
 // deeply nested vector (unbounded recursion overflows the wasm stack).
 // ---------------------------------------------------------------------------
 
@@ -178,15 +179,16 @@ fn restore_stack_snapshot_accepts_valid_rational() {
 
 #[wasm_bindgen_test]
 fn restore_stack_snapshot_survives_a_zero_denominator() {
-    // A zero denominator is the `Fraction` nil sentinel rather than a division:
-    // decoding routes it through the dedicated constructor, so the payload
-    // decodes instead of panicking in `Fraction::new`.
+    // A zero denominator is an absent number (the numerator over zero, as a
+    // quotient by zero is kept) rather than a number: decoding reads it as
+    // that absence, so the payload decodes instead of panicking in
+    // `Fraction::new`.
     let mut interp = AjisaiInterpreter::new();
     let snapshot = snapshot_of("{\"t\":\"Scalar\",\"n\":\"1\",\"d\":\"0\"}");
     let result = interp.restore_stack_snapshot(&snapshot);
     assert!(
         result.is_ok(),
-        "a zero denominator must decode as the NIL sentinel, not panic: {result:?}"
+        "a zero denominator must decode as an absent number, not panic: {result:?}"
     );
 }
 
