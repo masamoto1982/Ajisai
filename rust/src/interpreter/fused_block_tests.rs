@@ -89,7 +89,7 @@ fn hand_picked_programs_agree() {
         "[ 1 2 3 ] [ 1 2 ADD ADD ] MAP",
         "[ 1 2 3 ] 10 [ SUB ] FOLD",
         "[ 1 2 3 ] 10 [ DIV ] FOLD",
-        // A zero divisor projects a NIL: the ordinary walk's to report.
+        // A zero divisor answers a point over zero (LANG.VALUES.EXACT).
         "[ 1 0 2 ] [ 1 SWAP DIV ] MAP",
         "[ 1 0 2 ] [ 5 DIV ] MAP",
         "[ 1 0 2 ] 1 [ DIV ] FOLD",
@@ -189,27 +189,6 @@ fn hand_picked_programs_agree() {
     }
 }
 
-fn rat_runs(source: &str) -> u64 {
-    let before = crate::interpreter::fused_block_rat::rat_runs_on_this_thread();
-    let mut interp = Interpreter::new();
-    let _ = crate::agent::block_on(interp.execute(source));
-    crate::interpreter::fused_block_rat::rat_runs_on_this_thread() - before
-}
-
-/// The small-rational tier answers the fractional walks the integer tier
-/// declines, and steps aside for what does not fit it.
-#[test]
-fn the_rational_tier_is_taken_where_it_applies() {
-    assert_eq!(rat_runs("1 1 1000 RANGE DIV [ 2 MUL ] MAP"), 1);
-    assert_eq!(rat_runs("1 1000 RANGE [ 7 DIV 1/3 ADD FLOOR ] MAP"), 1);
-    assert_eq!(rat_runs("1 1 1000 RANGE DIV [ 1/2 GT ] FILTER"), 1);
-    assert_eq!(rat_runs("1 1 30 RANGE DIV 0 [ ADD ] FOLD"), 1);
-    // Integers stay on the integer tier; overflow and a zero divisor leave.
-    assert_eq!(rat_runs("1 1000 RANGE [ 2 MUL ] MAP"), 0);
-    assert_eq!(rat_runs("1 1 60 RANGE DIV 0 [ ADD ] FOLD"), 0);
-    assert_eq!(rat_runs("1 1 60 RANGE DIV [ 0 DIV ] MAP"), 0);
-}
-
 #[test]
 fn ceilings_agree_at_their_boundaries() {
     let source = "1 50 RANGE 0 [ 3 MUL ADD ] FOLD";
@@ -296,6 +275,10 @@ fn literal() -> impl Strategy<Value = String> {
         Just("-9223372036854775808".to_string()),
         Just("4611686018427387904".to_string()),
         Just("0".to_string()),
+        // The three points over zero.
+        Just("1/0".to_string()),
+        Just("-1/0".to_string()),
+        Just("0/0".to_string()),
     ]
 }
 
@@ -383,6 +366,7 @@ fn typed_expr() -> impl Strategy<Value = (String, String)> {
         3 => (-9i64..10).prop_map(|n| n.to_string()),
         1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
         1 => Just("4611686018427387904".to_string()),
+        1 => prop_oneof![Just("1/0"), Just("-1/0"), Just("0/0")].prop_map(String::from),
     ];
     let bool_leaf = prop_oneof![Just("TRUE".to_string()), Just("FALSE".to_string())];
     (num_leaf, bool_leaf).prop_recursive(4, 24, 3, |inner| {
@@ -422,6 +406,7 @@ fn integer_vector() -> impl Strategy<Value = String> {
             8 => (-50i64..50).prop_map(|n| n.to_string()),
             1 => Just("9223372036854775807".to_string()),
             1 => (-9i64..9, 1i64..5).prop_map(|(n, d)| format!("{n}/{d}")),
+            1 => prop_oneof![Just("1/0"), Just("-1/0"), Just("0/0")].prop_map(String::from),
         ],
         1..16,
     )

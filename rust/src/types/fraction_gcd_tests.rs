@@ -130,6 +130,69 @@ proptest! {
     }
 }
 
+/// The total forms of `small_rational` against `Fraction` on every pair of
+/// a set that holds the three points over zero, zero, signs, a non-integer
+/// and the ends of a machine word: the same pair wherever `Fraction`'s
+/// answer fits one, and the same order, `None` exactly where `Fraction`
+/// orders nothing.
+#[test]
+fn small_rational_total_forms_agree_with_fraction() {
+    use super::small_rational::{add_total, div_total, mul_total, order_total};
+    let pairs = [
+        (0, 1),
+        (1, 1),
+        (-1, 1),
+        (3, 4),
+        (-1, 2),
+        (i64::MAX, 1),
+        (i64::MIN + 1, 1),
+        (1, 0),
+        (-1, 0),
+        (0, 0),
+    ];
+    for a in pairs {
+        for b in pairs {
+            let fa = Fraction::from_normalized_pair(a.0, a.1);
+            let fb = Fraction::from_normalized_pair(b.0, b.1);
+            let cases = [
+                ("ADD", add_total(a, b, false), fa.add(&fb)),
+                ("SUB", add_total(a, b, true), fa.sub(&fb)),
+                ("MUL", mul_total(a, b), fa.mul(&fb)),
+                ("DIV", div_total(a, b), fa.div(&fb)),
+            ];
+            for (word, fast, oracle) in cases {
+                assert_eq!(fast, oracle.extract_i64_pair(), "{a:?} {b:?} {word}");
+            }
+            assert_eq!(order_total(a, b), fa.order(&fb), "{a:?} {b:?} order");
+        }
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(16384))]
+
+    /// The total forms agree with `Fraction` on random pairs and the three
+    /// points over zero.
+    #[test]
+    fn small_rational_total_forms_agree_on_random_pairs(
+        a in prop_oneof![4 => small_pair(), 1 => over_zero()],
+        b in prop_oneof![4 => small_pair(), 1 => over_zero()],
+    ) {
+        use super::small_rational::{add_total, div_total, mul_total, order_total};
+        let fa = Fraction::from_normalized_pair(a.0, a.1);
+        let fb = Fraction::from_normalized_pair(b.0, b.1);
+        prop_assert_eq!(add_total(a, b, false), fa.add(&fb).extract_i64_pair());
+        prop_assert_eq!(add_total(a, b, true), fa.sub(&fb).extract_i64_pair());
+        prop_assert_eq!(mul_total(a, b), fa.mul(&fb).extract_i64_pair());
+        prop_assert_eq!(div_total(a, b), fa.div(&fb).extract_i64_pair());
+        prop_assert_eq!(order_total(a, b), fa.order(&fb));
+    }
+}
+
+fn over_zero() -> impl Strategy<Value = (i64, i64)> {
+    prop_oneof![Just((1, 0)), Just((-1, 0)), Just((0, 0))]
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(16384))]
 

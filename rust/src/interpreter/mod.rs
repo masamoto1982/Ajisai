@@ -40,10 +40,14 @@ mod fused_block_int;
 #[cfg(test)]
 mod fused_block_lane_call_tests;
 pub(crate) mod fused_block_lower;
+#[cfg(test)]
+mod fused_block_over_zero_tests;
 mod fused_block_rat;
 mod fused_block_reg;
 #[cfg(test)]
 mod fused_block_tests;
+#[cfg(test)]
+mod fused_block_tier_tests;
 pub mod higher_order;
 pub mod higher_order_fold;
 #[cfg(test)]

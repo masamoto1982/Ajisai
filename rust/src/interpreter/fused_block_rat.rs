@@ -16,7 +16,17 @@
 //! here is `Small`, which the meter prices at one limb, so each arithmetic
 //! Word costs `binary_numeric_work(1, 1)` and takes the scalar fast path, as
 //! `LT`/`GT` and a numeric `EQ` do, and every result fits 64 bits for the
-//! size ceiling. A zero divisor is the ordinary walk's NIL to project.
+//! size ceiling.
+//!
+//! A number over zero — `(1, 0)`, `(-1, 0)`, `(0, 0)`, met as an element, a
+//! literal or the quotient of a zero divisor — is a pair like any other: the
+//! arithmetic that meets one is answered by the `Fraction`'s total law
+//! (`small_rational`'s `_total` forms), and its answer is again one of the
+//! three points or zero, so the walk stays here. The meter prices such a
+//! pair at one limb as well, so the charges are the same. Each point is its
+//! own floor and its own rounding. Only an order asked of `0/0` — `LT`, `GT`,
+//! `MIN`, `MAX` — has no answer here: it is the ordinary walk's `domainMiss`
+//! to project, and the walk steps aside.
 //!
 //! The results are the ones `Fraction` reaches: a rational's lowest-terms
 //! form with a positive denominator is unique, so any correct reduction
@@ -28,7 +38,7 @@ use crate::interpreter::fused_block_general::promote;
 use crate::interpreter::runtime_limits::binary_numeric_work;
 use crate::interpreter::Interpreter;
 use crate::types::fraction::{Fraction, FractionRepr};
-use crate::types::small_rational::{self, add, div, mul, order};
+use crate::types::small_rational::{self, add_total, div_total, mul_total, order_total};
 use crate::types::{DenseTensor, Value, ValueData};
 use std::cmp::Ordering;
 use std::sync::Arc;
@@ -216,19 +226,21 @@ impl Program {
         for ins in &self.instrs {
             let (a, b) = (read(regs, ins.a), read(regs, ins.b));
             regs[ins.dst] = match ins.kind {
-                Kind::Add => add(a, b, false)?,
-                Kind::Sub => add(a, b, true)?,
-                Kind::Mul => mul(a, b)?,
-                Kind::Div => div(a, b)?,
+                Kind::Add => add_total(a, b, false)?,
+                Kind::Sub => add_total(a, b, true)?,
+                Kind::Mul => mul_total(a, b)?,
+                Kind::Div => div_total(a, b)?,
                 Kind::Pow => crate::interpreter::quickened::small_power(a, b)?,
                 // The left operand on a tie, as MIN and MAX keep it.
-                Kind::Min if order(b, a) == Ordering::Less => b,
-                Kind::Max if order(a, b) == Ordering::Less => b,
+                Kind::Min if order_total(b, a)? == Ordering::Less => b,
+                Kind::Max if order_total(a, b)? == Ordering::Less => b,
                 Kind::Min | Kind::Max => a,
+                // A point over zero is its own floor and its own rounding.
+                Kind::Floor | Kind::Round if a.1 == 0 => a,
                 Kind::Floor => (a.0.div_euclid(a.1), 1),
                 Kind::Round => (small_rational::round_half_away_from_zero(a.0, a.1), 1),
-                Kind::Lt => truth(order(a, b) == Ordering::Less),
-                Kind::Gt => truth(order(a, b) == Ordering::Greater),
+                Kind::Lt => truth(order_total(a, b)? == Ordering::Less),
+                Kind::Gt => truth(order_total(a, b)? == Ordering::Greater),
                 Kind::Eq => truth(a == b),
                 Kind::Not => truth(a.0 == 0),
                 Kind::And => truth(a.0 != 0 && b.0 != 0),
@@ -272,7 +284,7 @@ impl Elements<'_> {
 
 fn elements(target: &Value) -> Option<(Ty, Elements<'_>)> {
     match &target.data {
-        ValueData::Tensor { data, shape } if shape.len() == 1 && data.all_finite() => Some((
+        ValueData::Tensor { data, shape } if shape.len() == 1 => Some((
             Ty::Num,
             Elements::Columns(&data.numerators, &data.denominators),
         )),

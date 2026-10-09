@@ -16,10 +16,14 @@
 //! - A Word run by its plain law (`fusion_contract`) charges what that law
 //!   reports, which is what its dispatch charges.
 //!
-//! An operand outside the domain a Word accepts is that Word's ERROR, and a
-//! zero divisor its NIL projection; both answer `None` here, for the ordinary
-//! walk to reproduce with its diagnostics.
+//! The three points over zero are numbers here like any other: `ADD`/`SUB`/
+//! `MUL`/`DIV` answer them, and a zero divisor, by the `Fraction`'s total
+//! arithmetic, as the fast path does. An operand outside the domain a Word
+//! accepts is that Word's ERROR, and an order asked of `0/0` its `domainMiss`
+//! NIL; both answer `None` here, for the ordinary walk to reproduce with its
+//! diagnostics.
 
+use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::fused_block::{Charges, Compare, FusedBlock, FusedWalk, Op, Plain};
 use crate::interpreter::runtime_limits::{
     binary_numeric_work, fraction_result_bits, fraction_work_bits,
@@ -38,11 +42,7 @@ fn elements(target: &Value) -> Option<Vec<Plain>> {
     if let ValueData::Tensor { data, shape } = &target.data {
         if shape.len() == 1 {
             return (0..data.len())
-                .map(|i| {
-                    Some(data.fraction_at(i))
-                        .filter(Fraction::is_finite)
-                        .map(Plain::Num)
-                })
+                .map(|i| Some(Plain::Num(data.fraction_at(i))))
                 .collect();
         }
     }
@@ -79,6 +79,29 @@ pub(crate) fn promote(values: Vec<Plain>) -> Value {
     Value::from_vector_promoted(values.into_iter().map(Plain::into_value).collect())
 }
 
+/// `a schema b` by `small_rational`'s pair laws when both are rationals whose
+/// halves fit a machine word and the answer does too: the value
+/// `schema.fraction` reaches (a lowest-terms form with a positive denominator
+/// is unique), without its `i128` normalisation, a software division on
+/// WebAssembly. `None` for anything else, which `Fraction` answers.
+#[inline]
+fn small_pair_law(schema: ExactArithmeticSchema, a: &Fraction, b: &Fraction) -> Option<Fraction> {
+    use crate::types::small_rational;
+    let (x, y) = (a.extract_i64_pair()?, b.extract_i64_pair()?);
+    if x.1 == 0 || y.1 == 0 {
+        return None;
+    }
+    let (n, d) = match schema {
+        ExactArithmeticSchema::Add => small_rational::add(x, y, false),
+        ExactArithmeticSchema::Sub => small_rational::add(x, y, true),
+        ExactArithmeticSchema::Mul => small_rational::mul(x, y),
+        ExactArithmeticSchema::Div => small_rational::div(x, y),
+    }?;
+    Some(Fraction::from_repr(
+        crate::types::fraction::FractionRepr::Small(n, d),
+    ))
+}
+
 struct Meter<'a> {
     interp: &'a Interpreter,
     work: u64,
@@ -98,7 +121,7 @@ impl Meter<'_> {
         if self.work > self.work_budget {
             return None;
         }
-        let r = schema.fraction(&a, &b);
+        let r = small_pair_law(schema, &a, &b).unwrap_or_else(|| schema.fraction(&a, &b));
         self.interp
             .runtime_limits
             .check_algebraic_size(0, fraction_result_bits(&r))
