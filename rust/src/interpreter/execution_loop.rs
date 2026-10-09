@@ -208,7 +208,7 @@ impl Interpreter {
     pub(crate) fn check_source_numeric_literals(&self, tokens: &[Token]) -> Result<()> {
         for token in tokens {
             if let Token::Number(literal) = token {
-                let digits = crate::tokenizer::denoted_digit_count(literal.lexeme());
+                let digits = literal.denoted_digits();
                 self.runtime_limits
                     .check_numeric_literal_digits(usize::try_from(digits).unwrap_or(usize::MAX))?;
             }

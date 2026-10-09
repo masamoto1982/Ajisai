@@ -33,7 +33,6 @@ mod lanes;
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::comparison::OrderingKind;
 use crate::types::small_rational;
-use crate::types::Column;
 use crate::types::Value;
 use lanes::{paired, Lanes, Out};
 
@@ -65,26 +64,26 @@ fn integer_lanes(
     b: Lanes,
     n: usize,
     f: impl Fn(i64, i64) -> (i64, bool),
-) -> Option<Column> {
-    let mut out: Column = smallvec::smallvec![0i64; n];
+) -> Option<Vec<i64>> {
+    let mut out = vec![0i64; n];
     let mut bad = false;
     match (a, b) {
-        (Lanes::Columns { tensor: x, .. }, Lanes::Columns { tensor: y, .. }) => {
-            for ((o, &x), &y) in out.iter_mut().zip(&x.numerators).zip(&y.numerators) {
+        (Lanes::Columns { nums: x, .. }, Lanes::Columns { nums: y, .. }) => {
+            for ((o, &x), &y) in out.iter_mut().zip(x).zip(y) {
                 let (v, f) = f(x, y);
                 *o = v;
                 bad |= f;
             }
         }
-        (Lanes::Columns { tensor: x, .. }, Lanes::Splat(y, _)) => {
-            for (o, &x) in out.iter_mut().zip(&x.numerators) {
+        (Lanes::Columns { nums: x, .. }, Lanes::Splat(y, _)) => {
+            for (o, &x) in out.iter_mut().zip(x) {
                 let (v, f) = f(x, y);
                 *o = v;
                 bad |= f;
             }
         }
-        (Lanes::Splat(x, _), Lanes::Columns { tensor: y, .. }) => {
-            for (o, &y) in out.iter_mut().zip(&y.numerators) {
+        (Lanes::Splat(x, _), Lanes::Columns { nums: y, .. }) => {
+            for (o, &y) in out.iter_mut().zip(y) {
                 let (v, f) = f(x, y);
                 *o = v;
                 bad |= f;
@@ -106,14 +105,14 @@ const GCD_TABLE_MAX: u64 = 4096;
 fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
     use crate::types::fraction::binary_gcd_u64;
     // A Tensor divided by one small integer (`7 DIV`, the common case) meets
-    // only `|y|` residues, so their gcds are read from a table built once.
-    let residue_gcds: Option<Vec<u16>> = match b {
-        Lanes::Splat(y, _) if (1..=GCD_TABLE_MAX).contains(&y.unsigned_abs()) => {
-            let m = y.unsigned_abs();
-            (m as usize <= n).then(|| (0..m).map(|r| binary_gcd_u64(m, r) as u16).collect())
+    // only `|y|` residues, so everything a lane needs is read from a table
+    // built once.
+    if let (Lanes::Columns { nums, .. }, Lanes::Splat(y, _)) = (a, b) {
+        let m = y.unsigned_abs();
+        if (1..=GCD_TABLE_MAX).contains(&m) && m as usize <= n {
+            return quotients_by_small_integer(nums, y);
         }
-        _ => None,
-    };
+    }
     let mut out = Out::with_capacity(n);
     for i in 0..n {
         let (x, y) = (a.num(i), b.num(i));
@@ -127,10 +126,7 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         // those need no further division.
         let m = y.unsigned_abs();
         let r = x.unsigned_abs() % m;
-        let g = match &residue_gcds {
-            Some(table) => u64::from(table[r as usize]),
-            None => binary_gcd_u64(m, r),
-        };
+        let g = binary_gcd_u64(m, r);
         let (q, d) = if g == 1 {
             (x, y)
         } else {
@@ -145,6 +141,109 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         out.push(q, d);
     }
     Some(out.into_value())
+}
+
+/// `x / y` for every lane `x` and one integer `y` with `1 <= |y| <=
+/// GCD_TABLE_MAX`: [`integer_quotients`]'s answer, with no hardware division
+/// per lane.
+///
+/// `x = q·m + r` with `m = |y|` and `0 <= r < m` ([`floor_divmod`]), and
+/// `g = gcd(m, r) = gcd(x, y)`, which divides both `m` and `r`, so the reduced
+/// numerator `x / g` is `q·(m/g) + r/g` — two table reads and a multiply.
+/// `None` for the one quotient a machine word cannot hold, `i64::MIN / -1`.
+fn quotients_by_small_integer(nums: &[i64], y: i64) -> Option<Value> {
+    use crate::types::fraction::binary_gcd_u64;
+    let m = y.unsigned_abs();
+    // Per residue: `m / g` and `r / g`.
+    let table: Vec<(u16, u16)> = (0..m)
+        .map(|r| {
+            let g = binary_gcd_u64(m, r);
+            ((m / g) as u16, (r / g) as u16)
+        })
+        .collect();
+    let (signed_m, inv) = (m as i64, 1.0 / m as f64);
+    let negative = y < 0;
+    let mut out = Out::with_capacity(nums.len());
+    for &x in nums {
+        let (q, r) = floor_divmod(x, signed_m, inv);
+        let (m_over_g, r_over_g) = table[r as usize];
+        let (m_over_g, r_over_g) = (i64::from(m_over_g), i64::from(r_over_g));
+        // `x / g` exactly: `q·m + r` divided through by `g`.
+        let numerator = if m_over_g == signed_m {
+            x
+        } else {
+            q.checked_mul(m_over_g)?.checked_add(r_over_g)?
+        };
+        if negative {
+            out.push(numerator.checked_neg()?, m_over_g);
+        } else {
+            out.push(numerator, m_over_g);
+        }
+    }
+    Some(out.into_value())
+}
+
+/// The floor quotient and remainder of `x` by `m >= 1`: `x = q·m + r` with
+/// `0 <= r < m`, as `div_euclid` / `rem_euclid` answer them.
+///
+/// A hardware 64-bit division costs tens of cycles a lane, and on the column
+/// kernels it was most of the work. Below 2^52 every integer is a double, and
+/// `x · (1/m)` lands within one of the true quotient (`m >= 2` keeps it under
+/// 2^51, where the two roundings together err by less than one), so the
+/// estimate is corrected by at most a step each way against the exact
+/// integer remainder. Anything wider takes the division.
+#[inline(always)]
+pub(crate) fn floor_divmod(x: i64, m: i64, inv: f64) -> (i64, i64) {
+    const EXACT: u64 = 1 << 52;
+    if m == 1 {
+        return (x, 0);
+    }
+    if x.unsigned_abs() >= EXACT || m as u64 >= EXACT {
+        return (x.div_euclid(m), x.rem_euclid(m));
+    }
+    let mut q = (x as f64 * inv) as i64;
+    let mut r = x - q * m;
+    while r < 0 {
+        q -= 1;
+        r += m;
+    }
+    while r >= m {
+        q += 1;
+        r -= m;
+    }
+    (q, r)
+}
+
+/// `n ± k` for a column of rationals and one integer `k`, either side:
+/// `n/d ± k` is `(n ± k·d)/d`, already in lowest terms because
+/// `gcd(n ± k·d, d) = gcd(n, d) = 1`, so a lane needs no gcd. The same law
+/// answers the three points over zero (`d = 0` leaves `n` as it was, or
+/// negated for `k - n`), which is what `add_total` answers for them. `None`
+/// for anything else, or when a lane overflows.
+fn shifted_by_integer(schema: ExactArithmeticSchema, a: Lanes, b: Lanes) -> Option<Value> {
+    let subtract = match schema {
+        ExactArithmeticSchema::Add => false,
+        ExactArithmeticSchema::Sub => true,
+        _ => return None,
+    };
+    let (nums, dens, k, k_first) = match (a, b) {
+        (Lanes::Columns { nums, dens, .. }, Lanes::Splat(k, 1)) => (nums, dens, k, false),
+        (Lanes::Splat(k, 1), Lanes::Columns { nums, dens, .. }) => (nums, dens, k, true),
+        _ => return None,
+    };
+    let mut out = vec![0i64; nums.len()];
+    let mut bad = false;
+    for ((o, &n), &d) in out.iter_mut().zip(nums).zip(dens) {
+        let (kd, f) = small_rational::overflowing_mul(k, d);
+        let (v, g) = match (subtract, k_first) {
+            (false, _) => n.overflowing_add(kd),
+            (true, false) => n.overflowing_sub(kd),
+            (true, true) => kd.overflowing_sub(n),
+        };
+        *o = v;
+        bad |= f | g;
+    }
+    (!bad).then(|| Out::columns(out, dens.to_vec()).into_value())
 }
 
 /// `a schema b` lane by lane, or `None` for the general route.
@@ -168,6 +267,9 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
         if matches!(schema, ExactArithmeticSchema::Div) {
             return integer_quotients(a, b, n);
         }
+    }
+    if let Some(shifted) = shifted_by_integer(schema, a, b) {
+        return Some(shifted);
     }
     let mut out = Out::with_capacity(n);
     for i in 0..n {
@@ -198,16 +300,17 @@ pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value
 fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     let (a, b) = (Lanes::of(a)?, Lanes::of(b)?);
     let n = paired(a, b)?;
-    let truth = |ordering| Value::from_bool(kind.apply_ordering(ordering));
+    let truth = |ordering| kind.apply_ordering(ordering);
     if a.integer() && b.integer() {
-        return Some(Value::from_vector(
-            (0..n).map(|i| truth(a.num(i).cmp(&b.num(i)))).collect(),
+        return Some(Value::from_truths(
+            (0..n).map(|i| truth(a.num(i).cmp(&b.num(i)))),
         ));
     }
-    let lanes = (0..n)
-        .map(|i| Some(truth(small_rational::order_total(a.at(i), b.at(i))?)))
-        .collect::<Option<_>>()?;
-    Some(Value::from_vector(lanes))
+    let mut truths = Vec::with_capacity(n);
+    for i in 0..n {
+        truths.push(truth(small_rational::order_total(a.at(i), b.at(i))?));
+    }
+    Some(Value::from_truths(truths.into_iter()))
 }
 
 /// Which rounding `rounded` applies.
@@ -230,7 +333,9 @@ pub(crate) fn rounded(rounding: Rounding, value: &Value) -> Option<Value> {
 fn rounded_lanes(rounding: Rounding, value: &Value) -> Option<Value> {
     let lanes = Lanes::of(value)?;
     let Lanes::Columns {
-        tensor, integer, ..
+        nums,
+        dens,
+        integer,
     } = lanes
     else {
         return None;
@@ -238,17 +343,37 @@ fn rounded_lanes(rounding: Rounding, value: &Value) -> Option<Value> {
     if integer {
         return Some(value.clone());
     }
-    let mut out = Out::with_capacity(tensor.len());
-    for (&n, &d) in tensor.numerators.iter().zip(&tensor.denominators) {
-        if d == 0 {
-            out.push(n, 0);
-            continue;
-        }
-        let rounded = match rounding {
-            Rounding::Floor => n.div_euclid(d),
-            Rounding::Round => small_rational::round_half_away_from_zero(n, d),
-        };
-        out.push(rounded, 1);
+    // A column's denominators repeat (after `7 DIV` they are 7 or 1), so the
+    // reciprocal `floor_divmod` multiplies by is kept for the last one met;
+    // an integer lane is its own floor and rounding and leaves it alone.
+    let (mut last_d, mut inv) = (1i64, 1.0f64);
+    let mut over_zero = false;
+    let out: Vec<i64> = nums
+        .iter()
+        .zip(dens)
+        .map(|(&n, &d)| {
+            if d == 1 {
+                return n;
+            }
+            if d == 0 {
+                over_zero = true;
+                return n;
+            }
+            match rounding {
+                Rounding::Floor => {
+                    if d != last_d {
+                        (last_d, inv) = (d, 1.0 / d as f64);
+                    }
+                    floor_divmod(n, d, inv).0
+                }
+                Rounding::Round => small_rational::round_half_away_from_zero(n, d),
+            }
+        })
+        .collect();
+    if !over_zero {
+        return Some(Out::integers(out).into_value());
     }
-    Some(out.into_value())
+    // The three points over zero keep their own denominator.
+    let out_dens = dens.iter().map(|&d| i64::from(d != 0)).collect();
+    Some(Out::columns(out, out_dens).into_value())
 }

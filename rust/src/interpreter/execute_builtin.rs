@@ -37,7 +37,28 @@ impl Interpreter {
         // and one probe of the Core dictionary spares the walk over every
         // scope that would only miss. Most names a program dispatches are
         // Core Words.
-        let core = self.core_vocabulary.get(name).cloned();
+        //
+        // A Core Word on two machine-word scalars is answered and charged as
+        // the dispatch below would (`quickened`): the step, the work, the
+        // fast-path hit and the nesting check are all made there. Asked
+        // first, on the entry the probe finds, so the common call takes no
+        // reference to the definition it would only let go of again.
+        let core_word = self.core_vocabulary.get(name).map(|def| {
+            def.body
+                .is_empty()
+                .then_some(def.generated)
+                .flatten()
+                .map(|word| word.id)
+        });
+        if let Some(Some(id)) = core_word {
+            if super::quickened::try_scalar_call(self, id) {
+                return Ok(());
+            }
+        }
+        let core = match core_word {
+            Some(_) => self.core_vocabulary.get(name).cloned(),
+            None => None,
+        };
         if core.is_none() {
             if let Some(value) = self.lookup_binding(name) {
                 self.stack.push(value);
@@ -75,10 +96,9 @@ impl Interpreter {
         // Provenance (Phase 6): record the resolved word for the execution
         // receipt. No-op unless receipt recording is enabled.
 
-        // A Core Word on two machine-word scalars, answered and charged as
-        // the dispatch below would (`quickened`): the step, the work, the
-        // fast-path hit and the nesting check are all made there.
-        if def.body.is_empty() {
+        // A definition the Core probe did not find gets the same scalar
+        // route; one it found has already been asked.
+        if core_word.is_none() && def.body.is_empty() {
             if let Some(word) = def.generated {
                 if super::quickened::try_scalar_call(self, word.id) {
                     return Ok(());
