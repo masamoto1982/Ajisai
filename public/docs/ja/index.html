@@ -1335,7 +1335,7 @@ FILTER</code></td>
 <h3 id="family-dictionary">契約: 辞書と名前</h3>
 <div class="word-entry" id="word-CONTRACT">
 <h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ワードまたはブロックの契約をRecordで答える。<code>[ SQRT ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
+<p>ワードまたはブロックの契約をRecordで答える。<code>[ SQRT ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>field</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問い、<code>[ 0 DIV ] CONTRACT 'field' GET</code>は<code>'leaving'</code>になる。三点を含まない被演算子から0の上の点を答えうるかどうかは、実行する前に読める(LANG.CONTRACT.FIELD)。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>field</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
@@ -1343,6 +1343,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>symbolNamesNoWord</code> → <code>notFound</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>notASymbol</code></dd>
@@ -1359,6 +1360,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code>, <code>nameConflict</code>, <code>shapeMismatch</code>, <code>invalidName</code>, <code>selfReferentialDefinition</code></dd>
@@ -1375,6 +1377,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>control</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd><code>dictionaryWrite</code></dd>
 <dt>ERROR条件</dt><dd><code>invalidName</code>, <code>protectedWord</code>, <code>nameConflict</code>, <code>definitionConflict</code>, <code>selfReferentialDefinition</code>, <code>nonText</code>, <code>invalidDefinitionBody</code></dd>
@@ -1391,6 +1394,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd><code>dictionaryDelete</code></dd>
 <dt>ERROR条件</dt><dd><code>wordNotFound</code>, <code>protectedWord</code>, <code>nonText</code>, <code>definitionConflict</code></dd>
@@ -1407,6 +1411,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.DICTIONARY.MUTATION</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.DICTIONARY.RESOLUTION</code></dd>
@@ -1782,6 +1787,7 @@ FILTER</code></td>
 <dt>スタック</dt><dd>入力 0 → 出力 1</dd>
 <dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
@@ -1796,6 +1802,7 @@ FILTER</code></td>
 <dt>スタック</dt><dd>入力 0 → 出力 1</dd>
 <dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
@@ -1811,6 +1818,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>truth</code>, <code>truth</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>kleeneAbsorbing</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonTruthValue</code>, <code>shapeMismatch</code></dd>
@@ -1827,6 +1835,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>truth</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>kleeneAbsorbing</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonTruthValue</code></dd>
@@ -1843,6 +1852,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>element</code>, <code>element</code>, <code>truth</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>kleeneAbsorbing</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonTruthValue</code>, <code>shapeMismatch</code></dd>
@@ -1860,6 +1870,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DENOTATION</code></dd>
@@ -1875,6 +1886,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -1891,6 +1903,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -1908,6 +1921,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -1924,6 +1938,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -1940,6 +1955,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -1956,10 +1972,11 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.CONTRACT.FIELD</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FLOOR">
@@ -1972,6 +1989,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
@@ -1988,6 +2006,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
@@ -2004,6 +2023,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -2020,6 +2040,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -2036,6 +2057,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>negativeScalar</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
@@ -2052,10 +2074,11 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>domainMiss</code>, <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-GCD">
@@ -2068,6 +2091,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>nonIntegerOperand</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
@@ -2084,6 +2108,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>irrationalOperand</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code></dd>
@@ -2405,6 +2430,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds,notFound</code> → <code>indexOutOfBounds</code>, <code>notFound</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonContainer</code>, <code>invalidInteger</code></dd>
@@ -2421,6 +2447,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2437,6 +2464,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds</code> → <code>indexOutOfBounds</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidInteger</code></dd>
@@ -2453,6 +2481,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds</code> → <code>indexOutOfBounds</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidInteger</code></dd>
@@ -2469,6 +2498,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2485,6 +2515,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2500,6 +2531,7 @@ FILTER</code></td>
 <dt>スタック</dt><dd>入力 variable → 出力 1</dd>
 <dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>invalidInteger</code>, <code>stackUnderflow</code></dd>
@@ -2516,6 +2548,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>invalidInteger</code>, <code>shapeMismatch</code></dd>
@@ -2532,6 +2565,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>invalidShape</code></dd>
@@ -2548,6 +2582,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>raggedNesting</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.FAILURE.PROJECT</code></dd>
@@ -2563,6 +2598,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidShape</code></dd>
@@ -2579,6 +2615,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2595,6 +2632,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.DICTIONARY.ACYCLIC</code></dd>
@@ -2610,6 +2648,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedElement</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
@@ -2626,6 +2665,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedElement</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
@@ -2642,6 +2682,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2658,6 +2699,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>shapeMismatch</code></dd>
@@ -2674,6 +2716,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>indexOutOfBounds</code> → <code>indexOutOfBounds</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonContainer</code>, <code>invalidInteger</code></dd>
@@ -2690,6 +2733,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2706,6 +2750,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2722,6 +2767,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound,unorderedOperand</code> → <code>notFound</code>, <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>unsortedInput</code>, <code>nonNumeric</code></dd>
@@ -2882,6 +2928,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code></dd>
@@ -2898,6 +2945,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>shapeMismatch</code></dd>
@@ -2914,6 +2962,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>shapeMismatch</code>, <code>duplicateKey</code></dd>
@@ -2930,6 +2979,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
@@ -2946,6 +2996,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
@@ -2962,6 +3013,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
@@ -2978,6 +3030,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
@@ -2994,6 +3047,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonRecord</code></dd>
@@ -3288,6 +3342,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
@@ -3304,6 +3359,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonText</code></dd>
@@ -3320,6 +3376,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
@@ -3336,6 +3393,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
@@ -3352,6 +3410,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
@@ -3368,6 +3427,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code>, <code>shapeMismatch</code></dd>
@@ -3384,6 +3444,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code>, <code>shapeMismatch</code></dd>
@@ -3400,6 +3461,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code>, <code>shapeMismatch</code></dd>
@@ -3416,10 +3478,11 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>parseFailure,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-STR">
@@ -3432,6 +3495,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>noExactLexemeForValue</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
@@ -3447,6 +3511,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>noDecimalForValue</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>invalidInteger</code>, <code>shapeMismatch</code></dd>
@@ -3463,6 +3528,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>textIsNotJson,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
@@ -3479,6 +3545,7 @@ FILTER</code></td>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>valueHasNoJsonImage</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
@@ -3808,6 +3875,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code></dd>
@@ -3824,6 +3892,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code>, <code>nonTruthValue</code></dd>
@@ -3840,6 +3909,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code></dd>
@@ -3856,6 +3926,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>data</code>, <code>element</code>, <code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>blockContractViolation</code></dd>
@@ -3873,6 +3944,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>notExecutable</code></dd>
@@ -3889,6 +3961,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>rejectNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>partial</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code>, <code>declaredFailure</code></dd>
@@ -4028,6 +4101,7 @@ SELECT</code></td>
 <dt>スタック</dt><dd>入力 0 → 出力 1</dd>
 <dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
@@ -4043,6 +4117,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code></dd>
@@ -4058,6 +4133,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>valueIsNotNil</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>条項</dt><dd><code>LANG.VALUES.NIL</code>, <code>LANG.FAILURE.RECOVERY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
@@ -4073,6 +4149,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>control</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>createsNil</code>; 投影: <code>always</code> → <code>userDeclared</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
@@ -4160,6 +4237,7 @@ SELECT</code></td>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
 <dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: なし</dd>
 <dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>effectful</code> / <code>hostRelative</code></dd>
 <dt>作用</dt><dd><code>consoleWrite</code></dd>
 <dt>条項</dt><dd><code>LANG.EFFECTS.OUTPUT</code>, <code>LANG.MACHINE.ORDER</code></dd>

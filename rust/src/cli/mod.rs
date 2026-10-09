@@ -289,11 +289,12 @@ fn cmd_contract(path: &str) -> i32 {
         for r in &reports {
             let count = |n: Option<u16>| n.map_or("variable".to_string(), |n| n.to_string());
             println!(
-                "{} : inputs={} outputs={} partiality={} purity={} determinism={} [{}]",
+                "{} : inputs={} outputs={} partiality={} field={} purity={} determinism={} [{}]",
                 r.name,
                 count(r.inputs),
                 count(r.outputs),
                 r.partiality,
+                r.field,
                 r.purity,
                 r.determinism,
                 r.confidence

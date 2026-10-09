@@ -42,7 +42,14 @@ const fail = report.fail;
 // where the earlier phases of that work order fit into existing clauses. Four
 // lines: the heading, the paragraph, and their separators. Net new content
 // again.
-const LINE_BUDGET = 408;
+//
+// Raised to 412 for LANG.CONTRACT.FIELD: total division moved the cost of a
+// zero divisor from a run-time failure to the three points over zero, where
+// the field laws stop, and the contract gained the one axis that says before
+// anything runs where that can happen (`field`: `closed` < `leaving`). It is a
+// new fact about every Word and every body, not a reflow of an old clause, so
+// it takes the same four lines a new clause took above.
+const LINE_BUDGET = 412;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
   fail(

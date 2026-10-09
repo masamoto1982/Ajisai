@@ -459,8 +459,12 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 One comment line per Word, written in the keys and values of a contract Record
 (the same vocabulary \`word_contract\` / \`CONTRACT\` answer in):
 
-\`#:contract NAME [inputs=N] [outputs=N] [purity=pure|effectful] [partiality=total|partial|projecting] [determinism=deterministic|stateRelative|hostRelative] [cost steps=C numeric=C collection=C]\`
+\`#:contract NAME [inputs=N] [outputs=N] [purity=pure|effectful] [partiality=total|partial|projecting] [field=closed|leaving] [determinism=deterministic|stateRelative|hostRelative] [cost steps=C numeric=C collection=C]\`
 with each cost class \`C\` one of \`const\` \`linear\` \`superlinear\` \`unbounded\`.
+\`field=closed\` promises the Word never answers a point over zero (\`1/0\` \`-1/0\`
+\`0/0\`) from operands holding none — only \`DIV\`, \`POW\`, \`NUM\` and a literal over
+zero leave the field, and inside \`closed\` code the field laws (distributivity,
+\`x x SUB\` = 0) hold (LANG.CONTRACT.FIELD).
 
 \`inputs\`/\`outputs\` must equal what the body does; every other key is an upper
 bound the body must not exceed; a key left out is not checked. The check is

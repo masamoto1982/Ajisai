@@ -270,8 +270,8 @@
       "summary": "ブロックをその場で実行し、結果をスタックに残す。`[ 1 2 ADD ] EXEC`は`3`。他のコードと同じくスタックを読み書きするので、`2 [ 3 MUL ] EXEC`は`6`。ブロックでないものは`notExecutable`。"
     },
     "CONTRACT": {
-      "source": "e4f1b2fd2fa9641a",
-      "summary": "ワードまたはブロックの契約をRecordで答える。`[ SQRT ] 0 GET CONTRACT 'partiality' GET`は`'projecting'`。CoreワードをSymbolで名指せば、`spec/words.json`に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名`name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`。だから`[ DIV ] 0 GET CONTRACT 'cost' GET`は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から`ajisai check --contract`が行うのと同じ推論)、キーは`inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects`(同じキーで同じ語彙なので両者を直接比べられる)と`confidence` `gaps`。`confidence`と`gaps`は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、`[ 42 PRINT ] CONTRACT`は出力せずに`effects`の下に`consoleWrite`を報告する。どのワードも名指さないSymbolは`notFound`を投影し、SymbolでもブロックでもないオペランドはERROR(`notASymbol`)。"
+      "source": "e0d2736444197e90",
+      "summary": "ワードまたはブロックの契約をRecordで答える。`[ SQRT ] 0 GET CONTRACT 'partiality' GET`は`'projecting'`。CoreワードをSymbolで名指せば、`spec/words.json`に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名`name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `field` `purity` `determinism` `cost` `effects`。だから`[ DIV ] 0 GET CONTRACT 'cost' GET`は実行する前にワードの費用級を問い、`[ 0 DIV ] CONTRACT 'field' GET`は`'leaving'`になる。三点を含まない被演算子から0の上の点を答えうるかどうかは、実行する前に読める(LANG.CONTRACT.FIELD)。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から`ajisai check --contract`が行うのと同じ推論)、キーは`inputs` `outputs` `partiality` `field` `purity` `determinism` `cost` `effects`(同じキーで同じ語彙なので両者を直接比べられる)と`confidence` `gaps`。`confidence`と`gaps`は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、`[ 42 PRINT ] CONTRACT`は出力せずに`effects`の下に`consoleWrite`を報告する。どのワードも名指さないSymbolは`notFound`を投影し、SymbolでもブロックでもないオペランドはERROR(`notASymbol`)。"
     },
     "FAIL": {
       "source": "a5802c10ab833aaf",

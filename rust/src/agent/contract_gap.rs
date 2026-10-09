@@ -244,7 +244,7 @@ pub(crate) fn parse_cost_terms(
         // (`inputs=1`, `purity=pure`, …).
         if matches!(
             axis,
-            "inputs" | "outputs" | "purity" | "partiality" | "determinism"
+            "inputs" | "outputs" | "purity" | "partiality" | "field" | "determinism"
         ) {
             break;
         }

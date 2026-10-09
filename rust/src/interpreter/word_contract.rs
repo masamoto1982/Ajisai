@@ -13,9 +13,9 @@ use std::sync::Arc;
 
 use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
-    get_coreword_metadata, Determinism, MassContract, Partiality, Purity,
+    get_coreword_metadata, Determinism, FieldClosure, MassContract, Partiality, Purity,
 };
-use crate::types::{Token, WordDefinition};
+use crate::types::{Token, Value, ValueData, WordDefinition};
 
 use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
 use super::word_contract_widen::{classify_vector_positions, runs_unread_code, LiteralContext};
@@ -39,6 +39,10 @@ pub struct WordContract {
     pub effects: Vec<String>,
     pub determinism: ContractDeterminism,
     pub partiality: ContractPartiality,
+    /// Whether the word can answer a point over zero from operands that hold
+    /// none (LANG.CONTRACT.FIELD): `leaving` as soon as one Word it calls is,
+    /// or one literal it pushes lies over zero; `closed` otherwise.
+    pub field: FieldClosure,
     /// Sound upper bound on the word's space growth (Phase 2.2; `word_space`).
     pub space: SpaceClass,
     /// True when the bound is provably attained, licensing a declaration error.
@@ -85,6 +89,7 @@ impl WordContract {
             effects: vec!["conservative".to_string()],
             determinism: ContractDeterminism::HostRelative,
             partiality: ContractPartiality::Projecting,
+            field: FieldClosure::Leaving,
             space: SpaceClass::Unbounded,
             space_exact: false,
             cost: CostBound::CONSERVATIVE,
@@ -105,6 +110,7 @@ impl WordContract {
             effects: Vec::new(),
             determinism: ContractDeterminism::Deterministic,
             partiality: ContractPartiality::Total,
+            field: FieldClosure::Closed,
             space: SpaceClass::Const,
             space_exact: true,
             cost: CostBound::IDENTITY,
@@ -169,6 +175,7 @@ pub(crate) struct AccumulatedContract {
     effects: Vec<String>,
     determinism: ContractDeterminism,
     partiality: ContractPartiality,
+    field: FieldClosure,
     confidence: ContractConfidence,
     pub(crate) gaps: Vec<GapCode>,
 }
@@ -181,6 +188,7 @@ impl AccumulatedContract {
             effects: contract.effects.clone(),
             determinism: contract.determinism,
             partiality: contract.partiality,
+            field: contract.field,
             confidence: contract.confidence,
             gaps: contract.gaps.clone(),
         }
@@ -206,10 +214,37 @@ impl AccumulatedContract {
         }
         self.determinism = self.determinism.max(other.determinism);
         self.partiality = self.partiality.max(other.partiality);
+        self.field = self.field.max(other.field);
         self.confidence = self.confidence.max(other.confidence);
         // Incompleteness propagates like a NIL reason; canonicalized once at
         // the end of accumulation, not per widen.
         self.gaps.extend(other.gaps.iter().copied());
+    }
+}
+
+/// Whether a literal token pushes one of the three points over zero, at any
+/// depth. A body that writes `1/0` leaves the field as surely as one that
+/// writes `1 0 DIV` (LANG.CONTRACT.FIELD). A lexeme that does not parse is
+/// not counted: running it raises before anything is pushed.
+fn pushes_point_over_zero(token: &Token) -> bool {
+    match token {
+        Token::Number(literal) => literal.value().is_some_and(|f| !f.is_finite()),
+        Token::Value(value) => holds_point_over_zero(value),
+        _ => false,
+    }
+}
+
+fn holds_point_over_zero(value: &Value) -> bool {
+    match &value.data {
+        ValueData::Scalar(f) => !f.is_finite(),
+        ValueData::Vector(items) => items.iter().any(holds_point_over_zero),
+        ValueData::Tensor { data, .. } => !data.all_finite(),
+        ValueData::Record(record) => record
+            .keys()
+            .iter()
+            .chain(record.values())
+            .any(holds_point_over_zero),
+        _ => false,
     }
 }
 
@@ -226,6 +261,7 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         effects: meta.effects,
         determinism: meta.determinism.into(),
         partiality: meta.partiality.into(),
+        field: meta.field,
         space,
         space_exact,
         cost,
@@ -300,6 +336,9 @@ impl Interpreter {
         'body: for (idx, token) in def.body.iter().enumerate() {
             match token {
                 Token::Number(_) | Token::String(_) | Token::Value(_) => {
+                    if pushes_point_over_zero(token) {
+                        acc.field = FieldClosure::Leaving;
+                    }
                     flow.feed_literal();
                     sim.feed_literal();
                 }
@@ -403,6 +442,7 @@ impl Interpreter {
             effects: acc.effects,
             determinism: acc.determinism,
             partiality: acc.partiality,
+            field: acc.field,
             space,
             space_exact,
             cost,

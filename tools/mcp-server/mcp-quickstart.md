@@ -284,11 +284,15 @@ Two further rules:
 A Word you define can state its own contract on a `#:contract` comment line,
 in the keys and values `word_contract` answers in: `inputs=N` `outputs=N`
 (must match the body), `purity=pure|effectful`,
-`partiality=total|partial|projecting`,
+`partiality=total|partial|projecting`, `field=closed|leaving`,
 `determinism=deterministic|stateRelative|hostRelative` (each a bound the body
 must not exceed), and `cost steps=… numeric=… collection=…` with a class from
 `const` `linear` `superlinear` `unbounded`. A key left out is not checked.
-`check` verifies the line against the body without running anything, and
+`field=closed` promises the body never answers a point over zero (`1/0`
+`-1/0` `0/0`) from operands holding none: only `DIV`, `POW`, `NUM` and a
+literal over zero leave the field, and inside `closed` code the field laws —
+distributivity, `x x SUB` is `0` — hold over finite operands
+(LANG.CONTRACT.FIELD). `check` verifies the line against the body without running anything, and
 `compute` runs the same check first:
 
 ```ajisai tool=check status=ok

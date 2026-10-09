@@ -1881,7 +1881,38 @@ W</pre>
 <section class="ajisai-case" id="core-contract-block-pure" data-category="core">
   <h3>CONTRACT infers a pure block as pure, with no gaps, as a contract Record</h3>
   <pre class="ajisai-source">[ 1 2 ADD ] CONTRACT</pre>
-  <pre class="ajisai-expect-result">[ 'inputs' 'outputs' 'partiality' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ] 0/1 1/1 'total' 'pure' 'deterministic' [ 'steps' 'numeric' 'collection' ] [ 'const' 'const' 'const' ] RECORD [ ] 'complete' [ ] 9 COLLECT RECORD</pre>
+  <pre class="ajisai-expect-result">[ 'inputs' 'outputs' 'partiality' 'field' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ] 0/1 1/1 'total' 'closed' 'pure' 'deterministic' [ 'steps' 'numeric' 'collection' ] [ 'const' 'const' 'const' ] RECORD [ ] 'complete' [ ] 10 COLLECT RECORD</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- LANG.CONTRACT.FIELD: whether a body can answer a point over zero from
+     operands that hold none is read before anything runs. -->
+
+<section class="ajisai-case" id="core-contract-field-closed" data-category="core">
+  <h3>CONTRACT infers field arithmetic as closed</h3>
+  <pre class="ajisai-source">[ 2 MUL 1 ADD 2 SQRT MUL ] CONTRACT 'field' GET</pre>
+  <pre class="ajisai-expect-result">'closed'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-field-leaving-division" data-category="core">
+  <h3>CONTRACT infers a body that divides as leaving the field</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] LENGTH DIV ] CONTRACT 'field' GET</pre>
+  <pre class="ajisai-expect-result">'leaving'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-field-leaving-literal" data-category="core">
+  <h3>A literal over zero leaves the field as surely as a division</h3>
+  <pre class="ajisai-source">[ 1/0 MIN ] CONTRACT 'field' GET</pre>
+  <pre class="ajisai-expect-result">'leaving'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-field-registered" data-category="core">
+  <h3>The registered field of DIV and of ADD</h3>
+  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'field' GET [ ADD ] 0 GET CONTRACT 'field' GET</pre>
+  <pre class="ajisai-expect-result">'leaving' 'closed'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
