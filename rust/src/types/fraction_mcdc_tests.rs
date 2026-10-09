@@ -28,15 +28,15 @@ fn big_int(n: i64) -> Fraction {
 }
 
 // AQ-VER-001-A
-// DUT: rust/src/types/fraction.rs:58-60 in `impl PartialEq for Fraction`
+// DUT: `impl PartialEq for Fraction`
 //
-//     if self.is_nil() || other.is_nil() {
-//         return self.is_nil() && other.is_nil();
+//     if !self.is_finite() || !other.is_finite() {
+//         return self.extract_i64_pair() == other.extract_i64_pair();
 //     }
 //
 // Conditions:
-//   A = self.is_nil()
-//   B = other.is_nil()
+//   A = !self.is_finite()
+//   B = !other.is_finite()
 //
 // MC/DC for A||B (entry guard):
 //   row 1: (A=T, B=F) -> guard taken
@@ -51,23 +51,23 @@ fn big_int(n: i64) -> Fraction {
 //   row 6: (A=F, B=T) -> false
 //   Pair (4,5) shows B independently flips outcome (A held T).
 //   Pair (4,6) shows A independently flips outcome (B held T).
-mod nil_equality_guard {
+mod point_equality_guard {
     use super::*;
 
     #[test]
-    fn aq_ver_001_a_row1_self_nil_other_nonnil_guard_taken_returns_false() {
-        // (A=T, B=F): guard taken, inner A&&B = false -> not equal.
-        let lhs = Fraction::nil();
+    fn aq_ver_001_a_row1_self_point_other_rational_guard_taken_returns_false() {
+        // (A=T, B=F): guard taken, the pairs differ -> not equal.
+        let lhs = Fraction::positive_infinity();
         let rhs = small(1, 1);
-        assert_ne!(lhs, rhs, "nil and non-nil must not be equal");
+        assert_ne!(lhs, rhs, "1/0 and 1/1 must not be equal");
     }
 
     #[test]
-    fn aq_ver_001_a_row2_other_nil_self_nonnil_guard_taken_returns_false() {
-        // (A=F, B=T): guard taken, inner A&&B = false -> not equal.
-        let lhs = small(1, 1);
-        let rhs = Fraction::nil();
-        assert_ne!(lhs, rhs, "non-nil and nil must not be equal");
+    fn aq_ver_001_a_row2_other_point_self_rational_guard_taken_returns_false() {
+        // (A=F, B=T): guard taken, the pairs differ -> not equal.
+        let lhs = small(0, 1);
+        let rhs = Fraction::nullity();
+        assert_ne!(lhs, rhs, "0/1 and 0/0 must not be equal");
     }
 
     #[test]
@@ -82,20 +82,24 @@ mod nil_equality_guard {
     }
 
     #[test]
-    fn aq_ver_001_a_row4_both_nil_returns_true() {
-        // (A=T, B=T): inner A&&B = true -> nil equals nil.
-        let lhs = Fraction::nil();
-        let rhs = Fraction::nil();
-        assert_eq!(lhs, rhs, "nil must equal nil");
+    fn aq_ver_001_a_row4_both_points_compare_as_pairs() {
+        // (A=T, B=T): the pairs decide — equal when the same point, and never
+        // by cross-multiplication, which would make 1/0 and -1/0 equal.
+        assert_eq!(
+            Fraction::nullity(),
+            Fraction::nullity(),
+            "0/0 must equal 0/0"
+        );
+        assert_ne!(
+            Fraction::positive_infinity(),
+            Fraction::negative_infinity(),
+            "1/0 and -1/0 are two points"
+        );
     }
-
-    // Rows (T,F) and (F,T) coincide with rows 1 and 2 above for the inner
-    // A&&B decision: in both cases the inner expression yields false, which
-    // is the outcome being verified. No additional cases required.
 }
 
 // AQ-VER-001-B
-// DUT: rust/src/types/fraction.rs:369-376 in `impl Ord for Fraction::cmp`
+// DUT: `Fraction::cmp_finite`, reached through `Fraction::order`
 //
 //     if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(),
 //                                            other.extract_i64_pair()) {
@@ -120,9 +124,9 @@ mod cmp_small_fast_path {
         // A=T, B=T, C=T: enters fast path, compares a vs c directly.
         let a = small(3, 7);
         let b = small(5, 7);
-        assert_eq!(a.cmp(&b), Ordering::Less);
-        assert_eq!(b.cmp(&a), Ordering::Greater);
-        assert_eq!(a.cmp(&a.clone()), Ordering::Equal);
+        assert_eq!(a.order(&b), Some(Ordering::Less));
+        assert_eq!(b.order(&a), Some(Ordering::Greater));
+        assert_eq!(a.order(&a.clone()), Some(Ordering::Equal));
     }
 
     #[test]
@@ -131,7 +135,7 @@ mod cmp_small_fast_path {
         // 1/3 vs 1/4 -> 4 vs 3 -> Greater.
         let a = small(1, 3);
         let b = small(1, 4);
-        assert_eq!(a.cmp(&b), Ordering::Greater);
+        assert_eq!(a.order(&b), Some(Ordering::Greater));
     }
 
     #[test]
@@ -140,13 +144,34 @@ mod cmp_small_fast_path {
         // arithmetic. The same-denominator BigInt branch must also work.
         let a = big_int(0); // 2*i64::MAX, denominator 1
         let b = big_int(1); // 2*i64::MAX + 1, denominator 1
-        assert_eq!(a.cmp(&b), Ordering::Less);
-        assert_eq!(b.cmp(&a), Ordering::Greater);
+        assert_eq!(a.order(&b), Some(Ordering::Less));
+        assert_eq!(b.order(&a), Some(Ordering::Greater));
 
         // Different-denominator BigInt path.
         let c = Fraction::new(BigInt::from(1), BigInt::from(i64::MAX) * BigInt::from(2));
         let d = Fraction::new(BigInt::from(1), BigInt::from(i64::MAX) * BigInt::from(3));
-        assert_eq!(c.cmp(&d), Ordering::Greater);
+        assert_eq!(c.order(&d), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn aq_ver_001_b_the_points_over_zero_order_or_do_not() {
+        // -1/0 lies below every rational and 1/0 above, however wide; 0/0 is
+        // ordered against nothing, itself included.
+        assert_eq!(
+            Fraction::negative_infinity().order(&big_int(0)),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            Fraction::positive_infinity().order(&big_int(0)),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            Fraction::positive_infinity().order(&Fraction::positive_infinity()),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(Fraction::nullity().order(&small(1, 1)), None);
+        assert_eq!(small(1, 1).order(&Fraction::nullity()), None);
+        assert_eq!(Fraction::nullity().order(&Fraction::nullity()), None);
     }
 }
 
@@ -275,13 +300,17 @@ mod add_small_fast_paths {
     }
 
     #[test]
-    fn aq_ver_001_d_nil_short_circuit_takes_precedence() {
-        // Documented invariant: nil propagates regardless of which side.
-        // Outside the decisions above but covers the entry guard.
-        let nil = Fraction::nil();
+    fn aq_ver_001_d_a_point_over_zero_takes_the_extended_law() {
+        // The entry guard: an operand over zero, on either side, decides the
+        // sum by the pair formulas rather than by the rational sum.
+        let nullity = Fraction::nullity();
         let one = small(1, 1);
-        assert!(nil.add(&one).is_nil());
-        assert!(one.add(&nil).is_nil());
+        assert_eq!(nullity.add(&one), nullity);
+        assert_eq!(one.add(&nullity), nullity);
+        assert_eq!(
+            Fraction::positive_infinity().add(&one),
+            Fraction::positive_infinity()
+        );
     }
 }
 

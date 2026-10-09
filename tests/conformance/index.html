@@ -133,23 +133,72 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-division-by-zero-is-nil" data-category="core">
-  <h3>Division by zero is NIL (a specified absence, not a trap)</h3>
-  <pre class="ajisai-source">1 0 DIV</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
+<section class="ajisai-case" id="core-division-by-zero-is-the-sign-over-zero" data-category="core">
+  <h3>Division by zero is total: the dividend's sign over zero, one of the three points (LANG.VALUES.EXACT)</h3>
+  <pre class="ajisai-source">100 0 DIV -5 0 DIV 0 0 DIV 1/2 0 DIV</pre>
+  <pre class="ajisai-expect-result">1/0 -1/0 0/0 1/0</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-reason-division-by-zero" data-category="core">
+<section class="ajisai-case" id="core-points-over-zero-obey-the-pair-formulas" data-category="core">
+  <h3>The three points obey the pair formulas: a finite operand contributes its sign, 1/0 + 1/0 is 0/0, 1 ÷ 1/0 is 0 (LANG.VALUES.EXACT)</h3>
+  <pre class="ajisai-source">1/0 5 ADD 1/0 1/0 ADD 1/0 -2 MUL 1/0 0 MUL 1 1/0 DIV 1/0 1/0 DIV 3 1/0 SUB</pre>
+  <pre class="ajisai-expect-result">1/0 0/0 -1/0 0/0 0/1 0/0 -1/0</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-distributivity-gives-way-at-the-points" data-category="core">
+  <h3>The distributive law gives way at the three points and nowhere else: (1 + 1) · 1/0 is 1/0 while 1/0 + 1/0 is 0/0 (LANG.VALUES.EXACT)</h3>
+  <pre class="ajisai-source">1 1 ADD 1/0 MUL 1/0 1/0 ADD 1 1 ADD 3 MUL 3 3 ADD EQ</pre>
+  <pre class="ajisai-expect-result">1/0 0/0 TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nullity-absorbs-and-is-one-value" data-category="core">
+  <h3>0/0 absorbs every operation and is one value, distinct from 1/0 (LANG.VALUES.EXACT, LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">0 0 DIV 5 ADD 0/0 0 MUL 0/0 0/0 EQ 0/0 1/0 EQ 100 0 DIV 1/0 EQ</pre>
+  <pre class="ajisai-expect-result">0/0 0/0 TRUE FALSE TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nullity-has-no-order" data-category="core">
+  <h3>-1/0 lies below every number and 1/0 above; 0/0 has no order, so an order asked of it projects domainMiss and reads as UNKNOWN (LANG.VALUES.EXACT, LANG.VALUES.TRUTH)</h3>
+  <pre class="ajisai-source">-1/0 -1000000 LT 1/0 1000000 GT 1/0 1/0 LT 0/0 1 LT NIL-REASON 0/0 0/0 GT NIL? 0/0 1 LT TRUE AND NIL?</pre>
+  <pre class="ajisai-expect-result">TRUE TRUE FALSE 'domainMiss' TRUE TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-order-words-project-on-nullity" data-category="core">
+  <h3>MIN, MAX, SORT, ORDER and BSEARCH order the points and project domainMiss for 0/0 (LANG.VALUES.EXACT)</h3>
+  <pre class="ajisai-source">-1/0 5 MIN 1/0 5 MAX 0/0 1 MIN NIL-REASON [ 3 1/0 -1/0 1 ] SORT [ 3 0/0 1 ] SORT NIL-REASON [ 3 0/0 1 ] ORDER NIL-REASON [ 1 3 ] 0/0 BSEARCH NIL-REASON [ 1 0/0 ] 1 BSEARCH NIL-REASON</pre>
+  <pre class="ajisai-expect-result">-1/0 1/0 'domainMiss' [ -1/0 1/1 3/1 1/0 ] 'domainMiss' 'domainMiss' 'domainMiss' 'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-points-through-the-other-numeric-words" data-category="core">
+  <h3>An irrational contributes its sign over zero; FLOOR, ROUND and SQRT leave the points as they are, SQRT of -1/0 is the negative radicand it is, and POW is total where division is (LANG.VALUES.EXACT)</h3>
+  <pre class="ajisai-source">2 SQRT 0 DIV 2 SQRT -1 MUL 0 DIV 0/0 FLOOR 1/0 ROUND 1/0 SQRT 0/0 SQRT -1/0 SQRT NIL-REASON 0 -1 POW 1/0 -1 POW -1/0 2 POW 2 1/0 POW NIL-REASON</pre>
+  <pre class="ajisai-expect-result">1/0 -1/0 0/0 1/0 1/0 0/0 'domainMiss' 1/0 0/1 1/0 'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-points-at-the-text-boundary" data-category="core">
+  <h3>A point over zero has a lexeme and no decimal: STR, NUM, RATIO and JSON-ENCODE read and write it, FORMAT projects domainMiss (LANG.VALUES.EXACT, LANG.SOURCE.TEXT)</h3>
+  <pre class="ajisai-source">1/0 STR '5/0' NUM 100 0 DIV RATIO 0/0 RATIO [ 1/0 0/0 ] JSON-ENCODE 1/0 3 FORMAT NIL-REASON 1 0 DIV NIL?</pre>
+  <pre class="ajisai-expect-result">'1/0' 1/0 [ 1/1 0/1 ] [ 0/1 0/1 ] '["1/0","0/0"]' 'domainMiss' FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-reason-domain-miss" data-category="core">
   <h3>NIL-REASON reads the reason of a NIL as a protocol string (LANG.VALUES.NIL/LANG.OBSERVATION.DIAGNOSIS)</h3>
-  <pre class="ajisai-source">1 0 DIV NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-check-true-consumes-source" data-category="core">
   <h3>NIL? is TRUE for an operational NIL and consumes the inspected value (LANG.OBSERVATION.DIAGNOSIS, LANG.STACK.CONSUMPTION)</h3>
-  <pre class="ajisai-source">1 0 DIV NIL?</pre>
+  <pre class="ajisai-source">-1 SQRT NIL?</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -361,8 +410,8 @@
 </section>
 
 <section class="ajisai-case" id="core-absence-fallback" data-category="core">
-  <h3>A chosen fallback turns a division-by-zero NIL into a value</h3>
-  <pre class="ajisai-source">1 0 DIV 'S' BIND 99 S S NIL? SELECT</pre>
+  <h3>A chosen fallback turns a domain-miss NIL into a value</h3>
+  <pre class="ajisai-source">-1 SQRT 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -493,12 +542,11 @@
 <!-- A zero denominator is a source error: the program is refused before it
      runs, so nothing is printed. -->
 
-<section class="ajisai-case" id="core-zero-denominator-is-a-source-error" data-category="core">
-  <h3>1/0 is refused as source before anything runs, so the PRINT before it never happens</h3>
-  <pre class="ajisai-source">1 PRINT 1/0</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">zero denominator</pre>
-  <div class="ajisai-expect-effects"></div>
+<section class="ajisai-case" id="core-zero-denominator-literal-is-a-number" data-category="core">
+  <h3>1/0 is a number literal (LANG.SOURCE.TEXT): the PRINT before it runs, and the literal is the point it denotes, reduced like every pair</h3>
+  <pre class="ajisai-source">1 PRINT 1/0 7/00</pre>
+  <pre class="ajisai-expect-result">1/0 1/0</pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span></div>
 </section>
 
 <section class="ajisai-case" id="core-collect-zero-is-empty" data-category="core">
@@ -727,7 +775,7 @@
 
 <section class="ajisai-case" id="core-filter-drops-unknown-predicate" data-category="core">
   <h3>FILTER's predicate is read in truth position: an UNKNOWN (a NIL) is a truth value, and only TRUE keeps an element (LANG.VALUES.TRUTH)</h3>
-  <pre class="ajisai-source">[ 1 0 2 ] [ 'X' BIND 1 X DIV 1/3 GT ] FILTER</pre>
+  <pre class="ajisai-source">[ 1 0/0 2 ] [ 'X' BIND X 1/3 GT ] FILTER</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -978,8 +1026,8 @@
 
 <section class="ajisai-case" id="core-logic-unknown-keeps-its-reason" data-category="core">
   <h3>UNKNOWN keeps the reason it arrived with: NIL-REASON still reports it</h3>
-  <pre class="ajisai-source">1 0 DIV TRUE AND NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">'x' NUM TRUE AND NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1068,8 +1116,8 @@
 
 <section class="ajisai-case" id="core-nil-leftmost-reason-preserved" data-category="core">
   <h3>Combining two reasoned NILs preserves the leftmost reason (LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">1 0 DIV 'abc' NUM ADD NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT 'abc' NUM ADD NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1079,8 +1127,8 @@
 
 <section class="ajisai-case" id="core-sort-passes-a-nil-through-with-its-reason" data-category="core">
   <h3>SORT passes a NIL through with its reason, rather than raising</h3>
-  <pre class="ajisai-source">1 0 DIV SORT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT SORT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1100,10 +1148,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-zero-div-zero-reason" data-category="core">
-  <h3>0/0 is the same divisionByZero NIL as 1/0</h3>
-  <pre class="ajisai-source">0 0 DIV NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+<section class="ajisai-case" id="core-every-pair-over-zero-reduces-to-its-sign" data-category="core">
+  <h3>Every pair over zero reduces to its sign over zero: 100/0, 5/0 and 1/0 are one value, and so are -3/0 and -1/0</h3>
+  <pre class="ajisai-source">100/0 5/0 EQ 5 0 DIV 1/0 EQ -3/0 -1/0 EQ 100/0</pre>
+  <pre class="ajisai-expect-result">TRUE TRUE TRUE 1/0</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1192,8 +1240,8 @@
 
 <section class="ajisai-case" id="core-num-passes-a-nil-through" data-category="core">
   <h3>NUM reads its operand as data, so an absent operand passes through with its reason (LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">0 0 DIV NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT NUM NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1261,8 +1309,8 @@
 -->
 <section class="ajisai-case" id="core-str-passes-a-nil-through-with-its-reason" data-category="core">
   <h3>STR passes a NIL through with its reason intact (LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">0 0 DIV STR NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT STR NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1326,8 +1374,8 @@
 
 <section class="ajisai-case" id="core-eq-nil-passthrough-preserves-reason" data-category="core">
   <h3>EQ passthrough preserves the leftmost NIL operand's reason (Section 4.5.1)</h3>
-  <pre class="ajisai-source">1 0 DIV 1 EQ NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT 1 EQ NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1489,15 +1537,15 @@
 
 <section class="ajisai-case" id="core-arithmetic-preserves-a-nil-lanes-reason" data-category="core">
   <h3>A NIL lane keeps the reason it was created with through the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] ADD 1 GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">[ 4 -1 ] SQRT [ 1 1 ] ADD 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-arithmetic-preserves-an-exact-lanes-nil" data-category="core">
   <h3>A NIL lane beside an irrational one is still a NIL after the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] DIV [ 1 1 ] ADD 1 GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 -1 ] SQRT ADD 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1511,8 +1559,8 @@
 
 <section class="ajisai-case" id="core-nil-lane-survives-a-structural-rebuild" data-category="core">
   <h3>A NIL lane keeps its reason when the vector is rebuilt around it</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] DIV [ 3 4 ] CONCAT 1 GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">[ 4 -1 ] SQRT [ 3 4 ] CONCAT 1 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1523,17 +1571,17 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-division-projects-the-zero-divisor-lane-only" data-category="core">
-  <h3>A zero divisor empties its own lane, not the vector around it</h3>
+<section class="ajisai-case" id="core-division-by-zero-fills-its-own-lane-only" data-category="core">
+  <h3>A zero divisor answers its own lane's sign over zero, and the lanes beside it are quotients</h3>
   <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] DIV</pre>
-  <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
+  <pre class="ajisai-expect-result">[ 6/1 3/1 1/0 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-division-projects-lane-after-broadcast" data-category="core">
+<section class="ajisai-case" id="core-division-by-zero-after-broadcast" data-category="core">
   <h3>A broadcast dividend keeps the lanes whose divisor was not zero</h3>
-  <pre class="ajisai-source">[ 6 ] [ 1 2 0 ] DIV</pre>
-  <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
+  <pre class="ajisai-source">[ 6 ] [ 1 2 0 ] DIV [ -6 ] [ 0 ] DIV</pre>
+  <pre class="ajisai-expect-result">[ 6/1 3/1 1/0 ] [ -1/0 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1646,8 +1694,8 @@ ADD ] 'A' DEF [ 1 2 ADD ] 'B' DEF [ A B ] 0 GET DIGEST [ A B ] 1 GET DIGEST EQ</
 
 <section class="ajisai-case" id="core-floor-keeps-a-lane-reason" data-category="core">
   <h3>FLOOR keeps the reason an absent lane carries</h3>
-  <pre class="ajisai-source">1 0 DIV 7/2 2 COLLECT FLOOR 0 GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT 7/2 2 COLLECT FLOOR 0 GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1768,8 +1816,8 @@ W</pre>
 
 <section class="ajisai-case" id="core-fold-nil-target-passes-through" data-category="core">
   <h3>FOLD of an absent Vector is that absence, not the initial accumulator: the Vector is data (LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">0 0 DIV 42 [ ADD ] FOLD NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT 42 [ ADD ] FOLD NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1958,8 +2006,8 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-core-word-record" data-category="core">
   <h3>CONTRACT answers a Core Word's registered record as a Record</h3>
-  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' GET [ DIV ] 0 GET CONTRACT 'projection' GET [ SORT ] 0 GET CONTRACT 'vocabularyTier' GET</pre>
-  <pre class="ajisai-expect-result">2/1 [ 'divisionByZero' ] 'standard'</pre>
+  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' GET [ SQRT ] 0 GET CONTRACT 'projection' GET [ SORT ] 0 GET CONTRACT 'vocabularyTier' GET</pre>
+  <pre class="ajisai-expect-result">2/1 [ 'domainMiss' ] 'standard'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1997,9 +2045,9 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-pow-projections" data-category="core">
-  <h3>POW projects what has no real value, by the declared reason</h3>
-  <pre class="ajisai-source">0 -1 POW NIL-REASON -2 1/2 POW NIL-REASON 2 1000000000 POW NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero' 'domainMiss' 'spaceExhausted'</pre>
+  <h3>POW is total where division is, and projects what has no real value by the declared reason</h3>
+  <pre class="ajisai-source">0 -1 POW -2 1/2 POW NIL-REASON 2 1000000000 POW NIL-REASON</pre>
+  <pre class="ajisai-expect-result">1/0 'domainMiss' 'spaceExhausted'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2717,8 +2765,8 @@ W</pre>
 
 <section class="ajisai-case" id="core-exec-keeps-a-nil-reason" data-category="core">
   <h3>EXEC of a Vector holding a NIL pushes that NIL with its reason</h3>
-  <pre class="ajisai-source">1 0 DIV 1 COLLECT EXEC NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'divisionByZero'</pre>
+  <pre class="ajisai-source">-1 SQRT 1 COLLECT EXEC NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

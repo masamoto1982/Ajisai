@@ -187,20 +187,20 @@ async fn test_nil_is_value() {
     assert!(nil.is_nil(), "Value::nil() should be NIL");
     assert!(nil.shape().is_empty(), "NIL should be scalar (empty shape)");
     assert!(
-        matches!(nil.data, ValueData::Nil(_)),
+        matches!(nil.data, ValueData::Nil),
         "NIL should be ValueData::Nil"
     );
 }
 
 #[tokio::test]
-async fn test_nil_arithmetic_propagation() {
-    let nil = crate::types::fraction::Fraction::nil();
+async fn test_nullity_absorbs_arithmetic() {
+    let nullity = crate::types::fraction::Fraction::nullity();
     let one = crate::types::fraction::Fraction::from(1);
-    let result = nil.add(&one);
-    assert!(result.is_nil(), "NIL + 1 should be NIL");
+    let result = nullity.add(&one);
+    assert_eq!(result, nullity, "0/0 + 1 should be 0/0");
 
-    let result = one.mul(&nil);
-    assert!(result.is_nil(), "1 * NIL should be NIL");
+    let result = one.mul(&nullity);
+    assert_eq!(result, nullity, "1 * 0/0 should be 0/0");
 }
 
 #[tokio::test]

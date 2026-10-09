@@ -86,7 +86,7 @@ async fn a_block_the_compiler_cannot_lower_still_answers() {
         // the fallback rather than a lowered op.
         ("[ 1 2 ] [ 'X' BIND X X ADD ] MAP", "[ 2/1 4/1 ]"),
         (
-            "[ 1 2 ] [ 'E' BIND E 0 DIV 'S' BIND 7 S S NIL? SELECT ] MAP",
+            "[ 1 2 ] [ 'E' BIND E -1 MUL SQRT 'S' BIND 7 S S NIL? SELECT ] MAP",
             "[ 7/1 7/1 ]",
         ),
     ] {

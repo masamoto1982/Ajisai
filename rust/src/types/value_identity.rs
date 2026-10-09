@@ -11,19 +11,14 @@
 //! `Hash` have to agree about it and drift apart the moment they are written
 //! twice.
 //!
-//! An absent lane is where the correspondence is easiest to get wrong. A NIL
-//! child of a `Vector` carries its reason on the child `Value`; the same lane
-//! of a `Tensor` carries it in the tensor's own per-lane absence map. Under
-//! LANG.VALUES.NIL the reason is the whole observable content of an absence,
-//! so both sides read it and neither reads more: `Value`'s equality is
-//! `data == data && nil_reason == nil_reason`, and the rest of an
-//! `AbsenceMetadata` is provenance.
+//! A dense tensor holds numbers and nothing else, so a `Vector` holding a NIL
+//! child never equals one: a NIL is not a number, and `Value`'s equality
+//! reads its reason (`data == data && nil_reason == nil_reason`), which no
+//! lane carries.
 
 use super::fraction::Fraction;
 use super::value_tensor::tensor_to_nested_values;
 use super::{DenseTensor, RecordData, Value, ValueData};
-use crate::error::NilReason;
-use crate::semantic::AbsenceMetadata;
 use std::sync::Arc;
 
 pub(super) fn tensor_eq_vector(data: &DenseTensor, shape: &[usize], v: &[Value]) -> bool {
@@ -64,7 +59,10 @@ fn nested_vector_shape(v: &[Value]) -> Option<Vec<usize>> {
 /// ragged sub-structures.
 fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil(_) => Some(Vec::new()),
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(Vec::new()),
+        // A NIL is not a numeric leaf: a Vector holding one has no dense
+        // counterpart to equal.
+        ValueData::Nil => None,
         // A String is not a numeric leaf, so it has no rectangular element
         // shape and forces the structural (non-dense) path, like a Boolean.
         ValueData::Text(_) => None,
@@ -78,31 +76,14 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
     for child in v {
         match &child.data {
             ValueData::Scalar(f) => {
-                if *idx >= data.len() || data.fraction_or_nil(*idx) != *f {
+                if *idx >= data.len() || data.fraction_at(*idx) != *f {
                     return false;
                 }
                 *idx += 1;
             }
-            // A NIL matches an absent lane carrying the same reason and the
-            // same `userDeclared` detail. All three halves matter: `is_valid`
-            // alone would let a NIL equal a number (an absent lane's numerator
-            // is the dividend it holds), the lane alone would let `NIL(divisionByZero)` equal
-            // a written `NIL`, and the reason alone would let `'a' ABSENT`
-            // equal `'b' ABSENT` across representations — which the same two
-            // values as scalars (`Value::eq`) and as two tensors
-            // (`DenseTensor::eq`) both already refuse.
-            ValueData::Nil(_) => {
-                if *idx >= data.len()
-                    || data.is_valid(*idx)
-                    || data.lane_reason(*idx) != child.nil_reason().copied()
-                    || data.lane_detail(*idx) != child.absence_detail()
-                {
-                    return false;
-                }
-                *idx += 1;
-            }
-            // ExactScalar cannot equal a dense-tensor Fraction element
-            ValueData::ExactScalar(_) => return false,
+            // A NIL is not a number, so no lane equals it; an ExactScalar is
+            // irrational, so no lane equals it either.
+            ValueData::Nil | ValueData::ExactScalar(_) => return false,
             ValueData::Vector(inner) => {
                 if !nested_flatten_matches(inner, data, idx) {
                     return false;
@@ -112,10 +93,7 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
                 data: inner_data, ..
             } => {
                 for lane in 0..inner_data.len() {
-                    if *idx >= data.len()
-                        || data.fraction_or_nil(*idx) != inner_data.fraction_or_nil(lane)
-                        || data.lane_reason(*idx) != inner_data.lane_reason(lane)
-                        || data.lane_detail(*idx) != inner_data.lane_detail(lane)
+                    if *idx >= data.len() || data.fraction_at(*idx) != inner_data.fraction_at(lane)
                     {
                         return false;
                     }
@@ -128,72 +106,37 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
     true
 }
 
-/// Flatten a nested `Vector` into `(shape, leaves, lane reasons)` the same way
+/// Flatten a nested `Vector` into `(shape, leaves)` the same way
 /// `nested_flatten_matches` walks it against a dense tensor's lanes:
-/// `Scalar` contributes its `Fraction`, `Nil` an absent lane and the reason
-/// for it, `Tensor` its own dense lanes, `Vector` recurses, and anything else
-/// (`ExactScalar`, `Boolean`, `Text`, `Symbol`) fails the flatten — mirroring
-/// exactly which leaves `nested_flatten_matches` is willing to match against a
-/// tensor lane. Used only to make [`ValueData`]'s `Hash` agree with the
-/// `Vector`/`Tensor` cross-equality in `PartialEq`: a value that *can*
-/// equal a dense tensor must hash the way that tensor does.
-pub(super) type DenseFlatten = (
-    Vec<usize>,
-    Vec<Option<Fraction>>,
-    Vec<(usize, Option<NilReason>)>,
-);
+/// `Scalar` contributes its `Fraction`, `Tensor` its own dense lanes,
+/// `Vector` recurses, and anything else (`Nil`, `ExactScalar`, `Boolean`,
+/// `Text`, `Symbol`) fails the flatten — mirroring exactly which leaves
+/// `nested_flatten_matches` is willing to match against a tensor lane. Used
+/// only to make [`ValueData`]'s `Hash` agree with the `Vector`/`Tensor`
+/// cross-equality in `PartialEq`: a value that *can* equal a dense tensor
+/// must hash the way that tensor does.
+pub(super) type DenseFlatten = (Vec<usize>, Vec<Fraction>);
 
 pub(super) fn dense_flatten(v: &[Value]) -> Option<DenseFlatten> {
     let shape = nested_vector_shape(v)?;
     let mut leaves = Vec::new();
-    let mut reasons = Vec::new();
-    if collect_dense_leaves(v, &mut leaves, &mut reasons) {
-        Some((shape, leaves, reasons))
+    if collect_dense_leaves(v, &mut leaves) {
+        Some((shape, leaves))
     } else {
         None
     }
 }
 
-/// The absent lanes of a dense tensor and the reason for each, in lane order
-/// — the hash counterpart of what [`DenseTensor`]'s `PartialEq` compares. An
-/// absent lane always contributes an entry, `None` when it carries no reason,
-/// so a reasonless absence cannot hash like a reasoned one.
-pub(super) fn dense_lane_reasons(data: &DenseTensor) -> Vec<(usize, Option<NilReason>)> {
-    (0..data.len())
-        .filter(|index| !data.is_valid(*index))
-        .map(|index| (index, data.lane_reason(index)))
-        .collect()
-}
-
-fn collect_dense_leaves(
-    v: &[Value],
-    out: &mut Vec<Option<Fraction>>,
-    reasons: &mut Vec<(usize, Option<NilReason>)>,
-) -> bool {
+fn collect_dense_leaves(v: &[Value], out: &mut Vec<Fraction>) -> bool {
     for child in v {
         match &child.data {
-            ValueData::Scalar(f) => out.push(Some(f.clone())),
-            // An absent leaf is `None` whether or not it holds a dividend:
-            // the pair is not part of its identity, so it must not reach the
-            // hash.
-            ValueData::Nil(_) => {
-                reasons.push((out.len(), child.nil_reason().copied()));
-                out.push(None);
-            }
+            ValueData::Scalar(f) => out.push(f.clone()),
             ValueData::Vector(inner) => {
-                if !collect_dense_leaves(inner, out, reasons) {
+                if !collect_dense_leaves(inner, out) {
                     return false;
                 }
             }
-            ValueData::Tensor { data, .. } => {
-                let offset = out.len();
-                reasons.extend(
-                    dense_lane_reasons(data)
-                        .into_iter()
-                        .map(|(index, reason)| (index + offset, reason)),
-                );
-                out.extend((0..data.len()).map(|lane| data.get_small_fraction(lane)));
-            }
+            ValueData::Tensor { data, .. } => out.extend(data.iter()),
             _ => return false,
         }
     }
@@ -202,26 +145,9 @@ fn collect_dense_leaves(
 
 impl Value {
     #[inline]
-    /// A numeric leaf from a rational.
-    ///
-    /// A `Fraction` whose denominator is 0 is absent — the pair the dense
-    /// tensor lanes store for an absent lane, not a rational. It becomes
-    /// `ValueData::Nil` holding that pair, rather than a `Scalar` wrapping an
-    /// unreadable number: this is the one place fraction-level absence is
-    /// translated into value-level absence, so a lane rehydrated out of a
-    /// tensor answers [`Value::is_nil`] like any other NIL. A pair carries
-    /// presence and a dividend, not a reason, so the absence reads back
-    /// reasonless here.
+    /// A numeric leaf from a `Fraction`: a rational, or one of the three
+    /// points over zero, which is a Scalar like any other.
     pub fn from_fraction(f: Fraction) -> Self {
-        if f.is_nil() {
-            // A `Fraction` records that it is absent and nothing about why, so
-            // this is a *reasonless* NIL — not `nil_literal()`, which claims
-            // the program wrote it (`spec/outcomes.json`: "a NIL the program
-            // wrote rather than computed"). Where the reason is known it is
-            // stored beside the lane, and `Value::from_dense_lane` is the
-            // materialization that reads it.
-            return Self::absent_number(f, AbsenceMetadata::with_reasonless_unknown());
-        }
         Self::new(ValueData::Scalar(f), None)
     }
 
@@ -313,11 +239,8 @@ impl Value {
 
     #[inline]
     pub fn from_exact_real(er: crate::types::exact::ExactReal) -> Self {
-        // A rational takes the `Fraction` path — through `from_fraction`, so
-        // that `Rational(nil)` (what the nil-propagating exact arithmetic
-        // answers for an absent operand) becomes `ValueData::Nil` here as it
-        // does everywhere else, never a `Scalar` wrapping an absent pair
-        // that displays as `NIL` while answering `NIL?` with FALSE.
+        // A rational takes the `Fraction` path, so the two tiers hold one
+        // value one way.
         if let Some(f) = er.as_rational() {
             return Self::from_fraction(f.clone());
         }
@@ -333,13 +256,13 @@ impl Value {
     /// ([`ValueData::Nil`]).
     #[inline]
     pub fn is_nil(&self) -> bool {
-        matches!(self.data, ValueData::Nil(_))
+        matches!(self.data, ValueData::Nil)
     }
 
     /// As [`is_nil`]: operational-absence test.
     #[inline]
     pub fn is_absent(&self) -> bool {
-        matches!(self.data, ValueData::Nil(_))
+        matches!(self.data, ValueData::Nil)
     }
 
     /// As [`is_nil`]: operational-absence test, and deliberately *not*
@@ -350,7 +273,7 @@ impl Value {
     /// `NIL-REASON` reports the reason it arrived with.
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
-        matches!(self.data, ValueData::Nil(_))
+        matches!(self.data, ValueData::Nil)
     }
 
     /// The value's domain, spelled as LANG.VALUES.DISJOINT spells it. Every
@@ -363,7 +286,7 @@ impl Value {
             ValueData::Text(_) => "String",
             ValueData::Vector(_) | ValueData::Tensor { .. } => "Vector",
             ValueData::Record(_) => "Record",
-            ValueData::Nil(_) => "NIL",
+            ValueData::Nil => "NIL",
             ValueData::Symbol(_) => "Symbol",
         }
     }
@@ -421,7 +344,7 @@ impl Value {
             | ValueData::Text(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
-            | ValueData::Nil(_)
+            | ValueData::Nil
             | ValueData::Symbol(_)
             | ValueData::Record(_) => None,
         }
@@ -457,21 +380,19 @@ impl Value {
             // truth position — collapses to `false`. Words that must honour
             // the third value read it before asking for a definite truth
             // (`SELECT`, `AND`/`NOT`), never here.
-            ValueData::Nil(_) => false,
+            ValueData::Nil => false,
             // A String is not a truth value. LANG.VALUES.TRUTH is two-valued
             // over Booleans, and the logic Words reject anything else outright
             // (`nonTruthValue`); this total coercion survives only for legacy
             // internal callers, so a String collapses to `false` rather than
             // inventing an emptiness rule for a domain that has none.
             ValueData::Text(_) => false,
-            ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
+            ValueData::Scalar(f) => !f.is_zero(),
             // ExactScalar values from AlgebraicSqrt are always non-zero positive
             // irrationals; Gosper nodes conservatively report truthy.
             ValueData::ExactScalar(_) => true,
             ValueData::Vector(v) => !v.is_empty() && !v.iter().all(|c| !c.is_truthy()),
-            ValueData::Tensor { data, .. } => {
-                !data.is_empty() && !data.iter().all(|f| f.is_zero() || f.is_nil())
-            }
+            ValueData::Tensor { data, .. } => !data.is_empty() && !data.iter().all(|f| f.is_zero()),
             ValueData::Symbol(_) => true,
             // A Record is not a truth value either; like a String it collapses
             // to `false` here and is rejected outright by the logic Words.

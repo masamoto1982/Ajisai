@@ -9,7 +9,6 @@
     "LANG.FAILURE.TRICHOTOMY"
   ],
   "description": "When are two things the same? Ajisai answers that question at three levels and decides it by three different procedures, and the procedures do not all decide it completely. This file states the one law and what each level can actually deliver, so that a level which answers 'I cannot tell' is not mistaken for one that answered 'different'.",
-
   "law": {
     "statement": "Identity is denotation: two things are one thing exactly when they denote the same thing, whatever operations produced each of them. A procedure that decides identity therefore answers about denotation, and where it cannot decide, it answers that it cannot — never 'different'.",
     "outcomes": [
@@ -28,15 +27,17 @@
     ],
     "why": "This is LANG.FAILURE.TRICHOTOMY's shape at a third place. A run answers with a value, a reasoned absence, or an error; a pre-execution check answers verified, cannot-verify, or violated; and a question of identity answers same, unknown, or different. In each, the middle outcome is the honest report of a procedure that did not reach an answer, and collapsing it into either neighbour is the mistake the trichotomy exists to prevent."
   },
-
   "levels": [
     {
       "id": "scalarAlgebraicField",
-      "subject": "Two scalars in the multiquadratic field",
-      "procedure": "Compare multiquadratic normal forms.",
-      "decides": ["same", "different"],
+      "subject": "Two scalars: in the multiquadratic field, or among the three points over zero",
+      "procedure": "Compare multiquadratic normal forms; a pair over zero is its reduced pair, one of three, and compares as that pair.",
+      "decides": [
+        "same",
+        "different"
+      ],
       "total": true,
-      "note": "LANG.VALUES.EXACT fixes this domain by a condition that includes deciding equality and order in finite time, so `unknown` is unreachable here — not because this clause forbids it but because a normal form that did not decide would not meet the condition.",
+      "note": "LANG.VALUES.EXACT fixes this domain by a condition that includes deciding equality in finite time, so `unknown` is unreachable here — not because this clause forbids it but because a normal form that did not decide would not meet the condition. The three points over zero decide too: identity is denotation, and `0/0` is one value, however it was reached. Order is another question, and the one `0/0` does not answer; that is a projection of the Word asking (LANG.VALUES.EXACT), not an identity outcome.",
       "witnesses": [
         {
           "source": "8 SQRT 2 SQRT 2 SQRT ADD EQ",
@@ -47,6 +48,11 @@
           "source": "2 SQRT 3 SQRT EQ",
           "expect": "FALSE",
           "note": "Decided, and decided negatively — `different` is a real answer at this level, not a default."
+        },
+        {
+          "source": "100 0 DIV 1/0 EQ 0/0 0/0 EQ 1/0 -1/0 EQ",
+          "expect": "TRUE TRUE FALSE",
+          "note": "Every pair over zero reduces to its sign over zero, so two quotients by zero of one sign are one value, 0/0 is one value, and the two signs are two values."
         }
       ]
     },
@@ -54,7 +60,10 @@
       "id": "recordDenotation",
       "subject": "Two Records",
       "procedure": "Compare the key sequences position by position, then the value sequences, each pair by the procedure its own domain provides.",
-      "decides": ["same", "different"],
+      "decides": [
+        "same",
+        "different"
+      ],
       "total": true,
       "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by PUT in one order is different from one built in another, and construction history beyond that is unobservable. Every key and value is compared by a procedure that decides, so the Record comparison decides too.",
       "witnesses": [
@@ -74,7 +83,10 @@
       "id": "userWordContentIdentity",
       "subject": "Two User Word definitions",
       "procedure": "Compare content identities — a digest over the normalized body with every reference replaced by the identity of its target.",
-      "decides": ["same", "unknown"],
+      "decides": [
+        "same",
+        "unknown"
+      ],
       "total": false,
       "unknownArrivesAs": {
         "kind": "readingRule",
@@ -133,7 +145,14 @@
         "leftWord": "IDX",
         "right": "[ 1 ADD 0 ADD ] 'IDY' DEF",
         "rightWord": "IDY",
-        "agreeOn": ["0", "1", "5", "1/2", "-1", "[ 1 2 3 ]"]
+        "agreeOn": [
+          "0",
+          "1",
+          "5",
+          "1/2",
+          "-1",
+          "[ 1 2 3 ]"
+        ]
       }
     }
   ]

@@ -57,7 +57,7 @@ async fn redefinition_invalidates_old_contract_cache_key() {
     let mut interp = Interpreter::new();
     interp.execute("[ [ 1 ] ADD ] 'W' DEF").await.unwrap();
     let first = interp.infer_word_contract("W").unwrap();
-    interp.execute("[ DIV ] 'W' DEF").await.unwrap();
+    interp.execute("[ SQRT ] 'W' DEF").await.unwrap();
     let second = interp.infer_word_contract("W").unwrap();
     assert_ne!(first.cache_key, second.cache_key);
     assert_eq!(second.partiality, ContractPartiality::Projecting);
@@ -97,7 +97,7 @@ async fn del_refuses_while_a_dependent_would_be_left_dangling() {
     // reference.
     let mut interp = Interpreter::new();
     interp
-        .execute("[ DIV ] 'DEP' DEF [ DEP ] 'USE' DEF")
+        .execute("[ SQRT ] 'DEP' DEF [ DEP ] 'USE' DEF")
         .await
         .unwrap();
     let before = interp.infer_word_contract("USE").unwrap();

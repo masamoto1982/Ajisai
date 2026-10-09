@@ -391,11 +391,11 @@ mod tests {
     #[tokio::test]
     async fn trim_passes_an_absent_operand_through() {
         let mut interp = Interpreter::new();
-        interp.execute("0 0 DIV TRIM NIL-REASON").await.unwrap();
+        interp.execute("-1 SQRT TRIM NIL-REASON").await.unwrap();
         let reason = interp
             .stack
             .last()
             .and_then(|v| v.as_text().map(str::to_string));
-        assert_eq!(reason.as_deref(), Some("divisionByZero"));
+        assert_eq!(reason.as_deref(), Some("domainMiss"));
     }
 }

@@ -22,64 +22,64 @@
       "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
     },
     "EQ": {
-      "source": "12aae8b989ea8f75",
-      "summary": "2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。`1 1/1 EQ`は`TRUE`、`2 SQRT 2 SQRT MUL 2 EQ`は`TRUE`、`[ 1 2 ] [ 1 2 ] EQ`は`TRUE`。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。`1 0 DIV 1 EQ`は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、`[ NIL ] [ NIL ] EQ`は`TRUE`。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に`1 COLLECT`で包む。"
+      "source": "d3445537cf2b316e",
+      "summary": "2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。`1 1/1 EQ`は`TRUE`、`2 SQRT 2 SQRT MUL 2 EQ`は`TRUE`、`100 0 DIV 1/0 EQ`は`TRUE`、`0/0 0/0 EQ`は`TRUE`、`[ 1 2 ] [ 1 2 ] EQ`は`TRUE`。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。`-1 SQRT 1 EQ`は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、`[ NIL ] [ NIL ] EQ`は`TRUE`。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に`1 COLLECT`で包む。"
     },
     "LT": {
-      "source": "4a18f46ee9169dbc",
-      "summary": "左の数が右より小さいかどうか。`1 2 LT`は`TRUE`で、ベクトルには要素ごとに働き、`[ 1 5 ] 3 LT`は`[ TRUE FALSE ]`。厳密な体の上の順序は、無理数を含めて常に決定する(LANG.VALUES.EXACT)。`2 SQRT 3/2 LT`は`TRUE`。順序があるのは数だけで、それ以外は`nonNumeric`。"
+      "source": "c975c333f1cf219e",
+      "summary": "左の数が右より小さいかどうか。`1 2 LT`は`TRUE`で、ベクトルには要素ごとに働き、`[ 1 5 ] 3 LT`は`[ TRUE FALSE ]`。厳密な定義域の上の順序が決める(LANG.VALUES.EXACT)。無理数も含まれ、`2 SQRT 3/2 LT`は`TRUE`。`-1/0`は他のすべての数より下に、`1/0`は上にある。`0/0`だけは順序を持たないので、それを問う比較はNIL(domainMiss)を投影する。`0/0 1 LT`は、真偽の位置で不在が読まれるUNKNOWNである(LANG.VALUES.TRUTH)。順序があるのは数だけで、それ以外は`nonNumeric`。"
     },
     "GT": {
-      "source": "040218df7f189aa8",
-      "summary": "左の数が右より大きいかどうか。`2 1 GT`は`TRUE`で、ベクトルには要素ごとに働き、`[ 1 5 ] 3 GT`は`[ FALSE TRUE ]`。厳密な体の上の順序は常に決定する(LANG.VALUES.EXACT)。順序があるのは数だけで、それ以外は`nonNumeric`。"
+      "source": "8fd0477245d3bbe2",
+      "summary": "左の数が右より大きいかどうか。`2 1 GT`は`TRUE`で、ベクトルには要素ごとに働き、`[ 1 5 ] 3 GT`は`[ FALSE TRUE ]`。厳密な定義域の上の順序が決める(LANG.VALUES.EXACT)。無理数も含まれ、`2 SQRT 3/2 LT`は`TRUE`。`-1/0`は他のすべての数より下に、`1/0`は上にある。`0/0`だけは順序を持たないので、それを問う比較はNIL(domainMiss)を投影する。`0/0 1 GT`は、真偽の位置で不在が読まれるUNKNOWNである(LANG.VALUES.TRUTH)。順序があるのは数だけで、それ以外は`nonNumeric`。"
     },
     "ADD": {
-      "source": "5773393d25c6c332",
-      "summary": "厳密な和。`1/3 1/6 ADD`は`1/2`で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 1 2 ] 10 ADD`は`[ 11 12 ]`。何も丸められない。`2 SQRT 2 SQRT ADD`は`8 SQRT`。数でないものは`nonNumeric`。"
+      "source": "ab3b6752d332c572",
+      "summary": "厳密な和。`1/3 1/6 ADD`は`1/2`で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 1 2 ] 10 ADD`は`[ 11 12 ]`。何も丸められない。`2 SQRT 2 SQRT ADD`は`8 SQRT`。0の上の3つの点も同じ分数の公式で決まる。`1/0 5 ADD`は`1/0`、`1/0 1/0 ADD`は`0/0`(LANG.VALUES.EXACT)。数でないものは`nonNumeric`。"
     },
     "SUB": {
       "source": "b1139c4ac885b2f0",
       "summary": "厳密な差(左から右を引く)。`5 3 SUB`は`2`で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`2 [ 1 2 3 ] SUB`は`[ 1 0 -1 ]`。数でないものは`nonNumeric`。"
     },
     "MUL": {
-      "source": "b8b024147417ba37",
-      "summary": "厳密な積。`2/3 3/4 MUL`は`1/2`で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 1 2 3 ] [ 10 ] MUL`は`[ 10 20 30 ]`。数でないものは`nonNumeric`。"
+      "source": "ae340565373f706a",
+      "summary": "厳密な積。`2/3 3/4 MUL`は`1/2`で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 1 2 3 ] [ 10 ] MUL`は`[ 10 20 30 ]`。0の上の3つの点も同じ分数の公式で決まる。`1/0 -2 MUL`は`-1/0`、`1/0 0 MUL`は`0/0`(LANG.VALUES.EXACT)。数でないものは`nonNumeric`。"
     },
     "DIV": {
-      "source": "263d4c590d6dad04",
-      "summary": "厳密な商(左を右で割る)。`1 3 DIV`は厳密に`1/3`。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 2 4 ] 2 DIV`は`[ 1 2 ]`。除数が0のレーンはNIL(divisionByZero)を自分のレーンだけに投影し、他のレーンには触れない。`[ 1 2 3 ] [ 1 0 2 ] DIV`は`[ 1 NIL 3/2 ]`で、隣のレーンは商のままであり、後続のワードは不在のレーンをそのまま通しながら残りを計算する(LANG.FAILURE.PASSTHROUGH)。だから`1 0 DIV 1 ADD NIL-REASON`は`'divisionByZero'`になる。数でないものは`nonNumeric`。"
+      "source": "efea0b44029c3ff1",
+      "summary": "厳密な商(左を右で割る)。`1 3 DIV`は厳密に`1/3`。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、`[ 2 4 ] 2 DIV`は`[ 1 2 ]`。除算は全域的である(LANG.VALUES.EXACT)。逆数との積であり、すべての数は逆数を持つ。除数が0なら、被除数の符号を0の上に置いた点を自分のレーンだけに答え、他のレーンには触れない。`[ 1 -2 0 ] 0 DIV`は`[ 1/0 -1/0 0/0 ]`、`1 1/0 DIV`は`0`。隣のレーンは商のままであり、後続のワードはその点を同じ分数の公式で計算するので、`1 0 DIV 2 MUL`は`1/0`、`1 0 DIV 0 MUL`は`0/0`。数でないものは`nonNumeric`。"
     },
     "FLOOR": {
-      "source": "5241afa119c18e10",
-      "summary": "その数を超えない最大の整数。`7/3 FLOOR`は`2`、`-7/3 FLOOR`は`-3`で、ベクトルには要素ごとに働く。無理数も厳密に切り捨てられる。`2 SQRT FLOOR`は`1`。数でないものは`nonNumeric`。"
+      "source": "05a88968acd1c523",
+      "summary": "その数を超えない最大の整数。`7/3 FLOOR`は`2`、`-7/3 FLOOR`は`-3`で、ベクトルには要素ごとに働く。無理数も厳密に切り捨てられる。`2 SQRT FLOOR`は`1`。0の上の3つの点には、その位置やその先に整数がないので、それぞれが自分自身の床である。`1/0 FLOOR`は`1/0`。数でないものは`nonNumeric`。"
     },
     "ROUND": {
-      "source": "070334b1cf337999",
-      "summary": "最も近い整数。ちょうど半分は0から遠い側へ。`5/2 ROUND`は`3`、`-5/2 ROUND`は`-3`で、ベクトルには要素ごとに働く。FORMATも最終桁を同じ規則で丸める。数でないものは`nonNumeric`。"
+      "source": "229a633f3dcc8da0",
+      "summary": "最も近い整数。ちょうど半分は0から遠い側へ。`5/2 ROUND`は`3`、`-5/2 ROUND`は`-3`で、ベクトルには要素ごとに働く。FORMATも最終桁を同じ規則で丸める。0の上の3つの点は、それぞれが自分自身の床であるのと同じく、それぞれが自分自身の丸めである。数でないものは`nonNumeric`。"
     },
     "MIN": {
-      "source": "b4e63938f36267e1",
-      "summary": "2つの数の小さい方。`1 2 MIN`は`1`で、ベクトルにはブロードキャスト付きで要素ごとに働き、`[ 3 1 ] 2 MIN`は`[ 2 1 ]`。数でないものは`nonNumeric`。"
+      "source": "03a3f51fbba05181",
+      "summary": "2つの数の小さい方。`1 2 MIN`は`1`で、ベクトルにはブロードキャスト付きで要素ごとに働き、`[ 3 1 ] 2 MIN`は`[ 2 1 ]`。順序は厳密な定義域のもの(LANG.VALUES.EXACT)。`-1/0 5 MIN`は`-1/0`で、順序を持たない`0/0`はLTと同じくNIL(domainMiss)を投影する。数でないものは`nonNumeric`。"
     },
     "MAX": {
-      "source": "dc1eaf9750a19fff",
-      "summary": "2つの数の大きい方。`1 2 MAX`は`2`で、ベクトルにはブロードキャスト付きで要素ごとに働き、`[ -1 2 -3 ] 0 MAX`は`[ 0 2 0 ]`。数でないものは`nonNumeric`。"
+      "source": "1360e0829dff70a4",
+      "summary": "2つの数の大きい方。`1 2 MAX`は`2`で、ベクトルにはブロードキャスト付きで要素ごとに働き、`[ -1 2 -3 ] 0 MAX`は`[ 0 2 0 ]`。順序は厳密な定義域のもの(LANG.VALUES.EXACT)。`1/0 5 MAX`は`1/0`で、順序を持たない`0/0`はGTと同じくNIL(domainMiss)を投影する。数でないものは`nonNumeric`。"
     },
     "SQRT": {
-      "source": "112fdf74179a17d5",
-      "summary": "非負の数の厳密な平方根。`4 SQRT`は`2`、`2 SQRT`は無理数そのもので、多重二次正規形で保持され丸めなしに比較される(LANG.VALUES.EXACT)ので、`2 SQRT 2 SQRT MUL`は`2`。根号の中は平方因子を含まない形に簡約されるので、1つの数は組み立て方によらず1つの形を持つ。`8 SQRT`は`2 SQRT 2 MUL`である。この簡約は根号の中を素因数分解し、実行の数値作業量に計上される。残りの作業量で分解できない根号の中身は`resourceLimitExceeded`。ベクトルには要素ごとに働き、負の数はNIL(domainMiss)を投影する。`[ 4 -1 ] SQRT`は`[ 2 NIL ]`で、2番目のレーンはその理由で不在になる。数でないものは`nonNumeric`。"
+      "source": "c0be2b09f107b348",
+      "summary": "非負の数の厳密な平方根。`4 SQRT`は`2`、`2 SQRT`は無理数そのもので、多重二次正規形で保持され丸めなしに比較される(LANG.VALUES.EXACT)ので、`2 SQRT 2 SQRT MUL`は`2`。根号の中は平方因子を含まない形に簡約されるので、1つの数は組み立て方によらず1つの形を持つ。`8 SQRT`は`2 SQRT 2 MUL`である。この簡約は根号の中を素因数分解し、実行の数値作業量に計上される。残りの作業量で分解できない根号の中身は`resourceLimitExceeded`。`1/0`と`0/0`はそれぞれ自分自身の平方根である。ベクトルには要素ごとに働き、`-1/0`を含む負の数はNIL(domainMiss)を投影する。`[ 4 -1 ] SQRT`は`[ 2 NIL ]`で、2番目のレーンはその理由で不在になる。数でないものは`nonNumeric`。"
     },
     "POW": {
-      "source": "f2af524df0cf226f",
-      "summary": "厳密なべき乗`x y POW`。ベクトルには要素ごとに働き、厳密な体の中で答える。整数の指数なら結果は底と同じ層に留まる。`2 10 POW`は`1024`、`2 SQRT 2 POW`は`2`、`2 -1 POW`は`1/2`。非負の有理数の底に対する指数`p/2`も体の中に留まる。`2 1/2 POW`は`2 SQRT`の答えとまったく同じで、`2 3/2 POW`は`2 2 SQRT MUL`。負の`y`による`0 y POW`は`divisionByZero`を投影する。`p/2`乗の負の底は実数の値を持たず`domainMiss`を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する`p/2`、無理数の指数)も体の外に出るので`domainMiss`を投影する(`8 1/3 POW`、`2 2 SQRT POW`)。機械が具体化できる範囲を超える指数は`spaceExhausted`を投影する。体を組み立てるワードは今も`SQRT`であり、`POW`はその糖衣ではない。"
+      "source": "30c562a1f6cd2c23",
+      "summary": "厳密なべき乗`x y POW`。ベクトルには要素ごとに働き、厳密な定義域の中で答える。整数の指数なら結果は底と同じ層に留まる。`2 10 POW`は`1024`、`2 SQRT 2 POW`は`2`、`2 -1 POW`は`1/2`。除算は全域的なので`0 -1 POW`は`1/0`、`1/0 -1 POW`は`0`(LANG.VALUES.EXACT)。非負の有理数の底に対する指数`p/2`も体の中に留まる。`2 1/2 POW`は`2 SQRT`の答えとまったく同じで、`2 3/2 POW`は`2 2 SQRT MUL`。`p/2`乗の負の底は実数の値を持たず`domainMiss`を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する`p/2`、無理数の指数、0の上の指数)も体の外に出るので`domainMiss`を投影する(`8 1/3 POW`、`2 2 SQRT POW`、`2 1/0 POW`)。機械が具体化できる範囲を超える指数は`spaceExhausted`を投影する。体を組み立てるワードは今も`SQRT`であり、`POW`はその糖衣ではない。"
     },
     "GCD": {
-      "source": "a8108d5de11fbdbb",
-      "summary": "2つの整数の非負の最大公約数。ベクトルには要素ごとに働く。`12 18 GCD`は`6`、`0 0 GCD`は`0`。ユークリッドの互除法は入力に依存する反復で、すでにあるベクトルの上でしか反復しない言語では定義として書けない。機械はすべての有理数を既約に保つためにこれをすでに実行しており、このワードはそれを見えるようにするだけである。整数でないオペランド(分数や無理数)は`domainMiss`を投影する。"
+      "source": "be13ccbc1ee68899",
+      "summary": "2つの整数の非負の最大公約数。ベクトルには要素ごとに働く。`12 18 GCD`は`6`、`0 0 GCD`は`0`。ユークリッドの互除法は入力に依存する反復で、すでにあるベクトルの上でしか反復しない言語では定義として書けない。機械はすべての数を既約に保つためにこれをすでに実行しており、このワードはそれを見えるようにするだけである。整数でないオペランド(分数、無理数、0の上の点)は`domainMiss`を投影する。"
     },
     "RATIO": {
-      "source": "08606ed18665ec73",
-      "summary": "有理数を既約の分子と分母に開き、分母を正とする2要素のベクトルで答える。`6/4 RATIO`は`[ 3 2 ]`、`-3 RATIO`は`[ -3 1 ]`で、ベクトルには要素ごとに働く。この言語は厳密な有理数を掲げており、これがその2つの部分を読み戻すワードである。答えはベクトルなので、算術は他のベクトルと同じようにその上へ持ち上がる。無理数(`2 SQRT`)には分子がなく`domainMiss`を投影する。"
+      "source": "80a19ddb71a6dff5",
+      "summary": "数を既約の分子と分母に開き、分母を非負とする2要素のベクトルで答える。`6/4 RATIO`は`[ 3 2 ]`、`-3 RATIO`は`[ -3 1 ]`、`100 0 DIV RATIO`は`[ 1 0 ]`。0の上のすべての対はその符号を0の上に置いた点に簡約されるからである(LANG.VALUES.EXACT)。ベクトルには要素ごとに働く。この言語は厳密な分数を掲げており、これがその2つの部分を読み戻すワードである。答えはベクトルなので、算術は他のベクトルと同じようにその上へ持ち上がる。無理数(`2 SQRT`)には分子がなく`domainMiss`を投影する。"
     },
     "GET": {
       "source": "f7a2bc0a5c62b8d8",
@@ -134,12 +134,12 @@
       "summary": "ベクトルの入れ子の深さ。ベクトルでないもの(数、テキスト、真偽値、Symbol、Record)は0、平らなベクトルは1、ベクトルは最も深い要素より1つ深い。`[ 1 [ 2 [ 3 ] ] ] DEPTH`は`3`、`[ ] DEPTH`は`1`。FLATTENと同じくユーザー定義では書けない。測る対象そのものが、再帰しないプログラムには辿れないものだからである。"
     },
     "SORT": {
-      "source": "af61aa2f615c5069",
-      "summary": "数のベクトルを昇順に並べた複製。`[ 3 1 2 ] SORT`は`[ 1 2 3 ]`。順序は無理数を含めて厳密。順序があるのは数だけで(`nonNumeric`)、ベクトルでないものは`nonVector`。並べ替えの置換を答えるのはORDER。"
+      "source": "efd1d37af0724a88",
+      "summary": "数のベクトルを昇順に並べた複製。`[ 3 1 2 ] SORT`は`[ 1 2 3 ]`。順序は無理数を含めて厳密で、`-1/0`が先頭、`1/0`が末尾になる。順序を持たない`0/0`を含むベクトルには整列した形がなく、NIL(domainMiss)を投影する(LANG.VALUES.EXACT)。順序があるのは数だけで(`nonNumeric`)、ベクトルでないものは`nonVector`。並べ替えの置換を答えるのはORDER。"
     },
     "ORDER": {
-      "source": "ef6d7a5e9476b3d7",
-      "summary": "数のベクトルを昇順に並べるインデックス。`[ 30 10 20 ] ORDER`は`[ 1 2 0 ]`なので、それで収集すれば並べ替えになる。`[ 30 10 20 ] 'V' BIND V V ORDER GET`は`[ 10 20 30 ]`。同点は元の順序を保つ。`[ 2 1 2 1 ] ORDER`は`[ 1 3 0 2 ]`。順序があるのは数だけで(`nonNumeric`)、ベクトルでないものは`nonVector`。"
+      "source": "d39f6d5250198e98",
+      "summary": "数のベクトルを昇順に並べるインデックス。`[ 30 10 20 ] ORDER`は`[ 1 2 0 ]`なので、それで収集すれば並べ替えになる。`[ 30 10 20 ] 'V' BIND V V ORDER GET`は`[ 10 20 30 ]`。同点は元の順序を保つ。`[ 2 1 2 1 ] ORDER`は`[ 1 3 0 2 ]`。順序を持たない`0/0`を含むベクトルは、SORTと同じくNIL(domainMiss)を投影する(LANG.VALUES.EXACT)。順序があるのは数だけで(`nonNumeric`)、ベクトルでないものは`nonVector`。"
     },
     "UNIQUE": {
       "source": "9b1c2b6fdf825789",
@@ -170,8 +170,8 @@
       "summary": "値がベクトルの中に現れるかどうか。`[ 1 2 3 ] 2 MEMBER?`は`TRUE`。所属は値の等価性、つまりUNIQUEやINDEX-OFが使う等価性なので、数だけでなくテキスト、入れ子のベクトル、NILにも働く。探す値は1つの値で、読まれるのではなく比較されるので、ベクトルを探せば1つの要素として探す。`[ [ 1 ] 2 ] [ 1 ] MEMBER?`は`TRUE`。これは`INDEX-OF NIL? NOT`である。"
     },
     "BSEARCH": {
-      "source": "fe244825a59b40e1",
-      "summary": "昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。`[ 1 3 5 7 ] [ 5 ] BSEARCH`は`[ 2 ]`で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ`unsortedInput`を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。"
+      "source": "5667c0f9a552b5ac",
+      "summary": "昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。`[ 1 3 5 7 ] [ 5 ] BSEARCH`は`[ 2 ]`で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ`unsortedInput`を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序を持たない`0/0`を含むベクトルはNIL(domainMiss)を投影し、`0/0`のキーも自分のレーンに同じものを投影する(LANG.VALUES.EXACT)。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。"
     },
     "RECORD": {
       "source": "f10752c3e5475b9f",
@@ -246,32 +246,32 @@
       "summary": "あるテキストのすべての出現を別のテキストで置き換える。`'a-b-c' '-' '+' REPLACE`は`'a+b+c'`。出現は左から順に、重ならずに見つける。空の`from`は何にも一致しないので、テキストは際限なく伸びるのではなく変わらずに戻る。CHARSとJOINの上で書けば位置ごとの窓による走査になるが、このワードはそれを1回の走査で行う。"
     },
     "NUM": {
-      "source": "a6232c6ef34678b7",
-      "summary": "テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。`'3/4' NUM`は`3/4`、`'0.25' NUM`は`1/4`。数を綴らないテキスト(`'abc'`、`'.5'`、`'1_000'`、`'1/0'`)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(`'1e99999999'`)はNIL(spaceExhausted)を投影する。StringでないオペランドはERROR(`nonText`)。Stringのベクトルは持ち上がる。"
+      "source": "0eaedde54eb589b7",
+      "summary": "テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。`'3/4' NUM`は`3/4`、`'0.25' NUM`は`1/4`、`'5/0' NUM`は、対をその符号を0の上に置いた点に簡約した`1/0`(LANG.VALUES.EXACT)。数を綴らないテキスト(`'abc'`、`'.5'`、`'1_000'`)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(`'1e99999999'`)はNIL(spaceExhausted)を投影する。StringでないオペランドはERROR(`nonText`)。Stringのベクトルは持ち上がる。"
     },
     "STR": {
-      "source": "cb307ed58e710e88",
-      "summary": "スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。`42 STR`は`'42'`、`1/3 STR`は`'1/3'`、`TRUE STR`は`'TRUE'`。Symbolはその名前そのままで書かれる。`[ ADD ] 0 GET STR`は`'ADD'`。そのテキストはStringであってSymbolではない。それをSymbolに戻すWordはないので、テキストとして持った名前が呼び出されることはない（LANG.DICTIONARY.ACYCLIC）。オペランドは葉なので、ベクトルやRecordは持ち上がる。`[ 1 2 ] STR`は`[ '1' '2' ]`。STRは要素ごとにNUMの逆であり、`1/3 STR NUM`は`1/3`、`x STR NUM`は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。"
+      "source": "9783a6877fea7a4f",
+      "summary": "スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。`42 STR`は`'42'`、`1/3 STR`は`'1/3'`、`1 0 DIV STR`は`'1/0'`、`TRUE STR`は`'TRUE'`。Symbolはその名前そのままで書かれる。`[ ADD ] 0 GET STR`は`'ADD'`。そのテキストはStringであってSymbolではない。それをSymbolに戻すWordはないので、テキストとして持った名前が呼び出されることはない（LANG.DICTIONARY.ACYCLIC）。オペランドは葉なので、ベクトルやRecordは持ち上がる。`[ 1 2 ] STR`は`[ '1' '2' ]`。STRは要素ごとにNUMの逆であり、`1/3 STR NUM`は`1/3`、`x STR NUM`は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。"
     },
     "FORMAT": {
-      "source": "93b2353a3f3e2a74",
-      "summary": "厳密なスカラーを、小数点以下の桁数を指定した十進テキストとして描く。ちょうど半分は`ROUND`とまったく同じく0から遠い側へ丸める。`1/3 5 FORMAT`は`'0.33333'`、`5/2 0 FORMAT`は`'3'`、`2 SQRT 3 FORMAT`は`'1.414'`。値が丸められる唯一の場所であり、そこから出ていくのはテキストであって決して数ではない。算術は丸めを行わず、`STR`は厳密な字句を持たない数を断るので、十進の近似が欲しいプログラムは表示の境界であるここで精度を名指す。桁数は非負の整数(そうでなければ`invalidInteger`)、値はスカラー(そうでなければ`nonNumeric`)。体の順序は決して同点にならないので、無理数を含めすべての桁が厳密に決まる。"
+      "source": "0073606dce4d0c54",
+      "summary": "厳密なスカラーを、小数点以下の桁数を指定した十進テキストとして描く。ちょうど半分は`ROUND`とまったく同じく0から遠い側へ丸める。`1/3 5 FORMAT`は`'0.33333'`、`5/2 0 FORMAT`は`'3'`、`2 SQRT 3 FORMAT`は`'1.414'`。値が丸められる唯一の場所であり、そこから出ていくのはテキストであって決して数ではない。算術は丸めを行わず、`STR`は厳密な字句を持たない数を断るので、十進の近似が欲しいプログラムは表示の境界であるここで精度を名指す。0の上の3つの点の位置やその先には小数がないので、`1/0`、`-1/0`、`0/0`はNIL(domainMiss)を投影する(LANG.VALUES.EXACT)。それらの字句を書くのはSTRである。桁数は非負の整数(そうでなければ`invalidInteger`)、値はスカラー(そうでなければ`nonNumeric`)。体の順序は決して同点にならないので、無理数を含めすべての桁が厳密に決まる。"
     },
     "JSON-DECODE": {
       "source": "6cbc356a98f8d295",
       "summary": "JSONテキストを値として読む。`'[1, 2]' JSON-DECODE`は`[ 1 2 ]`。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(`'0.1' JSON-DECODE`は厳密に`1/10`)、`true`/`false`は真偽値、`null`はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は`invalidEncoding`を投影する。これは`NUM`が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値や、数値リテラルの上限より多くの桁の数は`spaceExhausted`を投影する。上限を超えるあらゆる具体化の結末である(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(`nonText`)。"
     },
     "JSON-ENCODE": {
-      "source": "2a46df54df49b05d",
-      "summary": "値をJSONテキストとして書く。`JSON-DECODE`の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は`true`/`false`、NILは`null`になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(`1/4`は`0.25`)、それ以外の有理数はAjisaiの字句を文字列に入れて書かれる(`1/3`は`\"1/3\"`)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は`domainMiss`を投影する。このワードが書いたものを解読すると与えた値が戻り、字句として書かれた有理数はそのStringとして戻るので、`NUM`で数を取り戻せる。"
+      "source": "d504cccf79d5de4d",
+      "summary": "値をJSONテキストとして書く。`JSON-DECODE`の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は`true`/`false`、NILは`null`になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(`1/4`は`0.25`)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(`1/3`は`\"1/3\"`、`1/0`は`\"1/0\"`)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は`domainMiss`を投影する。このワードが書いたものを解読すると与えた値が戻り、字句として書かれた数はそのStringとして戻るので、`NUM`で数を取り戻せる。"
     },
     "EXEC": {
       "source": "24306a660d879dd5",
       "summary": "ブロックをその場で実行し、結果をスタックに残す。`[ 1 2 ADD ] EXEC`は`3`。他のコードと同じくスタックを読み書きするので、`2 [ 3 MUL ] EXEC`は`6`。ブロックでないものは`notExecutable`。"
     },
     "CONTRACT": {
-      "source": "a5261389bce93f15",
-      "summary": "ワードまたはブロックの契約をRecordで答える。`[ DIV ] 0 GET CONTRACT 'partiality' GET`は`'projecting'`。CoreワードをSymbolで名指せば、`spec/words.json`に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名`name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`。だから`[ DIV ] 0 GET CONTRACT 'cost' GET`は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から`ajisai check --contract`が行うのと同じ推論)、キーは`inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects`(同じキーで同じ語彙なので両者を直接比べられる)と`confidence` `gaps`。`confidence`と`gaps`は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、`[ 42 PRINT ] CONTRACT`は出力せずに`effects`の下に`consoleWrite`を報告する。どのワードも名指さないSymbolは`notFound`を投影し、SymbolでもブロックでもないオペランドはERROR(`notASymbol`)。"
+      "source": "e4f1b2fd2fa9641a",
+      "summary": "ワードまたはブロックの契約をRecordで答える。`[ SQRT ] 0 GET CONTRACT 'partiality' GET`は`'projecting'`。CoreワードをSymbolで名指せば、`spec/words.json`に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名`name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`。だから`[ DIV ] 0 GET CONTRACT 'cost' GET`は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から`ajisai check --contract`が行うのと同じ推論)、キーは`inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects`(同じキーで同じ語彙なので両者を直接比べられる)と`confidence` `gaps`。`confidence`と`gaps`は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、`[ 42 PRINT ] CONTRACT`は出力せずに`effects`の下に`consoleWrite`を報告する。どのワードも名指さないSymbolは`notFound`を投影し、SymbolでもブロックでもないオペランドはERROR(`notASymbol`)。"
     },
     "FAIL": {
       "source": "a5802c10ab833aaf",
@@ -282,12 +282,12 @@
       "summary": "プログラムに書かれた不在。`NIL NIL?`は`TRUE`で、理由は`literal`。`NIL NIL-REASON`は`'literal'`(LANG.VALUES.NIL)。プログラム自身の理由を持つ不在はABSENTで書く。"
     },
     "NIL?": {
-      "source": "479093ac08c077e7",
-      "summary": "値が不在かどうか。`1 0 DIV NIL?`は`TRUE`、`5 NIL?`は`FALSE`。値全体について問うので、NILを持つベクトルは存在している。`[ 1 NIL ] NIL?`は`FALSE`。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。"
+      "source": "1f9a85ce48e21575",
+      "summary": "値が不在かどうか。`-1 SQRT NIL?`は`TRUE`、`5 NIL?`は`FALSE`。0で割った商は数なので、`1 0 DIV NIL?`は`FALSE`(LANG.VALUES.EXACT)。値全体について問うので、NILを持つベクトルは存在している。`[ 1 NIL ] NIL?`は`FALSE`。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。"
     },
     "NIL-REASON": {
-      "source": "2c60f956da48f5d2",
-      "summary": "不在が持つ理由をテキストで答える。`1 0 DIV NIL-REASON`は`'divisionByZero'`で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。"
+      "source": "10e4092b14035028",
+      "summary": "不在が持つ理由をテキストで答える。`-1 SQRT NIL-REASON`は`'domainMiss'`で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。"
     },
     "ABSENT": {
       "source": "2fa81bebb60a59ea",

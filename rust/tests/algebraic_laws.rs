@@ -142,10 +142,23 @@ proptest! {
 
     // ─────────────────── NIL-projection monad (§5) ───────────────────
 
-    /// NIL passthrough: any arithmetic on a division-by-zero projection stays NIL.
+    /// NIL passthrough: any arithmetic on a domain-miss projection stays NIL.
     #[test]
     fn nil_passthrough(a in small()) {
-        assert_law("nil-passthrough", &format!("1 0 DIV {a} ADD"), "NIL");
+        assert_law("nil-passthrough", &format!("-1 SQRT {a} ADD"), "NIL");
+    }
+
+    /// Division by zero is total, and the three points over zero obey the
+    /// pair formulas (LANG.VALUES.EXACT): a quotient by zero is its sign over
+    /// zero, and arithmetic after it stays on the three points.
+    #[test]
+    fn division_by_zero_is_the_sign_over_zero(a in small()) {
+        let sign = a.signum();
+        assert_law("div-by-zero", &format!("{a} 0 DIV"), &format!("{sign}/0"));
+        assert_law("div-by-zero-absorbs-add", &format!("{a} 0 DIV {a} ADD"), &format!("{sign}/0"));
+        assert_law("div-by-point-is-zero", &format!("{a} 1/0 DIV"), "0/1");
+        assert_law("point-minus-itself", &format!("{a} 0 DIV {a} 0 DIV SUB"), "0/0");
+        assert_law("nullity-absorbs", &format!("0/0 {a} ADD"), "0/0");
     }
 
     /// Absence handler: a projected NIL is replaced by the fallback, a present
@@ -155,7 +168,7 @@ proptest! {
     /// `subject 'S' BIND fallback S S NIL? SELECT`.
     #[test]
     fn absence_handler(a in small()) {
-        assert_law("absence-recovers-projection", &format!("1 0 DIV 'S' BIND {a} S S NIL? SELECT"), &format!("{a}"));
+        assert_law("absence-recovers-projection", &format!("-1 SQRT 'S' BIND {a} S S NIL? SELECT"), &format!("{a}"));
         // A present value is its own result regardless of the fallback.
         assert_law("absence-present", &format!("{a} 'S' BIND 999 S S NIL? SELECT"), &format!("{a}"));
     }

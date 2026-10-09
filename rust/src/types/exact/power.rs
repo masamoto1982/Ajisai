@@ -8,7 +8,10 @@
 //! real value, and every other exponent — a denominator other than 1 or 2, an
 //! algebraic base under `p/2`, an irrational exponent — leaves the field:
 //! both are `DomainMiss`. A zero base under a negative exponent divides by
-//! zero.
+//! zero, and answers `1/0` as division does; a base over zero powers by the
+//! same products, so `1/0 2 POW` is `1/0` and `1/0 -1 POW` is `0`. An
+//! exponent over zero is neither an integer nor `p/2`, and leaves the field
+//! like any other.
 
 use std::cmp::Ordering;
 
@@ -24,8 +27,6 @@ use crate::types::fraction::Fraction;
 #[derive(Debug, Clone)]
 pub enum PowOutcome {
     Value(ExactReal),
-    /// `0ʸ` with `y LT 0`.
-    DivisionByZero,
     /// A negative base under `p/2`, or an answer outside the field.
     DomainMiss,
     /// An exponent too large to materialize.
@@ -40,12 +41,9 @@ pub enum PowOutcome {
 /// a ten-million-bit number no comparison will read, is refused.
 const INTEGER_POWER_RESULT_BITS: u64 = 1 << 20;
 
-/// The sign of a non-nil exact real. Decidable over the whole field.
+/// The sign of an exact real. Decidable over the whole domain.
 fn sign_of(x: &ExactReal) -> Ordering {
-    match x {
-        ExactReal::Rational(q) => q.cmp(&Fraction::from(0)),
-        ExactReal::Algebraic(a) => a.sign(),
-    }
+    x.signum()
 }
 
 /// `xⁿ` for an integer `n ≥ 0` by square-and-multiply, in `x`'s own tier.
@@ -117,12 +115,21 @@ impl ExactReal {
         if q != BigInt::from(2) {
             return PowPlan::Answered(PowOutcome::DomainMiss);
         }
+        // `0/0` has no sign to read: its root is itself, and so is every
+        // power of that root (`fraction_extended`).
+        if matches!(self, ExactReal::Rational(q) if q.is_nullity()) {
+            return PowPlan::Answered(PowOutcome::Value(self.clone()));
+        }
         PowPlan::Answered(match sign_of(self) {
             Ordering::Less => PowOutcome::DomainMiss,
-            Ordering::Equal if p.is_positive() => {
-                PowOutcome::Value(ExactReal::from_fraction(Fraction::from(0)))
+            // `0^(p/2)` is `0^p`: 0 for a positive `p`, and `1/0` for a
+            // negative one, as the reciprocal of zero is.
+            Ordering::Equal => {
+                return PowPlan::Integer {
+                    base: ExactReal::from_fraction(Fraction::from(0)),
+                    exponent: p,
+                }
             }
-            Ordering::Equal => PowOutcome::DivisionByZero,
             Ordering::Greater => match self.as_rational() {
                 Some(x) => match ExactReal::try_sqrt_rational(x.clone(), budget) {
                     Ok(root) => {
@@ -151,10 +158,7 @@ impl ExactReal {
         if n.is_positive() {
             return PowOutcome::Value(positive);
         }
-        match positive.reciprocal() {
-            Some(inverse) => PowOutcome::Value(inverse),
-            None => PowOutcome::DivisionByZero,
-        }
+        PowOutcome::Value(positive.reciprocal())
     }
 
     /// How wide `self^n` can be, and how many terms it can hold, without

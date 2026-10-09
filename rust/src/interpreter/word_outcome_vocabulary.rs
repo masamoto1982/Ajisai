@@ -61,9 +61,6 @@ use super::Interpreter;
 /// (not any specific Word's own declared `errorWhen`) — the fixed,
 /// non-`Declared` `ErrorCategory` variants, read through the real
 /// `as_protocol_str()` so this can never drift from the wire spelling.
-/// `DivisionByZero` is excluded: it is not a registered outcome category at
-/// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
-/// diagnostic-trace-only).
 fn structural_error_categories() -> [ErrorCategory; 7] {
     [
         ErrorCategory::StackUnderflow,
@@ -128,8 +125,8 @@ const NIL_WORD: &str = "NIL";
 /// came back reasonless, and a reasonless NIL reads back as `literal`:
 ///
 /// ```text
-/// [ 1 2 ] [ 1 0 ] DIV 1 GET NIL-REASON            -> 'divisionByZero'
-/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET NIL-REASON -> 'literal'   (then)
+/// [ 4 -1 ] SQRT 1 GET NIL-REASON             -> 'domainMiss'
+/// [ 4 -1 ] SQRT [ 1 1 ] DIV 1 GET NIL-REASON -> 'literal'   (then)
 /// ```
 ///
 /// The second program contains no `NIL` token, so "a NIL literal is written
@@ -137,10 +134,10 @@ const NIL_WORD: &str = "NIL";
 /// exhaustive table (where every `nil:literal` cell does take `nilLiteral`
 /// as an input). Predicting from what the program can produce instead of
 /// from what it writes stays sound whatever the value representation does
-/// with reasons — including now that a dense lane keeps its reason in the
-/// tensor's absence map (`DenseTensor::absences`) and that program answers
-/// `'divisionByZero'`, since dropping an outcome the program cannot reach is
-/// the allowed direction (pitfall A) and adding one it can is not.
+/// with reasons — including now that a NIL never enters a dense lane at all
+/// (a dense tensor holds numbers only, LANG.VALUES.EXACT) and that program
+/// answers `'domainMiss'`, since dropping an outcome the program cannot reach
+/// is the allowed direction (pitfall A) and adding one it can is not.
 pub(crate) fn close_over_nil_reason_loss(outcomes: &mut BTreeSet<String>) {
     if outcomes.iter().any(|id| id.starts_with("nil:")) {
         outcomes.insert(NIL_LITERAL.to_string());
@@ -394,10 +391,12 @@ mod tests {
 
     #[test]
     fn builtin_outcomes_include_declared_nil_projections() {
-        let outcomes = builtin_outcomes_for("DIV");
-        assert!(outcomes.contains("nil:divisionByZero"));
-        let outcomes = builtin_outcomes_for("POW");
+        let outcomes = builtin_outcomes_for("SQRT");
         assert!(outcomes.contains("nil:domainMiss"));
+        let outcomes = builtin_outcomes_for("LT");
+        assert!(outcomes.contains("nil:domainMiss"));
+        // Division is total: no projection to declare.
+        assert!(!builtin_outcomes_for("DIV").contains("nil:domainMiss"));
     }
 
     #[test]
@@ -429,7 +428,7 @@ mod tests {
     fn any_reachable_nil_admits_a_reasonless_one() {
         let mut projecting: BTreeSet<String> = BTreeSet::new();
         projecting.insert("value".to_string());
-        projecting.insert("nil:divisionByZero".to_string());
+        projecting.insert("nil:domainMiss".to_string());
         close_over_nil_reason_loss(&mut projecting);
         assert!(projecting.contains("nil:literal"));
 

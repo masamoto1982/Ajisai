@@ -299,9 +299,7 @@ mod tests {
         assert!(
             predict("[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC").contains(&"error:nonNumeric".to_string())
         );
-        assert!(
-            predict("[ [ 1 0 DIV ] ] 'G' DEF G EXEC").contains(&"nil:divisionByZero".to_string())
-        );
+        assert!(predict("[ [ -1 SQRT ] ] 'G' DEF G EXEC").contains(&"nil:domainMiss".to_string()));
     }
 
     /// A higher-order block runs on its own stack, so a top level that
@@ -454,13 +452,13 @@ mod tests {
     }
 
     /// The trigger is what the program can *produce*, not what it writes:
-    /// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET` answers `nil:literal` with no
-    /// `NIL` token anywhere, because the divide-by-zero lane's reason does not
+    /// `[ 4 -1 ] SQRT [ 1 1 ] DIV 1 GET` answers `nil:literal` with no
+    /// `NIL` token anywhere, because the negative radicand's reason does not
     /// survive a second lane-wise pass.
     #[test]
     fn a_computed_nil_admits_the_reasonless_one_too() {
-        let outcomes = predict("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET");
-        assert!(outcomes.contains(&"nil:divisionByZero".to_string()));
+        let outcomes = predict("[ 4 -1 ] SQRT [ 1 1 ] DIV 1 GET");
+        assert!(outcomes.contains(&"nil:domainMiss".to_string()));
         assert!(
             outcomes.contains(&"nil:literal".to_string()),
             "{outcomes:?}"

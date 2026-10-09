@@ -19,7 +19,7 @@ impl FlatTensor {
     /// is remapped directly here, not at each caller.
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
-            ValueData::Nil(_) => Err(AjisaiError::declared(
+            ValueData::Nil => Err(AjisaiError::declared(
                 "nonNumeric",
                 "expected a Scalar or a Vector, got NIL",
             )),
@@ -242,7 +242,7 @@ pub(crate) fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     rectangular_shape_by(value, |leaf| {
         matches!(
             leaf.data,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil(_)
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil
         )
     })
 }
@@ -301,15 +301,12 @@ pub(crate) fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
     }
 }
 
-/// The numeric leaf fraction of a value (scalar or NIL lane), or `None` when
-/// the value is not a numeric leaf.
+/// The numeric leaf fraction of a value, or `None` when the value is not a
+/// numeric leaf. A NIL is not one: the lane-wise lift settles absence while
+/// the lane is still a `Value`.
 pub(crate) fn broadcast_leaf(value: &Value) -> Option<Fraction> {
     match &value.data {
         ValueData::Scalar(f) => Some(f.clone()),
-        // An absent number is its pair; an absence that is not a number is
-        // no leaf for a `Fraction` law. Neither is met here in practice: the
-        // lane-wise lift settles absence while the lane is still a `Value`.
-        ValueData::Nil(pair) => pair.clone(),
         _ => None,
     }
 }

@@ -17,20 +17,15 @@
 //! one is still a sane size.
 
 use std::cell::Cell;
-use std::collections::BTreeMap;
 
-use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::arithmetic::{ExactArithmeticSchema, ScalarFastWrap};
+use crate::error::{AjisaiError, Result};
+use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::exact_work::reciprocal_numeric_work;
 use crate::interpreter::runtime_limits::{
     broadcast_numeric_work, exact_work_bits, fraction_result_bits, fraction_work_bits, OperandWork,
     ALGEBRAIC_PAIR_UNITS,
 };
-use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
-use crate::interpreter::tensor_ops::apply_binary_broadcast;
-use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
-use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Value, ValueData};
@@ -72,7 +67,7 @@ pub(crate) fn measure_operand(value: &Value) -> OperandWork {
             .unwrap_or(OperandWork::leaf(1)),
         // No arithmetic happens on these; the structure error they raise is
         // not work.
-        ValueData::Boolean(_) | ValueData::Nil(_) | ValueData::Text(_) | ValueData::Symbol(_) => {
+        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
             OperandWork::leaf(1)
         }
     }
@@ -150,7 +145,7 @@ fn measure_result(value: &Value) -> (u64, usize) {
             let (child_bits, child_terms) = measure_result(child);
             (bits.max(child_bits), terms.max(child_terms))
         }),
-        ValueData::Boolean(_) | ValueData::Nil(_) | ValueData::Text(_) | ValueData::Symbol(_) => {
+        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
             (0, 0)
         }
     }
@@ -163,153 +158,6 @@ fn measure_result(value: &Value) -> (u64, usize) {
 pub(crate) fn check_result_size(interp: &Interpreter, value: &Value) -> Result<()> {
     let (bits, terms) = measure_result(value);
     interp.runtime_limits.check_algebraic_size(terms, bits)
-}
-
-// The zero-divisor projection law: what a zero divisor does to the value
-// around it, for `DIV`, the Word that meets one.
-//
-// Split out of `arithmetic.rs` because these are the exact-arithmetic laws
-// that can *project* — answer NIL for a well-formed operand
-// (`LANG.FAILURE.TRICHOTOMY`) — and lifting a projecting law over a
-// collection is a different problem from lifting a total one. `ADD`, `SUB`
-// and `MUL` either answer with a number in every lane or raise.
-//
-// A remainder written out as `a - b * floor(a/b)` goes through the same
-// division, so a zero divisor answers the same way whichever phrase wraps it.
-//
-// The quotient is absent as a number: `dividend` over the zero that refused
-// it (`Fraction::over_zero`), so `100 0 DIV` holds `100/0` and `0 0 DIV` the
-// one `0/0`. A dividend with no pair of its own — an algebraic number — is
-// absent without one.
-pub(crate) fn division_by_zero_projection(dividend: Option<Fraction>) -> Value {
-    match dividend {
-        Some(dividend) => Value::absent_number(dividend.over_zero(), division_by_zero_absence()),
-        None => Value::nil_with_absence(division_by_zero_absence()),
-    }
-}
-
-/// The absence a zero divisor projects, for a route that writes it into a
-/// dense lane rather than wrapping it as a `Value`: the column kernels keep
-/// their quotient columns and record this, keyed by lane, in the Tensor's
-/// absence map. One mint per lane, as `division_by_zero_projection` mints one
-/// per NIL, so the error-flow trace sees the same production either way.
-pub(crate) fn division_by_zero_absence() -> AbsenceMetadata {
-    AbsenceMetadata::with_reason(
-        NilReason::DivisionByZero,
-        AbsenceOrigin::DivisionByZero,
-        Recoverability::Recoverable,
-    )
-}
-
-/// The scalar law of `DIV` as a whole `Value`, for the lane-wise lift.
-///
-/// A zero divisor is a projection, not a failure (`LANG.FAILURE.TRICHOTOMY`),
-/// so it answers with the reasoned NIL the scalar `6 0 DIV` answers with.
-///
-/// An absent operand never reaches here: `apply_lane_wise_broadcast` lifts the
-/// scalar passthrough law over each lane *before* consulting this one, while
-/// the lane is still a `Value` and its reason is still readable. Were one to,
-/// `Fraction::div` passes it through as it is — an absent divisor is not a
-/// zero divisor (`Fraction::is_zero`), so no `divisionByZero` the program
-/// never performed is invented for it.
-fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
-    if b.is_zero() {
-        return Ok(division_by_zero_projection(Some(a.clone())));
-    }
-    Ok(Value::from_fraction(a.div(b)))
-}
-
-/// A zero divisor on the one-lane fast path projects *inside* the operand's
-/// wrap, for the same reason it projects per lane in the broadcast: the shape
-/// of `[ 6 ] [ 0 ] DIV` is the shape of `[ 6 ] [ 2 ] DIV`. Answering with a bare
-/// NIL here made `DIV` the one Word whose result shape depended on whether it
-/// projected — `[ 6 ] [ 2 ] DIV` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] DIV` gave a
-/// scalar `NIL`.
-///
-/// The wrap is rebuilt as the dense Tensor `build_scalar_fast_result` builds
-/// for a quotient, its one lane absent — the dividend over zero in the
-/// columns — and the reason in the absence map: the representation of a
-/// `DIV` result does not depend on whether it projected, on this route any
-/// more than on the column kernels or the general lift.
-pub(crate) fn build_scalar_fast_projection(dividend: &Fraction, wrap: &ScalarFastWrap) -> Value {
-    match wrap {
-        ScalarFastWrap::Scalar => division_by_zero_projection(Some(dividend.clone())),
-        ScalarFastWrap::Tensor(shape) => {
-            let mut absences = BTreeMap::new();
-            absences.insert(0, division_by_zero_absence());
-            Value::from_tensor_with_absences(vec![dividend.over_zero()], shape.clone(), absences)
-        }
-    }
-}
-
-/// The `DIV` arm of [`apply_exact_arithmetic_schema`], after the fast paths
-/// declined it.
-///
-/// [`apply_exact_arithmetic_schema`]: crate::interpreter::arithmetic
-pub(crate) fn apply_division_schema(
-    interp: &mut Interpreter,
-    schema: ExactArithmeticSchema,
-) -> Result<()> {
-    let stack_len = interp.stack.len();
-    if stack_len >= 2 {
-        let slots = interp.stack.as_slice();
-        let left_is_text = slots[stack_len - 2].is_text();
-        let right_is_text = slots[stack_len - 1].is_text();
-        if left_is_text || right_is_text {
-            return Err(AjisaiError::declared(
-                "nonNumeric",
-                "expected a Scalar, got String",
-            ));
-        }
-    }
-    let operands = extract_operands(interp, 2)?;
-    let a_val = &operands[0];
-    let b_val = &operands[1];
-
-    let computed = apply_binary_broadcast(a_val, b_val, |a, b| schema.fraction(a, b))
-        // Bound accumulation before the result is pushed; on a refusal the
-        // operands go back, exactly as for any other failure of this arm.
-        .and_then(|result| {
-            check_result_size(interp, &result)?;
-            Ok(result)
-        });
-
-    // `LANG.COLLECTIONS.LIFT`: "Each lane preserves the exactness, truth, NIL,
-    // and ERROR distinctions of the scalar law." A zero divisor empties its own
-    // lane; it does not empty the vector.
-    //
-    // The flat rational broadcast above cannot say that. Its leaf law answers
-    // with a `Fraction`, so a projection can only surface as one error for the
-    // whole operation, and the lanes that had already divided were discarded
-    // with it: `[ 6 6 6 ] [ 1 2 0 ] DIV` answered `NIL` where the same division
-    // through `MAP` answered `[ 6/1 3/1 NIL ]`, so one `DIV` meant two
-    // different things depending on the route it took.
-    //
-    // Re-run it lane-wise, where the leaf law answers with a value and each
-    // projection carries its own reason — the shape `SQRT` already produces for
-    // a negative lane. The re-run costs a second pass only when a zero divisor
-    // was actually met; a division that projects nothing keeps the flat path.
-    let computed = match computed {
-        Err(AjisaiError::DivisionByZero) => apply_lane_wise_broadcast(a_val, b_val, divide_lane)
-            .and_then(|result| {
-                check_result_size(interp, &result)?;
-                Ok(result)
-            }),
-        other => other,
-    };
-
-    match computed {
-        Ok(result) => {
-            interp.stack.push(result);
-            Ok(())
-        }
-        Err(error) => {
-            for val in operands {
-                interp.stack.push(val);
-            }
-            Err(error)
-        }
-    }
 }
 
 // The share of the run's `numericWork` a square root may spend factoring its
@@ -416,10 +264,9 @@ mod tests {
     //! `op_add`/`op_sub`/`op_mul` place the ExactScalar block before broadcast;
     //! these tests pin `op_div` to the same, correct ordering.
 
-    use crate::error::NilReason;
-
     use crate::test_support::run_ok;
-    use crate::types::ValueData;
+    use crate::types::fraction::Fraction;
+    use crate::types::{Value, ValueData};
 
     /// `√2 2 /` is evaluated as an exact value rather than hard-erroring on the
     /// (impossible) ExactScalar -> tensor conversion. This is the core P0-a
@@ -460,18 +307,23 @@ mod tests {
         );
     }
 
-    /// `√2 0 /` is a recoverable DivisionByZero projection, not a hard error.
+    /// `√2 0 /` is `1/0`: an irrational dividend contributes its sign to a
+    /// quotient by zero (LANG.VALUES.EXACT), and `0 √2 DIV` is 0.
     #[tokio::test]
-    async fn sqrt2_div_zero_is_division_by_zero_projection() {
+    async fn sqrt2_div_zero_is_the_positive_point_over_zero() {
         let stack = run_ok("2 SQRT 0 DIV").await;
         assert_eq!(stack.len(), 1);
-        let top = &stack[0];
-        assert!(top.is_nil(), "√2 0 / must be a reasoned NIL, got {top:?}");
         assert_eq!(
-            top.nil_reason().cloned(),
-            Some(NilReason::DivisionByZero),
-            "√2 0 / must carry NilReason::DivisionByZero, got {top:?}"
+            stack[0],
+            Value::from_fraction(Fraction::positive_infinity())
         );
+        let stack = run_ok("2 SQRT -1 MUL 0 DIV").await;
+        assert_eq!(
+            stack[0],
+            Value::from_fraction(Fraction::negative_infinity())
+        );
+        let stack = run_ok("1 2 SQRT 0 DIV DIV").await;
+        assert_eq!(stack[0], Value::from_int(0));
     }
 
     /// Ordinary rational division is unchanged (no regression): `6 3 DIV` -> `2`.

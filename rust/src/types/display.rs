@@ -44,7 +44,7 @@ impl fmt::Display for Value {
 /// `COLLECT` phrase it is written as `[ NAME ] 0 GET`, which does.
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
-        ValueData::Nil(_) => "NIL".to_string(),
+        ValueData::Nil => "NIL".to_string(),
         // A String renders quoted at every depth, from its domain alone, or
         // as the phrase that joins its pieces when no literal spells it.
         ValueData::Text(s) => format_text(s),
@@ -200,13 +200,11 @@ fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usi
 }
 
 /// Canonical numeric rendering: every number is shown as a reduced
-/// `numerator/denominator`, integers included (`3` -> `3/1`). There is no
-/// decimal surface form and no per-value style — the display is uniform
-/// and matches the exact-real internal model.
+/// `numerator/denominator`, integers included (`3` -> `3/1`) and the three
+/// points over zero included (`1/0`, `-1/0`, `0/0`). There is no decimal
+/// surface form and no per-value style — the display is uniform and matches
+/// the exact-real internal model.
 fn format_fraction(f: &Fraction) -> String {
-    if f.is_nil() {
-        return "NIL".to_string();
-    }
     format!("{}/{}", f.numerator(), f.denominator())
 }
 

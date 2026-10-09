@@ -80,9 +80,9 @@ impl AlgebraicResult {
 impl Algebraic {
     // ---- Construction ----
 
-    /// √`radicand` with the same normalization as the historical
-    /// `ExactReal::from_sqrt_rational`: `None` for nil or negative input,
-    /// `Rational` for zero and perfect squares, `Irrational` otherwise.
+    /// √`radicand`: `None` for a negative radicand (`-1/0` included),
+    /// `Rational` for zero, a perfect square, `1/0` and `0/0`, `Irrational`
+    /// otherwise.
     pub fn sqrt_of_fraction(radicand: &Fraction) -> Option<AlgebraicResult> {
         Self::sqrt_of_fraction_within(radicand, &mut u64::MAX.clone())
             .expect("an unbounded budget always factors")
@@ -94,8 +94,14 @@ impl Algebraic {
         radicand: &Fraction,
         budget: &mut u64,
     ) -> Result<Option<AlgebraicResult>, FactorBudgetExhausted> {
-        if radicand.is_nil() {
-            return Ok(None);
+        if !radicand.is_finite() {
+            // √(1/0) is 1/0 and √(0/0) is 0/0: a square root over zero is
+            // the pair formula's own answer, √(a/0) = √a/√0 = √a/0, reduced
+            // to its sign. √(-1/0) is the negative radicand it is.
+            return Ok(match radicand.signum() {
+                Ordering::Less => None,
+                _ => Some(AlgebraicResult::Rational(radicand.clone())),
+            });
         }
         let num = radicand.numerator();
         let den = radicand.denominator();

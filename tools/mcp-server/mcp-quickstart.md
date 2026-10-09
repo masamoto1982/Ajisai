@@ -105,28 +105,42 @@ A partial operation that has no answer produces `NIL` carrying a reason, and the
 call still succeeds:
 
 ```ajisai tool=compute status=ok stack="NIL"
-1 0 DIV
+-1 SQRT
 ```
 
-The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
+Division is not such an operation. Every number is a pair over a non-negative
+denominator and division is total: a zero divisor answers the dividend's sign
+over zero, one of the three numbers `1/0`, `-1/0`, `0/0`, and the call carries
+no absence:
+
+```ajisai tool=compute status=ok stack="1/0 -1/0 0/0"
+100 0 DIV -5 0 DIV 0 0 DIV
+```
+
+The reason is on the value (`semantics.absence.reason`, here `domainMiss`)
 and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with
 `BIND`, `NIL?` and `SELECT`. `NIL?` consumes its subject, like every Word,
 and answers whether it was absent, which is exactly where `SELECT` reads its
 truth operand, so name the subject once and read it twice:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT
+-1 SQRT 'S' BIND [ 99 ] S S NIL? SELECT
 ```
 
 `NIL?` asks about the whole value, and a vector holding an absent lane is not
-itself absent. Lifted over a vector the same division projects lane by lane
-(`LANG.COLLECTIONS.LIFT`) — the zero divisor empties its own lane and leaves
-the others — so the top is still a vector and the fallback is not chosen.
-Recover such a result per lane (`MAP`), not around it:
+itself absent. Lifted over a vector the same root projects lane by lane
+(`LANG.COLLECTIONS.LIFT`) — the negative radicand empties its own lane and
+leaves the others — so the top is still a vector and the fallback is not
+chosen. Recover such a result per lane (`MAP`), not around it:
 
-```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"
-[ 6 6 ] [ 1 0 ] DIV
+```ajisai tool=compute status=ok stack="[ 2/1 NIL ]"
+[ 4 -1 ] SQRT
 ```
+
+`0/0` is the one number with no place in the order, so an order asked of it is
+where arithmetic and absence meet: `0 0 DIV 1 LT` projects `NIL` with reason
+`domainMiss`, which reads as *unknown* in truth position, while `0/0 0/0 EQ`
+is `TRUE`.
 
 ## 4. Exact arithmetic: what to read, and what not to
 

@@ -207,17 +207,21 @@ mod tests {
         }
     }
 
-    /// `DIV` both passes a NIL through and projects a zero divisor onto a
-    /// fresh reasoned NIL. `passthroughThenProject` is the declaration that
-    /// says both; `createsNil` — all the hand-written vocabulary could
-    /// express — said only the second, which is why `1 0 DIV 1 ADD` looked
-    /// like a Word creating an absence out of nothing rather than one
-    /// projected NIL flowing into the next.
+    /// Division is total (LANG.VALUES.EXACT): a quotient by zero is the
+    /// dividend's sign over zero, a number like any other, so `DIV` declares
+    /// no projection and passes a NIL operand through exactly as `ADD` does.
+    /// `SQRT` is the arithmetic Word that still projects — a negative
+    /// radicand has no square root in the field — and it both passes a NIL
+    /// through and projects, which is what `passthroughThenProject` says.
     #[test]
-    fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
+    fn aq_ver_contract_b_arithmetic_division_is_total_and_sqrt_projects() {
         let div = get_coreword_metadata("DIV").expect("DIV must be in registry");
-        assert_eq!(div.partiality, Partiality::Projecting);
-        assert_eq!(div.nil_policy, NilPolicy::PassthroughThenProject);
+        assert_eq!(div.partiality, Partiality::Total);
+        assert_eq!(div.nil_policy, NilPolicy::Passthrough);
+
+        let sqrt = get_coreword_metadata("SQRT").expect("SQRT must be in registry");
+        assert_eq!(sqrt.partiality, Partiality::Projecting);
+        assert_eq!(sqrt.nil_policy, NilPolicy::PassthroughThenProject);
 
         let add = get_coreword_metadata("ADD").expect("ADD must be in registry");
         assert_eq!(add.partiality, Partiality::Total);
@@ -225,13 +229,14 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_contract_f_comparison_and_rounding_words_are_total() {
-        // LANG.CONTRACT.REGISTRY / LANG.VALUES.EXACT: order, equality and integer
-        // rounding decide over every number the language holds — the rationals and
-        // the algebraic field `SQRT` builds — so the comparison and rounding
-        // primitives have no projection to declare. Like ADD/SUB/MUL they pass a
-        // NIL operand through (LANG.FAILURE.PASSTHROUGH) and are otherwise total.
-        for name in &["EQ", "LT", "GT", "FLOOR", "ROUND", "ADD", "SUB", "MUL"] {
+    fn aq_ver_contract_f_equality_rounding_and_arithmetic_words_are_total() {
+        // LANG.CONTRACT.REGISTRY / LANG.VALUES.EXACT: equality, integer rounding
+        // and the four arithmetic Words decide over every number the language
+        // holds — the field, the two points over zero and `0/0` — so they have
+        // no projection to declare. They pass a NIL operand through
+        // (LANG.FAILURE.PASSTHROUGH) and are otherwise total. Order is the one
+        // exception: `0/0` has no place in the order, so `LT`/`GT` project.
+        for name in &["EQ", "FLOOR", "ROUND", "ADD", "SUB", "MUL", "DIV"] {
             let meta = get_coreword_metadata(name)
                 .unwrap_or_else(|| panic!("{} must be in registry", name));
             assert_eq!(

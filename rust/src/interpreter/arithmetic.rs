@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::arithmetic_meter::{
-    apply_division_schema, build_scalar_fast_projection, charge_binary_schema, check_result_size,
-    division_by_zero_projection, measure_operand,
+    charge_binary_schema, check_result_size, measure_operand,
 };
 use crate::interpreter::record_ops;
 use crate::interpreter::simd_ops;
@@ -25,26 +24,22 @@ pub(crate) enum ExactArithmeticSchema {
 }
 
 impl ExactArithmeticSchema {
-    pub(crate) fn fraction(self, a: &Fraction, b: &Fraction) -> Result<Fraction> {
+    /// The scalar law over rationals, total: every one of the four operations
+    /// answers a number, division by zero included (`fraction_extended`).
+    pub(crate) fn fraction(self, a: &Fraction, b: &Fraction) -> Fraction {
         match self {
-            ExactArithmeticSchema::Add => Ok(a.add(b)),
-            ExactArithmeticSchema::Sub => Ok(a.sub(b)),
-            ExactArithmeticSchema::Mul => Ok(a.mul(b)),
-            ExactArithmeticSchema::Div => {
-                if b.is_zero() {
-                    Err(AjisaiError::DivisionByZero)
-                } else {
-                    Ok(a.div(b))
-                }
-            }
+            ExactArithmeticSchema::Add => a.add(b),
+            ExactArithmeticSchema::Sub => a.sub(b),
+            ExactArithmeticSchema::Mul => a.mul(b),
+            ExactArithmeticSchema::Div => a.div(b),
         }
     }
 
-    fn exact_real(self, a: &ExactReal, b: &ExactReal) -> Option<ExactReal> {
+    fn exact_real(self, a: &ExactReal, b: &ExactReal) -> ExactReal {
         match self {
-            ExactArithmeticSchema::Add => Some(a.add(b)),
-            ExactArithmeticSchema::Sub => Some(a.sub(b)),
-            ExactArithmeticSchema::Mul => Some(a.mul(b)),
+            ExactArithmeticSchema::Add => a.add(b),
+            ExactArithmeticSchema::Sub => a.sub(b),
+            ExactArithmeticSchema::Mul => a.mul(b),
             ExactArithmeticSchema::Div => a.div(b),
         }
     }
@@ -133,10 +128,7 @@ fn push_exact_real_schema_result(
 
     // The work of this operation was charged at the dispatch entry, before any
     // route was chosen — see `charge_binary_schema`.
-    let result = match schema.exact_real(&a_exact, &b_exact) {
-        Some(r) => Value::from_exact_real(r),
-        None => division_by_zero_projection(a_exact.to_fraction()),
-    };
+    let result = Value::from_exact_real(schema.exact_real(&a_exact, &b_exact));
     // Bound accumulation: reject a result whose term count or coefficient
     // bit-length crosses the ceiling, before it is consumed and pushed (so a
     // limit failure leaves the operands on the stack, not a corrupted partial
@@ -176,7 +168,7 @@ fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand> {
             wrap: ScalarFastWrap::Scalar,
         }),
         ValueData::Tensor { data, shape } if data.len() == 1 => Some(ScalarFastOperand {
-            fraction: data.get_small_fraction(0)?,
+            fraction: data.fraction_at(0),
             wrap: ScalarFastWrap::Tensor((**shape).clone()),
         }),
         ValueData::Vector(children) if children.len() == 1 => {
@@ -244,11 +236,7 @@ fn push_scalar_fastpath_result(
 
     // The work of this operation was charged at the dispatch entry, before any
     // route was chosen — see `charge_binary_schema`.
-    let result = match schema.fraction(&a.fraction, &b.fraction) {
-        Ok(result) => build_scalar_fast_result(result, &a.wrap),
-        Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.fraction, &a.wrap),
-        Err(error) => return Err(error),
-    };
+    let result = build_scalar_fast_result(schema.fraction(&a.fraction, &b.fraction), &a.wrap);
     // Bound accumulation, so the operand feeding the next multiply is still a
     // sane size. Without this the chain above grows without any ceiling naming
     // itself.
@@ -324,11 +312,7 @@ fn apply_exact_arithmetic_schema(
         }
     }
 
-    if matches!(schema, ExactArithmeticSchema::Div) {
-        return apply_division_schema(interp, schema);
-    }
-
-    apply_binary_arithmetic(interp, |a, b| schema.fraction(a, b))
+    apply_binary_arithmetic(interp, |a, b| Ok(schema.fraction(a, b)))
 }
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
@@ -340,9 +324,9 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         }
         ValueData::Vector(_) => None,
         ValueData::Text(_) => None,
-        ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
+        ValueData::Tensor { data, .. } if data.len() == 1 => Some(data.fraction_at(0)),
         ValueData::Tensor { .. } => None,
-        ValueData::Nil(_) => None,
+        ValueData::Nil => None,
         ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
     }
 }
@@ -371,9 +355,7 @@ pub(crate) fn value_contains_exact_scalar(val: &Value) -> bool {
 /// [`exact_real_lane`] at the leaves — but each lane stays exact.
 /// `Value::from_exact_real` renormalizes any lane that lands back on a
 /// rational to a plain `Scalar`, so an all-rational result is byte-identical
-/// to the rational path. Per-lane division by zero becomes a reasoned `NIL`
-/// — the same NIL Projection Rule the scalar `√x 0 /` path uses
-/// (LANG.FAILURE.PROJECT) — rather than aborting the whole vector.
+/// to the rational path.
 fn apply_exact_real_recursive_broadcast(
     a: &Value,
     b: &Value,
@@ -387,10 +369,7 @@ fn apply_exact_real_recursive_broadcast(
 /// One lane of the exact-real lift: the passthrough law, then `schema`.
 fn exact_real_lane(a: &Value, b: &Value, schema: ExactArithmeticSchema) -> Result<Value> {
     // Absence before arithmetic, for the reason the rational lift gives
-    // (`tensor_lane_ops::lane_nil_passthrough`) and one more:
-    // `ExactReal::from_fraction` of an absent pair is a *number* whose
-    // denominator happens to be zero, so the exact law answered a NIL lane
-    // with an observable scalar — an absence that had stopped being one.
+    // (`tensor_lane_ops::lane_nil_passthrough`).
     if let Some(nil) = lane_nil_passthrough(a, b) {
         return Ok(nil);
     }
@@ -409,24 +388,17 @@ fn exact_real_lane(a: &Value, b: &Value, schema: ExactArithmeticSchema) -> Resul
             ),
         ));
     };
-    Ok(match schema.exact_real(&ea, &eb) {
-        Some(result) => Value::from_exact_real(result),
-        None => division_by_zero_projection(ea.to_fraction()),
-    })
+    Ok(Value::from_exact_real(schema.exact_real(&ea, &eb)))
 }
 
-/// Exact-real value of a broadcast leaf (`Scalar`, `ExactScalar`, or `NIL`).
-/// `None` for non-numeric leaves, matching `tensor_ops::broadcast_leaf`.
+/// Exact-real value of a broadcast leaf (`Scalar` or `ExactScalar`). `None`
+/// for non-numeric leaves, a NIL included, matching
+/// `tensor_ops::broadcast_leaf`: the lane-wise lift settles absence before
+/// this is asked.
 fn exact_broadcast_leaf(value: &Value) -> Option<ExactReal> {
     match &value.data {
         ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
         ValueData::ExactScalar(er) => Some(er.clone()),
-        // As `tensor_ops::broadcast_leaf`: an absent number is its pair, and
-        // an absence that is not a number has no exact-real form. The
-        // lane-wise lift settles absence before either is asked.
-        ValueData::Nil(pair) => pair
-            .as_ref()
-            .map(|pair| ExactReal::from_fraction(pair.clone())),
         _ => None,
     }
 }
@@ -484,18 +456,12 @@ pub(crate) fn push_exact_real_broadcast_result(
         return Ok(false);
     }
     // Homogeneous flat case (equal-length vectors of numeric leaves): each lane
-    // is an independent compute-bound exact-real op, so fan it out across the
-    // native pool. `Value` is not `Send`, so the kernel computes `Send`
-    // `Option<ExactReal>` lanes (`None` = division-by-zero projection) and we rebuild
-    // `Value`s here. The result is identical to the sequential recursion for
-    // this shape, lane for lane.
+    // is an independent exact-real op. The result is identical to the
+    // sequential recursion for this shape, lane for lane.
     let result = if let Some((a_lanes, b_lanes)) = exact_flat_leaf_lanes(a, b) {
         let n = a_lanes.len();
         let children: Vec<Value> = (0..n)
-            .map(|i| match schema.exact_real(&a_lanes[i], &b_lanes[i]) {
-                Some(result) => Value::from_exact_real(result),
-                None => division_by_zero_projection(a_lanes[i].to_fraction()),
-            })
+            .map(|i| Value::from_exact_real(schema.exact_real(&a_lanes[i], &b_lanes[i])))
             .collect();
         Value::from_children(children)
     } else {
@@ -563,7 +529,7 @@ fn sparse_same_shape_tensor_mul(a: &Value, b: &Value) -> Option<Value> {
             sparse.numerators[entry].into(),
             sparse.denominators[entry].into(),
         );
-        let rhs = other.get_small_fraction(index)?;
+        let rhs = other.fraction_at(index);
         result[index] = lhs.mul(&rhs);
     }
     Some(Value::from_tensor(result, a_shape.to_vec()))

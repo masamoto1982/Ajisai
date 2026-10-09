@@ -176,7 +176,7 @@ fn text_bytes(value: &Value) -> u64 {
         | ValueData::ExactScalar(_)
         | ValueData::Tensor { .. }
         | ValueData::Boolean(_)
-        | ValueData::Nil(_) => 0,
+        | ValueData::Nil => 0,
     }
 }
 

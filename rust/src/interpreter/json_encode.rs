@@ -38,8 +38,13 @@ fn strip_factor(mut n: BigInt, factor: u32) -> (u32, BigInt) {
     (count, n)
 }
 
-/// The finite decimal spelling of `f`, or `None` when it has none.
+/// The finite decimal spelling of `f`, or `None` when it has none — a
+/// rational whose denominator has a factor other than 2 and 5, and each of
+/// the three points over zero.
 fn decimal_spelling(f: &Fraction) -> Option<String> {
+    if !f.is_finite() {
+        return None;
+    }
     let (numerator, denominator) = f.to_bigint_pair();
     let gcd = crate::types::fraction_arithmetic::balanced_bigint_gcd(&numerator, &denominator);
     let (numerator, denominator) = if gcd.is_zero() {
@@ -105,7 +110,7 @@ fn write_rational(out: &mut String, f: &Fraction) {
 /// Append `value`'s JSON image, or answer `None` when it has none.
 fn encode(out: &mut String, value: &Value) -> Option<()> {
     match &value.data {
-        ValueData::Nil(_) => out.push_str("null"),
+        ValueData::Nil => out.push_str("null"),
         ValueData::Boolean(b) => out.push_str(if *b { "true" } else { "false" }),
         ValueData::Text(s) => write_string(out, s),
         ValueData::Scalar(f) => write_rational(out, f),

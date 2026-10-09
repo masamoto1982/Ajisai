@@ -41,8 +41,8 @@ impl Fraction {
     }
 
     pub fn add(&self, other: &Fraction) -> Fraction {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !self.is_finite() || !other.is_finite() {
+            return self.extended_add(other, false);
         }
 
         // Two `Small` integers: the overwhelmingly common operand pair (a
@@ -92,8 +92,8 @@ impl Fraction {
     }
 
     pub fn sub(&self, other: &Fraction) -> Fraction {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !self.is_finite() || !other.is_finite() {
+            return self.extended_add(other, true);
         }
 
         // Two `Small` integers: the overwhelmingly common operand pair (a
@@ -213,8 +213,8 @@ impl Fraction {
     }
 
     pub fn mul(&self, other: &Fraction) -> Fraction {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !self.is_finite() || !other.is_finite() {
+            return self.extended_mul(other);
         }
 
         // As in `add`: an integer product is already in lowest terms.
@@ -267,13 +267,17 @@ impl Fraction {
         Self::create_already_reduced(a_reduced * c_reduced, b_reduced * d_reduced)
     }
 
+    /// Division is total: it is multiplication by the reciprocal, and every
+    /// number has one (`fraction_extended`). A zero divisor's reciprocal is
+    /// `1/0`, so `a ÷ 0` is the sign of `a` over zero.
     pub fn div(&self, other: &Fraction) -> Fraction {
-        if let Some(absent) = self.absent_operand(other) {
-            return absent;
+        if !other.is_finite() {
+            // The reciprocal of `1/0` or `-1/0` is 0, and of `0/0` is itself:
+            // the product is the ordinary one, or the extended one.
+            return self.mul(&other.reciprocal());
         }
-        // Division is total: a zero divisor answers the dividend over zero.
-        if other.is_zero() {
-            return self.over_zero();
+        if !self.is_finite() || other.is_zero() {
+            return self.extended_mul(&other.reciprocal());
         }
 
         if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
@@ -323,9 +327,6 @@ impl Fraction {
     /// Additive inverse: a sign flip on the stored pair (no gcd, no clone); `-i64::MIN` widens as in `abs`.
     #[inline]
     pub fn neg(&self) -> Fraction {
-        if self.is_nil() {
-            return self.clone();
-        }
         match &self.repr {
             FractionRepr::Small(n, d) => match n.checked_neg() {
                 Some(negated) => Fraction::from_repr(FractionRepr::Small(negated, *d)),
@@ -340,9 +341,6 @@ impl Fraction {
 
     #[inline]
     pub fn abs(&self) -> Fraction {
-        if self.is_nil() {
-            return self.clone();
-        }
         match &self.repr {
             // `i64::MIN` has no positive i64 counterpart, so `i64::abs()`
             // overflows on it (a panic in debug, the same negative value back
@@ -364,9 +362,9 @@ impl Fraction {
     }
 
     pub fn floor(&self) -> Fraction {
-        // Absence passes through as it is, as through the arithmetic: an absent
-        // lane must not reach the division below (`[ NIL 1 ] FLOOR` aborted).
-        if self.is_nil() {
+        // No integer lies at or beyond the three points, so each is its own
+        // floor, as it is its own rounding.
+        if !self.is_finite() {
             return self.clone();
         }
         if self.is_integer() {
@@ -395,8 +393,8 @@ impl Fraction {
     }
 
     pub fn round(&self) -> Fraction {
-        // As `floor`: an absent lane must not reach the division.
-        if self.is_nil() {
+        // As `floor`.
+        if !self.is_finite() {
             return self.clone();
         }
         if self.is_integer() {

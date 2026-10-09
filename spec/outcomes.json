@@ -2,14 +2,9 @@
   "schemaVersion": 1,
   "nilReasons": [
     {
-      "id": "divisionByZero",
-      "projectable": true,
-      "documentation": "A divisor equal to zero."
-    },
-    {
       "id": "domainMiss",
       "projectable": true,
-      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational; NIL-REASON asked of a value that is not a NIL is another."
+      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational; an order asked of `0/0`, which has none (LT, GT, MIN, MAX, SORT, ORDER, BSEARCH), a decimal asked of a number over zero (FORMAT), and NIL-REASON asked of a value that is not a NIL are others."
     },
     {
       "id": "indexOutOfBounds",

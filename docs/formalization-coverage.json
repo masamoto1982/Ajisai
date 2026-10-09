@@ -672,10 +672,10 @@
       "conformance_cases": [
         "core-nil-spelling",
         "core-nil-propagation",
-        "core-division-by-zero-is-nil"
+        "core-nil-reason-domain-miss"
       ],
       "status": "Formalized",
-      "notes": "Primitive operational absence; distinct from FALSE, numeric zero, and logical UNKNOWN. Reasoned NIL values propagate through NIL-passthrough words.",
+      "notes": "Primitive operational absence; distinct from FALSE, numeric zero, the points over zero, and logical UNKNOWN. Reasoned NIL values propagate through NIL-passthrough words.",
       "semantic_role": "Primitive",
       "primitive": true,
       "derived_from": [
@@ -725,7 +725,7 @@
         "rust/src/interpreter/nil_diagnostics_tests.rs"
       ],
       "conformance_cases": [
-        "core-nil-reason-division-by-zero",
+        "core-nil-reason-domain-miss",
         "core-nil-reason-present-value-is-nil"
       ],
       "status": "Formalized",
@@ -830,10 +830,12 @@
       "conformance_cases": [
         "core-exact-addition",
         "core-exact-division",
-        "core-division-by-zero-is-nil"
+        "core-division-by-zero-is-the-sign-over-zero",
+        "core-points-over-zero-obey-the-pair-formulas",
+        "core-distributivity-gives-way-at-the-points"
       ],
       "status": "Formalized",
-      "notes": "Exact rational arithmetic; division by zero observes NIL rather than host exceptions.",
+      "notes": "Exact arithmetic over the reduced pairs with a non-negative denominator; division by zero is total and answers the dividend's sign over zero (LANG.VALUES.EXACT) rather than a host exception or an absence.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -940,10 +942,11 @@
       ],
       "conformance_cases": [
         "core-exact-division",
-        "core-division-by-zero-is-nil"
+        "core-division-by-zero-is-the-sign-over-zero",
+        "core-every-pair-over-zero-reduces-to-its-sign"
       ],
       "status": "Formalized",
-      "notes": "Exact-real division as a bihomographic arithmetic word; division by zero projects to NIL rather than a host exception.",
+      "notes": "Exact-real division as a bihomographic arithmetic word, total over the reduced pairs: a zero divisor answers the dividend's sign over zero (LANG.VALUES.EXACT) rather than a host exception or an absence.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -1162,7 +1165,7 @@
         "core-pow-projections"
       ],
       "status": "Formalized",
-      "notes": "Exact power inside the exact field (power.rs): integer exponents by square-and-multiply in the base's tier, p/2 exponents over a non-negative rational base in the field through SQRT; every other exponent leaves the field and projects domainMiss. Projects divisionByZero, domainMiss and spaceExhausted as the contract declares.",
+      "notes": "Exact power inside the exact field (power.rs): integer exponents by square-and-multiply in the base's tier, p/2 exponents over a non-negative rational base in the field through SQRT; every other exponent leaves the field and projects domainMiss. Division is total, so a zero base under a negative exponent is a point over zero; projects domainMiss and spaceExhausted as the contract declares.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

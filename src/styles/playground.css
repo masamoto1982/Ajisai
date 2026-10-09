@@ -1203,8 +1203,8 @@ footer {
 }
 
 /* A NIL in its own ink, apart from the magenta of the values around it. Its
-   reason (`divisionByZero`) is the tooltip rather than text beside it: set
-   in the line, `NIL · divisionByZero` read as two values. A reasoned NIL
+   reason (`domainMiss`) is the tooltip rather than text beside it: set
+   in the line, `NIL · domainMiss` read as two values. A reasoned NIL
    carries the dotted underline and help cursor that say there is one. */
 .stack-node-nil {
     color: var(--color-nil);

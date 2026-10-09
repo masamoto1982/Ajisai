@@ -298,21 +298,21 @@ describe('renderDiagnosisReport', () => {
     it('renders the frame a reader learns once', () => {
         const diagnosis: ProtocolDiagnosis = {
             when: 'executeWord',
-            where: { kind: 'coreWord', word: 'DIV' },
+            where: { kind: 'coreWord', word: 'SQRT' },
             why: 'domain',
-            summary: 'executeWord / DIV (coreWord) / domain (nil:divisionByZero)',
-            evidence: ['sourceLine=3', 'sourceColumn=7', 'insideWords=SAFE-DIV,REPORT'],
+            summary: 'executeWord / SQRT (coreWord) / domain (nil:domainMiss)',
+            evidence: ['sourceLine=3', 'sourceColumn=7', 'insideWords=SAFE-ROOT,REPORT'],
             candidates: [],
-            nextChecks: [check('checkDivisor', 'Check the divisor', 'A zero divisor projects NIL.')]
+            nextChecks: [check('checkOperandDomain', 'Check the operand domain', 'A negative radicand projects NIL.')]
         };
 
         expect(renderDiagnosisReport(diagnosis, { stackLenBefore: 2 })).toBe(
             [
-                '[DIAGNOSIS] executeWord / DIV (coreWord) / domain (nil:divisionByZero)',
+                '[DIAGNOSIS] executeWord / SQRT (coreWord) / domain (nil:domainMiss)',
                 'Q1 when: executeWord',
-                'Q2 where: DIV (coreWord), inside SAFE-DIV, REPORT at line 3, column 7, stack depth 2',
+                'Q2 where: SQRT (coreWord), inside SAFE-ROOT, REPORT at line 3, column 7, stack depth 2',
                 'Q3 why: domain',
-                'next: Check the divisor - A zero divisor projects NIL.'
+                'next: Check the operand domain - A negative radicand projects NIL.'
             ].join('\n')
         );
     });
@@ -556,26 +556,26 @@ describe('checkRunLeftOwnNil', () => {
         ({ type: 'vector', value: elements } as unknown as Value);
 
     it('sees a NIL the run pushed', () => {
-        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('divisionByZero')] }))).toBe(true);
+        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('domainMiss')] }))).toBe(true);
     });
 
     it('sees a NIL the run left below another value', () => {
-        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('divisionByZero'), num(5)] }))).toBe(true);
+        expect(checkRunLeftOwnNil(view(), view({ stack: [nil('domainMiss'), num(5)] }))).toBe(true);
     });
 
     it('sees a NIL lane in a Vector the run produced', () => {
-        expect(checkRunLeftOwnNil(view(), view({ stack: [vector(num(1), nil('divisionByZero'))] }))).toBe(true);
+        expect(checkRunLeftOwnNil(view(), view({ stack: [vector(num(1), nil('domainMiss'))] }))).toBe(true);
     });
 
     it('ignores a NIL the run was handed and left where it was', () => {
-        const before = view({ stack: [nil('divisionByZero')] });
-        const after = view({ stack: [nil('divisionByZero')], userWords: [word('G', '2 MUL')] });
+        const before = view({ stack: [nil('domainMiss')] });
+        const after = view({ stack: [nil('domainMiss')], userWords: [word('G', '2 MUL')] });
         expect(checkRunLeftOwnNil(before, after)).toBe(false);
     });
 
     it('sees a second NIL pushed on top of an earlier one', () => {
-        const before = view({ stack: [nil('divisionByZero')] });
-        const after = view({ stack: [nil('divisionByZero'), nil('divisionByZero')] });
+        const before = view({ stack: [nil('domainMiss')] });
+        const after = view({ stack: [nil('domainMiss'), nil('domainMiss')] });
         expect(checkRunLeftOwnNil(before, after)).toBe(true);
     });
 

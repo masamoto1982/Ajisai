@@ -108,7 +108,7 @@
                     <p>厳密な数と、それを運ぶスタック。この形が定まったとき、私の脳裏に浮かんだのは「器に注がれた水」の情景でした。器を満たすのは、決して丸められることのない水だけです。しかし、AIとともにその水面へ広げていく波紋のかたちに、際限はありません。</p>
                     <p>奇しくも、「水の器」を学名の語源に持つ花があります。紫陽花(あじさい)です。開発を始めたのは、雨が降り続く日本の6月、梅雨の時期でした。Ajisaiは、その情景を思い浮かべながらつくった言語です。</p>
                     <h3>数値の厳密性</h3>
-                    <p>すべての数値は厳密に扱われます。値は厳密な有理数と、それらを<code>SQRT</code>で閉じたときに生じる代数的無理数、すなわち多重二次正規形として保持されます。算術も比較も丸め誤差なしに実行されます。なお、スタック表示の<code>sqrt(2)</code>や<code>1/1+sqrt(2)</code>は正規形をそのまま一つのトークンとして書いた表示であり、打ち切りも近似もありません。Playgroundのスタック領域も同じトークンをそのまま表示します。除算も例外ではなく、ゼロで割ってもプログラムは止まらず、理由を覚えた値<code>NIL</code>が答えになります(<a href="#division-by-zero">ゼロで割る</a>)。</p>
+                    <p>すべての数値は厳密に扱われます。値は厳密な有理数と、それらを<code>SQRT</code>で閉じたときに生じる代数的無理数、すなわち多重二次正規形として保持されます。算術も比較も丸め誤差なしに実行されます。なお、スタック表示の<code>sqrt(2)</code>や<code>1/1+sqrt(2)</code>は正規形をそのまま一つのトークンとして書いた表示であり、打ち切りも近似もありません。Playgroundのスタック領域も同じトークンをそのまま表示します。除算も例外ではなく全域的です。ゼロで割ってもプログラムは止まらず、被除数の符号を0の上に置いた数、すなわち<code>1/0</code>、<code>-1/0</code>、<code>0/0</code>の3つのうちの1つが答えになります(<a href="#division-by-zero">ゼロで割る</a>)。</p>
                     <h3>本リファレンスの特徴</h3>
                     <p>本書では、各機能を検証済みの短いサンプルコードとともに解説します。すべての例には<strong>「Playgroundで開く」</strong>ボタンが用意されており、クリックするだけでアプリのエディタにコードが読み込まれ、実際の挙動をすぐに確認できます。</p>
                     <p>本書は、プログラムを要素に分け、要素をさらに分けられる限り分けていく順に述べます。分けていった先にあるのが個々のワードで、そこで本書は終わります。</p>
@@ -345,9 +345,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV</code></td>
+                                    <td><code>-1 SQRT</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">ゼロ除算はトラップではなく、理由付きの<code>NIL</code>になる。</td>
+                                    <td class="notes">負の数の平方根はトラップではなく、理由付きの<code>NIL</code>になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -748,8 +748,8 @@
                     <p>無理数の表示形式は1つです。値の正規形を空白なしの一つのトークンとして書きます。<code>2 SQRT</code>は<code>sqrt(2)</code>、<code>1 2 SQRT ADD</code>は<code>1/1+sqrt(2)</code>、<code>2 SQRT 3 SQRT SUB</code>は<code>sqrt(2)-sqrt(3)</code>、<code>8 SQRT</code>は<code>2/1*sqrt(2)</code>です(根号の中は平方因子を持たない形に正規化されます)。打ち切りも近似もなく、ベクトルの中でも一要素として読めます。CLIやMCPホストの<code>stackDisplay</code>も、Playgroundのスタック領域も、この同じトークンを表示します。CLIとMCPでは同じ項が<code>semantics.exactTerms</code>に構造化されて並びます。</p>
                     <p class="ref-note">これは表示専用の出力であり、ソースコードの構文ではありません。<code>sqrt(2)</code>をプログラムに書いても未知の名前です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
                     <h3 id="division-by-zero">ゼロで割る</h3>
-                    <p>すべての数は分数であり、<code>DIV</code>は必ず答えを返します。ゼロで割ってもプログラムは止まりません。答えは<code>NIL</code>、「ここに商はない」ということを理由とともに覚えている値です(<a href="#nil">NILの規則</a>。理由は<code>NIL-REASON</code>で<code>'divisionByZero'</code>と読めます)。この<code>NIL</code>はほかの値と同じように運ばれます。あとに続く算術はそのまま通し、それを読んだ比較は<code>TRUE</code>でも<code>FALSE</code>でもなく「不明」と答え(<a href="#logic">三値論理</a>)、プログラムが望めば<code>SELECT</code>で代わりの値に置き換えられます。ベクトルでは、ゼロで割られた要素だけが<code>NIL</code>になり、隣の要素は普通の商のままです。</p>
-                    <p class="ref-note">機械の内側では、この不在の商も隣の分数と同じ形のままです。割られた数を、それを拒んだゼロの上に置いた組、<code>100 0 DIV</code>なら<code>100/0</code>として、理由を添えて保持されます。ゼロの除数1つの代償は要素1つ分であり、ベクトル全体ではありません。</p>
+                    <p>すべての数は非負の分母を持つ既約な整数の組であり、<code>DIV</code>は全域的です。除算は逆数との積であり、すべての数は逆数を持ちます。ゼロで割ってもプログラムは止まらず、不在も生まれません。答えは被除数の符号を0の上に置いた数です。<code>n</code>と<code>0</code>の最大公約数は<code>|n|</code>なので、0の上のすべての組はちょうど3つの数、<code>1/0</code>、<code>-1/0</code>、<code>0/0</code>のいずれかに簡約されます。<code>100 0 DIV</code>が<code>1/0</code>なのは<code>4/2</code>が<code>2/1</code>なのと同じ理由であり、<code>1/0</code>は<code>1/2</code>と同じくリテラルです。この3つの点は、ほかのすべての数と同じ分数の公式で計算されます。<code>1/0 5 ADD</code>は<code>1/0</code>、<code>1 1/0 DIV</code>は<code>0</code>、<code>1/0 1/0 ADD</code>は<code>0/0</code>。<code>-1/0</code>はほかのすべての数より下に、<code>1/0</code>は上にあります。<code>0/0</code>は出会うすべてを吸収し、順序の中に場所を持たないので、その順序を問う比較は<code>NIL</code>(<code>domainMiss</code>)を投影し、「不明」と読まれます(<a href="#logic">三値論理</a>)。ベクトルでは、ゼロで割られた要素だけが0の上の点になり、隣の要素は普通の商のままです。</p>
+                    <p class="ref-note">この3つの点でだけ、0に言及する体の法則が成り立たなくなります。<code>0 1/0 MUL</code>は<code>0</code>ではなく<code>0/0</code>、<code>1/0 1/0 SUB</code>も<code>0</code>ではなく<code>0/0</code>で、分配法則もそこでは破れます。機械はこれらを特別扱いで取り戻しません。点に到達してはならないプログラムは先に除数を調べ、到達したプログラムはそのまま計算を続けます。<code>EQ</code>は依然として決定し、<code>0/0 0/0 EQ</code>は<code>TRUE</code>です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -759,8 +759,8 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
-                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
-                                    <td class="notes">ゼロで割られた要素だけが不在になる。隣の要素は商のまま。</td>
+                                    <td><code>[ 1/1 1/0 3/2 ]</code></td>
+                                    <td class="notes">ゼロで割られた要素だけが0の上の点になる。隣の要素は商のまま。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -778,8 +778,13 @@
                             <tbody>
                                 <tr>
                                     <td><code>1 0 DIV 1 GT</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes"><code>1/0</code>はほかのすべての数より上にあるので、順序が決まる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>0 0 DIV 1 GT</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">比べる商がないので比較は不明。<code>NIL</code>が理由ごと残る。</td>
+                                    <td class="notes"><code>0/0</code>は順序の中に場所を持たないので比較は不明。理由<code>domainMiss</code>の<code>NIL</code>になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -796,9 +801,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV 'S' BIND 0 S S NIL? SELECT</code></td>
+                                    <td><code>0 'D' BIND 0 1 D DIV D 0 EQ SELECT</code></td>
                                     <td><code>0/1</code></td>
-                                    <td class="notes">商に名前を付け、<code>SELECT</code>に選ばせる。不在なら<code>0</code>、そうでなければ商。</td>
+                                    <td class="notes">除数に名前を付け、<code>SELECT</code>に選ばせる。ゼロなら<code>0</code>、そうでなければ商。0の上の点は値なので、それを望むかどうかはプログラムが決める。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1282,8 +1287,8 @@ FILTER</code></td>
                                     <td class="notes">値は意味内容でダイジェストされる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' GET</code></td>
-                                    <td><code>[ 'divisionByZero' ]</code></td>
+                                    <td><code>[ SQRT ] 0 GET CONTRACT 'projection' GET</code></td>
+                                    <td><code>[ 'domainMiss' ]</code></td>
                                     <td class="notes">登録済みの契約を、走らせずに読む。</td>
                                 </tr>
                                 <tr>
@@ -1330,7 +1335,7 @@ FILTER</code></td>
 <h3 id="family-dictionary">契約: 辞書と名前</h3>
 <div class="word-entry" id="word-CONTRACT">
 <h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ワードまたはブロックの契約をRecordで答える。<code>[ DIV ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
+<p>ワードまたはブロックの契約をRecordで答える。<code>[ SQRT ] 0 GET CONTRACT 'partiality' GET</code>は<code>'projecting'</code>。CoreワードをSymbolで名指せば、<code>spec/words.json</code>に登録された記録で(LANG.CONTRACT.REGISTRY)、キーはレジストリ自身のフィールド名<code>name</code> <code>vocabularyTier</code> <code>inputs</code> <code>outputs</code> <code>nilPolicy</code> <code>projection</code> <code>errorWhen</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>。だから<code>[ DIV ] 0 GET CONTRACT 'cost' GET</code>は実行する前にワードの費用級を問う。UserワードをSymbolで名指すか、コードのブロックを渡せば、何も実行せずに推論した契約で(言語の外から<code>ajisai check --contract</code>が行うのと同じ推論)、キーは<code>inputs</code> <code>outputs</code> <code>partiality</code> <code>purity</code> <code>determinism</code> <code>cost</code> <code>effects</code>(同じキーで同じ語彙なので両者を直接比べられる)と<code>confidence</code> <code>gaps</code>。<code>confidence</code>と<code>gaps</code>は検査自身の三分法(LANG.CONTRACT.CHECK)をデータとして運ぶので、解決できない依存はERRORではなく答えの中の欠落になる。ブロックは決して評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は出力せずに<code>effects</code>の下に<code>consoleWrite</code>を報告する。どのワードも名指さないSymbolは<code>notFound</code>を投影し、SymbolでもブロックでもないオペランドはERROR(<code>notASymbol</code>)。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ ADD ] 0 GET CONTRACT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ symbol | code ] -&gt; [ record ]</span></dd>
@@ -1506,7 +1511,7 @@ FILTER</code></td>
                         <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)。切り上げは<code>x -1 MUL FLOOR -1 MUL</code>と書きます。</li>
                         <li><strong>格子への丸め</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の倍数に丸めます。ループ処理や反復計算で分母の肥大化を止めるのに使います。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
                     </ul>
-                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが理由付きの<code>NIL</code>になります。隣の要素は商のままで、除算の後に続くワードは不在の要素をそのまま通しながら残りを計算します。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
+                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、不在も生まれません。該当する要素はその符号を0の上に置いた数になり、隣の要素は商のままです。除算の後に続くワードは、その点を同じ分数の公式で計算します。詳しくは<a href="#division-by-zero">ゼロで割る</a>を参照してください。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1516,18 +1521,18 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV</code></td>
-                                    <td><code>[ 1/1 NIL 3/2 ]</code></td>
-                                    <td class="notes">除数が0の要素は、自分の要素だけを空にする。</td>
+                                    <td><code>[ 1/1 1/0 3/2 ]</code></td>
+                                    <td class="notes">除数が0の要素は、自分の要素だけに印を付ける。</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD</code></td>
-                                    <td><code>[ 2/1 NIL 5/2 ]</code></td>
-                                    <td class="notes">次のワードは商を計算し、不在をそのまま運ぶ。</td>
+                                    <td><code>[ 2/1 1/0 5/2 ]</code></td>
+                                    <td class="notes">次のワードは商を計算し、<code>1/0 1 ADD</code>は分数の公式により<code>1/0</code>になる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>1 0 DIV 1 ADD NIL-REASON</code></td>
-                                    <td><code>'divisionByZero'</code></td>
-                                    <td class="notes">理由は不在とともに、どこまでも運ばれる。</td>
+                                    <td><code>1 0 DIV 0 MUL</code></td>
+                                    <td><code>0/0</code></td>
+                                    <td class="notes">0と0の上の点の積は<code>0/0</code>、すべてを吸収する唯一の数。体の法則「<code>0 x MUL</code>は<code>0</code>」はここで成り立たなくなる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1537,7 +1542,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3 id="powers">累乗と、整数・有理数を読む: <code>POW</code>・<code>GCD</code>・<code>RATIO</code></h3>
-                    <p><code>x y POW</code>は、厳密な体の中で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、非負の有理数の底に対する指数<code>p/2</code>なら平方根のべきとして体の中に留まります（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）。それ以外の指数——分母が1でも2でもない指数、無理数の底に対する<code>p/2</code>、無理数の指数——は体の外に出るので、答えが有理数になる場合（<code>8 1/3 POW</code>）も含めて<code>domainMiss</code>を投影します。<code>0</code>の負のべきは<code>divisionByZero</code>、負の底の<code>p/2</code>べきは実数の答えを持たないので<code>domainMiss</code>、機械が保持できないほど大きな指数は<code>spaceExhausted</code>を投影します。</p>
+                    <p><code>x y POW</code>は、厳密な体の中で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、非負の有理数の底に対する指数<code>p/2</code>なら平方根のべきとして体の中に留まります（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）。それ以外の指数——分母が1でも2でもない指数、無理数の底に対する<code>p/2</code>、無理数の指数——は体の外に出るので、答えが有理数になる場合（<code>8 1/3 POW</code>）も含めて<code>domainMiss</code>を投影します。<code>0</code>の負のべきは、除算が全域的なので0の上の点(<code>0 -1 POW</code>は<code>1/0</code>)、負の底の<code>p/2</code>べきは実数の答えを持たないので<code>domainMiss</code>、機械が保持できないほど大きな指数は<code>spaceExhausted</code>を投影します。</p>
                     <p><code>GCD</code>は2つの整数の最大公約数を非負で答えます。ユークリッドの互除法は入力依存の反復であり、すでにあるベクトルの上でしか反復しないこの言語では定義で書けません——機械はすべての有理数を既約に保つためにこの計算を常に行っており、このワードはそれを見えるようにするだけです。<code>RATIO</code>は有理数を既約の分子と分母の2要素ベクトルに開きます。答えがベクトルなので、算術はそのまま持ち上がります。整数でない引数（<code>GCD</code>）や無理数（<code>RATIO</code>）は<code>domainMiss</code>を投影します。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1754,7 +1759,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV TRUE AND</code></td>
+                                    <td><code>-1 SQRT TRUE AND</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">左のオペランドが<code>NIL</code>になったので、その不在が結果まで伝わる。必要な箇所で<a href="#recovery">代わりの値を選んで</a>回復させる。</td>
                                 </tr>
@@ -1847,7 +1852,7 @@ FILTER</code></td>
 <h3 id="family-comparison">契約: 比較</h3>
 <div class="word-entry" id="word-EQ">
 <h4><code>EQ</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。<code>1 1/1 EQ</code>は<code>TRUE</code>、<code>2 SQRT 2 SQRT MUL 2 EQ</code>は<code>TRUE</code>、<code>[ 1 2 ] [ 1 2 ] EQ</code>は<code>TRUE</code>。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。<code>1 0 DIV 1 EQ</code>は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、<code>[ NIL ] [ NIL ] EQ</code>は<code>TRUE</code>。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に<code>1 COLLECT</code>で包む。</p>
+<p>2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。<code>1 1/1 EQ</code>は<code>TRUE</code>、<code>2 SQRT 2 SQRT MUL 2 EQ</code>は<code>TRUE</code>、<code>100 0 DIV 1/0 EQ</code>は<code>TRUE</code>、<code>0/0 0/0 EQ</code>は<code>TRUE</code>、<code>[ 1 2 ] [ 1 2 ] EQ</code>は<code>TRUE</code>。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。<code>-1 SQRT 1 EQ</code>は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、<code>[ NIL ] [ NIL ] EQ</code>は<code>TRUE</code>。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に<code>1 COLLECT</code>で包む。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1 1 EQ</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
@@ -1862,40 +1867,40 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-LT">
 <h4><code>LT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>左の数が右より小さいかどうか。<code>1 2 LT</code>は<code>TRUE</code>で、ベクトルには要素ごとに働き、<code>[ 1 5 ] 3 LT</code>は<code>[ TRUE FALSE ]</code>。厳密な体の上の順序は、無理数を含めて常に決定する(LANG.VALUES.EXACT)。<code>2 SQRT 3/2 LT</code>は<code>TRUE</code>。順序があるのは数だけで、それ以外は<code>nonNumeric</code>。</p>
+<p>左の数が右より小さいかどうか。<code>1 2 LT</code>は<code>TRUE</code>で、ベクトルには要素ごとに働き、<code>[ 1 5 ] 3 LT</code>は<code>[ TRUE FALSE ]</code>。厳密な定義域の上の順序が決める(LANG.VALUES.EXACT)。無理数も含まれ、<code>2 SQRT 3/2 LT</code>は<code>TRUE</code>。<code>-1/0</code>は他のすべての数より下に、<code>1/0</code>は上にある。<code>0/0</code>だけは順序を持たないので、それを問う比較はNIL(domainMiss)を投影する。<code>0/0 1 LT</code>は、真偽の位置で不在が読まれるUNKNOWNである(LANG.VALUES.TRUTH)。順序があるのは数だけで、それ以外は<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1 2 LT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-GT">
 <h4><code>GT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>左の数が右より大きいかどうか。<code>2 1 GT</code>は<code>TRUE</code>で、ベクトルには要素ごとに働き、<code>[ 1 5 ] 3 GT</code>は<code>[ FALSE TRUE ]</code>。厳密な体の上の順序は常に決定する(LANG.VALUES.EXACT)。順序があるのは数だけで、それ以外は<code>nonNumeric</code>。</p>
+<p>左の数が右より大きいかどうか。<code>2 1 GT</code>は<code>TRUE</code>で、ベクトルには要素ごとに働き、<code>[ 1 5 ] 3 GT</code>は<code>[ FALSE TRUE ]</code>。厳密な定義域の上の順序が決める(LANG.VALUES.EXACT)。無理数も含まれ、<code>2 SQRT 3/2 LT</code>は<code>TRUE</code>。<code>-1/0</code>は他のすべての数より下に、<code>1/0</code>は上にある。<code>0/0</code>だけは順序を持たないので、それを問う比較はNIL(domainMiss)を投影する。<code>0/0 1 GT</code>は、真偽の位置で不在が読まれるUNKNOWNである(LANG.VALUES.TRUTH)。順序があるのは数だけで、それ以外は<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>2 1 GT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <h3 id="family-exactArithmetic">契約: 厳密な算術</h3>
 <div class="word-entry" id="word-ADD">
 <h4><code>ADD</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密な和。<code>1/3 1/6 ADD</code>は<code>1/2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 1 2 ] 10 ADD</code>は<code>[ 11 12 ]</code>。何も丸められない。<code>2 SQRT 2 SQRT ADD</code>は<code>8 SQRT</code>。数でないものは<code>nonNumeric</code>。</p>
+<p>厳密な和。<code>1/3 1/6 ADD</code>は<code>1/2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 1 2 ] 10 ADD</code>は<code>[ 11 12 ]</code>。何も丸められない。<code>2 SQRT 2 SQRT ADD</code>は<code>8 SQRT</code>。0の上の3つの点も同じ分数の公式で決まる。<code>1/0 5 ADD</code>は<code>1/0</code>、<code>1/0 1/0 ADD</code>は<code>0/0</code>(LANG.VALUES.EXACT)。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1 2 ADD</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a + b ]</span></dd>
@@ -1927,7 +1932,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-MUL">
 <h4><code>MUL</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密な積。<code>2/3 3/4 MUL</code>は<code>1/2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 1 2 3 ] [ 10 ] MUL</code>は<code>[ 10 20 30 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<p>厳密な積。<code>2/3 3/4 MUL</code>は<code>1/2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 1 2 3 ] [ 10 ] MUL</code>は<code>[ 10 20 30 ]</code>。0の上の3つの点も同じ分数の公式で決まる。<code>1/0 -2 MUL</code>は<code>-1/0</code>、<code>1/0 0 MUL</code>は<code>0/0</code>(LANG.VALUES.EXACT)。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>2 4 MUL</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a * b ]</span></dd>
@@ -1943,23 +1948,23 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DIV">
 <h4><code>DIV</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は厳密に<code>1/3</code>。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除数が0のレーンはNIL(divisionByZero)を自分のレーンだけに投影し、他のレーンには触れない。<code>[ 1 2 3 ] [ 1 0 2 ] DIV</code>は<code>[ 1 NIL 3/2 ]</code>で、隣のレーンは商のままであり、後続のワードは不在のレーンをそのまま通しながら残りを計算する(LANG.FAILURE.PASSTHROUGH)。だから<code>1 0 DIV 1 ADD NIL-REASON</code>は<code>'divisionByZero'</code>になる。数でないものは<code>nonNumeric</code>。</p>
+<p>厳密な商(左を右で割る)。<code>1 3 DIV</code>は厳密に<code>1/3</code>。ベクトルにはブロードキャスト付きで要素ごとに働き(LANG.COLLECTIONS.LIFT)、<code>[ 2 4 ] 2 DIV</code>は<code>[ 1 2 ]</code>。除算は全域的である(LANG.VALUES.EXACT)。逆数との積であり、すべての数は逆数を持つ。除数が0なら、被除数の符号を0の上に置いた点を自分のレーンだけに答え、他のレーンには触れない。<code>[ 1 -2 0 ] 0 DIV</code>は<code>[ 1/0 -1/0 0/0 ]</code>、<code>1 1/0 DIV</code>は<code>0</code>。隣のレーンは商のままであり、後続のワードはその点を同じ分数の公式で計算するので、<code>1 0 DIV 2 MUL</code>は<code>1/0</code>、<code>1 0 DIV 0 MUL</code>は<code>0/0</code>。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>10 2 DIV</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a / b ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>divisorEqualsZero</code> → <code>divisionByZero</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FLOOR">
 <h4><code>FLOOR</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>その数を超えない最大の整数。<code>7/3 FLOOR</code>は<code>2</code>、<code>-7/3 FLOOR</code>は<code>-3</code>で、ベクトルには要素ごとに働く。無理数も厳密に切り捨てられる。<code>2 SQRT FLOOR</code>は<code>1</code>。数でないものは<code>nonNumeric</code>。</p>
+<p>その数を超えない最大の整数。<code>7/3 FLOOR</code>は<code>2</code>、<code>-7/3 FLOOR</code>は<code>-3</code>で、ベクトルには要素ごとに働く。無理数も厳密に切り捨てられる。<code>2 SQRT FLOOR</code>は<code>1</code>。0の上の3つの点には、その位置やその先に整数がないので、それぞれが自分自身の床である。<code>1/0 FLOOR</code>は<code>1/0</code>。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>7/3 FLOOR</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ floor x ]</span></dd>
@@ -1975,7 +1980,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-ROUND">
 <h4><code>ROUND</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>最も近い整数。ちょうど半分は0から遠い側へ。<code>5/2 ROUND</code>は<code>3</code>、<code>-5/2 ROUND</code>は<code>-3</code>で、ベクトルには要素ごとに働く。FORMATも最終桁を同じ規則で丸める。数でないものは<code>nonNumeric</code>。</p>
+<p>最も近い整数。ちょうど半分は0から遠い側へ。<code>5/2 ROUND</code>は<code>3</code>、<code>-5/2 ROUND</code>は<code>-3</code>で、ベクトルには要素ごとに働く。FORMATも最終桁を同じ規則で丸める。0の上の3つの点は、それぞれが自分自身の床であるのと同じく、それぞれが自分自身の丸めである。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>5/2 ROUND</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ round x ]</span></dd>
@@ -1991,39 +1996,39 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-MIN">
 <h4><code>MIN</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>2つの数の小さい方。<code>1 2 MIN</code>は<code>1</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き、<code>[ 3 1 ] 2 MIN</code>は<code>[ 2 1 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<p>2つの数の小さい方。<code>1 2 MIN</code>は<code>1</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き、<code>[ 3 1 ] 2 MIN</code>は<code>[ 2 1 ]</code>。順序は厳密な定義域のもの(LANG.VALUES.EXACT)。<code>-1/0 5 MIN</code>は<code>-1/0</code>で、順序を持たない<code>0/0</code>はLTと同じくNIL(domainMiss)を投影する。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1 2 MIN</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ min ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-MAX">
 <h4><code>MAX</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>2つの数の大きい方。<code>1 2 MAX</code>は<code>2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き、<code>[ -1 2 -3 ] 0 MAX</code>は<code>[ 0 2 0 ]</code>。数でないものは<code>nonNumeric</code>。</p>
+<p>2つの数の大きい方。<code>1 2 MAX</code>は<code>2</code>で、ベクトルにはブロードキャスト付きで要素ごとに働き、<code>[ -1 2 -3 ] 0 MAX</code>は<code>[ 0 2 0 ]</code>。順序は厳密な定義域のもの(LANG.VALUES.EXACT)。<code>1/0 5 MAX</code>は<code>1/0</code>で、順序を持たない<code>0/0</code>はGTと同じくNIL(domainMiss)を投影する。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1 2 MAX</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ max ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedOperand</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-SQRT">
 <h4><code>SQRT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>非負の数の厳密な平方根。<code>4 SQRT</code>は<code>2</code>、<code>2 SQRT</code>は無理数そのもので、多重二次正規形で保持され丸めなしに比較される(LANG.VALUES.EXACT)ので、<code>2 SQRT 2 SQRT MUL</code>は<code>2</code>。根号の中は平方因子を含まない形に簡約されるので、1つの数は組み立て方によらず1つの形を持つ。<code>8 SQRT</code>は<code>2 SQRT 2 MUL</code>である。この簡約は根号の中を素因数分解し、実行の数値作業量に計上される。残りの作業量で分解できない根号の中身は<code>resourceLimitExceeded</code>。ベクトルには要素ごとに働き、負の数はNIL(domainMiss)を投影する。<code>[ 4 -1 ] SQRT</code>は<code>[ 2 NIL ]</code>で、2番目のレーンはその理由で不在になる。数でないものは<code>nonNumeric</code>。</p>
+<p>非負の数の厳密な平方根。<code>4 SQRT</code>は<code>2</code>、<code>2 SQRT</code>は無理数そのもので、多重二次正規形で保持され丸めなしに比較される(LANG.VALUES.EXACT)ので、<code>2 SQRT 2 SQRT MUL</code>は<code>2</code>。根号の中は平方因子を含まない形に簡約されるので、1つの数は組み立て方によらず1つの形を持つ。<code>8 SQRT</code>は<code>2 SQRT 2 MUL</code>である。この簡約は根号の中を素因数分解し、実行の数値作業量に計上される。残りの作業量で分解できない根号の中身は<code>resourceLimitExceeded</code>。<code>1/0</code>と<code>0/0</code>はそれぞれ自分自身の平方根である。ベクトルには要素ごとに働き、<code>-1/0</code>を含む負の数はNIL(domainMiss)を投影する。<code>[ 4 -1 ] SQRT</code>は<code>[ 2 NIL ]</code>で、2番目のレーンはその理由で不在になる。数でないものは<code>nonNumeric</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>2 SQRT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ sqrt(x) ]</span></dd>
@@ -2039,13 +2044,13 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-POW">
 <h4><code>POW</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密なべき乗<code>x y POW</code>。ベクトルには要素ごとに働き、厳密な体の中で答える。整数の指数なら結果は底と同じ層に留まる。<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>、<code>2 -1 POW</code>は<code>1/2</code>。非負の有理数の底に対する指数<code>p/2</code>も体の中に留まる。<code>2 1/2 POW</code>は<code>2 SQRT</code>の答えとまったく同じで、<code>2 3/2 POW</code>は<code>2 2 SQRT MUL</code>。負の<code>y</code>による<code>0 y POW</code>は<code>divisionByZero</code>を投影する。<code>p/2</code>乗の負の底は実数の値を持たず<code>domainMiss</code>を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する<code>p/2</code>、無理数の指数)も体の外に出るので<code>domainMiss</code>を投影する(<code>8 1/3 POW</code>、<code>2 2 SQRT POW</code>)。機械が具体化できる範囲を超える指数は<code>spaceExhausted</code>を投影する。体を組み立てるワードは今も<code>SQRT</code>であり、<code>POW</code>はその糖衣ではない。</p>
+<p>厳密なべき乗<code>x y POW</code>。ベクトルには要素ごとに働き、厳密な定義域の中で答える。整数の指数なら結果は底と同じ層に留まる。<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>、<code>2 -1 POW</code>は<code>1/2</code>。除算は全域的なので<code>0 -1 POW</code>は<code>1/0</code>、<code>1/0 -1 POW</code>は<code>0</code>(LANG.VALUES.EXACT)。非負の有理数の底に対する指数<code>p/2</code>も体の中に留まる。<code>2 1/2 POW</code>は<code>2 SQRT</code>の答えとまったく同じで、<code>2 3/2 POW</code>は<code>2 2 SQRT MUL</code>。<code>p/2</code>乗の負の底は実数の値を持たず<code>domainMiss</code>を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する<code>p/2</code>、無理数の指数、0の上の指数)も体の外に出るので<code>domainMiss</code>を投影する(<code>8 1/3 POW</code>、<code>2 2 SQRT POW</code>、<code>2 1/0 POW</code>)。機械が具体化できる範囲を超える指数は<code>spaceExhausted</code>を投影する。体を組み立てるワードは今も<code>SQRT</code>であり、<code>POW</code>はその糖衣ではない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>2 10 POW</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] [ y ] -&gt; [ x^y ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>divisionByZero</code>, <code>domainMiss</code>, <code>spaceExhausted</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>domainMiss</code>, <code>spaceExhausted</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
@@ -2055,7 +2060,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GCD">
 <h4><code>GCD</code> <span class="word-tier">Standard · operational</span></h4>
-<p>2つの整数の非負の最大公約数。ベクトルには要素ごとに働く。<code>12 18 GCD</code>は<code>6</code>、<code>0 0 GCD</code>は<code>0</code>。ユークリッドの互除法は入力に依存する反復で、すでにあるベクトルの上でしか反復しない言語では定義として書けない。機械はすべての有理数を既約に保つためにこれをすでに実行しており、このワードはそれを見えるようにするだけである。整数でないオペランド(分数や無理数)は<code>domainMiss</code>を投影する。</p>
+<p>2つの整数の非負の最大公約数。ベクトルには要素ごとに働く。<code>12 18 GCD</code>は<code>6</code>、<code>0 0 GCD</code>は<code>0</code>。ユークリッドの互除法は入力に依存する反復で、すでにあるベクトルの上でしか反復しない言語では定義として書けない。機械はすべての数を既約に保つためにこれをすでに実行しており、このワードはそれを見えるようにするだけである。整数でないオペランド(分数、無理数、0の上の点)は<code>domainMiss</code>を投影する。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>12 18 GCD</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ gcd ]</span></dd>
@@ -2071,7 +2076,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-RATIO">
 <h4><code>RATIO</code> <span class="word-tier">Standard · operational</span></h4>
-<p>有理数を既約の分子と分母に開き、分母を正とする2要素のベクトルで答える。<code>6/4 RATIO</code>は<code>[ 3 2 ]</code>、<code>-3 RATIO</code>は<code>[ -3 1 ]</code>で、ベクトルには要素ごとに働く。この言語は厳密な有理数を掲げており、これがその2つの部分を読み戻すワードである。答えはベクトルなので、算術は他のベクトルと同じようにその上へ持ち上がる。無理数(<code>2 SQRT</code>)には分子がなく<code>domainMiss</code>を投影する。</p>
+<p>数を既約の分子と分母に開き、分母を非負とする2要素のベクトルで答える。<code>6/4 RATIO</code>は<code>[ 3 2 ]</code>、<code>-3 RATIO</code>は<code>[ -3 1 ]</code>、<code>100 0 DIV RATIO</code>は<code>[ 1 0 ]</code>。0の上のすべての対はその符号を0の上に置いた点に簡約されるからである(LANG.VALUES.EXACT)。ベクトルには要素ごとに働く。この言語は厳密な分数を掲げており、これがその2つの部分を読み戻すワードである。答えはベクトルなので、算術は他のベクトルと同じようにその上へ持ち上がる。無理数(<code>2 SQRT</code>)には分子がなく<code>domainMiss</code>を投影する。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>6/4 RATIO</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ q ] -&gt; [ [ numerator denominator ] ]</span></dd>
@@ -2597,34 +2602,34 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SORT">
 <h4><code>SORT</code> <span class="word-tier">Standard · operational</span></h4>
-<p>数のベクトルを昇順に並べた複製。<code>[ 3 1 2 ] SORT</code>は<code>[ 1 2 3 ]</code>。順序は無理数を含めて厳密。順序があるのは数だけで(<code>nonNumeric</code>)、ベクトルでないものは<code>nonVector</code>。並べ替えの置換を答えるのはORDER。</p>
+<p>数のベクトルを昇順に並べた複製。<code>[ 3 1 2 ] SORT</code>は<code>[ 1 2 3 ]</code>。順序は無理数を含めて厳密で、<code>-1/0</code>が先頭、<code>1/0</code>が末尾になる。順序を持たない<code>0/0</code>を含むベクトルには整列した形がなく、NIL(domainMiss)を投影する(LANG.VALUES.EXACT)。順序があるのは数だけで(<code>nonNumeric</code>)、ベクトルでないものは<code>nonVector</code>。並べ替えの置換を答えるのはORDER。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 3 1 2 ] SORT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ sorted ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedElement</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.VALUES.EXACT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-ORDER">
 <h4><code>ORDER</code> <span class="word-tier">Standard · operational</span></h4>
-<p>数のベクトルを昇順に並べるインデックス。<code>[ 30 10 20 ] ORDER</code>は<code>[ 1 2 0 ]</code>なので、それで収集すれば並べ替えになる。<code>[ 30 10 20 ] 'V' BIND V V ORDER GET</code>は<code>[ 10 20 30 ]</code>。同点は元の順序を保つ。<code>[ 2 1 2 1 ] ORDER</code>は<code>[ 1 3 0 2 ]</code>。順序があるのは数だけで(<code>nonNumeric</code>)、ベクトルでないものは<code>nonVector</code>。</p>
+<p>数のベクトルを昇順に並べるインデックス。<code>[ 30 10 20 ] ORDER</code>は<code>[ 1 2 0 ]</code>なので、それで収集すれば並べ替えになる。<code>[ 30 10 20 ] 'V' BIND V V ORDER GET</code>は<code>[ 10 20 30 ]</code>。同点は元の順序を保つ。<code>[ 2 1 2 1 ] ORDER</code>は<code>[ 1 3 0 2 ]</code>。順序を持たない<code>0/0</code>を含むベクトルは、SORTと同じくNIL(domainMiss)を投影する(LANG.VALUES.EXACT)。順序があるのは数だけで(<code>nonNumeric</code>)、ベクトルでないものは<code>nonVector</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 30 10 20 ] ORDER</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] -&gt; [ permutation ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>unorderedElement</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>nonNumeric</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.VALUES.EXACT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-UNIQUE">
@@ -2709,18 +2714,18 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-BSEARCH">
 <h4><code>BSEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2 ]</code>で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ<code>unsortedInput</code>を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。</p>
+<p>昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2 ]</code>で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ<code>unsortedInput</code>を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序を持たない<code>0/0</code>を含むベクトルはNIL(domainMiss)を投影し、<code>0/0</code>のキーも自分のレーンに同じものを投影する(LANG.VALUES.EXACT)。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ sorted ] [ keys ] -&gt; [ indices ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound,unorderedOperand</code> → <code>notFound</code>, <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>unsortedInput</code>, <code>nonNumeric</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.VALUES.EXACT</code></dd>
 </dl>
 </div>
 <!-- END generated word contracts: vector-ops -->
@@ -3403,7 +3408,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-NUM">
 <h4><code>NUM</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。<code>'3/4' NUM</code>は<code>3/4</code>、<code>'0.25' NUM</code>は<code>1/4</code>。数を綴らないテキスト(<code>'abc'</code>、<code>'.5'</code>、<code>'1_000'</code>、<code>'1/0'</code>)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(<code>'1e99999999'</code>)はNIL(spaceExhausted)を投影する。StringでないオペランドはERROR(<code>nonText</code>)。Stringのベクトルは持ち上がる。</p>
+<p>テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。<code>'3/4' NUM</code>は<code>3/4</code>、<code>'0.25' NUM</code>は<code>1/4</code>、<code>'5/0' NUM</code>は、対をその符号を0の上に置いた点に簡約した<code>1/0</code>(LANG.VALUES.EXACT)。数を綴らないテキスト(<code>'abc'</code>、<code>'.5'</code>、<code>'1_000'</code>)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(<code>'1e99999999'</code>)はNIL(spaceExhausted)を投影する。StringでないオペランドはERROR(<code>nonText</code>)。Stringのベクトルは持ち上がる。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'42' NUM</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ n ]</span></dd>
@@ -3419,7 +3424,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-STR">
 <h4><code>STR</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。<code>42 STR</code>は<code>'42'</code>、<code>1/3 STR</code>は<code>'1/3'</code>、<code>TRUE STR</code>は<code>'TRUE'</code>。Symbolはその名前そのままで書かれる。<code>[ ADD ] 0 GET STR</code>は<code>'ADD'</code>。そのテキストはStringであってSymbolではない。それをSymbolに戻すWordはないので、テキストとして持った名前が呼び出されることはない（LANG.DICTIONARY.ACYCLIC）。オペランドは葉なので、ベクトルやRecordは持ち上がる。<code>[ 1 2 ] STR</code>は<code>[ '1' '2' ]</code>。STRは要素ごとにNUMの逆であり、<code>1/3 STR NUM</code>は<code>1/3</code>、<code>x STR NUM</code>は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。</p>
+<p>スカラー、String、真偽値を、読み戻すとそれになるテキストとして書く。<code>42 STR</code>は<code>'42'</code>、<code>1/3 STR</code>は<code>'1/3'</code>、<code>1 0 DIV STR</code>は<code>'1/0'</code>、<code>TRUE STR</code>は<code>'TRUE'</code>。Symbolはその名前そのままで書かれる。<code>[ ADD ] 0 GET STR</code>は<code>'ADD'</code>。そのテキストはStringであってSymbolではない。それをSymbolに戻すWordはないので、テキストとして持った名前が呼び出されることはない（LANG.DICTIONARY.ACYCLIC）。オペランドは葉なので、ベクトルやRecordは持ち上がる。<code>[ 1 2 ] STR</code>は<code>[ '1' '2' ]</code>。STRは要素ごとにNUMの逆であり、<code>1/3 STR NUM</code>は<code>1/3</code>、<code>x STR NUM</code>は字句を持つすべての数を返す。テキストは封じられた数の文法のアルファベットなので、その中に字句を持たない数(2 SQRTのような厳密な無理数)には忠実なテキストがなく、有理数の似姿で答えるのではなくNIL(domainMiss)を投影する。これはJSON-ENCODEがJSONに像を持たない値に投影する理由と同じである。近似を明示して描きたいときはFORMATを使う。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>42 STR</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
@@ -3434,18 +3439,18 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-FORMAT">
 <h4><code>FORMAT</code> <span class="word-tier">Standard · operational</span></h4>
-<p>厳密なスカラーを、小数点以下の桁数を指定した十進テキストとして描く。ちょうど半分は<code>ROUND</code>とまったく同じく0から遠い側へ丸める。<code>1/3 5 FORMAT</code>は<code>'0.33333'</code>、<code>5/2 0 FORMAT</code>は<code>'3'</code>、<code>2 SQRT 3 FORMAT</code>は<code>'1.414'</code>。値が丸められる唯一の場所であり、そこから出ていくのはテキストであって決して数ではない。算術は丸めを行わず、<code>STR</code>は厳密な字句を持たない数を断るので、十進の近似が欲しいプログラムは表示の境界であるここで精度を名指す。桁数は非負の整数(そうでなければ<code>invalidInteger</code>)、値はスカラー(そうでなければ<code>nonNumeric</code>)。体の順序は決して同点にならないので、無理数を含めすべての桁が厳密に決まる。</p>
+<p>厳密なスカラーを、小数点以下の桁数を指定した十進テキストとして描く。ちょうど半分は<code>ROUND</code>とまったく同じく0から遠い側へ丸める。<code>1/3 5 FORMAT</code>は<code>'0.33333'</code>、<code>5/2 0 FORMAT</code>は<code>'3'</code>、<code>2 SQRT 3 FORMAT</code>は<code>'1.414'</code>。値が丸められる唯一の場所であり、そこから出ていくのはテキストであって決して数ではない。算術は丸めを行わず、<code>STR</code>は厳密な字句を持たない数を断るので、十進の近似が欲しいプログラムは表示の境界であるここで精度を名指す。0の上の3つの点の位置やその先には小数がないので、<code>1/0</code>、<code>-1/0</code>、<code>0/0</code>はNIL(domainMiss)を投影する(LANG.VALUES.EXACT)。それらの字句を書くのはSTRである。桁数は非負の整数(そうでなければ<code>invalidInteger</code>)、値はスカラー(そうでなければ<code>nonNumeric</code>)。体の順序は決して同点にならないので、無理数を含めすべての桁が厳密に決まる。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1/3 5 FORMAT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] [ digits ] -&gt; [ text ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>noDecimalForValue</code> → <code>domainMiss</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>invalidInteger</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-JSON-DECODE">
@@ -3466,7 +3471,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-ENCODE">
 <h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外の有理数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。このワードが書いたものを解読すると与えた値が戻り、字句として書かれた有理数はそのStringとして戻るので、<code>NUM</code>で数を取り戻せる。</p>
+<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>、<code>1/0</code>は<code>&quot;1/0&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。このワードが書いたものを解読すると与えた値が戻り、字句として書かれた数はそのStringとして戻るので、<code>NUM</code>で数を取り戻せる。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>
@@ -3906,7 +3911,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV NIL?</code></td>
+                                    <td><code>-1 SQRT NIL?</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes"><code>NIL?</code>は最上位の値を消費し、その場所に答えを積む。</td>
                                 </tr>
@@ -3925,8 +3930,8 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV NIL-REASON</code></td>
-                                    <td><code>'divisionByZero'</code></td>
+                                    <td><code>-1 SQRT NIL-REASON</code></td>
+                                    <td><code>'domainMiss'</code></td>
                                     <td class="notes">理由はプロトコル文字列なので、プログラムは値が欠けている理由によって分岐できる。</td>
                                 </tr>
                             </tbody>
@@ -3981,7 +3986,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 DIV 'S' BIND 99 S S NIL? SELECT</code></td>
+                                    <td><code>-1 SQRT 'S' BIND 99 S S NIL? SELECT</code></td>
                                     <td><code>99/1</code></td>
                                     <td class="notes">不在だったので代わりの値が選ばれる。</td>
                                 </tr>
@@ -4030,9 +4035,9 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-NIL_3f">
 <h4><code>NIL?</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>値が不在かどうか。<code>1 0 DIV NIL?</code>は<code>TRUE</code>、<code>5 NIL?</code>は<code>FALSE</code>。値全体について問うので、NILを持つベクトルは存在している。<code>[ 1 NIL ] NIL?</code>は<code>FALSE</code>。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。</p>
+<p>値が不在かどうか。<code>-1 SQRT NIL?</code>は<code>TRUE</code>、<code>5 NIL?</code>は<code>FALSE</code>。0で割った商は数なので、<code>1 0 DIV NIL?</code>は<code>FALSE</code>(LANG.VALUES.EXACT)。値全体について問うので、NILを持つベクトルは存在している。<code>[ 1 NIL ] NIL?</code>は<code>FALSE</code>。SELECTと組んで代わりの値を選ぶ(LANG.FAILURE.RECOVERY)。</p>
 <dl class="word-contract">
-<dt>構文</dt><dd><code>1 0 DIV NIL?</code></dd>
+<dt>構文</dt><dd><code>-1 SQRT NIL?</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ TRUE | FALSE ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
@@ -4045,9 +4050,9 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-NIL-REASON">
 <h4><code>NIL-REASON</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>不在が持つ理由をテキストで答える。<code>1 0 DIV NIL-REASON</code>は<code>'divisionByZero'</code>で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。</p>
+<p>不在が持つ理由をテキストで答える。<code>-1 SQRT NIL-REASON</code>は<code>'domainMiss'</code>で、ABSENTが作ったNILは与えられたテキストを答える。理由はNILの観測できる内容のすべてなので(LANG.VALUES.NIL)、これがプログラムがそれを読む方法である。NILでない値は、問いの定義域の外にある整ったオペランドなので、SQRTに対する負の数と同じくNIL(domainMiss)を投影する。</p>
 <dl class="word-contract">
-<dt>構文</dt><dd><code>1 0 DIV NIL-REASON</code></dd>
+<dt>構文</dt><dd><code>-1 SQRT NIL-REASON</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ text ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>

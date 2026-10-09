@@ -521,7 +521,7 @@ protocol-string variants as opaque values rather than rejecting the report.
 
 `summary` is one display line in protocol spellings:
 `executeWord / ADD / stackShape (error:stackUnderflow) msg="…"`, or
-`(nil:divisionByZero)` for a NIL's diagnosis. Read it; branch on the fields.
+`(nil:domainMiss)` for a NIL's diagnosis. Read it; branch on the fields.
 
 Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
 `code` is the stable identifier — match on it. `title` and `detail` are display
@@ -552,15 +552,15 @@ fixes one and not the other.
 a `wordError` event carries none, since the report's top-level `diagnosis` is
 built from it. A successful run may therefore have a non-empty trace. The
 event is recorded at the Word whose contract projected the NIL and not at the
-Words it then passed through (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 2 ADD` holds
-one `nilProduced` event, for `DIV`. A Word inside whose run it was produced —
-a `MAP` applying the block, the User Word whose body ran `DIV` — is named in
+Words it then passed through (LANG.FAILURE.PASSTHROUGH): `-1 SQRT 2 ADD` holds
+one `nilProduced` event, for `SQRT`. A Word inside whose run it was produced —
+a `MAP` applying the block, the User Word whose body ran `SQRT` — is named in
 that event's diagnosis evidence as `insideWords=`, innermost first, the same
 way a `wordError` names the frames a failure happened in. Neither NIL nor an Ajisai
 language `status: error` is a host transport failure.
 
-The trace grows with the run rather than the source — `0 45000 RANGE [ 0 DIV ]
-MAP` records 45,001 `nilProduced` events — so it is sent under a byte budget,
+The trace grows with the run rather than the source — `0 45000 RANGE [ 1 ADD -1
+MUL SQRT ] MAP` records 45,001 `nilProduced` events — so it is sent under a byte budget,
 the same 64 KiB an error report's stack gets. When the events do not all fit,
 the first ones that fit half of it and the last ones that fit the other half
 are sent, in order (the last event always), and a top-level

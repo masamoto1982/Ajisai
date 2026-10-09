@@ -1,9 +1,8 @@
 //! `Value::from_vector_promoted` (which tries `dense_columns` first) against
 //! the two-step route it replaces on the dense path: every lane read into a
-//! `Vec<Fraction>`, then packed by `DenseTensor::from_fractions_with_absences`,
-//! with the nested Vector as the answer when either step declines. The two
-//! must agree on every value down to its columns, purity flag, absence
-//! reasons, shape and nesting.
+//! `Vec<Fraction>`, then packed by `DenseTensor::from_fractions`, with the
+//! nested Vector as the answer when either step declines. The two must agree
+//! on every value down to its columns, purity flag, shape and nesting.
 
 use std::sync::Arc;
 
@@ -16,11 +15,7 @@ use crate::semantic::Recoverability;
 
 fn reference_promoted(values: Vec<Value>) -> Value {
     if let Some(collected) = try_collect_dense(&values) {
-        if let Some(tensor) = DenseTensor::from_fractions_with_absences(
-            collected.data,
-            collected.shape.clone(),
-            collected.absences,
-        ) {
+        if let Some(tensor) = DenseTensor::from_fractions(collected.data, collected.shape.clone()) {
             return Value::new(
                 ValueData::Tensor {
                     data: Arc::new(tensor),
@@ -43,8 +38,12 @@ fn leaf() -> impl Strategy<Value = Value> {
             num_bigint::BigInt::from(i64::MAX) * 4,
             1.into(),
         ))),
+        // The three points over zero, which are lanes like any other.
+        1 => (-1i64..=1).prop_map(|sign| Value::from_fraction(
+            super::fraction::Fraction::new(sign.into(), 0.into()),
+        )),
         1 => prop_oneof![
-            Just(NilReason::DivisionByZero),
+            Just(NilReason::DomainMiss),
             Just(NilReason::IndexOutOfBounds),
             Just(NilReason::NotFound),
         ]
@@ -56,7 +55,7 @@ fn leaf() -> impl Strategy<Value = Value> {
 }
 
 /// A value as a `MAP` row might be: a leaf, a promoted row of leaves (often
-/// a dense Tensor, sometimes with absent lanes), or a Vector of those.
+/// a dense Tensor), or a Vector of those.
 fn element() -> impl Strategy<Value = Value> {
     let row = || prop::collection::vec(leaf(), 0..4).prop_map(Value::from_vector_promoted);
     let nested = prop::collection::vec(row(), 0..3).prop_map(Value::from_vector);

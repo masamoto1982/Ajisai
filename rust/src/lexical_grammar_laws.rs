@@ -342,18 +342,17 @@ fn a_glued_comment_or_quote_character_does_not_unbalance_delimiters() {
     }
 }
 
-/// `n/0` is refused as source, before anything runs — not when the literal is
-/// reached, after the program has already printed.
+/// `n/0` is a number like any other pair: it denotes one of the three points
+/// over zero (LANG.VALUES.EXACT), and tokenizes as a Number.
 #[test]
-fn a_zero_denominator_is_a_source_error() {
-    for source in ["1/0", "-3/000", "[ 1 PRINT 1/0 ]"] {
-        let error = tokenize(source).expect_err(source);
-        assert!(error.contains("zero denominator"), "{source:?}: {error}");
+fn a_zero_denominator_is_a_number() {
+    for source in ["1/0", "-3/000", "0/0", "1/01"] {
+        let tokens = tokenize(source).unwrap_or_else(|e| panic!("{source:?}: {e}"));
+        assert!(
+            matches!(tokens.as_slice(), [Token::Number(literal)] if literal.lexeme() == source),
+            "{source:?} must be one Number token, got {tokens:?}"
+        );
     }
-    assert!(
-        tokenize("1/01").is_ok(),
-        "a leading zero is not a zero denominator"
-    );
 }
 
 /// The numeric-literal ceiling counts the digits a literal denotes, exponent

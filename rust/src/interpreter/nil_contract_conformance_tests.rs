@@ -110,9 +110,9 @@ fn required(roles: &[OperandRole]) -> Option<Outcome> {
 }
 
 /// A program that puts `arity` NIL operands on the stack and applies `word`.
-/// `1 0 DIV` is the canonical reasoned projection (`divisionByZero`).
+/// `-1 SQRT` is the canonical reasoned projection (`domainMiss`).
 fn probe_program(word: &str, arity: u8) -> String {
-    let nils = vec!["1 0 DIV"; arity as usize].join(" ");
+    let nils = vec!["-1 SQRT"; arity as usize].join(" ");
     format!("{nils} {word}")
 }
 
@@ -200,11 +200,11 @@ fn a_search_needle_is_an_element() {
 
     for (program, current) in [
         // Found: the Vector holds a NIL with the same reason.
-        ("1 0 DIV 1 COLLECT 1 0 DIV MEMBER?", Outcome::Value),
-        ("1 0 DIV 1 COLLECT 1 0 DIV INDEX-OF", Outcome::Value),
+        ("-1 SQRT 1 COLLECT -1 SQRT MEMBER?", Outcome::Value),
+        ("-1 SQRT 1 COLLECT -1 SQRT INDEX-OF", Outcome::Value),
         // Not found: MEMBER? answers FALSE, INDEX-OF projects `notFound`.
-        ("[ 1 ] 1 0 DIV MEMBER?", Outcome::Value),
-        ("[ 1 ] 1 0 DIV INDEX-OF", Outcome::NilWithReason),
+        ("[ 1 ] -1 SQRT MEMBER?", Outcome::Value),
+        ("[ 1 ] -1 SQRT INDEX-OF", Outcome::NilWithReason),
     ] {
         assert_eq!(
             runtime.block_on(observe(program)),
@@ -230,12 +230,12 @@ fn passthrough_unwinds_the_operand_window() {
 
     for (program, depth) in [
         // Unary: SORT eats its vector, so only the projected NIL is left.
-        ("1 0 DIV SORT", 1),
+        ("-1 SQRT SORT", 1),
         // Binary: ADD eats both operands.
-        ("1 0 DIV 1 ADD", 1),
+        ("-1 SQRT 1 ADD", 1),
         // The projected NIL need not be the receiver: any operand position
         // carries it.
-        ("1 1 0 DIV ADD", 1),
+        ("1 -1 SQRT ADD", 1),
     ] {
         let (observed, left) = runtime.block_on(observe_depth(program));
         assert_eq!(
@@ -252,8 +252,8 @@ fn passthrough_unwinds_the_operand_window() {
 
 /// A Word wrapped in a user-defined Word runs through the compiled plan rather
 /// than the interpreter's dispatch, and that second path skipped the guard
-/// entirely: `[ LENGTH ] 'LEN' DEF 1 0 DIV LEN` answered `0` for the length of
-/// a NIL while `1 0 DIV LENGTH` answered differently, and SORT and STR likewise reverted
+/// entirely: `[ LENGTH ] 'LEN' DEF -1 SQRT LEN` answered `0` for the length of
+/// a NIL while `-1 SQRT LENGTH` answered differently, and SORT and STR likewise reverted
 /// to their pre-guard behavior one call deep.
 ///
 /// Compiling a body is required to be unobservable (LANG.AUTHORITY.FREEDOM), so
@@ -276,8 +276,8 @@ fn the_declared_contract_binds_the_compiled_path_too() {
         ("SORT", Outcome::NilWithReason),
         ("STR", Outcome::NilWithReason),
     ] {
-        let direct = format!("1 0 DIV {word}");
-        let wrapped = format!("[ {word} ] 'WRAP' DEF 1 0 DIV WRAP");
+        let direct = format!("-1 SQRT {word}");
+        let wrapped = format!("[ {word} ] 'WRAP' DEF -1 SQRT WRAP");
 
         let direct_outcome = runtime.block_on(observe(&direct));
         let wrapped_outcome = runtime.block_on(observe(&wrapped));

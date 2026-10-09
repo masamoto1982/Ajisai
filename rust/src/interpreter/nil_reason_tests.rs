@@ -3,6 +3,7 @@
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
+use crate::types::fraction::Fraction;
 use crate::types::Value;
 
 fn last_nil_reason(interp: &Interpreter) -> Option<NilReason> {
@@ -13,16 +14,16 @@ fn last_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 }
 
 #[tokio::test]
-async fn division_by_zero_preserves_direct_projection_reason() {
+async fn a_negative_radicand_preserves_direct_projection_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("1 0 DIV").await.unwrap();
+    interp.execute("-1 SQRT").await.unwrap();
     let stack = interp.get_stack();
     assert!(
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
-        "top of stack must be NIL after division by zero"
+        "top of stack must be NIL after a negative radicand"
     );
     let reason = last_nil_reason(&interp).expect("the reasoned NIL must carry a reason");
-    assert_eq!(reason, NilReason::DivisionByZero);
+    assert_eq!(reason, NilReason::DomainMiss);
 }
 
 #[tokio::test]
@@ -51,23 +52,23 @@ async fn unknown_word_propagates_error() {
 #[tokio::test]
 async fn successful_projection_uses_normal_word_stack_effect() {
     let mut interp = Interpreter::new();
-    interp.execute("1 2 3 0 DIV").await.unwrap();
+    interp.execute("1 2 -3 SQRT").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
         3,
-        "DIV consumes its two operands and pushes a single reasoned NIL result"
+        "SQRT consumes its operand and pushes a single reasoned NIL result"
     );
     assert_eq!(format!("{}", stack[0]), "1/1");
     assert_eq!(format!("{}", stack[1]), "2/1");
     assert!(stack[2].is_nil());
-    assert_eq!(stack[2].nil_reason(), Some(&NilReason::DivisionByZero));
+    assert_eq!(stack[2].nil_reason(), Some(&NilReason::DomainMiss));
 }
 
 #[tokio::test]
 async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
     let mut interp = Interpreter::new();
-    interp.execute("1 0 DIV").await.unwrap();
+    interp.execute("-1 SQRT").await.unwrap();
     interp.execute("10 ADD").await.unwrap();
     interp.execute("2 MUL").await.unwrap();
     assert!(
@@ -79,7 +80,7 @@ async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
         "top of stack should still be NIL after passthrough pipeline"
     );
     let reason = last_nil_reason(&interp).expect("reason must propagate through passthrough");
-    assert_eq!(reason, NilReason::DivisionByZero);
+    assert_eq!(reason, NilReason::DomainMiss);
 }
 
 #[tokio::test]
@@ -125,7 +126,7 @@ async fn bare_nil_literal_is_reasoned_as_literal() {
 #[tokio::test]
 async fn a_fallback_replaces_a_directly_projected_nil() {
     let mut interp = Interpreter::new();
-    interp.execute("1 0 DIV").await.unwrap();
+    interp.execute("-1 SQRT").await.unwrap();
     interp.execute("'X' BIND 42 X X NIL? SELECT").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
@@ -136,7 +137,7 @@ async fn a_fallback_replaces_a_directly_projected_nil() {
     assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }
 
-mod division_nil_projection_rule {
+mod division_is_total {
     use super::*;
 
     #[tokio::test]
@@ -153,12 +154,23 @@ mod division_nil_projection_rule {
         assert!(interp.get_stack().last().unwrap().is_nil());
     }
 
+    /// A zero divisor answers the dividend's sign over zero, a number and not
+    /// an absence (LANG.VALUES.EXACT).
     #[tokio::test]
-    async fn right_zero_produces_nil_with_division_by_zero() {
-        let mut interp = Interpreter::new();
-        interp.execute("5 0 DIV").await.unwrap();
-        let reason = last_nil_reason(&interp).expect("must carry reason");
-        assert_eq!(reason, NilReason::DivisionByZero);
+    async fn right_zero_produces_the_sign_over_zero() {
+        for (source, expected) in [
+            ("5 0 DIV", Fraction::positive_infinity()),
+            ("-5 0 DIV", Fraction::negative_infinity()),
+            ("0 0 DIV", Fraction::nullity()),
+            ("1/2 0 DIV", Fraction::positive_infinity()),
+        ] {
+            let mut interp = Interpreter::new();
+            interp.execute(source).await.unwrap();
+            let top = interp.get_stack().last().cloned().unwrap();
+            assert!(!top.is_nil(), "`{source}` is a number, got {top:?}");
+            assert_eq!(top, Value::from_fraction(expected), "{source}");
+            assert_eq!(last_nil_reason(&interp), None, "{source}");
+        }
     }
 
     #[tokio::test]
@@ -174,19 +186,19 @@ mod division_nil_projection_rule {
 }
 
 #[tokio::test]
-async fn nil_projection_rule_division_by_zero_without_safe_has_direct_reason() {
+async fn nil_projection_rule_domain_miss_without_safe_has_direct_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 DIV").await.unwrap();
+    interp.execute("-10 SQRT").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(top.is_nil());
-    assert_eq!(top.nil_reason(), Some(&NilReason::DivisionByZero));
+    assert_eq!(top.nil_reason(), Some(&NilReason::DomainMiss));
 }
 
 #[tokio::test]
-async fn nil_projection_rule_division_by_zero_is_recoverable() {
+async fn nil_projection_rule_domain_miss_is_recoverable() {
     let mut interp = Interpreter::new();
     interp
-        .execute("10 0 DIV 'S' BIND 99 S S NIL? SELECT")
+        .execute("-10 SQRT 'S' BIND 99 S S NIL? SELECT")
         .await
         .unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -270,14 +282,14 @@ async fn every_reachable_nil_carries_a_reason() {
         // describe.
         // Projections that already had reasons — pinned so the sweep is a
         // statement about all NILs, not only the ones this change touched.
-        ("1 0 DIV", NilReason::DivisionByZero),
         ("-1 SQRT", NilReason::DomainMiss),
+        ("0/0 1 LT", NilReason::DomainMiss),
         ("'abc' NUM", NilReason::InvalidEncoding),
         // A NIL target keeps its reason through the higher-order Words rather
         // than being replaced by a blank one.
-        ("1 0 DIV [ 1 ] MAP", NilReason::DivisionByZero),
-        ("1 0 DIV [ TRUE ] FILTER", NilReason::DivisionByZero),
-        ("1 0 DIV STR", NilReason::DivisionByZero),
+        ("-1 SQRT [ 1 ] MAP", NilReason::DomainMiss),
+        ("-1 SQRT [ TRUE ] FILTER", NilReason::DomainMiss),
+        ("'abc' NUM STR", NilReason::InvalidEncoding),
     ];
 
     for (code, expected) in cases {
@@ -314,7 +326,7 @@ async fn every_reachable_nil_carries_a_reason() {
 
     for code in [
         "NIL NIL",
-        "1 0 DIV -1 SQRT",
+        "'x' NUM -1 SQRT",
         "[ 1 NIL 2 ]",
         "[ 1 NIL 2 ] 1 GET",
         "[ 1 2 3 ] 9 GET",
@@ -334,21 +346,21 @@ async fn every_reachable_nil_carries_a_reason() {
 ///
 /// `LANG.COLLECTIONS.LIFT` says each lane preserves the scalar law's NIL
 /// distinction, and the scalar law is passthrough with the reason intact
-/// (`1 0 DIV 1 ADD` is still `NIL(divisionByZero)`). Lifted, it was not: the
-/// element-wise kernels answer each lane with a `Fraction`, which records
-/// absence as a zero denominator and carries no reason, so the second Word
-/// re-reported every lane as `NIL(literal)` — "a NIL the program wrote rather
-/// than computed" (`spec/outcomes.json`), for a division by zero the program
-/// had performed and no NIL written anywhere in the source.
+/// (`-1 SQRT 1 ADD` is still `NIL(domainMiss)`). Lifted, it was not: the
+/// element-wise kernels answer each lane with a `Fraction`, which carries no
+/// reason, so the second Word re-reported every lane as `NIL(literal)` — "a
+/// NIL the program wrote rather than computed" (`spec/outcomes.json`), for a
+/// projection the program had performed and no NIL written anywhere in the
+/// source.
 #[tokio::test]
 async fn a_nil_lane_keeps_its_reason_through_the_next_element_wise_word() {
     for (source, expected) in [
-        ("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] ADD", NilReason::DivisionByZero),
-        ("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] SUB", NilReason::DivisionByZero),
-        ("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] MUL", NilReason::DivisionByZero),
-        ("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV", NilReason::DivisionByZero),
-        ("[ 1 2 ] [ 1 0 ] DIV 2 MUL", NilReason::DivisionByZero),
         ("[ 4 -1 ] SQRT [ 1 1 ] ADD", NilReason::DomainMiss),
+        ("[ 4 -1 ] SQRT [ 1 1 ] SUB", NilReason::DomainMiss),
+        ("[ 4 -1 ] SQRT [ 1 1 ] MUL", NilReason::DomainMiss),
+        ("[ 4 -1 ] SQRT [ 1 1 ] DIV", NilReason::DomainMiss),
+        ("[ 4 -1 ] SQRT 2 MUL", NilReason::DomainMiss),
+        ("[ 1 0/0 ] [ 1 1 ] LT [ TRUE ] AND", NilReason::DomainMiss),
         (
             "[ '1' 'a' ] [ NUM ] MAP [ 1 1 ] ADD",
             NilReason::InvalidEncoding,
@@ -379,11 +391,11 @@ async fn a_nil_lane_keeps_its_reason_through_the_next_element_wise_word() {
 async fn the_leftmost_nil_lane_decides_the_reason() {
     for (source, expected) in [
         (
-            "[ 1 2 ] [ 1 0 ] DIV [ 4 -1 ] SQRT ADD",
-            NilReason::DivisionByZero,
+            "[ '1' 'a' ] [ NUM ] MAP [ 4 -1 ] SQRT ADD",
+            NilReason::InvalidEncoding,
         ),
         (
-            "[ 4 -1 ] SQRT [ 1 2 ] [ 1 0 ] DIV ADD",
+            "[ 4 -1 ] SQRT [ '1' 'a' ] [ NUM ] MAP ADD",
             NilReason::DomainMiss,
         ),
     ] {

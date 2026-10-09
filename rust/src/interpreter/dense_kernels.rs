@@ -21,36 +21,22 @@
 //! route (`charge_binary_schema`); which route ran is unobservable
 //! (LANG.AUTHORITY.FREEDOM). `dense_kernels_tests` holds the two equal.
 //!
-//! An absent lane is not a reason to decline either, in an operand or in the
-//! answer. A dense Tensor holds one as it holds any other lane: a
-//! denominator of 0 in the columns, the dividend it holds in the numerator
-//! beside it, and the reason in the Tensor's absence map, which is sized to
-//! the failures rather than to the data. So the two laws that meet absence
-//! are the kernels' own:
-//!
-//! - **Passthrough** (LANG.FAILURE.PASSTHROUGH): an absent operand lane is
-//!   the result lane, the leftmost operand first, carried with its pair and
-//!   its reason and never re-minted. On the integer route the vectorised
-//!   loop runs over an absent lane's numerator like any lane, and the absent
-//!   lanes are overwritten afterwards, from the denominator scan, at the
-//!   cost of the failures rather than the data (`carry_absent_lanes`).
-//! - **Projection** (LANG.FAILURE.PROJECT): `DIV` by a zero lane writes the
-//!   dividend over that zero (`Fraction::over_zero`), records
-//!   `divisionByZero` for that lane, and keeps dividing the rest.
-//!
-//! The kernels used to hand both cases to the general route, which boxed a
-//! million lanes to say that one of them was absent, and left the result
-//! boxed for every Word after it. One absent lane then cost a pipeline its
-//! columns from that Word on.
+//! A lane over zero — one of the three points `1/0`, `-1/0`, `0/0` — is a
+//! lane like any other, in an operand or in the answer. The pair laws here
+//! assume a positive denominator, so such a lane, and a zero divisor, are
+//! answered by the `Fraction`'s own total arithmetic (`fraction_extended`)
+//! and written back as the reduced pair it answers: `[ 6 6 ] [ 1 0 ] DIV`
+//! holds `6/1` and `1/0`, and keeps its columns.
 
 mod lanes;
 
 use crate::interpreter::arithmetic::ExactArithmeticSchema;
 use crate::interpreter::comparison::OrderingKind;
+use crate::types::fraction::Fraction;
 use crate::types::small_rational;
 use crate::types::Column;
 use crate::types::Value;
-use lanes::{carry_absent_lanes, paired, Lanes, Out};
+use lanes::{paired, Lanes, Out};
 
 #[cfg(test)]
 thread_local! {
@@ -73,12 +59,7 @@ fn hit<T>(answer: Option<T>) -> Option<T> {
 
 /// `out[i] = f(a[i], b[i])` on integer lanes, with the overflow flags of
 /// every lane gathered rather than checked one by one, so the loop is free
-/// to vectorise. A set flag declines the whole operation — unless only
-/// absent lanes raised it: an absent lane's numerator is the dividend it
-/// holds, which `f` takes like any other integer and which may overflow
-/// where no present lane does, and the lane is overwritten afterwards
-/// (`carry_absent_lanes`), so its flag is read again, lane by lane, only
-/// when a flag was raised at all.
+/// to vectorise. A set flag declines the whole operation.
 #[inline(always)]
 fn integer_lanes(
     a: Lanes,
@@ -112,9 +93,6 @@ fn integer_lanes(
         }
         (Lanes::Splat(..), Lanes::Splat(..)) => return None,
     }
-    if bad && (a.absent() || b.absent()) {
-        bad = (0..n).any(|i| a.den(i) != 0 && b.den(i) != 0 && f(a.num(i), b.num(i)).1);
-    }
     (!bad).then_some(out)
 }
 
@@ -123,9 +101,9 @@ fn integer_lanes(
 const GCD_TABLE_MAX: u64 = 4096;
 
 /// `a / b` on integer lanes: each quotient reduced by one gcd, with the sign
-/// carried by the numerator; an absent operand lane carried, a zero divisor
-/// an absent lane holding its dividend. `None` for the one quotient a
-/// machine word cannot hold, `i64::MIN / -1`.
+/// carried by the numerator; a zero divisor answers the dividend's sign over
+/// zero. `None` for the one quotient a machine word cannot hold,
+/// `i64::MIN / -1`.
 fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
     use crate::types::fraction::binary_gcd_u64;
     // A Tensor divided by one small integer (`7 DIV`, the common case) meets
@@ -137,22 +115,11 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         }
         _ => None,
     };
-    let absent = a.absent() || b.absent();
     let mut out = Out::with_capacity(n);
     for i in 0..n {
-        if absent {
-            if a.den(i) == 0 {
-                out.carry(i, a);
-                continue;
-            }
-            if b.den(i) == 0 {
-                out.carry(i, b);
-                continue;
-            }
-        }
         let (x, y) = (a.num(i), b.num(i));
         if y == 0 {
-            out.project(i, x);
+            out.push(x.signum(), 0);
             continue;
         }
         // gcd(x, y) = gcd(y, x mod y): one division brings both operands
@@ -197,32 +164,29 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
             ExactArithmeticSchema::Div => None,
         };
         if let Some(nums) = lanes {
-            let mut out = Out::integers(nums);
-            carry_absent_lanes(&mut out, a, b);
-            return Some(out.into_value());
+            return Some(Out::integers(nums).into_value());
         }
         if matches!(schema, ExactArithmeticSchema::Div) {
             return integer_quotients(a, b, n);
         }
     }
+    let finite = a.finite() && b.finite();
     let mut out = Out::with_capacity(n);
     for i in 0..n {
         let (x, y) = (a.at(i), b.at(i));
-        // A present lane never has denominator 0, so the denominator alone
-        // says which operand lane is absent: that lane is the result, leftmost
-        // first (LANG.FAILURE.PASSTHROUGH). Then a zero divisor projects its
-        // own lane; a lane that outgrows a machine word is a boxed Vector,
-        // the general route's to make.
-        if x.1 == 0 {
-            out.carry(i, a);
-            continue;
-        }
-        if y.1 == 0 {
-            out.carry(i, b);
-            continue;
-        }
-        if matches!(schema, ExactArithmeticSchema::Div) && y.0 == 0 {
-            out.project(i, x.0);
+        // A lane over zero, or a zero divisor, is the `Fraction`'s own law:
+        // its answer is one of the three points or zero, a small pair. A lane
+        // that outgrows a machine word is a boxed Vector, the general route's
+        // to make.
+        if (!finite && (x.1 == 0 || y.1 == 0))
+            || (matches!(schema, ExactArithmeticSchema::Div) && y.0 == 0)
+        {
+            let answer = schema.fraction(
+                &Fraction::from_normalized_pair(x.0, x.1),
+                &Fraction::from_normalized_pair(y.0, y.1),
+            );
+            let (rn, rd) = answer.extract_i64_pair()?;
+            out.push(rn, rd);
             continue;
         }
         let (rn, rd) = match schema {
@@ -237,9 +201,9 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
 }
 
 /// `a LT b` / `a GT b` lane by lane: the Vector of Booleans `lift_lanes`
-/// builds, an absent operand lane passed through as the NIL it would answer
-/// there, or `None` for the general route. Denominators are positive, so the
-/// cross products order the lanes, and they fit `i128`.
+/// builds, or `None` for the general route — which a lane over zero takes,
+/// since `0/0` has no order to answer (LANG.VALUES.EXACT). Denominators are
+/// positive, so the cross products order the lanes, and they fit `i128`.
 pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     hit(ordering_lanes(kind, a, b))
 }
@@ -247,17 +211,11 @@ pub(crate) fn ordering(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value
 fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     let (a, b) = (Lanes::of(a)?, Lanes::of(b)?);
     let n = paired(a, b)?;
+    if !a.finite() || !b.finite() {
+        return None;
+    }
     let integer = a.integer() && b.integer();
-    let absent = a.absent() || b.absent();
     let decide = |i: usize| -> Value {
-        if absent {
-            if a.den(i) == 0 {
-                return a.absent_value(i);
-            }
-            if b.den(i) == 0 {
-                return b.absent_value(i);
-            }
-        }
         let ordering = if integer {
             a.num(i).cmp(&b.num(i))
         } else {
@@ -279,9 +237,10 @@ pub(crate) enum Rounding {
 }
 
 /// `FLOOR`/`ROUND` of every lane, or `None` for the general route. Every
-/// present result is an integer, so the answer is a pure-integer Tensor; for
-/// one that already was, that is the operand itself. An absent lane passes
-/// through with its reason.
+/// rational rounds to an integer, so the answer is a pure-integer Tensor
+/// unless a lane is one of the three points over zero, which is its own
+/// floor and its own rounding; for a Tensor that already was pure-integer,
+/// that is the operand itself.
 pub(crate) fn rounded(rounding: Rounding, value: &Value) -> Option<Value> {
     hit(rounded_lanes(rounding, value))
 }
@@ -289,25 +248,18 @@ pub(crate) fn rounded(rounding: Rounding, value: &Value) -> Option<Value> {
 fn rounded_lanes(rounding: Rounding, value: &Value) -> Option<Value> {
     let lanes = Lanes::of(value)?;
     let Lanes::Columns {
-        tensor,
-        integer,
-        absent,
+        tensor, integer, ..
     } = lanes
     else {
         return None;
     };
-    if integer && !absent {
+    if integer {
         return Some(value.clone());
     }
     let mut out = Out::with_capacity(tensor.len());
-    for (i, (&n, &d)) in tensor
-        .numerators
-        .iter()
-        .zip(&tensor.denominators)
-        .enumerate()
-    {
+    for (&n, &d) in tensor.numerators.iter().zip(&tensor.denominators) {
         if d == 0 {
-            out.carry(i, lanes);
+            out.push(n, 0);
             continue;
         }
         let rounded = match rounding {

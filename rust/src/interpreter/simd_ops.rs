@@ -24,7 +24,7 @@ pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
             if shape.len() != 1 || data.len() < SIMD_THRESHOLD {
                 return None;
             }
-            if data.is_pure_integer && data.all_lanes_valid() {
+            if data.is_pure_integer {
                 return Some(Cow::Borrowed(data.numerators.as_slice()));
             }
             let mut result: Vec<i64> = Vec::with_capacity(data.len());
@@ -52,7 +52,7 @@ pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
         ValueData::Boolean(_)
         | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
-        | ValueData::Nil(_)
+        | ValueData::Nil
         | ValueData::Symbol(_) => None,
     }
 }
@@ -105,7 +105,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::ExactScalar(_)
         | ValueData::Vector(_)
         | ValueData::Tensor { .. }
-        | ValueData::Nil(_)
+        | ValueData::Nil
         | ValueData::Symbol(_)
         | ValueData::Record(_) => None,
     }

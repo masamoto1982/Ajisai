@@ -69,7 +69,6 @@ export function makeLexer(grammar) {
   const numericPattern = new RegExp(grammar.numericGrammar.pattern, 'u');
   const namedPatterns = new Map([
     ['numeric', numericPattern],
-    ['zeroDenominator', new RegExp(grammar.numericGrammar.zeroDenominator.pattern, 'u')],
   ]);
 
   const scanPhase = grammar.phases.find((p) => p.id === 'scan');

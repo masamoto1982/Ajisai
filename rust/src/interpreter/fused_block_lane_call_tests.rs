@@ -182,12 +182,15 @@ fn pow_and_literal_length_programs_agree() {
 /// A one-lane literal in a `MAP` block (`[ 1 ] ADD`) is walked as its lane:
 /// beside a scalar (no fast-path hit) and beside another lane (a hit), on
 /// the integer and small-rational tiers, bound and read back, dead, inside a
-/// User Word, past a machine word; and declined where a lane meets a zero
-/// divisor or a Word that does not treat it as its value, and outside `MAP`.
+/// User Word, past a machine word, and beside a zero divisor (whose quotient
+/// is a point over zero the pair tier leaves to the dispatch); and declined
+/// where a lane meets a Word that does not treat it as its value, and
+/// outside `MAP`.
 #[test]
 fn one_lane_literals_in_map_agree() {
     let fused = [
         "1 600 RANGE [ [ 1 ] ADD ] MAP",
+        "[ 1 0 2 ] [ 'X' BIND [ 1 ] X DIV ] MAP",
         "1 600 RANGE [ 'X' BIND [ 7 ] X SUB ] MAP",
         "1 600 RANGE [ [ 2 ] [ 3 ] MUL ADD ] MAP",
         "1 600 RANGE [ [ 1/3 ] ADD 2 MUL ] MAP",
@@ -199,7 +202,6 @@ fn one_lane_literals_in_map_agree() {
         "[ 9223372036854775807 1 ] [ [ 1 ] ADD ] MAP",
     ];
     let declined = [
-        "[ 1 0 2 ] [ 'X' BIND [ 1 ] X DIV ] MAP",
         "1 20 RANGE [ [ 5 ] LT ] MAP",
         "1 20 RANGE [ [ 5 ] EQ ] MAP",
         "1 20 RANGE [ [ 1 ] ADD FLOOR ] MAP",
@@ -237,7 +239,7 @@ fn one_lane_literals_in_map_agree() {
     for source in fused {
         assert!(fused_runs(source) > 0, "`{source}` was not fused");
     }
-    for source in &declined[..7] {
+    for source in &declined[..6] {
         assert_eq!(fused_runs(source), 0, "`{source}` was fused");
     }
 }

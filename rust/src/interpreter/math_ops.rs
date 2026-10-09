@@ -20,8 +20,9 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 
 /// `three_way_compare` for MIN/MAX, raising `nonNumeric` like every other
-/// Word that asks for the exact order.
-fn compare_for_numeric(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
+/// Word that asks for the exact order; `None` for an operand with no order
+/// (`0/0`), which the Word projects.
+fn compare_for_numeric(a: &Value, b: &Value) -> Result<Option<std::cmp::Ordering>> {
     crate::interpreter::comparison::three_way_compare(a, b).map_err(|e| {
         AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {}", e.got))
     })
@@ -44,11 +45,7 @@ pub(crate) fn lift_unary_numeric(
                 .iter()
                 .map(|item| lift_unary_numeric(item, scalar_op))
                 .collect::<Result<Vec<_>>>()?;
-            // Promoted back to a dense Tensor wherever the lanes fit one: a
-            // dense lane holds an absence with its reason (the sentinel in
-            // the columns, the reason in `DenseTensor::absences`), so a lane
-            // that projected or passed a NIL through does not cost the
-            // vector its columns for every Word after it.
+            // Promoted back to a dense Tensor wherever the lanes fit one.
             Ok(Value::from_vector_promoted(lanes))
         }
         None if value.is_nil() => Ok(value.clone()),
@@ -84,11 +81,12 @@ pub(crate) fn lift_binary_numeric(
 }
 
 /// `MIN` / `MAX` select one of two numeric operands by the order relation
-/// (LANG.VALUES.TRUTH). They accept the full numeric domain, algebraic
+/// (LANG.VALUES.EXACT). They accept the full numeric domain, algebraic
 /// operands included, and decide the order through the same exact comparison
-/// as the relations, which always decides. The selected operand is returned
-/// unchanged (preserving its exact representation). NIL-passthrough.
-/// Element-wise over vectors, by [`lift_binary_numeric`].
+/// as the relations; an operand with no order (`0/0`) projects `domainMiss`,
+/// as `LT` does. The selected operand is returned unchanged (preserving its
+/// exact representation). NIL-passthrough. Element-wise over vectors, by
+/// [`lift_binary_numeric`].
 fn apply_selecting<F>(interp: &mut Interpreter, pick_left: F) -> Result<()>
 where
     // Given the order of `a` (left) vs `b` (right), return true to keep `a`.
@@ -103,7 +101,9 @@ where
         return Err(e);
     }
     let select = |a: &Value, b: &Value| -> Result<Value> {
-        let ord = compare_for_numeric(a, b)?;
+        let Some(ord) = compare_for_numeric(a, b)? else {
+            return Ok(crate::interpreter::comparison::unordered_projection());
+        };
         Ok(if pick_left(ord) { a.clone() } else { b.clone() })
     };
     match lift_binary_numeric(&operands[0], &operands[1], &select) {
@@ -137,10 +137,12 @@ pub(crate) fn op_max(interp: &mut Interpreter) -> Result<()> {
 /// `SQRT`: the exact square root of a non-negative rational, and the only Word
 /// that leaves the rationals (LANG.VALUES.EXACT). The result is carried in the
 /// multiquadratic normal form, so it compares and decides with no rounding.
+/// `1/0` and `0/0` are their own roots.
 ///
-/// A negative radicand is a well-formed domain miss: the multiquadratic field
-/// is not closed under it, so the operation projects to NIL rather than raising
-/// (LANG.FAILURE.PROJECT). It is recoverable — a different input resolves it.
+/// A negative radicand (`-1/0` included) is a well-formed domain miss: the
+/// multiquadratic field is not closed under it, so the operation projects to
+/// NIL rather than raising (LANG.FAILURE.PROJECT). It is recoverable — a
+/// different input resolves it.
 ///
 /// Element-wise over a vector, by [`lift_unary_numeric`]: a per-element
 /// standard deviation is `variances SQRT`, not a `MAP` around a block.
@@ -246,13 +248,14 @@ fn pow_scalar(
     Ok(match outcome {
         PowOutcome::WorkExhausted => return Err(budget.exhausted_error()),
         PowOutcome::Value(er) => Value::from_exact_real(er),
-        PowOutcome::DivisionByZero => nil(NilReason::DivisionByZero, Recoverability::Recoverable),
         PowOutcome::DomainMiss => nil(NilReason::DomainMiss, Recoverability::Recoverable),
         PowOutcome::SpaceExhausted => nil(NilReason::SpaceExhausted, Recoverability::Unknown),
     })
 }
 
-/// The integer a rational integer scalar holds; the projection otherwise.
+/// The integer a rational integer scalar holds; the projection otherwise — a
+/// rational that is not an integer, an irrational, and each of the three
+/// points over zero, none of which is an integer.
 fn integer_of(value: &Value) -> std::result::Result<BigInt, Value> {
     match exact_real_of(value) {
         Some(ExactReal::Rational(q)) if q.is_integer() => Ok(q.numerator()),

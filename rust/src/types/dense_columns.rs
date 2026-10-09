@@ -11,23 +11,19 @@
 //! copied as they stand.
 //!
 //! The result is the tensor the two-step route builds, lane for lane: a
-//! scalar's pair as it is held, an absent lane of a child Tensor as the
-//! pair it holds (the dividend over zero), an absent number as its pair
-//! with its reason, the absences at their offset in the whole, the shape
-//! from the same rectangular walk, and purity recomputed over every lane.
-//! Whatever that route would not have stored densely — a lane wider than a
-//! machine word, an absence that is not a number, a Boolean, a String, an
-//! irrational, a Record, a ragged or empty Vector — answers `None` here, and
-//! the caller keeps the nested form; the
+//! scalar's pair as it is held, a point over zero as its reduced pair like
+//! any other, the shape from the same rectangular walk, and purity
+//! recomputed over every lane. Whatever that route would not have stored
+//! densely — a lane wider than a machine word, a NIL (which is not a
+//! number), a Boolean, a String, an irrational, a Record, a ragged or empty
+//! Vector — answers `None` here, and the caller keeps the nested form; the
 //! two-step route would have declined it too, which is why the caller no
 //! longer retries through it. `dense_columns_tests` holds the two equal.
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use super::tensor_storage::{Column, DenseTensor};
 use super::{Value, ValueData};
-use crate::semantic::AbsenceMetadata;
 use crate::types::fraction::{Fraction, FractionRepr};
 
 /// A shape on the way up the walk; four dimensions fit without allocating.
@@ -36,15 +32,14 @@ type Shape = smallvec::SmallVec<[usize; 4]>;
 struct Columns {
     nums: Column,
     dens: Column,
-    absences: BTreeMap<usize, AbsenceMetadata>,
 }
 
 /// The plain scalars a per-element walk answers, written into the two columns
 /// as they arrive, so that a walk whose every answer is one never holds them as
 /// `Value`s at all (`MAP`'s unfused loop).
 ///
-/// A scalar is taken only when it is held as a machine-word pair with a real
-/// denominator and carries no absence; anything else is declined, and the
+/// A scalar is taken only when it is held as a machine-word pair and carries
+/// no absence; anything else is declined, and the
 /// caller turns what has been taken back into the `Value`s it came from
 /// (`into_values`) and carries on with a list. `finish` is the Tensor
 /// `Value::from_vector_promoted` builds from that list.
@@ -70,7 +65,7 @@ impl ScalarColumns {
                     repr: FractionRepr::Small(n, d),
                 }),
                 None,
-            ) if *d != 0 => {
+            ) => {
                 self.nums.push(*n);
                 self.dens.push(*d);
                 true
@@ -95,13 +90,8 @@ impl ScalarColumns {
     pub(crate) fn finish(self) -> Value {
         let shape = vec![self.nums.len()];
         let is_pure_integer = self.dens.iter().all(|&d| d == 1);
-        let tensor = DenseTensor::from_columns(
-            self.nums,
-            self.dens,
-            shape.clone(),
-            is_pure_integer,
-            BTreeMap::new(),
-        );
+        let tensor =
+            DenseTensor::from_columns(self.nums, self.dens, shape.clone(), is_pure_integer);
         Value::new(
             ValueData::Tensor {
                 data: Arc::new(tensor),
@@ -117,20 +107,14 @@ pub(super) fn try_promote_columns(values: &[Value]) -> Option<Value> {
     let mut columns = Columns {
         nums: Column::with_capacity(values.len()),
         dens: Column::with_capacity(values.len()),
-        absences: BTreeMap::new(),
     };
     let shape = append_values(values, &mut columns)?.into_vec();
     if shape.iter().product::<usize>() != columns.nums.len() {
         return None;
     }
     let is_pure_integer = columns.dens.iter().all(|&d| d == 1);
-    let tensor = DenseTensor::from_columns(
-        columns.nums,
-        columns.dens,
-        shape.clone(),
-        is_pure_integer,
-        columns.absences,
-    );
+    let tensor =
+        DenseTensor::from_columns(columns.nums, columns.dens, shape.clone(), is_pure_integer);
     Some(Value::new(
         ValueData::Tensor {
             data: Arc::new(tensor),
@@ -160,26 +144,11 @@ fn append_values(values: &[Value], columns: &mut Columns) -> Option<Shape> {
 }
 
 fn append_value(value: &Value, columns: &mut Columns) -> Option<Shape> {
-    let offset = columns.nums.len();
     match &value.data {
         ValueData::Scalar(fraction) => {
             let (n, d) = fraction.extract_i64_pair()?;
             columns.nums.push(n);
             columns.dens.push(d);
-            Some(Shape::new())
-        }
-        // An absent number is written as the pair it holds: the dividend a
-        // zero divisor refused, over that zero. An absence that is not a
-        // number has no pair to write, so the vector keeps its nested form,
-        // as it does for a String or a Boolean; a dividend past a machine
-        // word keeps it nested as any such lane does.
-        ValueData::Nil(pair) => {
-            let (n, _) = pair.as_ref()?.extract_i64_pair()?;
-            columns.nums.push(n);
-            columns.dens.push(0);
-            if let Some(metadata) = value.absence_metadata() {
-                columns.absences.insert(offset, metadata.clone());
-            }
             Some(Shape::new())
         }
         ValueData::Tensor {
@@ -188,13 +157,13 @@ fn append_value(value: &Value, columns: &mut Columns) -> Option<Shape> {
         } => {
             columns.nums.extend_from_slice(&tensor.numerators);
             columns.dens.extend_from_slice(&tensor.denominators);
-            for (index, metadata) in tensor.absences() {
-                columns.absences.insert(offset + index, metadata.clone());
-            }
             Some(Shape::from_slice(shape))
         }
         ValueData::Vector(children) => append_values(children, columns),
-        ValueData::ExactScalar(_)
+        // A NIL is not a number, so a Vector holding one keeps its nested
+        // form, as it does for a String or a Boolean.
+        ValueData::Nil
+        | ValueData::ExactScalar(_)
         | ValueData::Record(_)
         | ValueData::Boolean(_)
         | ValueData::Text(_)

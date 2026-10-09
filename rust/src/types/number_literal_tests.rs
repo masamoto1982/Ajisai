@@ -4,10 +4,8 @@
 //! Two properties carry the whole change. The `i64` fast path must never
 //! disagree with the full parse — otherwise a literal would denote one number in
 //! a block and another in straight-line code. And the type itself validates
-//! nothing: a lexeme that denotes no rational is refused by the tokenizer as a
-//! source error (`1/0` is `zeroDenominator` in `spec/grammar.json`), so a
-//! `NumberLiteral` holding one can only be built directly, and reading its value
-//! must then report the parse's own message rather than panic.
+//! nothing: it stores a spelling, and reading the value of one that is not a
+//! number reports the parse's own message rather than panicking.
 
 use crate::types::fraction::Fraction;
 use crate::types::{NumberLiteral, Token};
@@ -95,25 +93,25 @@ fn the_lexeme_is_preserved_exactly_as_written() {
     }
 }
 
-/// A lexeme denoting no rational carries no value and reports the parse's own
-/// message when read — not at construction. Source never builds one (the
-/// tokenizer refuses `n/0` as a source error), so this pins the type's own
-/// contract: it stores a spelling and never validates it.
+/// A lexeme over zero denotes one of the three points (LANG.VALUES.EXACT),
+/// reduced to its sign over zero, and carries no `i64` fast path: it reaches
+/// the full parse as every rational does.
 #[test]
-fn a_lexeme_that_denotes_no_rational_defers_its_refusal() {
-    for lexeme in ["1/0", "0/0", "-1/0"] {
+fn a_lexeme_over_zero_denotes_its_point() {
+    for (lexeme, expected) in [
+        ("1/0", Fraction::positive_infinity()),
+        ("100/0", Fraction::positive_infinity()),
+        ("0/0", Fraction::nullity()),
+        ("-1/0", Fraction::negative_infinity()),
+    ] {
         let literal = literal(lexeme);
-        // Construction succeeded; only reading the value refuses.
         assert_eq!(literal.lexeme(), lexeme);
-        let error = literal
-            .parsed()
-            .expect_err("a zero denominator denotes no rational");
-        assert_eq!(
-            error,
-            Fraction::from_str(lexeme).expect_err("same lexeme, same refusal"),
-            "the message must be the one the parse itself reports"
-        );
+        assert_eq!(literal.parsed(), Ok(expected.clone()), "{lexeme}");
+        assert_eq!(Fraction::from_str(lexeme), Ok(expected), "{lexeme}");
     }
+    // A lexeme that is not a number at all still reports the parse's message.
+    let error = literal("1/x").parsed().expect_err("not a number");
+    assert_eq!(error, Fraction::from_str("1/x").expect_err("same refusal"));
 }
 
 /// A literal built from a value the caller already holds must denote that

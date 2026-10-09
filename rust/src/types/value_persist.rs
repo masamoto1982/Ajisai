@@ -19,31 +19,14 @@
 //! (LANG.VALUES.DENOTATION): the data, plus a NIL's reason and detail.
 
 use crate::error::NilReason;
-use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, RecordData, Value, ValueData};
 use num_bigint::BigInt;
-use num_traits::{One, Zero};
+use num_traits::One;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
-
-/// The absence a reason alone determines, taken from the one constructor that
-/// derives it.
-///
-/// A dense tensor keeps a lane's absence beside the lane rather than on a
-/// `Value`, so decoding one needs the metadata without the `Value` around it.
-/// Building it here by pairing a reason with an origin would give that pairing
-/// a second source; `value_absence`'s own doc reserves it to one place, so
-/// this asks that place and takes the answer apart.
-fn absence_from_reason(reason: NilReason) -> AbsenceMetadata {
-    Value::nil_with_reason_unknown(reason)
-        .absence_metadata()
-        .cloned()
-        .expect("nil_with_reason_unknown always attaches absence metadata")
-}
 
 // ---- Fraction <-> decimal string pair ----
 
@@ -54,37 +37,10 @@ fn frac_to_parts(f: &Fraction) -> (String, String) {
 fn frac_from_parts(num: &str, den: &str) -> Result<Fraction, String> {
     let numerator = BigInt::from_str(num).map_err(|e| format!("bad numerator: {e}"))?;
     let denominator = BigInt::from_str(den).map_err(|e| format!("bad denominator: {e}"))?;
-    // A zero denominator is an absent number — the numerator over zero, as
-    // `Fraction::over_zero` writes a quotient by zero — and `Fraction::new`
-    // panics on one. The codec never writes a number that way (an absent
-    // number saves as a `Nil` with its dividend), but the payload is
-    // untrusted, so one that arrives decodes as the absence it spells
-    // (`absent_data`) rather than trapping the module.
-    if denominator.is_zero() {
-        return Ok(Fraction::from_bigint_pair(numerator, BigInt::zero()));
-    }
+    // A zero denominator is a pair like any other: `Fraction::new` reduces it
+    // to one of the three points over zero, so an untrusted `100/0` decodes
+    // as the `1/0` it spells.
     Ok(Fraction::new(numerator, denominator))
-}
-
-/// A number payload whose pair is absent (denominator 0) is the absent
-/// number holding that pair, never a `Scalar` wrapping an unreadable one —
-/// as `Value::from_fraction` reads the same pair. `Err(f)` hands a present
-/// number back to its own arm.
-fn absent_data(f: Fraction) -> Result<ValueData, Fraction> {
-    if f.is_nil() {
-        Ok(ValueData::Nil(Some(f)))
-    } else {
-        Err(f)
-    }
-}
-
-/// The pair an absent number was saved with: its dividend over zero.
-fn absent_pair_from(dividend: &Option<String>) -> Result<Option<Fraction>, String> {
-    let Some(dividend) = dividend else {
-        return Ok(None);
-    };
-    let numerator = BigInt::from_str(dividend).map_err(|e| format!("bad dividend: {e}"))?;
-    Ok(Some(Fraction::from_bigint_pair(numerator, BigInt::zero())))
 }
 
 // ---- Wire structures ----
@@ -129,29 +85,14 @@ enum PersistData {
     Text {
         s: String,
     },
-    /// A dense tensor. `dens` carries absence as well as scale: a 0
-    /// denominator is an absent lane (`Fraction::is_nil`), with the dividend
-    /// it holds in `nums` beside it, which is why no separate validity bitmap
-    /// is written. One was, until the bitmap turned out to be a second record
-    /// of the same fact that nothing ever wrote to.
+    /// A dense tensor: its two columns as stored. A lane with denominator 0
+    /// is one of the three points over zero, a number like any other lane.
     Tensor {
         nums: Vec<i64>,
         dens: Vec<i64>,
         dshape: Vec<usize>,
         pure_int: bool,
         shape: Vec<usize>,
-        /// The reason each absent lane is absent, as `(lane index, protocol
-        /// string)`. Empty for a tensor with no holes, which is almost all of
-        /// them, and absent from the encoded payload entirely — so a tensor
-        /// written before lane reasons were carried decodes as it always did,
-        /// with reasonless holes.
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        absent: Vec<(usize, String)>,
-        /// The user-declared detail of each absent lane that has one, as
-        /// `(lane index, text)` — the text an `ABSENT` was given. Part of the
-        /// lane's identity (LANG.VALUES.NIL), so it must survive a save.
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        absent_detail: Vec<(usize, String)>,
     },
     Nil {
         /// The NIL's reason as its protocol string. `None` decodes a payload
@@ -159,12 +100,6 @@ enum PersistData {
         /// none.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         r: Option<String>,
-        /// The dividend an absent number holds over zero, as a decimal
-        /// `BigInt`: `100 0 DIV` saves as `n: "100"`. Absent for a NIL that
-        /// was never a division, and from every payload written before the
-        /// dividend was kept.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        n: Option<String>,
         /// The text a `userDeclared` NIL was given by `ABSENT`. Absent for
         /// every other reason.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -218,27 +153,8 @@ fn encode_data(data: &ValueData) -> PersistData {
             dshape: data.shape.to_vec(),
             pure_int: data.is_pure_integer,
             shape: (**shape).clone(),
-            // The denominators already say *which* lanes are absent. This says
-            // why, one entry per absent lane that knows — the same `r` field a
-            // scalar NIL carries, addressed by lane. Without it a saved
-            // session reloaded `[ 1 2 ] [ 1 0 ] DIV` as a vector whose second
-            // lane had stopped being a division by zero.
-            absent: data
-                .absences()
-                .filter_map(|(index, metadata)| {
-                    Some((index, metadata.reason?.as_protocol_str().to_string()))
-                })
-                .collect(),
-            absent_detail: data
-                .absences()
-                .filter_map(|(index, metadata)| Some((index, metadata.detail_text()?.to_string())))
-                .collect(),
         },
-        ValueData::Nil(pair) => PersistData::Nil {
-            r: None,
-            n: pair.as_ref().map(|pair| pair.numerator().to_string()),
-            ud: None,
-        },
+        ValueData::Nil => PersistData::Nil { r: None, ud: None },
         ValueData::Record(record) => PersistData::Record {
             keys: record.keys().iter().map(encode_value).collect(),
             values: record.values().iter().map(encode_value).collect(),
@@ -252,11 +168,10 @@ fn encode_data(data: &ValueData) -> PersistData {
 fn decode_data(data: &PersistData) -> Result<ValueData, String> {
     Ok(match data {
         PersistData::Bool { v } => ValueData::Boolean(*v),
-        PersistData::Scalar { n, d } => {
-            absent_data(frac_from_parts(n, d)?).unwrap_or_else(ValueData::Scalar)
+        PersistData::Scalar { n, d } => ValueData::Scalar(frac_from_parts(n, d)?),
+        PersistData::ExactRat { n, d } => {
+            ValueData::ExactScalar(ExactReal::Rational(frac_from_parts(n, d)?))
         }
-        PersistData::ExactRat { n, d } => absent_data(frac_from_parts(n, d)?)
-            .unwrap_or_else(|f| ValueData::ExactScalar(ExactReal::Rational(f))),
         PersistData::ExactAlg { terms } => {
             // Replay ∑ cₘ·√m through the public exact arithmetic. The
             // multiquadratic normal form is canonical, so the accumulated
@@ -285,8 +200,6 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             dshape,
             pure_int,
             shape,
-            absent,
-            absent_detail,
         } => {
             if nums.len() != dens.len() {
                 return Err("tensor numerator/denominator length mismatch".to_string());
@@ -305,30 +218,17 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             {
                 return Err("tensor shape does not match its columns".to_string());
             }
-            let mut absences = BTreeMap::new();
-            for (index, reason) in absent {
-                let reason = NilReason::from_protocol_str(reason)
-                    .ok_or_else(|| format!("unknown NIL reason: {reason}"))?;
-                absences.insert(*index, absence_from_reason(reason));
-            }
-            for (index, detail) in absent_detail {
-                let metadata = absences
-                    .get_mut(index)
-                    .ok_or_else(|| format!("detail for a lane without a reason: {index}"))?;
-                metadata.detail = Some(Arc::new(detail.clone()));
-            }
             ValueData::Tensor {
                 data: Arc::new(DenseTensor::from_untrusted_columns(
                     nums.clone(),
                     dens.clone(),
                     dshape.clone(),
                     *pure_int,
-                    absences,
                 )),
                 shape: Arc::new(shape.clone()),
             }
         }
-        PersistData::Nil { n, .. } => ValueData::Nil(absent_pair_from(n)?),
+        PersistData::Nil { .. } => ValueData::Nil,
         PersistData::Record { keys, values } => {
             let keys = keys
                 .iter()
@@ -350,7 +250,7 @@ fn encode_value(value: &Value) -> PersistData {
     let mut d = encode_data(&value.data);
     // The reason lives on `Value`, not in `ValueData`, so it is attached here
     // rather than inside `encode_data`.
-    if let PersistData::Nil { r, ud, .. } = &mut d {
+    if let PersistData::Nil { r, ud } = &mut d {
         *r = value
             .nil_reason()
             .map(|reason| reason.as_protocol_str().to_string());
@@ -362,24 +262,14 @@ fn encode_value(value: &Value) -> PersistData {
 fn decode_value(value: &PersistData) -> Result<Value, String> {
     if let PersistData::Nil {
         r: Some(reason),
-        n,
         ud,
     } = value
     {
         let reason = NilReason::from_protocol_str(reason)
             .ok_or_else(|| format!("unknown NIL reason: {}", reason))?;
-        let reasoned = match (reason, ud) {
+        return Ok(match (reason, ud) {
             (NilReason::UserDeclared, Some(detail)) => Value::nil_user_declared(detail),
             _ => Value::nil_with_reason_unknown(reason),
-        };
-        return Ok(match absent_pair_from(n)? {
-            Some(pair) => Value::absent_number(
-                pair,
-                reasoned
-                    .normalized_absence_metadata()
-                    .expect("a reasoned NIL carries its absence"),
-            ),
-            None => reasoned,
         });
     }
     Ok(Value::new(decode_data(value)?, None))

@@ -55,15 +55,14 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
+    // Division is total (LANG.VALUES.EXACT): a quotient by zero is a number.
+    ("DIV", NilClass::BinaryBlanket),
     ("FLOOR", NilClass::UnaryBlanket),
     ("ROUND", NilClass::UnaryBlanket),
-    ("MIN", NilClass::BinaryBlanket),
-    ("MAX", NilClass::BinaryBlanket),
-    // Order and equality decide over every number (LANG.VALUES.EXACT), so
-    // the comparison words project nothing of their own.
+    // Equality decides over every number (LANG.VALUES.EXACT), so `EQ`
+    // projects nothing of its own. Order does not reach `0/0`, so `LT`, `GT`,
+    // `MIN` and `MAX` are projecting Words probed in `PROJECTING_WORDS`.
     ("EQ", NilClass::BinaryBlanket),
-    ("LT", NilClass::BinaryBlanket),
-    ("GT", NilClass::BinaryBlanket),
     ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
     ("SELECT", NilClass::ThreeValSelect),
@@ -156,10 +155,69 @@ async fn passthrough_blanket_collapses_to_nil() {
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABSENT", "BSEARCH", "CONTRACT", "DIV", "DROP", "FILL", "GCD", "GET", "INDEX-OF",
-    "JSON-DECODE", "JSON-ENCODE", "NIL-REASON", "NUM", "POW", "PUT", "RANGE", "RATIO", "RESHAPE",
-    "SEARCH", "SHAPE", "SQRT", "STR", "TAKE", "WITHOUT",
+    "ABSENT", "BSEARCH", "CONTRACT", "DROP", "FILL", "FORMAT", "GCD", "GET", "GT", "INDEX-OF",
+    "JSON-DECODE", "JSON-ENCODE", "LT", "MAX", "MIN", "NIL-REASON", "NUM", "ORDER", "POW", "PUT",
+    "RANGE", "RATIO", "RESHAPE", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
+
+/// The order Words project on `0/0`: it is a number (LANG.VALUES.EXACT) but
+/// has no place in the order `-1/0 < field < 1/0`, so asking where it stands
+/// is a question outside the Word's domain — `domainMiss`, the reason `SQRT`
+/// gives a negative radicand. Equality is not order: `0/0 0/0 EQ` is TRUE.
+#[tokio::test]
+async fn nil_projection_order_words_project_on_nullity() {
+    for code in [
+        "0 0 DIV 1 LT",
+        "1 0 0 DIV GT",
+        "0 0 DIV 0 0 DIV LT",
+        "0 0 DIV 1 MIN",
+        "1 0 0 DIV MAX",
+        // Inside a literal the point is spelled as the pair it is.
+        "[ 1 0/0 ] SORT",
+        "[ 0/0 1 ] ORDER",
+        "[ 1 2 3 ] 0 0 DIV BSEARCH",
+        "[ 1 0/0 ] 2 BSEARCH",
+        // Lifted over lanes, the projection lands in the lane that asked.
+        "[ 1 0/0 ] 1 LT 1 GET",
+        "[ 0/0 1 ] 1 MAX 0 GET",
+    ] {
+        assert_eq!(
+            reason(code).await.as_deref(),
+            Some("domainMiss"),
+            "`{code}` must project domainMiss"
+        );
+    }
+    // The two points over zero *are* ordered, at the ends of the line.
+    for (code, expected) in [
+        ("1 0 DIV 1 GT", "TRUE"),
+        ("-1 0 DIV 1 LT", "TRUE"),
+        ("-1 0 DIV 1 0 DIV LT", "TRUE"),
+        ("1 0 DIV 5 MAX", "1/0"),
+        ("-1 0 DIV 5 MIN", "-1/0"),
+        ("[ 1/0 -1/0 0 ] SORT", "[ -1/0 0/1 1/0 ]"),
+        ("0 0 DIV 0 0 DIV EQ", "TRUE"),
+    ] {
+        assert_eq!(top_of(code).await.to_string(), expected, "`{code}`");
+    }
+}
+
+/// `FORMAT` projects on a number with no decimal spelling: the two points
+/// over zero and `0/0` have no digits to write, so the answer is NIL rather
+/// than an invented text.
+#[tokio::test]
+async fn nil_projection_format_projects_on_a_point_over_zero() {
+    for code in ["1 0 DIV 2 FORMAT", "-1 0 DIV 0 FORMAT", "0 0 DIV 3 FORMAT"] {
+        assert_eq!(
+            reason(code).await.as_deref(),
+            Some("domainMiss"),
+            "`{code}` must project domainMiss"
+        );
+    }
+    assert_eq!(
+        text_answer("1 3 DIV 2 FORMAT").await.as_deref(),
+        Some("0.33")
+    );
+}
 
 /// Declaring a projection condition is a claim that the Word can hand back a
 /// NIL it produced, so **every** Word that declares one carries a behavioral
@@ -266,7 +324,7 @@ async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
     // A NIL that does carry a reason reads back as that reason rather than
     // projecting.
     let mut interp = Interpreter::new();
-    interp.execute("1 0 DIV NIL-REASON").await.unwrap();
+    interp.execute("-1 SQRT NIL-REASON").await.unwrap();
     let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
     assert!(
         !answer.is_nil(),
@@ -285,7 +343,9 @@ async fn nil_check_answers_rather_than_projecting() {
         ("[ 1 2 ] NIL?", false),
         ("'ab' NIL?", false),
         ("NIL NIL?", true),
-        ("1 0 DIV NIL?", true),
+        ("-1 SQRT NIL?", true),
+        // A quotient by zero is a number (LANG.VALUES.EXACT).
+        ("1 0 DIV NIL?", false),
     ] {
         let mut interp = Interpreter::new();
         interp
@@ -363,8 +423,8 @@ async fn a_chosen_fallback_replaces_a_reasoned_nil() {
     let stack = run_ok("[ 42 ] 'S' BIND [ 0 ] S S NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 42/1 ]");
 
-    // a reasoned NIL (division by zero) is replaced; no NIL survives
-    let stack = run_ok("1 0 DIV 'S' BIND [ 7 ] S S NIL? SELECT").await;
+    // a reasoned NIL (a negative radicand) is replaced; no NIL survives
+    let stack = run_ok("-1 SQRT 'S' BIND [ 7 ] S S NIL? SELECT").await;
     assert!(
         !is_nil(&stack[0]),
         "the fallback must replace the reasoned NIL"
@@ -393,13 +453,13 @@ async fn raised_errors_propagate_instead_of_projecting_to_nil() {
 
 #[tokio::test]
 async fn direct_projection_preserves_its_own_reason() {
-    // A well-formed projected NIL (division by zero) keeps its own reason.
-    let stack = run_ok("1 0 DIV").await;
+    // A well-formed projected NIL (a negative radicand) keeps its own reason.
+    let stack = run_ok("-1 SQRT").await;
     assert!(is_nil(&stack[0]));
     assert_eq!(
         reason_of(&stack[0]),
-        Some(NilReason::DivisionByZero),
-        "a direct projection keeps its DivisionByZero reason"
+        Some(NilReason::DomainMiss),
+        "a direct projection keeps its DomainMiss reason"
     );
 }
 
@@ -409,7 +469,6 @@ async fn direct_projection_preserves_its_own_reason() {
 mod properties {
     use super::run;
     use crate::agent::block_on;
-    use crate::error::NilReason;
     use proptest::prelude::*;
 
     proptest! {
@@ -427,13 +486,13 @@ mod properties {
             }
         }
 
-        // Division by a zero divisor is a total projection to a reasoned NIL.
+        // Division by zero is total: the dividend's sign over zero.
         #[test]
-        fn division_by_zero_is_a_reasoned_projection(a in -50i64..50) {
+        fn division_by_zero_is_the_sign_over_zero(a in -50i64..50) {
             let stack = block_on(run(&format!("{a} 0 DIV")))
                 .unwrap_or_else(|e| panic!("`{a} 0 DIV` errored: {e}"));
-            prop_assert!(stack[0].is_nil());
-            prop_assert_eq!(stack[0].nil_reason().cloned(), Some(NilReason::DivisionByZero));
+            prop_assert!(!stack[0].is_nil());
+            prop_assert_eq!(format!("{}", stack[0]), format!("{}/0", a.signum()));
         }
     }
 }

@@ -38,7 +38,11 @@ fn elements(target: &Value) -> Option<Vec<Plain>> {
     if let ValueData::Tensor { data, shape } = &target.data {
         if shape.len() == 1 {
             return (0..data.len())
-                .map(|i| data.get_small_fraction(i).map(Plain::Num))
+                .map(|i| {
+                    Some(data.fraction_at(i))
+                        .filter(Fraction::is_finite)
+                        .map(Plain::Num)
+                })
                 .collect();
         }
     }
@@ -94,7 +98,7 @@ impl Meter<'_> {
         if self.work > self.work_budget {
             return None;
         }
-        let r = schema.fraction(&a, &b).ok()?;
+        let r = schema.fraction(&a, &b);
         self.interp
             .runtime_limits
             .check_algebraic_size(0, fraction_result_bits(&r))
@@ -107,11 +111,11 @@ impl Meter<'_> {
         Some(Plain::Bool(match (kind, a, b) {
             (Compare::Lt, Plain::Num(a), Plain::Num(b)) => {
                 self.fastpath += 1;
-                a.lt(&b)
+                a.order(&b)? == std::cmp::Ordering::Less
             }
             (Compare::Gt, Plain::Num(a), Plain::Num(b)) => {
                 self.fastpath += 1;
-                a.gt(&b)
+                a.order(&b)? == std::cmp::Ordering::Greater
             }
             (Compare::Eq, Plain::Num(a), Plain::Num(b)) => {
                 self.fastpath += 1;
@@ -194,7 +198,11 @@ fn run_block(
                     return None;
                 };
                 // The left operand on a tie, as MIN and MAX keep it.
-                let take_right = if *max { x.lt(y) } else { y.lt(x) };
+                let take_right = if *max {
+                    x.order(y)? == std::cmp::Ordering::Less
+                } else {
+                    y.order(x)? == std::cmp::Ordering::Less
+                };
                 if take_right {
                     b
                 } else {

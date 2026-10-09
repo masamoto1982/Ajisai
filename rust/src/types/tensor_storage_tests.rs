@@ -35,33 +35,32 @@ fn dense_tensor_sparse_density_counts_zero_and_nonzero_lanes() {
 }
 
 #[test]
-fn dense_tensor_sparse_density_does_not_count_absent_lanes_as_zero() {
-    // An absent lane has numerator 0, exactly like a zero lane, so it is
-    // the denominator that tells them apart. A density that counted the
-    // two alike would offer a NIL-holding tensor to the sparse form, which
-    // stores no absence and would silently read those lanes back as 0.
+fn dense_tensor_sparse_density_does_not_count_nullity_as_zero() {
+    // `0/0` has numerator 0, exactly like a zero lane, so it is the
+    // denominator that tells them apart. A density that counted the two
+    // alike would offer a tensor holding `0/0` to the sparse form, which
+    // stores no pair over zero and would silently read those lanes back as 0.
     let dense = DenseTensor::from_fractions(
         vec![
-            Fraction::nil(),
-            Fraction::nil(),
+            Fraction::nullity(),
+            Fraction::positive_infinity(),
             Fraction::from(0_i64),
             Fraction::from(9_i64),
         ],
         vec![4],
     )
     .expect("small fractions admit dense representation");
-    assert!(!dense.is_valid(0));
-    assert!(dense.is_valid(2), "a zero lane is present, not absent");
+    assert!(!dense.all_finite());
     assert_eq!(dense.zero_count(), 1);
-    assert_eq!(dense.nonzero_count(), 1);
-    assert_eq!(dense.density(), 0.25);
+    assert_eq!(dense.nonzero_count(), 3);
+    assert_eq!(dense.density(), 0.75);
     assert!(SparseTensor::from_dense(&dense).is_none());
 }
 
 #[test]
 fn sparse_tensor_round_trips_dense_values_and_shape() {
     let dense = dense_from_i64(&[0, 0, 3, 0, -4, 0], vec![2, 3]);
-    let sparse = SparseTensor::from_dense(&dense).expect("all-valid dense tensor is sparseable");
+    let sparse = SparseTensor::from_dense(&dense).expect("a finite dense tensor is sparseable");
     assert_eq!(sparse.shape.as_slice(), [2, 3]);
     assert_eq!(sparse.len, 6);
     assert_eq!(sparse.indices, vec![2, 4]);
@@ -75,7 +74,7 @@ fn sparse_tensor_round_trips_dense_values_and_shape() {
 #[test]
 fn sparse_tensor_accepts_all_zero_dense_tensor() {
     let dense = dense_from_i64(&vec![0; 64], vec![8, 8]);
-    let sparse = SparseTensor::from_dense(&dense).expect("all-zero all-valid tensor is sparseable");
+    let sparse = SparseTensor::from_dense(&dense).expect("an all-zero tensor is sparseable");
     assert!(sparse.indices.is_empty());
     assert_eq!(sparse.nonzero_count(), 0);
     assert_eq!(sparse.density(), 0.0);
@@ -83,31 +82,16 @@ fn sparse_tensor_accepts_all_zero_dense_tensor() {
 }
 
 // ── reversed_lanes ──────────────────────────────────────────────────────────
-//
-// Reversing columns is easy; carrying the *reason* an absent lane is absent to
-// its new index is the part that can silently go wrong. Whether a lane is absent
-// travels with the denominator sentinel and so reverses with the column for
-// free, which is exactly what would make a broken reason-remap invisible: the
-// NILs would land in the right places holding the wrong explanations.
 
-use crate::error::NilReason;
-use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
-use std::collections::BTreeMap;
-
-fn reasoned(reason: NilReason) -> AbsenceMetadata {
-    AbsenceMetadata::with_reason(reason, AbsenceOrigin::Unknown, Recoverability::Unknown)
-}
-
-/// A flat tensor whose lane `absent_at` is absent for `reason`, and whose other
-/// lanes hold their index.
-fn with_absence_at(len: usize, absent_at: usize, reason: NilReason) -> DenseTensor {
-    let numerators: Vec<i64> = (0..len).map(|i| i as i64).collect();
-    let denominators: Vec<i64> = (0..len)
-        .map(|i| if i == absent_at { 0 } else { 1 })
+/// A flat tensor whose lane `at` is `point`, and whose other lanes hold
+/// their index.
+fn with_point_at(len: usize, at: usize, point: Fraction) -> DenseTensor {
+    let (pn, pd) = point.extract_i64_pair().expect("a point is a small pair");
+    let numerators: Vec<i64> = (0..len)
+        .map(|i| if i == at { pn } else { i as i64 })
         .collect();
-    let mut absences = BTreeMap::new();
-    absences.insert(absent_at, reasoned(reason));
-    DenseTensor::from_columns(numerators, denominators, vec![len], true, absences)
+    let denominators: Vec<i64> = (0..len).map(|i| if i == at { pd } else { 1 }).collect();
+    DenseTensor::from_columns(numerators, denominators, vec![len], false)
 }
 
 #[test]
@@ -121,42 +105,27 @@ fn reversed_lanes_reverses_both_columns() {
 }
 
 #[test]
-fn reversed_lanes_carries_each_absence_reason_to_its_new_index() {
-    // An absence at lane 1 of 8 belongs at lane 6 afterwards (len - 1 - index),
-    // still holding the reason it was given — not the reason of whatever lane
-    // happened to land where it used to be.
-    let tensor = with_absence_at(8, 1, NilReason::DivisionByZero);
+fn reversed_lanes_carries_a_point_over_zero_to_its_new_index() {
+    // `1/0` at lane 1 of 8 belongs at lane 6 afterwards (len - 1 - index).
+    let tensor = with_point_at(8, 1, Fraction::positive_infinity());
     let reversed = tensor.reversed_lanes();
-
-    assert!(
-        !reversed.is_valid(6),
-        "the absent lane must land at index 6"
-    );
-    assert!(reversed.is_valid(1), "index 1 must now hold a number");
-    assert_eq!(
-        reversed.lane_reason(6),
-        Some(NilReason::DivisionByZero),
-        "the reason must travel with the lane"
-    );
-    assert_eq!(
-        reversed.lane_reason(1),
-        None,
-        "a present lane has no reason to report"
-    );
+    assert_eq!(reversed.fraction_at(6), Fraction::positive_infinity());
+    assert_eq!(reversed.fraction_at(1), Fraction::from(6));
+    assert!(!reversed.all_finite());
 }
 
 #[test]
 fn reversed_lanes_is_its_own_inverse() {
     for tensor in [
         DenseTensor::from_integers(vec![7, -3, 0, 11]),
-        with_absence_at(6, 0, NilReason::DomainMiss),
-        with_absence_at(6, 5, NilReason::IndexOutOfBounds),
-        with_absence_at(1, 0, NilReason::Literal),
+        with_point_at(6, 0, Fraction::nullity()),
+        with_point_at(6, 5, Fraction::negative_infinity()),
+        with_point_at(1, 0, Fraction::positive_infinity()),
     ] {
         assert_eq!(
             tensor.reversed_lanes().reversed_lanes(),
             tensor,
-            "reversing twice must restore the tensor, reasons included"
+            "reversing twice must restore the tensor"
         );
     }
 }
@@ -181,13 +150,11 @@ fn reversed_lanes_keeps_a_rational_tensor_rational() {
 
 // ── reading a lane reads the columns rather than re-deriving them ──────────
 //
-// `get_small_fraction` used to build two `BigInt`s from the stored `i64` pair
-// and hand them to `Fraction::new`, which narrowed them straight back and ran a
-// Euclidean gcd to reach the normal form the columns were already in. These pin
-// that the cheaper read is the *same* read: the answer for every lane must be
-// the one `Fraction::new` would have given.
+// `fraction_at` reads the stored `i64` pair as the normal form it was stored
+// in. These pin that the cheaper read is the *same* read: the answer for every
+// lane must be the one `Fraction::new` would have given.
 
-/// The oracle is the constructor that was replaced.
+/// The oracle is the normalizing constructor.
 #[test]
 fn a_lane_reads_as_the_fraction_its_columns_denote() {
     // Dense over a range that crosses zero and both signs, plus the extremes
@@ -201,7 +168,7 @@ fn a_lane_reads_as_the_fraction_its_columns_denote() {
     .expect("integer lanes build");
 
     for (index, lane) in lanes.iter().enumerate() {
-        let read = tensor.get_small_fraction(index).expect("lane is present");
+        let read = tensor.fraction_at(index);
         let oracle = Fraction::new((*lane).into(), 1.into());
         assert_eq!(read, oracle, "lane {index} holding {lane}");
         assert_eq!(
@@ -224,26 +191,31 @@ fn a_rational_lane_reads_as_the_fraction_its_columns_denote() {
         DenseTensor::from_fractions(fractions.clone(), vec![fractions.len()]).expect("lanes build");
 
     for (index, expected) in fractions.iter().enumerate() {
-        let read = tensor.get_small_fraction(index).expect("lane is present");
+        let read = tensor.fraction_at(index);
         assert_eq!(&read, expected, "lane {index}");
     }
 }
 
-/// An absent lane is still absent, and asking for one must not reach the
-/// normalized-pair constructor at all — its denominator is the 0 sentinel,
-/// which is not a rational.
+/// A lane over zero reads as the point it is, and an untrusted column reduces
+/// a pair over zero to its sign over zero like any other pair.
 #[test]
-fn an_absent_lane_reads_as_absent_rather_than_as_a_pair() {
+fn a_lane_over_zero_reads_as_its_point() {
     let tensor = DenseTensor::from_fractions(
-        vec![Fraction::from(1), Fraction::nil(), Fraction::from(3)],
+        vec![
+            Fraction::from(1),
+            Fraction::nullity(),
+            Fraction::negative_infinity(),
+        ],
         vec![3],
     )
     .expect("lanes build");
-    assert!(tensor.get_small_fraction(0).is_some());
-    assert!(
-        tensor.get_small_fraction(1).is_none(),
-        "the sentinel lane has no fraction to read"
-    );
-    assert!(tensor.get_small_fraction(2).is_some());
-    assert!(tensor.fraction_or_nil(1).is_nil());
+    assert_eq!(tensor.fraction_at(0), Fraction::from(1));
+    assert_eq!(tensor.fraction_at(1), Fraction::nullity());
+    assert_eq!(tensor.fraction_at(2), Fraction::negative_infinity());
+
+    let untrusted =
+        DenseTensor::from_untrusted_columns(vec![100, 4, -7], vec![0, 2, 0], vec![3], true);
+    assert_eq!(untrusted.numerators.as_slice(), [1, 2, -1]);
+    assert_eq!(untrusted.denominators.as_slice(), [0, 1, 0]);
+    assert!(!untrusted.is_pure_integer);
 }

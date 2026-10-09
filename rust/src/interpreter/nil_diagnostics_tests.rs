@@ -41,7 +41,7 @@ fn top_is_true(interp: &Interpreter) -> bool {
 
 #[tokio::test]
 async fn nil_check_is_true_for_operational_nil_and_consumes_it() {
-    let interp = run("1 0 DIV NIL?").await;
+    let interp = run("-1 SQRT NIL?").await;
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1, "NIL? consumes the inspected value");
     assert!(top_is_true(&interp), "NIL? on an operational NIL is TRUE");
@@ -78,16 +78,16 @@ async fn nil_check_is_true_for_logical_unknown() {
 }
 
 /// A reason survives being read in truth position. `AND` used to swallow it:
-/// `1 0 DIV TRUE AND NIL-REASON` answered that it had no reason while the protocol
-/// still published `absence.reason = divisionByZero` for that value, so the
-/// language contradicted its own boundary and LANG.VALUES.NIL ("the reason
-/// is the entire observable content of a NIL").
+/// `'x' NUM TRUE AND NIL-REASON` answered that it had no reason while the
+/// protocol still published `absence.reason = invalidEncoding` for that value,
+/// so the language contradicted its own boundary and LANG.VALUES.NIL ("the
+/// reason is the entire observable content of a NIL").
 #[tokio::test]
 async fn nil_reason_survives_a_kleene_word() {
-    let interp = run("1 0 DIV TRUE AND NIL-REASON").await;
+    let interp = run("'x' NUM TRUE AND NIL-REASON").await;
     assert_eq!(
         top_text(&interp).as_deref(),
-        Some("divisionByZero"),
+        Some("invalidEncoding"),
         "an UNKNOWN must keep the reason it arrived with"
     );
 }
@@ -95,25 +95,25 @@ async fn nil_reason_survives_a_kleene_word() {
 // ── NIL-REASON ──────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn nil_reason_reports_division_by_zero_protocol_string() {
-    let interp = run("1 0 DIV NIL-REASON").await;
+async fn nil_reason_reports_domain_miss_protocol_string() {
+    let interp = run("-1 SQRT NIL-REASON").await;
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1, "NIL-REASON consumes the inspected value");
     assert_eq!(
         top_text(&interp).as_deref(),
-        Some("divisionByZero"),
+        Some("domainMiss"),
         "NIL-REASON must be the lowerCamelCase protocol string, not a Debug name"
     );
 }
 
 /// The output must be the protocol string, never the Rust `Debug` rendering of
-/// the `NilReason` enum (`DivisionByZero`).
+/// the `NilReason` enum (`DomainMiss`).
 #[tokio::test]
 async fn nil_reason_is_protocol_string_not_debug_name() {
-    let interp = run("1 0 DIV NIL-REASON").await;
+    let interp = run("-1 SQRT NIL-REASON").await;
     let text = top_text(&interp).expect("reason must be Text");
-    assert_eq!(text, "divisionByZero");
-    assert_ne!(text, format!("{:?}", NilReason::DivisionByZero));
+    assert_eq!(text, "domainMiss");
+    assert_ne!(text, format!("{:?}", NilReason::DomainMiss));
 }
 
 #[tokio::test]
@@ -154,12 +154,15 @@ async fn nil_reason_is_nil_for_a_decidable_exact_comparison() {
 }
 // ── Domain miss (LANG.FAILURE.PROJECT: "SQRT of a negative rational is a well-formed
 //    domain miss") ────────────────────────────────────────────────────────────
-/// Division by zero keeps its own reason. The domain-miss variant is a new
-/// classification, not a rename of an existing one.
+/// A quotient by zero is a number, not an absence (LANG.VALUES.EXACT), so
+/// `NIL-REASON` asked of it is asked of a value outside its domain and
+/// projects `domainMiss` like any other non-NIL operand.
 #[tokio::test]
-async fn division_by_zero_is_untouched_by_the_domain_miss_split() {
-    let interp = run("1 0 DIV NIL-REASON").await;
-    assert_eq!(top_text(&interp).as_deref(), Some("divisionByZero"));
+async fn a_quotient_by_zero_is_a_number_not_an_absence() {
+    let interp = run("1 0 DIV NIL?").await;
+    assert!(!top_is_true(&interp), "`1 0 DIV` is the number 1/0");
+    let interp = run("1 0 DIV NIL-REASON NIL-REASON").await;
+    assert_eq!(top_text(&interp).as_deref(), Some("domainMiss"));
 }
 
 #[cfg(test)]
@@ -250,27 +253,27 @@ mod upstream_nil_link_tests {
     /// The same link for an absence with a different origin, so the behaviour is
     /// the NIL-flow rule and not a special case for the resource ceiling.
     #[tokio::test]
-    async fn a_division_by_zero_reaches_the_top_level_diagnosis_too() {
-        let report = report("1 0 DIV EXEC").await;
+    async fn a_domain_miss_reaches_the_top_level_diagnosis_too() {
+        let report = report("-1 SQRT EXEC").await;
         let detail = report["diagnosis"]["nextChecks"][0]["detail"]["en"]
             .as_str()
             .expect("english detail");
         assert!(
-            detail.contains("DIV") && detail.contains("divisionByZero"),
+            detail.contains("SQRT") && detail.contains("domainMiss"),
             "{detail}"
         );
     }
 
     /// The link names the Word that produced the NIL, not the last Word it passed
     /// through on the way: with `ADD` between the projection and the refusal, the
-    /// cause is still `DIV`.
+    /// cause is still `SQRT`.
     #[tokio::test]
     async fn the_link_names_the_producer_not_the_last_word_the_nil_passed() {
-        let report = report("1 0 DIV 2 ADD EXEC").await;
+        let report = report("-1 SQRT 2 ADD EXEC").await;
         assert_eq!(report["status"], "error");
         let evidence = evidence(&report);
         assert!(
-            evidence.contains(&"upstreamNilProducer=DIV".to_string()),
+            evidence.contains(&"upstreamNilProducer=SQRT".to_string()),
             "{evidence:?}"
         );
     }
@@ -327,18 +330,17 @@ mod upstream_nil_link_tests {
 /// produced one is the mint count (`crate::semantic::minted_absence_count`):
 /// a NIL that arrived in an operand and left in the result was carried, not
 /// produced (LANG.FAILURE.PASSTHROUGH). *Which* reason it produced is read off
-/// the result — and for a dense tensor, off its absence map rather than by
-/// rebuilding every lane as a boxed `Value`, which on a 4096-lane tensor was
-/// 67% of all instructions executed and scaled with the data rather than the
-/// failures. These are ratio-free, wall-clock-free gates on the parts that
-/// could silently change.
+/// the result — and for a dense tensor, which holds numbers alone, without
+/// rebuilding every lane as a boxed `Value` to find no absence, which on a
+/// 4096-lane tensor was 67% of all instructions executed and scaled with the
+/// data rather than the failures. These are ratio-free, wall-clock-free gates
+/// on the parts that could silently change.
 #[cfg(test)]
 mod nil_trace_tests {
     use crate::error::NilReason;
     use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
     use crate::interpreter::nil_diagnostics::projected_nil_reason;
     use crate::interpreter::Interpreter;
-    use crate::semantic::Recoverability;
     use crate::types::{Value, ValueData};
 
     /// Every reason the trace recorded for a `NilProduced` event raised by
@@ -372,75 +374,60 @@ mod nil_trace_tests {
         Value::from_number(crate::types::fraction::Fraction::new(n.into(), 1.into()))
     }
 
-    /// `MAP`ping a failing block over a numeric vector lands a *dense tensor*
-    /// whose lanes are absent for a reason. The gate is the representation as
-    /// much as the reason: if this stops being a `Tensor`, the reads below stop
-    /// covering the dense absence map and silently pass on the `Vector` walk
-    /// instead.
+    /// `MAP`ping a block that divides by zero over a numeric vector lands a
+    /// *dense tensor*: a quotient by zero is a number, `1/0`, and a lane like
+    /// any other. The gate is the representation: a dense tensor carries no
+    /// absence, so the trace reads must find none there.
     #[tokio::test]
-    async fn a_lifted_failure_lands_in_a_dense_tensor() {
+    async fn a_lifted_division_by_zero_lands_in_a_dense_tensor() {
+        let source = "[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP";
         assert!(
-            top_is_dense_tensor("[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP").await,
-            "MAP over a numeric vector must produce a dense Tensor for the \
-             dense-absence gates below to mean anything"
+            top_is_dense_tensor(source).await,
+            "MAP over a numeric vector must produce a dense Tensor"
         );
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.expect("must compute");
+        assert_eq!(
+            projected_nil_reason(interp.get_stack().last().unwrap()),
+            None
+        );
+        assert_eq!(traced_reasons(source, "DIV").await, Vec::new());
     }
 
-    /// The reason survives the read: a reasoned absent lane densified into a
-    /// tensor is read back from the absence map, the same answer the
-    /// materialized lane walk gave.
+    /// A dense tensor holds numbers alone, so a NIL beside numbers keeps the
+    /// Vector nested, and its reason is read from the lane walk.
     #[test]
-    fn a_dense_tensors_absence_reason_is_read_from_its_map() {
-        // The absent lane is a quotient by zero, `2/0`: an absent number,
-        // which is what a dense lane can hold.
+    fn a_nil_lane_keeps_the_vector_nested_and_its_reason_readable() {
         let lanes = vec![
             number(1),
-            Value::absent_number(
-                crate::types::fraction::Fraction::from(2).over_zero(),
-                Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
-                    .normalized_absence_metadata()
-                    .expect("a reasoned NIL carries its absence"),
+            Value::nil_with_reason(
+                NilReason::DomainMiss,
+                crate::semantic::Recoverability::Recoverable,
             ),
             number(3),
         ];
-        let dense = Value::from_vector_promoted(lanes.clone());
+        let boxed = Value::from_vector_promoted(lanes);
         assert!(
-            matches!(dense.data, ValueData::Tensor { .. }),
-            "numeric lanes with an absent number must densify"
+            matches!(boxed.data, ValueData::Vector(_)),
+            "a NIL is not a numeric lane"
         );
-        assert_eq!(
-            projected_nil_reason(&dense),
-            Some(NilReason::DivisionByZero)
-        );
-        // Same failure, same reason, whichever representation carries it.
-        let boxed = Value::from_vector(lanes);
-        assert_eq!(projected_nil_reason(&boxed), projected_nil_reason(&dense));
+        assert_eq!(projected_nil_reason(&boxed), Some(NilReason::DomainMiss));
     }
 
     /// The Word that produced a lane's absence is the one that ran the
-    /// projection, not the Word whose result carries it: `MAP` lands a dense
-    /// tensor whose lanes `DIV` made absent, so `DIV` is the producer — once per
+    /// projection, not the Word whose result carries it: `MAP` lands a vector
+    /// whose lanes `SQRT` made absent, so `SQRT` is the producer — once per
     /// lane it answered — and `MAP` is the frame it happened in. `MAP` used to
-    /// record the tensor as its own production, and a reader was sent to the
+    /// record the vector as its own production, and a reader was sent to the
     /// wrong Word.
     #[tokio::test]
     async fn the_word_that_projected_the_lane_is_the_producer() {
-        // A negative radicand's absence is not a number — there is no pair
-        // to hold over a zero — so the result keeps its nested form; the
-        // producer is the same Word either way.
         let source = "[ 1 2 3 4 5 6 7 8 ] [ -1 MUL SQRT ] MAP";
         assert!(!top_is_dense_tensor(source).await);
         assert_eq!(traced_reasons(source, "MAP").await, Vec::new());
         assert_eq!(
             traced_reasons(source, "SQRT").await,
             vec![Some(NilReason::DomainMiss); 8]
-        );
-        let source = "[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP";
-        assert!(top_is_dense_tensor(source).await);
-        assert_eq!(traced_reasons(source, "MAP").await, Vec::new());
-        assert_eq!(
-            traced_reasons(source, "DIV").await,
-            vec![Some(NilReason::DivisionByZero); 8]
         );
     }
 
@@ -455,9 +442,7 @@ mod nil_trace_tests {
     }
 
     /// `Literal` is the absence a Word *received*, not one it produced, so it
-    /// is not an event — and a `NIL` written in source densifies into a tensor
-    /// lane carrying exactly that reason. The dense read has to skip it for the
-    /// same reason the lane walk did.
+    /// is not an event.
     #[tokio::test]
     async fn a_dense_literal_absence_is_not_traced_as_produced() {
         let mut interp = Interpreter::new();
@@ -478,12 +463,12 @@ mod nil_trace_tests {
     }
 
     /// A reasoned absent lane carried through a lifted Word is not produced
-    /// again by it: `ADD` over the tensor `MAP` left passes every absent lane
+    /// again by it: `ADD` over the vector `MAP` left passes every absent lane
     /// through (LANG.FAILURE.PASSTHROUGH per lane) and mints nothing.
     #[tokio::test]
-    async fn a_dense_reasoned_absence_passed_through_is_not_traced_again() {
+    async fn a_reasoned_absence_passed_through_is_not_traced_again() {
         assert_eq!(
-            traced_reasons("[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP 1 ADD", "ADD").await,
+            traced_reasons("[ 1 2 3 4 5 6 7 8 ] [ -1 MUL SQRT ] MAP 1 ADD", "ADD").await,
             Vec::new()
         );
     }

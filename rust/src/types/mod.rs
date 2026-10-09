@@ -5,20 +5,19 @@ pub(crate) use self::dense_columns::ScalarColumns;
 #[cfg(test)]
 mod dense_columns_tests;
 pub mod display;
-#[cfg(test)]
-mod dividend_over_zero_tests;
 pub mod exact;
 pub mod fraction;
-mod fraction_absence;
 pub(crate) mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_arithmetic_tests;
+mod fraction_extended;
 #[cfg(test)]
 mod fraction_gcd_tests;
 #[cfg(test)]
 mod fraction_lowest_terms_tests;
 #[cfg(test)]
 mod fraction_mcdc_tests;
+mod fraction_order;
 pub mod record;
 pub(crate) mod small_rational;
 pub mod stack;
@@ -34,8 +33,6 @@ mod value_tensor;
 mod number_literal_tests;
 #[cfg(test)]
 mod value_hash_tests;
-#[cfg(test)]
-mod value_lane_absence_tests;
 #[cfg(test)]
 mod value_layout_tests;
 #[cfg(any(test, feature = "wasm"))]
@@ -56,7 +53,7 @@ use self::fraction::Fraction;
 pub use self::record::{RecordBuildError, RecordData};
 pub use self::stack::Stack;
 pub use self::tensor_storage::{Column, DenseTensor, Dims, SparseTensor};
-use self::value_identity::{dense_flatten, dense_lane_reasons, tensor_eq_vector};
+use self::value_identity::{dense_flatten, tensor_eq_vector};
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use std::collections::HashSet;
@@ -79,15 +76,11 @@ pub enum ValueData {
         data: Arc<DenseTensor>,
         shape: Arc<Vec<usize>>,
     },
-    /// An absent value. A quotient by zero is absent *as a number*: the
-    /// dividend over the zero that refused it, a fraction whose denominator
-    /// is 0 (`100 0 DIV` holds `100/0`, `Fraction::over_zero`; `0 0 DIV` is
-    /// the one `0/0`). An absence that was never a division — a written
-    /// `NIL`, an index past the end, a key not found, a negative radicand —
-    /// holds no pair. The pair is the machine's record, not the program's:
-    /// why the value is absent lives in `Value::absence`, and that reason is
-    /// the whole of what a program can observe (LANG.VALUES.NIL).
-    Nil(Option<Fraction>),
+    /// An absent value. Why it is absent lives in `Value::absence`, and that
+    /// reason is the whole of what a program can observe (LANG.VALUES.NIL).
+    /// A quotient by zero is not one: it is a Scalar over zero
+    /// (`fraction_extended`).
+    Nil,
     /// A bare name in code position — a Word reference that is data until
     /// something executes it. Promoted from the hidden `'symbol'` tag
     /// REFLECT's canonical wire format used to carry (LANG.SOURCE.REFLECTION,
@@ -128,7 +121,7 @@ impl PartialEq for ValueData {
             | (ValueData::Tensor { data, shape }, ValueData::Vector(v)) => {
                 tensor_eq_vector(data, shape, v)
             }
-            (ValueData::Nil(_), ValueData::Nil(_)) => true,
+            (ValueData::Nil, ValueData::Nil) => true,
             // A Symbol equals a Symbol with the same name, and nothing else —
             // in particular not a Text of the same spelling: `[ FOO ] { FOO }
             // EQ` and `[ FOO ] [ 'FOO' ] EQ` are both false (LANG.VALUES.
@@ -179,11 +172,10 @@ impl std::hash::Hash for ValueData {
                 e.hash(state);
             }
             ValueData::Vector(v) => match dense_flatten(v) {
-                Some((shape, leaves, reasons)) => {
+                Some((shape, leaves)) => {
                     state.write_u8(HASH_TAG_DENSE);
                     shape.hash(state);
                     leaves.hash(state);
-                    reasons.hash(state);
                 }
                 None => {
                     state.write_u8(HASH_TAG_STRUCT_VECTOR);
@@ -193,15 +185,10 @@ impl std::hash::Hash for ValueData {
             ValueData::Tensor { data, shape } => {
                 state.write_u8(HASH_TAG_DENSE);
                 shape.hash(state);
-                // A lane hashes as its number or as absent — never as the
-                // dividend an absent lane keeps, which is not its identity.
-                let leaves: Vec<Option<Fraction>> = (0..data.len())
-                    .map(|i| data.get_small_fraction(i))
-                    .collect();
+                let leaves: Vec<Fraction> = data.to_fractions();
                 leaves.hash(state);
-                dense_lane_reasons(data).hash(state);
             }
-            ValueData::Nil(_) => state.write_u8(HASH_TAG_NIL),
+            ValueData::Nil => state.write_u8(HASH_TAG_NIL),
             ValueData::Symbol(name) => {
                 state.write_u8(HASH_TAG_SYMBOL);
                 name.hash(state);
@@ -286,7 +273,7 @@ impl ValueData {
             ValueData::Boolean(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
-            | ValueData::Nil(_)
+            | ValueData::Nil
             | ValueData::Symbol(_)
             | ValueData::Text(_) => 0,
         }
@@ -302,8 +289,8 @@ impl PartialEq for Value {
     /// entire observable content of a NIL", so two NILs are the same value
     /// exactly when their reasons agree. `ValueData::Nil` carries no reason —
     /// it lives in `absence` — so comparing `data` alone decided every pair of
-    /// NILs equal, and `[ NIL ] [ 0 ] { 0 DIV } MAP EQ` answered TRUE for a
-    /// `literal` absence against a `divisionByZero` one.
+    /// NILs equal, and `[ NIL ] [ 'x' ] [ NUM ] MAP EQ` answered TRUE for a
+    /// `literal` absence against an `invalidEncoding` one.
     ///
     /// Nothing else is: a value carries no record of how it was made
     /// (LANG.VALUES.DENOTATION), so two values with the same data and the same
@@ -360,18 +347,16 @@ impl std::hash::Hash for Value {
 /// round-trip check compares a lexeme against itself.
 ///
 /// **A malformed lexeme is not an error here.** This type validates nothing: it
-/// keeps whatever spelling it is handed. A lexeme that denotes no rational never
-/// arrives from source — `1/0` is the `zeroDenominator` source error of
-/// `spec/grammar.json`, refused by the tokenizer before anything runs
-/// (LANG.SOURCE.TEXT) — but a `NumberLiteral` built directly from such a lexeme
-/// simply has no `integer`, and [`Self::parsed`] reports the parse's own message
-/// when the value is read.
+/// keeps whatever spelling it is handed. A `NumberLiteral` built directly from
+/// a lexeme that is not a number simply has no `integer`, and [`Self::parsed`]
+/// reports the parse's own message when the value is read.
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct NumberLiteral {
     lexeme: Arc<str>,
     /// Set only when the lexeme is exactly `[+-]?digits` in `i64` range, in which
     /// case it denotes precisely this integer over 1. Every other spelling —
-    /// `1/2`, `1.5`, `1e5`, `1_000`, `1/0`, or anything wider than `i64` — leaves
+    /// `1/2`, `1.5`, `1e5`, `1_000`, `1/0` (one of the three points over zero),
+    /// or anything wider than `i64` — leaves
     /// it `None` and reaches `Fraction::from_str` as it did before.
     integer: Option<i64>,
 }

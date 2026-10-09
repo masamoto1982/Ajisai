@@ -6,6 +6,8 @@ pub(crate) mod broadcast_tree;
 pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;
+#[cfg(test)]
+mod comparison_tests;
 pub mod compiled_plan;
 #[cfg(test)]
 mod compiled_plan_tests;

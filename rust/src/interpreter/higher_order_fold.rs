@@ -313,11 +313,11 @@ mod tests {
     /// nothing, and only a predicate that holds keeps its element.
     #[tokio::test]
     async fn test_filter_drops_an_unknown_predicate() {
-        // `1 X DIV` is NIL(divisionByZero) for the 0 lane, so its comparison
-        // is UNKNOWN there and TRUE for the other two.
+        // `0/0` has no order (LANG.VALUES.EXACT), so its comparison projects
+        // and is UNKNOWN there, and TRUE for the other two.
         let mut interp = Interpreter::new();
         interp
-            .execute("[ 1 0 2 ] [ 'X' BIND 1 X DIV 1/3 GT ] FILTER")
+            .execute("[ 1 0/0 2 ] [ 'X' BIND X 1/3 GT ] FILTER")
             .await
             .expect("an UNKNOWN predicate is a truth value, not an ERROR");
         assert_eq!(

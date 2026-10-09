@@ -182,20 +182,21 @@ fn the_kernels_answer_where_they_apply() {
     assert_eq!(kernel_hits("1 [ 1 0 2 ] DIV"), 1);
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV"), 1);
     assert_eq!(kernel_hits("[ 1/2 3 ] [ 0 2 ] DIV"), 1);
-    // The projected lane is an absent operand lane for the next Word, which
-    // passes it through on the kernel too.
+    // The quotient by zero is a lane over zero for the next Word, which the
+    // arithmetic and rounding kernels compute by the Fraction's own law; the
+    // ordering kernel declines it, since `0/0` could be among such lanes and
+    // has no order, and leaves it to the general route.
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD"), 2);
     assert_eq!(
         kernel_hits("[ 1 2 3 ] [ 1 0 2 ] DIV 1 ADD 2 MUL 3 DIV FLOOR 0 GT"),
-        6
+        5
     );
-    // A quotient by zero is an absent *number* — its dividend over zero —
-    // and stays a lane; a written NIL is not a number and keeps a Vector
-    // nested, off the kernels.
+    // A quotient by zero is a *number* and stays a lane; a written NIL is
+    // not a number and keeps a Vector nested, off the kernels.
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV 2 MUL"), 2);
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV [ 1 0 2 ] DIV"), 2);
     assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV FLOOR"), 2);
-    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV 2 GT"), 2);
+    assert_eq!(kernel_hits("[ 1 2 3 ] [ 1 0 1 ] DIV 2 GT"), 1);
     assert_eq!(kernel_hits("[ 1 NIL 3 ] 2 MUL"), 0);
     assert_eq!(kernel_hits("[ 1 NIL 3 ] FLOOR"), 0);
     assert_eq!(kernel_hits("[ 9223372036854775807 1 ] 1 ADD"), 0);
@@ -203,26 +204,33 @@ fn the_kernels_answer_where_they_apply() {
     assert_eq!(kernel_hits("2 3 ADD"), 0);
 }
 
-/// A zero divisor empties its own lane and nothing else — not the Tensor's
-/// columns. On every route a `DIV` result whose lanes fit a machine word is
-/// a dense Tensor, the absent lane the denominator-0 sentinel with its reason
-/// in the absence map; it used to be a boxed Vector on the lift and a nested
-/// Vector on the one-lane fast path, so one zero divisor cost the vector its
-/// representation for every Word after it.
+/// A zero divisor answers its own lane's sign over zero and nothing else —
+/// not the Tensor's columns. On every route a `DIV` result whose lanes fit a
+/// machine word is a dense Tensor, the point over zero a lane like any other;
+/// it used to be a boxed Vector on the lift and a nested Vector on the
+/// one-lane fast path, so one zero divisor cost the vector its representation
+/// for every Word after it.
 #[test]
 fn a_zero_divisor_keeps_the_result_dense() {
-    use crate::error::NilReason;
     use crate::types::ValueData;
-    for (source, absent, shape) in [
-        ("[ 1 2 3 ] [ 1 0 2 ] DIV", vec![1], vec![3]),
-        ("[ 1/2 3 5/3 ] [ 0 2 0 ] DIV", vec![0, 2], vec![3]),
-        ("1 [ 1 0 2 ] DIV", vec![1], vec![3]),
-        ("[ 1 2 3 ] 0 DIV", vec![0, 1, 2], vec![3]),
-        ("[ 6 ] [ 0 ] DIV", vec![0], vec![1]),
-        ("[ [ 6 ] ] [ [ 0 ] ] DIV", vec![0], vec![1, 1]),
+    for (source, lanes, shape) in [
+        (
+            "[ 1 2 3 ] [ 1 0 2 ] DIV",
+            vec!["1/1", "1/0", "3/2"],
+            vec![3],
+        ),
+        (
+            "[ 1/2 3 -5/3 ] [ 0 2 0 ] DIV",
+            vec!["1/0", "3/2", "-1/0"],
+            vec![3],
+        ),
+        ("1 [ 1 0 2 ] DIV", vec!["1/1", "1/0", "1/2"], vec![3]),
+        ("[ 1 0 -3 ] 0 DIV", vec!["1/0", "0/0", "-1/0"], vec![3]),
+        ("[ 6 ] [ 0 ] DIV", vec!["1/0"], vec![1]),
+        ("[ [ 6 ] ] [ [ 0 ] ] DIV", vec!["1/0"], vec![1, 1]),
         (
             "[ [ 1 2 ] [ 3 4 ] ] [ [ 1 0 ] [ 0 2 ] ] DIV",
-            vec![1, 2],
+            vec!["1/1", "1/0", "1/0", "2/1"],
             vec![2, 2],
         ),
     ] {
@@ -240,51 +248,43 @@ fn a_zero_divisor_keeps_the_result_dense() {
                 "`{source}` (kernels {dense})"
             );
             assert!(!data.is_pure_integer, "`{source}` (kernels {dense})");
-            for lane in 0..data.len() {
-                let expected = absent.contains(&lane).then_some(NilReason::DivisionByZero);
-                assert_eq!(
-                    data.lane_reason(lane),
-                    expected,
-                    "`{source}` (kernels {dense}) lane {lane}"
-                );
-            }
+            let read: Vec<String> = (0..data.len())
+                .map(|i| crate::types::Value::from_dense_lane(data, i).to_string())
+                .collect();
+            assert_eq!(read, lanes, "`{source}` (kernels {dense})");
         }
     }
 }
 
-/// An absent operand lane is carried, not re-minted: the result lane holds
-/// the operand's own absence, the leftmost operand's where both are absent,
-/// and the result stays a dense Tensor on every route. The error-flow trace
-/// is part of the equality (`observe`), so a carried lane that was minted
-/// again would already fail `hand_picked_programs_agree`; this pins the value.
+/// A lane over zero computes by the Fraction's own law on every route, and
+/// the result stays a dense Tensor: the column kernels hand such a lane to
+/// `Fraction` and write back the reduced pair it answers.
 #[test]
-fn an_absent_lane_passes_through_dense() {
-    use crate::error::NilReason;
+fn a_lane_over_zero_computes_dense() {
     use crate::types::ValueData;
-    // The absent lanes are quotients by zero — the absence a dense Tensor
-    // holds, as the dividend over zero — made by one `DIV` and carried by the
-    // Word under test. A written `NIL` is not a number and never a lane.
-    for (source, reasons) in [
+    for (source, lanes) in [
         (
             "[ 1 2 3 ] [ 1 0 1 ] DIV [ 10 20 30 ] ADD",
-            vec![None, Some(NilReason::DivisionByZero), None],
+            vec!["11/1", "1/0", "33/1"],
         ),
         (
             "[ 1 2 3 ] [ 1 0 2 ] DIV [ 10 20 30 ] [ 1 0 1 ] DIV MUL",
-            vec![None, Some(NilReason::DivisionByZero), None],
+            vec!["10/1", "1/0", "45/1"],
         ),
         (
             "[ 10 20 30 ] [ 1 1 0 ] DIV [ 1 2 3 ] [ 1 0 2 ] DIV MUL",
-            vec![
-                None,
-                Some(NilReason::DivisionByZero),
-                Some(NilReason::DivisionByZero),
-            ],
+            vec!["10/1", "1/0", "1/0"],
         ),
         (
             "[ 1/2 3 -3/2 ] [ 1 0 1 ] DIV FLOOR",
-            vec![None, Some(NilReason::DivisionByZero), None],
+            vec!["0/1", "1/0", "-2/1"],
         ),
+        (
+            "[ 1 2 3 ] [ 0 0 0 ] DIV [ 1 0 -1 ] MUL",
+            vec!["1/0", "0/0", "-1/0"],
+        ),
+        ("[ 1 2 ] [ 0 0 ] DIV [ 1 -1 ] 0 DIV ADD", vec!["0/0", "0/0"]),
+        ("[ 5 7 ] [ 1 0 ] DIV 0 DIV", vec!["1/0", "1/0"]),
     ] {
         for dense in [true, false] {
             let mut interp = Interpreter::new();
@@ -294,9 +294,10 @@ fn an_absent_lane_passes_through_dense() {
             let ValueData::Tensor { data, .. } = &top.data else {
                 panic!("`{source}` (kernels {dense}) answered {top:?}, not a dense Tensor");
             };
-            let got: Vec<Option<NilReason>> =
-                (0..data.len()).map(|i| data.lane_reason(i)).collect();
-            assert_eq!(got, reasons, "`{source}` (kernels {dense})");
+            let read: Vec<String> = (0..data.len())
+                .map(|i| crate::types::Value::from_dense_lane(data, i).to_string())
+                .collect();
+            assert_eq!(read, lanes, "`{source}` (kernels {dense})");
         }
     }
 }

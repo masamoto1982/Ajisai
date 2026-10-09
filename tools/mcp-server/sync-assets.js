@@ -65,6 +65,7 @@ const protocolDefNames = {
   elided: "protocolElided",
   integerString: "integerString",
   positiveIntegerString: "positiveIntegerString",
+  nonNegativeIntegerString: "nonNegativeIntegerString",
 };
 const resultSchemaPath = join(here, "result.schema.json");
 function resultSchemaWithProtocol() {

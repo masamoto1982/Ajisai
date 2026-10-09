@@ -253,9 +253,9 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn divide_then_add_propagates_nil_through_pipeline() {
-        // The scalar law: `10 0 DIV` projects to NIL, and the NIL survives the
+        // The scalar law: `-10 SQRT` projects to NIL, and the NIL survives the
         // `ADD` that follows it.
-        let interp = run("10 0 DIV 1 ADD").await;
+        let interp = run("-10 SQRT 1 ADD").await;
         let stack = interp.get_stack();
         assert!(
             stack.last().unwrap().is_nil(),
@@ -264,12 +264,12 @@ mod nil_passthrough_tests {
         );
 
         // Lifted over a vector, that law applies per lane
-        // (LANG.COLLECTIONS.LIFT): the zero divisor empties its own lane, and
-        // the lane -- not the vector around it -- is what carries the NIL
-        // onward. This case used to assert the whole value went NIL, which is
-        // the collapse the lane law forbids: `[ 10 ] [ 2 ] DIV` answers
-        // `[ 5/1 ]`, so `[ 10 ] [ 0 ] DIV` answers `[ NIL ]`.
-        let interp = run("[ 10 ] [ 0 ] DIV 1 ADD").await;
+        // (LANG.COLLECTIONS.LIFT): the negative radicand empties its own
+        // lane, and the lane -- not the vector around it -- is what carries
+        // the NIL onward. This case used to assert the whole value went NIL,
+        // which is the collapse the lane law forbids: `[ 4 ] SQRT` answers
+        // `[ 2/1 ]`, so `[ -10 ] SQRT` answers `[ NIL ]`.
+        let interp = run("[ -10 ] SQRT 1 ADD").await;
         let stack = interp.get_stack();
         let result = stack.last().unwrap();
         let lanes = result
@@ -284,7 +284,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn a_fallback_can_replace_a_nil_that_passed_through() {
-        let interp = run("10 0 DIV 1 ADD 'S' BIND 0 S S NIL? SELECT").await;
+        let interp = run("-10 SQRT 1 ADD 'S' BIND 0 S S NIL? SELECT").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
         assert!(

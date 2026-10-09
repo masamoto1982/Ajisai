@@ -4,7 +4,6 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NilReason {
-    DivisionByZero,
     NotFound,
     InvalidEncoding,
     IndexOutOfBounds,
@@ -179,20 +178,11 @@ impl ErrorCategory {
         }
     }
 
-    /// The spec/outcomes.json error category `err` reports as, or `None` for
-    /// the one variant that is not an outcome at all.
-    ///
-    /// `DivisionByZero` used to map to a `divisionByZero` *error* category —
-    /// an id spec/outcomes.json declares only as a NIL reason. DIV never ends a
-    /// run with it (the signal is projected to `NIL(divisionByZero)` before it
-    /// can), so the category existed only to label NIL-producing trace events
-    /// and surfaced there as an error id the registry does not have. A NIL is
-    /// reported by its reason; the internal signal has no category to give.
+    /// The spec/outcomes.json error category `err` reports as.
     pub fn from_error(err: &AjisaiError) -> Option<Self> {
         Some(match err {
             AjisaiError::StackUnderflow { .. } => ErrorCategory::StackUnderflow,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
-            AjisaiError::DivisionByZero => return None,
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
@@ -205,7 +195,6 @@ impl ErrorCategory {
 impl NilReason {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
-            NilReason::DivisionByZero => "divisionByZero",
             NilReason::NotFound => "notFound",
             NilReason::InvalidEncoding => "invalidEncoding",
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
@@ -221,7 +210,6 @@ impl NilReason {
     /// single spelling authority: a new reason is added here and named there,
     /// and `from_protocol_str` follows without another table to update.
     pub const ALL: &'static [NilReason] = &[
-        NilReason::DivisionByZero,
         NilReason::NotFound,
         NilReason::InvalidEncoding,
         NilReason::IndexOutOfBounds,
@@ -254,12 +242,6 @@ pub enum AjisaiError {
         word: Option<&'static str>,
     },
     UnknownWord(String),
-    /// A zero divisor met by the rational kernel. Not an ERROR a program can
-    /// end with: DIV projects it to `NIL(divisionByZero)` (LANG.FAILURE.PROJECT)
-    /// by re-running the operation lane-wise, so this is only the signal that
-    /// asks for that re-run. It has no outcome category — see
-    /// `ErrorCategory::from_error`.
-    DivisionByZero,
     /// Program text that does not parse: an unclosed or crossed delimiter, a
     /// delimiter glued to a name, an unclosed string. The fault is in the
     /// writing, not in any value, so it belongs to neither the value-shape nor
@@ -399,7 +381,6 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::StackUnderflow { word: None } => write!(f, "stack underflow"),
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
-            AjisaiError::DivisionByZero => write!(f, "Division by zero"),
             AjisaiError::MalformedSource(msg) => write!(f, "{}", msg),
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)

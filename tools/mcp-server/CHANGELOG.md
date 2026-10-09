@@ -6,6 +6,14 @@ beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## 0.8.2
+
+An engine rule changes and the Word summaries, quickstart and goldens this server serves say so; no tool, envelope field or resource changes.
+
+### Changed
+
+- **Division is total.** A number is a reduced pair over a non-negative denominator, and a quotient by zero is the dividend's sign over zero — one of the three numbers `1/0`, `-1/0`, `0/0` — not a reasoned NIL. `1 0 DIV` is `1/0` and `outcomes` predicts `value` for it; `[ 6 6 6 ] [ 1 2 0 ] DIV` is `[ 6/1 3/1 1/0 ]`; `0/0` has no place in the order, so `0 0 DIV 1 LT` projects `nil:domainMiss`. The number node's `denominator` may now be `"0"` (`host-protocol.schema.json`: `nonNegativeIntegerString`). The NIL reason `divisionByZero` no longer exists; the quickstart's absence examples use `-1 SQRT`.
+
 ## 0.8.1
 
 An engine rule changes and the Word summaries this server serves say so; no tool, envelope field or resource changes.

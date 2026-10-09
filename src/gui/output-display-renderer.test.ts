@@ -138,9 +138,9 @@ describe('a NIL in the Stack carries its reason', () => {
     const nil = (reason?: string): Node =>
         ({ type: 'nil', value: null, semantics: reason ? { absence: { reason } } : {} }) as Node;
 
-    test('1 0 DIV', () => {
-        expect(render(nil('divisionByZero'))).toBe('NIL');
-        expect(describeNilNode(nil('divisionByZero'))).toBe('NIL · divisionByZero');
+    test('-1 SQRT', () => {
+        expect(render(nil('domainMiss'))).toBe('NIL');
+        expect(describeNilNode(nil('domainMiss'))).toBe('NIL · domainMiss');
     });
 
     test('a NIL the program wrote names that reason too', () => {

@@ -86,10 +86,10 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
 
 /// A rational near an irrational value that costs one integer square root per
 /// term, for when the enclosure-based approximation answers nothing (a bound
-/// no enclosure can reach). The fallback once was `Fraction::nil()` — `0/0`,
-/// the internal absence sentinel, shipped as if it were a number. Each term `c·√m` contributes `c·⌊√m·10⁹⌋/10⁹`, so the sum
-/// is within `terms·|c|·10⁻⁹` of the value: coarse, marked `approximate` like
-/// every approximation here, and never a denominator of zero.
+/// no enclosure can reach). Each term `c·√m` contributes `c·⌊√m·10⁹⌋/10⁹`,
+/// so the sum is within `terms·|c|·10⁻⁹` of the value: coarse, marked
+/// `approximate` like every approximation here, and never a denominator of
+/// zero.
 fn termwise_approximation(er: &crate::types::exact::ExactReal) -> Fraction {
     let crate::types::exact::ExactReal::Algebraic(algebraic) = er else {
         return er
@@ -124,26 +124,21 @@ fn number_protocol_value(f: &Fraction) -> ProtocolValue {
 }
 
 /// Flatten a dense tensor into protocol leaves. A dense tensor holds numbers
-/// only (Booleans never densify), so every present lane is a `number` and an
-/// absent lane is a `nil` carrying its reason. An interior node of rank >= 2
+/// only (neither a Boolean nor a NIL densifies), so every lane is a `number`,
+/// one of the three points over zero included. An interior node of rank >= 2
 /// is a Vector of Vectors, whose `semantics` is empty like any Vector's.
 fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec<ProtocolNode> {
     if shape.is_empty() || shape.len() == 1 {
         let len = shape.first().copied().unwrap_or_else(|| data.len());
         (offset..offset + len)
             .map(|lane| {
-                // `from_dense_lane` turns an absent lane — denominator 0, the
-                // dividend over it — into `ValueData::Nil` *carrying the
-                // reason stored beside it*, so the lane is reported as `nil`
-                // rather than as an unreadable number, and says why it is
-                // absent (LANG.VALUES.NIL).
                 let leaf = Value::from_dense_lane(data, lane);
-                let (type_str, value) = match &leaf.data {
-                    ValueData::Scalar(f) => ("number", number_protocol_value(f)),
-                    _ => ("nil", ProtocolValue::Null),
+                let value = match &leaf.data {
+                    ValueData::Scalar(f) => number_protocol_value(f),
+                    _ => unreachable!("a dense lane is a Scalar"),
                 };
                 ProtocolNode {
-                    type_str,
+                    type_str: "number",
                     value,
                     semantics: leaf,
                 }
@@ -171,7 +166,7 @@ fn tensor_to_protocol(data: &DenseTensor, offset: usize, shape: &[usize]) -> Vec
 /// (LANG.VALUES.DISJOINT); nothing about how the value was produced reaches it.
 pub(crate) fn value_to_protocol(value: &Value) -> ProtocolNode {
     let (type_str, protocol_value) = match &value.data {
-        ValueData::Nil(_) => ("nil", ProtocolValue::Null),
+        ValueData::Nil => ("nil", ProtocolValue::Null),
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large
@@ -234,6 +229,6 @@ mod termwise_approximation_tests {
                 BigInt::from(1_000_000_000u64)
             )
         );
-        assert!(!approx.is_nil());
+        assert!(approx.is_finite());
     }
 }

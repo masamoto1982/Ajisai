@@ -824,7 +824,7 @@
      ]
     },
     "value": {
-     "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number -> {numerator, denominator} (arbitrary-precision decimal strings, the denominator positive); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue; record -> {keys, values}, two arrays of observedValue of equal length, aligned position by position (LANG.RECORDS.STRUCTURE). null for any type when `elided` is present.",
+     "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number -> {numerator, denominator} (arbitrary-precision decimal strings, the pair reduced and the denominator non-negative: zero exactly for the three points over zero, `1/0`, `-1/0`, `0/0`, LANG.VALUES.EXACT); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue; record -> {keys, values}, two arrays of observedValue of equal length, aligned position by position (LANG.RECORDS.STRUCTURE). null for any type when `elided` is present.",
      "oneOf": [
       {
        "type": "null"
@@ -847,7 +847,7 @@
          "$ref": "#/$defs/integerString"
         },
         "denominator": {
-         "$ref": "#/$defs/positiveIntegerString"
+         "$ref": "#/$defs/nonNegativeIntegerString"
         }
        }
       },
@@ -994,6 +994,10 @@
   "positiveIntegerString": {
    "type": "string",
    "pattern": "^[1-9][0-9]*$"
+  },
+  "nonNegativeIntegerString": {
+   "type": "string",
+   "pattern": "^(0|[1-9][0-9]*)$"
   }
  }
 }

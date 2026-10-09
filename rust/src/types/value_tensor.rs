@@ -5,42 +5,20 @@
 
 use super::fraction::Fraction;
 use super::{DenseTensor, Value, ValueData};
-use crate::semantic::AbsenceMetadata;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 impl Value {
-    /// The lane at `index` of a dense tensor as a `Value`, keeping an absent
-    /// lane's reason.
-    ///
-    /// The one materialization of a lane, and the reason there is only one:
-    /// going through the lane's `Fraction` instead loses the reason before a
-    /// `Value` exists to carry it, because a `Fraction` records absence and
-    /// nothing about why. Where the tensor itself was told no reason the
-    /// answer is a *reasonless* NIL rather than a wrong one — absent, for a
-    /// reason this value was never given.
+    /// The lane at `index` of a dense tensor as a `Value`: the number its
+    /// columns denote, one of the three points over zero included.
     pub fn from_dense_lane(data: &DenseTensor, index: usize) -> Value {
-        match data.get_small_fraction(index) {
-            Some(fraction) => Value::from_fraction(fraction),
-            // An absent lane comes back whole: the pair it holds (the dividend
-            // a zero divisor refused, over that zero) and its reason.
-            None => Value::absent_number(
-                data.fraction_or_nil(index),
-                data.absence_at(index)
-                    .cloned()
-                    .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
-            ),
-        }
+        Value::from_fraction(data.fraction_at(index))
     }
 
-    /// Construct a dense `Tensor` value. `data.len()` must equal the product of
-    /// `shape` (or `shape` may be empty for a flat 1-D buffer; in that case
-    /// `[data.len()]` is used).
     /// Wrap a flat `Vec<i64>` as a 1-D pure-integer dense `Tensor` (SoA),
     /// without materializing per-element `Value`s or `Fraction`s. This is the
     /// output constructor for the integer SIMD lane: it keeps the result in
     /// the same dense column representation as its inputs instead of degrading
-    /// to an AoS `Vector` (handoff 手1).
+    /// to an AoS `Vector`.
     pub fn from_int_tensor(numerators: Vec<i64>) -> Self {
         let len = numerators.len();
         let tensor = DenseTensor::from_integers(numerators);
@@ -75,34 +53,18 @@ impl Value {
         )
     }
 
+    /// Construct a dense `Tensor` value. `data.len()` must equal the product
+    /// of `shape` (or `shape` may be empty for a flat 1-D buffer; in that
+    /// case `[data.len()]` is used). A lane too wide for two machine words
+    /// keeps the whole value in its nested form.
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
-        Self::from_tensor_with_absences(data, shape, BTreeMap::new())
-    }
-
-    /// [`Value::from_tensor`] for a caller that knows why its absent lanes are
-    /// absent. Prefer it wherever the lanes came from `Value`s: `from_tensor`
-    /// takes `Fraction`s, which record absence without a reason for it, so
-    /// every lane it makes absent is reasonless.
-    pub fn from_tensor_with_absences(
-        data: Vec<Fraction>,
-        shape: Vec<usize>,
-        absences: BTreeMap<usize, AbsenceMetadata>,
-    ) -> Self {
         let resolved_shape = if shape.is_empty() {
             vec![data.len()]
         } else {
             shape
         };
-        let Some(tensor) = DenseTensor::from_fractions_with_absences(
-            data.clone(),
-            resolved_shape.clone(),
-            absences.clone(),
-        ) else {
-            return Self::from_vector(tensor_fractions_to_nested_values(
-                &data,
-                &resolved_shape,
-                &absences,
-            ));
+        let Some(tensor) = DenseTensor::from_fractions(data.clone(), resolved_shape.clone()) else {
+            return Self::from_vector(tensor_fractions_to_nested_values(&data, &resolved_shape));
         };
         Self::new(
             ValueData::Tensor {
@@ -117,14 +79,8 @@ impl Value {
     /// a Fraction scalar and the shape is rectangular. Otherwise the nested
     /// form is preserved.
     ///
-    /// `try_promote_columns` is the one promotion walk. It used to be
-    /// followed by a second attempt through `value_absence::try_collect_dense`
-    /// and `DenseTensor::from_fractions_with_absences`, but the two accept
-    /// exactly the same inputs (`dense_columns_tests` holds that route as the
-    /// oracle and checks the agreement), so the second walk could only ever
-    /// repeat the first one's refusal — a full tree walk, with a `Fraction`
-    /// clone per lane, paid by every Vector that holds a String, a Boolean, a
-    /// Record or a ragged child before it fell back to the nested form.
+    /// `try_promote_columns` is the one promotion walk; `dense_columns_tests`
+    /// holds it equal to the two-step route through `Vec<Fraction>`.
     pub fn from_vector_promoted(values: Vec<Value>) -> Self {
         match super::dense_columns::try_promote_columns(&values) {
             Some(promoted) => promoted,
@@ -145,16 +101,10 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
         return None;
     }
     if shape.len() == 1 {
-        // An absent lane is still a child — it materializes as NIL, carrying
-        // the reason it was stored with, not as "no such index".
         return Some(Value::from_dense_lane(data, index));
     }
     let rest = &shape[1..];
     let stride: usize = rest.iter().product();
-    // The sub-tensor's lanes are re-indexed from the slice's start, so its
-    // absences are too (`DenseTensor::lanes`). Dropping that rebase was the
-    // whole bug one level down: the child kept the holes and lost the reasons
-    // for them.
     let tensor = data.lanes(index * stride, stride, rest);
     Some(Value::new(
         ValueData::Tensor {
@@ -165,42 +115,16 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
     ))
 }
 
-/// The nested fallback for lanes too wide for `i64` columns. Takes the
-/// absence map alongside the lanes for the same reason every other
-/// materialization here does: the `Fraction` says a lane is absent and the
-/// map says why, and a fallback that dropped the second would make "this
-/// value is too big to store densely" silently mean "and its absences are
-/// now anonymous".
-fn tensor_fractions_to_nested_values(
-    data: &[Fraction],
-    shape: &[usize],
-    absences: &BTreeMap<usize, AbsenceMetadata>,
-) -> Vec<Value> {
-    fn lane(data: &[Fraction], absences: &BTreeMap<usize, AbsenceMetadata>, index: usize) -> Value {
-        if !data[index].is_nil() {
-            return Value::from_fraction(data[index].clone());
-        }
-        Value::absent_number(
-            data[index].clone(),
-            absences
-                .get(&index)
-                .cloned()
-                .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
-        )
-    }
-    fn build(
-        data: &[Fraction],
-        shape: &[usize],
-        absences: &BTreeMap<usize, AbsenceMetadata>,
-        offset: usize,
-    ) -> Vec<Value> {
+/// The nested fallback for lanes too wide for `i64` columns.
+fn tensor_fractions_to_nested_values(data: &[Fraction], shape: &[usize]) -> Vec<Value> {
+    fn build(data: &[Fraction], shape: &[usize], offset: usize) -> Vec<Value> {
         if shape.is_empty() || shape.len() == 1 {
             let len = shape
                 .first()
                 .copied()
                 .unwrap_or_else(|| data.len().saturating_sub(offset));
             return (offset..offset + len)
-                .map(|index| lane(data, absences, index))
+                .map(|index| Value::from_fraction(data[index].clone()))
                 .collect();
         }
         let outer = shape[0];
@@ -208,16 +132,11 @@ fn tensor_fractions_to_nested_values(
         let stride: usize = rest.iter().product();
         let mut out = Vec::with_capacity(outer);
         for i in 0..outer {
-            out.push(Value::from_children(build(
-                data,
-                rest,
-                absences,
-                offset + i * stride,
-            )));
+            out.push(Value::from_children(build(data, rest, offset + i * stride)));
         }
         out
     }
-    build(data, shape, absences, 0)
+    build(data, shape, 0)
 }
 
 /// Materialize a dense Tensor (`data` + `shape`) as a tree of nested `Value`s.
@@ -333,38 +252,40 @@ mod tensor_boundary_tests {
         assert!(!data.is_pure_integer);
     }
 
+    /// A lane over zero is a lane like any other: stored as its reduced pair,
+    /// read back as the point it is, and not an integer lane.
     #[test]
-    fn dense_tensor_reads_an_absent_lane_from_the_denominator_sentinel() {
+    fn dense_tensor_holds_a_point_over_zero_as_a_lane() {
         let tensor = DenseTensor::from_fractions(
-            vec![Fraction::from(1), Fraction::nil(), Fraction::from(3)],
+            vec![Fraction::from(1), Fraction::nullity(), Fraction::from(3)],
             vec![3],
         )
         .expect("small fractions should admit dense representation");
 
         assert_eq!(tensor.denominators.as_slice(), [1, 0, 1]);
-        assert!(!tensor.is_valid(1));
-        assert!(!tensor.all_lanes_valid());
-        assert_eq!(tensor.get_small_fraction(0), Some(Fraction::from(1)));
-        assert_eq!(tensor.get_small_fraction(1), None);
-        assert!(tensor.fraction_or_nil(1).is_nil());
+        assert!(!tensor.all_finite());
+        assert!(!tensor.is_pure_integer);
+        assert_eq!(tensor.fraction_at(0), Fraction::from(1));
+        assert_eq!(tensor.fraction_at(1), Fraction::nullity());
         assert_eq!(
             tensor.to_fractions(),
-            vec![Fraction::from(1), Fraction::nil(), Fraction::from(3)]
+            vec![Fraction::from(1), Fraction::nullity(), Fraction::from(3)]
+        );
+        assert_eq!(
+            Value::from_dense_lane(&tensor, 1),
+            Value::from_fraction(Fraction::nullity())
         );
     }
 
-    /// `from_exact_real` with `Rational(nil)` — what the nil-propagating
-    /// exact arithmetic answers for an absent operand — is a NIL, not a
-    /// `Scalar` around an absent pair that displayed as `NIL` while
-    /// answering `NIL?` with FALSE and naming its domain `Scalar`.
+    /// `from_exact_real` of a rational over zero is the Scalar it is.
     #[test]
-    fn from_exact_real_translates_the_nil_sentinel_like_from_fraction() {
+    fn from_exact_real_keeps_a_point_over_zero_a_scalar() {
         use crate::types::exact::ExactReal;
 
-        let value = Value::from_exact_real(ExactReal::Rational(Fraction::nil()));
-        assert!(value.is_nil(), "got {:?}", value.data);
-        assert_eq!(value, Value::from_fraction(Fraction::nil()));
-        assert_eq!(value.domain_name(), "NIL");
+        let value = Value::from_exact_real(ExactReal::Rational(Fraction::positive_infinity()));
+        assert!(value.is_scalar(), "got {:?}", value.data);
+        assert_eq!(value, Value::from_fraction(Fraction::positive_infinity()));
+        assert_eq!(value.domain_name(), "Scalar");
 
         // A present rational still takes the Scalar fast path, and an
         // irrational still keeps its exact form.

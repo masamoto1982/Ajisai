@@ -11,10 +11,9 @@
 //! rules exactly, so the result shape never depends on whether the Word
 //! projected, and differs only in what a lane may answer with. The lanes are
 //! decided as `Value`s, so each projection keeps its reason, and the result
-//! is then promoted back to a dense Tensor wherever its lanes fit one: a
-//! dense Tensor holds an absent quotient as the dividend over a denominator
-//! of 0 and its reason in the tensor's absence map, so a projection empties
-//! its own lane without costing the vector around it its representation.
+//! is then promoted back to a dense Tensor wherever its lanes fit one — which
+//! a NIL lane does not, so a projection costs the vector around it its
+//! columns, and nothing else.
 //!
 //! [`tensor_ops`]: crate::interpreter::tensor_ops
 
@@ -27,25 +26,23 @@ use crate::interpreter::tensor_ops::{
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
-/// Whether an absent lane sits anywhere inside `value`.
+/// Whether a NIL sits anywhere inside `value`.
 ///
-/// Two representations record one fact. A NIL that lives as a `Value` carries
-/// its `AbsenceMetadata`, and therefore its reason; a NIL that lives as a
-/// dense tensor lane is a pair with denominator 0 — the dividend over the
-/// zero — which records *that* the lane is absent and nothing about why.
-/// Both count here: this predicate exists to steer a broadcast away from the
-/// flat `Fraction` kernels, which can only produce the second kind.
+/// A NIL lives only as a `Value`, carrying its `AbsenceMetadata` and
+/// therefore its reason; a dense tensor holds numbers alone. This predicate
+/// exists to steer a broadcast away from the flat `Fraction` kernels, which
+/// cannot carry a reason through a lane.
 ///
 /// Reached only when a broadcast is about to choose a route, so the cost is
 /// one linear scan against a value the flat path would have walked anyway.
 pub(crate) fn contains_absent_lane(value: &Value) -> bool {
     match &value.data {
-        ValueData::Nil(_) => true,
+        ValueData::Nil => true,
         ValueData::Vector(items) => items.iter().any(contains_absent_lane),
-        ValueData::Tensor { data, .. } => !data.all_lanes_valid(),
-        ValueData::Scalar(f) => f.is_nil(),
         ValueData::Record(record) => record.values().iter().any(contains_absent_lane),
-        ValueData::Boolean(_)
+        ValueData::Tensor { .. }
+        | ValueData::Scalar(_)
+        | ValueData::Boolean(_)
         | ValueData::ExactScalar(_)
         | ValueData::Symbol(_)
         | ValueData::Text(_) => false,
@@ -82,8 +79,7 @@ pub(crate) fn lane_nil_passthrough(a: &Value, b: &Value) -> Option<Value> {
 
 /// The tree-walking half of [`apply_lane_wise_broadcast`], for ragged or
 /// nested-mixed operands: [`broadcast_tree`]'s walk with [`apply_lane_law`]
-/// at the leaves. Every caller (ADD/SUB/MUL/DIV, directly or through DIV's
-/// own division-by-zero fallback) declares `nonNumeric` uniformly, same as
+/// at the leaves. Every caller declares `nonNumeric` uniformly, same as
 /// `FlatTensor::from_value`.
 fn apply_lane_wise_recursive<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
@@ -100,14 +96,11 @@ where
 /// absence: a `Fraction` records presence, not a reason. `SQRT` already lifts
 /// this way through `lift_unary_numeric`, which is why a negative lane comes
 /// back as `NIL(domainMiss)` beside its neighbours. This is the binary
-/// counterpart, and `DIV` uses it so a zero divisor empties its own lane and
-/// says why, rather than emptying the vector.
+/// counterpart.
 ///
 /// Shape handling is the flat path's, lane for lane — the same
 /// [`broadcast_shape`] and the same index projection — so a Word cannot mean
-/// one thing when it projects and another when it does not: `[ 6 ] [ 1 2 0 ] DIV`
-/// broadcasts its single dividend across three divisors here exactly as
-/// `[ 6 ] [ 1 2 3 ] DIV` does there.
+/// one thing when it projects and another when it does not.
 ///
 /// The leaf law never sees an absent operand: [`apply_lane_law`] settles those
 /// first, from the `Value`, so each lane's reason survives the lift. It is not
@@ -198,14 +191,8 @@ where
 /// The leaves of a rectangular value, in the order `FlatTensor` flattens it.
 ///
 /// This is `tensor_ops::FlatTensor::from_value` with the lane type widened
-/// from `Fraction` to `Value` — the whole point of this module. A `Fraction` lane records that
-/// it is absent and nothing about why, so flattening through one discards
-/// every reason before any lane law could preserve it; a `Value` lane carries
-/// its `AbsenceMetadata` intact.
-///
-/// A dense tensor's absent lane is the one case with nothing to carry: the
-/// reason was already gone when the tensor was built, so it materializes as a
-/// reasonless NIL, which is what it is.
+/// from `Fraction` to `Value` — the whole point of this module: a `Value`
+/// lane carries its `AbsenceMetadata` intact.
 fn flat_leaf_values(value: &Value) -> Vec<Value> {
     fn collect(value: &Value, out: &mut Vec<Value>) {
         match &value.data {
@@ -216,9 +203,6 @@ fn flat_leaf_values(value: &Value) -> Vec<Value> {
             }
             ValueData::Tensor { data, .. } => {
                 for lane in 0..data.len() {
-                    // Through the lane, not through its `Fraction`: the
-                    // reason for an absent lane is stored beside it and is
-                    // gone by the time a `Fraction` is all that is left.
                     out.push(Value::from_dense_lane(data, lane));
                 }
             }
@@ -233,17 +217,6 @@ fn flat_leaf_values(value: &Value) -> Vec<Value> {
 /// Fold flat lane values back into `shape`: the dense Tensor the flat path
 /// would have built when every lane fits one, else nested Vectors. An empty
 /// shape is the scalar case — one lane, and it *is* the result.
-///
-/// The promotion is the point. These lanes were decided as `Value`s so that a
-/// projection could keep its reason, and a dense Tensor keeps it too: the
-/// lane is the dividend over a denominator of 0, the reason sits in the absence map
-/// (`DenseTensor::absences`). Answering a boxed Vector here instead made one
-/// zero divisor cost the whole result its columns — every Word downstream
-/// then read a million boxed lanes to find the one that was absent — and made
-/// `DIV` the one Word whose result representation depended on whether it
-/// projected. The column kernels (`dense_kernels`) build exactly this Tensor
-/// without boxing a lane first; this is the general route reaching the same
-/// value, so the two agree lane for lane and map for map.
 fn nest_lane_values(mut values: Vec<Value>, shape: &[usize]) -> Value {
     if shape.is_empty() {
         return values.pop().unwrap_or_else(Value::nil);
