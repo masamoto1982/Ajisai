@@ -22,7 +22,10 @@ impl Value {
     pub fn from_dense_lane(data: &DenseTensor, index: usize) -> Value {
         match data.get_small_fraction(index) {
             Some(fraction) => Value::from_fraction(fraction),
-            None => Value::nil_with_absence(
+            // An absent lane comes back whole: the pair it holds (the dividend
+            // a zero divisor refused, over that zero) and its reason.
+            None => Value::absent_number(
+                data.fraction_or_nil(index),
                 data.absence_at(index)
                     .cloned()
                     .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
@@ -177,7 +180,8 @@ fn tensor_fractions_to_nested_values(
         if !data[index].is_nil() {
             return Value::from_fraction(data[index].clone());
         }
-        Value::nil_with_absence(
+        Value::absent_number(
+            data[index].clone(),
             absences
                 .get(&index)
                 .cloned()
@@ -351,7 +355,7 @@ mod tensor_boundary_tests {
 
     /// `from_exact_real` with `Rational(nil)` — what the nil-propagating
     /// exact arithmetic answers for an absent operand — is a NIL, not a
-    /// `Scalar` around the `0/0` sentinel that displayed as `NIL` while
+    /// `Scalar` around an absent pair that displayed as `NIL` while
     /// answering `NIL?` with FALSE and naming its domain `Scalar`.
     #[test]
     fn from_exact_real_translates_the_nil_sentinel_like_from_fraction() {

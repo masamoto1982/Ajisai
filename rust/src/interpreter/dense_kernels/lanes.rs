@@ -19,8 +19,8 @@ pub(super) enum Lanes<'a> {
         /// Every present lane is an integer, so the integer kernels apply to
         /// the numerators alone.
         integer: bool,
-        /// Some lane is absent: the denominator-0 sentinel, with its reason
-        /// in the Tensor's absence map.
+        /// Some lane is absent: a denominator of 0, the dividend it holds in
+        /// the numerator, and its reason in the Tensor's absence map.
         absent: bool,
     },
     Splat(i64, i64),
@@ -108,6 +108,15 @@ impl Lanes<'_> {
             Lanes::Splat(..) => AbsenceMetadata::with_reasonless_unknown(),
         }
     }
+
+    /// Absent lane `i` as the `Value` the general route materializes: the
+    /// pair it holds and its reason, carried whole.
+    pub(super) fn absent_value(self, i: usize) -> Value {
+        match self {
+            Lanes::Columns { tensor, .. } => Value::from_dense_lane(tensor, i),
+            Lanes::Splat(..) => Value::nil_with_absence(self.absence(i)),
+        }
+    }
 }
 
 /// The lane count two operands pair over: a Tensor's length against a
@@ -158,21 +167,22 @@ impl Out {
         self.integer &= den == 1;
     }
 
-    /// Lane `index` is absent, divided by zero: the sentinel in the columns,
-    /// the reason in the map. An absent lane is not an integer lane, so the
-    /// Tensor is not pure-integer — the same reading `from_vector_promoted`
-    /// gives the general route's result.
-    pub(super) fn project(&mut self, index: usize) {
-        self.nums.push(0);
+    /// Lane `index` is absent, divided by zero: `dividend` over the zero in
+    /// the columns (`Fraction::over_zero`, lane for lane), the reason in the
+    /// map. An absent lane is not an integer lane, so the Tensor is not
+    /// pure-integer — the same reading `from_vector_promoted` gives the
+    /// general route's result.
+    pub(super) fn project(&mut self, index: usize, dividend: i64) {
+        self.nums.push(dividend);
         self.dens.push(0);
         self.integer = false;
         self.absences.insert(index, division_by_zero_absence());
     }
 
-    /// Lane `index` is absent because `from`'s lane is: the sentinel in the
-    /// columns, and `from`'s reason carried over, not minted again.
+    /// Lane `index` is absent because `from`'s lane is: that lane's pair in
+    /// the columns, and `from`'s reason carried over, not minted again.
     pub(super) fn carry(&mut self, index: usize, from: Lanes) {
-        self.nums.push(0);
+        self.nums.push(from.num(index));
         self.dens.push(0);
         self.integer = false;
         self.absences.insert(index, from.absence(index));
@@ -199,9 +209,9 @@ impl Out {
 
 /// The passthrough law over lanes already computed as if every lane were
 /// present: each absent operand lane becomes an absent result lane carrying
-/// that operand's reason, `a`'s lanes before `b`'s so the leftmost absent
-/// operand wins (LANG.FAILURE.PASSTHROUGH). A sentinel scan per absent
-/// operand, and one map entry per absent lane.
+/// that operand's pair and reason, `a`'s lanes before `b`'s so the leftmost
+/// absent operand wins (LANG.FAILURE.PASSTHROUGH). A denominator scan per
+/// absent operand, and one map entry per absent lane.
 pub(super) fn carry_absent_lanes(out: &mut Out, a: Lanes, b: Lanes) {
     for operand in [a, b] {
         let Lanes::Columns {
@@ -214,7 +224,7 @@ pub(super) fn carry_absent_lanes(out: &mut Out, a: Lanes, b: Lanes) {
         };
         for (index, &den) in tensor.denominators.iter().enumerate() {
             if den == 0 && out.dens[index] != 0 {
-                out.nums[index] = 0;
+                out.nums[index] = tensor.numerators[index];
                 out.dens[index] = 0;
                 out.integer = false;
                 out.absences.insert(index, operand.absence(index));

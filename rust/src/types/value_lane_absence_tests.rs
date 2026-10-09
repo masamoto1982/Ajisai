@@ -19,29 +19,45 @@ use crate::error::NilReason;
 use crate::semantic::Recoverability;
 use crate::test_support::hash_of;
 
+/// `7 0 DIV`: the absent number `7/0`, with its reason.
 fn div_by_zero() -> Value {
-    Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
+    Value::absent_number(
+        Fraction::from(7).over_zero(),
+        Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
+            .normalized_absence_metadata()
+            .expect("a reasoned NIL carries its absence"),
+    )
 }
 
-/// **A vector holding a NIL is stored densely, and the NIL keeps its
-/// reason.**
+/// **A vector holding an absent number is stored densely, and the absence
+/// keeps its reason.**
 ///
 /// `try_dense_value` used to refuse a NIL child, so this vector kept its
 /// nested form. The refusal was right while dense storage could say only
 /// *that* a lane was absent: densifying `NIL(divisionByZero)` and reading
 /// it back gave a NIL claiming the program had written it. With the reason
-/// stored beside the lane the refusal is no longer needed.
+/// stored beside the lane the refusal is no longer needed for an absent
+/// number — a quotient by zero, which is its dividend over that zero. A
+/// written `NIL` is not a number and still keeps the vector nested.
 #[test]
 fn a_densified_nil_keeps_its_reason() {
     let value = Value::from_vector_promoted(vec![Value::from_int(1), div_by_zero()]);
     assert!(
         matches!(value.data, ValueData::Tensor { .. }),
-        "a vector of numeric lanes promotes, NIL included: {:?}",
+        "a vector of numeric lanes promotes, an absent number included: {:?}",
         value.data
     );
     let lane = value.child(1).expect("lane 1 is a child");
     assert!(lane.is_nil());
     assert_eq!(lane.nil_reason().copied(), Some(NilReason::DivisionByZero));
+    assert_eq!(lane.absent_pair(), Some(&Fraction::from(7).over_zero()));
+
+    let written = Value::from_vector_promoted(vec![Value::from_int(1), Value::nil()]);
+    assert!(
+        matches!(written.data, ValueData::Vector(_)),
+        "a written NIL has no pair to be a lane: {:?}",
+        written.data
+    );
 }
 
 /// A lane made absent by a `Fraction` alone is absent for a reason the
@@ -131,10 +147,7 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
 /// different value, which is the one thing this codec promises not to do.
 #[test]
 fn a_tensors_absent_lane_keeps_its_reason_across_the_boundary() {
-    let value = Value::from_vector_promoted(vec![
-        Value::from_int(1),
-        Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable),
-    ]);
+    let value = Value::from_vector_promoted(vec![Value::from_int(1), div_by_zero()]);
     assert!(
         matches!(&value.data, ValueData::Tensor { data, .. } if !data.is_valid(1)),
         "the fixture must actually be a tensor with an absent lane: {:?}",
@@ -167,11 +180,13 @@ fn a_tensors_absent_lane_keeps_its_reason_across_the_boundary() {
 
 #[test]
 fn promotion_puts_every_reason_on_the_lane_it_belongs_to() {
+    // Lane 3 is an absent number too — `4/0` — but one a `Fraction` alone
+    // made, so it is absent for a reason the tensor is never told.
     let lanes = vec![
         Value::from_fraction(Fraction::from(1)),
         div_by_zero(),
         Value::from_fraction(Fraction::from(3)),
-        Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable),
+        Value::from_fraction(Fraction::from(4).over_zero()),
         Value::from_fraction(Fraction::from(5)),
     ];
     let promoted = Value::from_vector_promoted(lanes);
@@ -184,12 +199,11 @@ fn promotion_puts_every_reason_on_the_lane_it_belongs_to() {
         data.absences()
             .map(|(index, metadata)| (index, metadata.reason))
             .collect::<Vec<_>>(),
-        vec![
-            (1, Some(NilReason::DivisionByZero)),
-            (3, Some(NilReason::IndexOutOfBounds)),
-        ],
+        vec![(1, Some(NilReason::DivisionByZero)), (3, None)],
         "each reason sits on its own lane"
     );
+    assert_eq!(data.numerators.as_slice(), [1, 7, 3, 4, 5]);
+    assert_eq!(data.denominators.as_slice(), [1, 0, 1, 0, 1]);
     for (index, rendered) in [(0, "1/1"), (2, "3/1"), (4, "5/1")] {
         assert_eq!(
             promoted.child(index).map(|c| format!("{c}")),
@@ -304,10 +318,28 @@ fn cross_representation_equality_reads_the_user_declared_detail() {
     let nested = |detail: &str| {
         Value::from_vector(vec![Value::nil_user_declared(detail), Value::from_int(1)])
     };
+    // An `ABSENT` is not a number, so promotion keeps it nested; a tensor
+    // whose lane carries that absence is built from its lanes directly,
+    // which is how one restored from a save holds it.
     let dense = |detail: &str| {
-        Value::from_vector_promoted(vec![Value::nil_user_declared(detail), Value::from_int(1)])
+        Value::from_tensor_with_absences(
+            vec![Fraction::from(0).over_zero(), Fraction::from(1)],
+            vec![2],
+            BTreeMap::from([(
+                0,
+                Value::nil_user_declared(detail)
+                    .absence_metadata()
+                    .cloned()
+                    .expect("an ABSENT carries its detail"),
+            )]),
+        )
     };
-    assert!(dense("a").is_tensor(), "a NIL lane promotes");
+    assert!(dense("a").is_tensor(), "a tensor built from its lanes");
+    assert!(
+        !Value::from_vector_promoted(vec![Value::nil_user_declared("a"), Value::from_int(1)])
+            .is_tensor(),
+        "an ABSENT is not a number and does not promote"
+    );
 
     assert_eq!(
         nested("a"),

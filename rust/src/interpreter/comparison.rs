@@ -290,9 +290,9 @@ impl OrderingKind {
 /// Only that one shape is screened. `ExactScalar` (Tier 1 algebraic), `Text`,
 /// `Vector` and the rest fall through to the general route, which is the only
 /// one that can answer for them — an algebraic pair through the total
-/// `ExactReal::cmp_exact`. A nil
-/// `Fraction` (the 0-denominator sentinel) falls through too: it is not a
-/// rational, and this is not the place to decide what comparing one means.
+/// `ExactReal::cmp_exact`. An absent
+/// `Fraction` (denominator 0) falls through too: it is not a rational, and
+/// this is not the place to decide what comparing one means.
 pub(crate) fn rational_pair<'a>(
     a_val: &'a Value,
     b_val: &'a Value,

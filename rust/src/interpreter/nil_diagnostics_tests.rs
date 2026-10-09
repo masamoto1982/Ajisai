@@ -391,15 +391,22 @@ mod nil_trace_tests {
     /// materialized lane walk gave.
     #[test]
     fn a_dense_tensors_absence_reason_is_read_from_its_map() {
+        // The absent lane is a quotient by zero, `2/0`: an absent number,
+        // which is what a dense lane can hold.
         let lanes = vec![
             number(1),
-            Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable),
+            Value::absent_number(
+                crate::types::fraction::Fraction::from(2).over_zero(),
+                Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
+                    .normalized_absence_metadata()
+                    .expect("a reasoned NIL carries its absence"),
+            ),
             number(3),
         ];
         let dense = Value::from_vector_promoted(lanes.clone());
         assert!(
             matches!(dense.data, ValueData::Tensor { .. }),
-            "numeric lanes with an absent one must densify"
+            "numeric lanes with an absent number must densify"
         );
         assert_eq!(
             projected_nil_reason(&dense),
@@ -418,12 +425,22 @@ mod nil_trace_tests {
     /// wrong Word.
     #[tokio::test]
     async fn the_word_that_projected_the_lane_is_the_producer() {
+        // A negative radicand's absence is not a number — there is no pair
+        // to hold over a zero — so the result keeps its nested form; the
+        // producer is the same Word either way.
         let source = "[ 1 2 3 4 5 6 7 8 ] [ -1 MUL SQRT ] MAP";
-        assert!(top_is_dense_tensor(source).await);
+        assert!(!top_is_dense_tensor(source).await);
         assert_eq!(traced_reasons(source, "MAP").await, Vec::new());
         assert_eq!(
             traced_reasons(source, "SQRT").await,
             vec![Some(NilReason::DomainMiss); 8]
+        );
+        let source = "[ 1 2 3 4 5 6 7 8 ] [ 0 DIV ] MAP";
+        assert!(top_is_dense_tensor(source).await);
+        assert_eq!(traced_reasons(source, "MAP").await, Vec::new());
+        assert_eq!(
+            traced_reasons(source, "DIV").await,
+            vec![Some(NilReason::DivisionByZero); 8]
         );
     }
 

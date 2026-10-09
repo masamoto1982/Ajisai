@@ -52,7 +52,7 @@ pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
         ValueData::Boolean(_)
         | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
-        | ValueData::Nil
+        | ValueData::Nil(_)
         | ValueData::Symbol(_) => None,
     }
 }
@@ -105,7 +105,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::ExactScalar(_)
         | ValueData::Vector(_)
         | ValueData::Tensor { .. }
-        | ValueData::Nil
+        | ValueData::Nil(_)
         | ValueData::Symbol(_)
         | ValueData::Record(_) => None,
     }

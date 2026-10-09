@@ -72,7 +72,7 @@ pub(crate) fn measure_operand(value: &Value) -> OperandWork {
             .unwrap_or(OperandWork::leaf(1)),
         // No arithmetic happens on these; the structure error they raise is
         // not work.
-        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
+        ValueData::Boolean(_) | ValueData::Nil(_) | ValueData::Text(_) | ValueData::Symbol(_) => {
             OperandWork::leaf(1)
         }
     }
@@ -150,7 +150,7 @@ fn measure_result(value: &Value) -> (u64, usize) {
             let (child_bits, child_terms) = measure_result(child);
             (bits.max(child_bits), terms.max(child_terms))
         }),
-        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
+        ValueData::Boolean(_) | ValueData::Nil(_) | ValueData::Text(_) | ValueData::Symbol(_) => {
             (0, 0)
         }
     }
@@ -176,8 +176,16 @@ pub(crate) fn check_result_size(interp: &Interpreter, value: &Value) -> Result<(
 //
 // A remainder written out as `a - b * floor(a/b)` goes through the same
 // division, so a zero divisor answers the same way whichever phrase wraps it.
-pub(crate) fn division_by_zero_projection() -> Value {
-    Value::nil_with_absence(division_by_zero_absence())
+//
+// The quotient is absent as a number: `dividend` over the zero that refused
+// it (`Fraction::over_zero`), so `100 0 DIV` holds `100/0` and `0 0 DIV` the
+// one `0/0`. A dividend with no pair of its own — an algebraic number — is
+// absent without one.
+pub(crate) fn division_by_zero_projection(dividend: Option<Fraction>) -> Value {
+    match dividend {
+        Some(dividend) => Value::absent_number(dividend.over_zero(), division_by_zero_absence()),
+        None => Value::nil_with_absence(division_by_zero_absence()),
+    }
 }
 
 /// The absence a zero divisor projects, for a route that writes it into a
@@ -200,17 +208,13 @@ pub(crate) fn division_by_zero_absence() -> AbsenceMetadata {
 ///
 /// An absent operand never reaches here: `apply_lane_wise_broadcast` lifts the
 /// scalar passthrough law over each lane *before* consulting this one, while
-/// the lane is still a `Value` and its reason is still readable. The guard
-/// stays because it is not only about absence — `Fraction::nil` has
-/// denominator *and* numerator 0, so an absent divisor answers `is_zero` too,
-/// and dropping the test would read one as a zero divisor and invent a
-/// `divisionByZero` the program never performed.
+/// the lane is still a `Value` and its reason is still readable. Were one to,
+/// `Fraction::div` passes it through as it is — an absent divisor is not a
+/// zero divisor (`Fraction::is_zero`), so no `divisionByZero` the program
+/// never performed is invented for it.
 fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
-    if a.is_nil() || b.is_nil() {
-        return Ok(Value::nil());
-    }
     if b.is_zero() {
-        return Ok(division_by_zero_projection());
+        return Ok(division_by_zero_projection(Some(a.clone())));
     }
     Ok(Value::from_fraction(a.div(b)))
 }
@@ -223,18 +227,17 @@ fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
 /// scalar `NIL`.
 ///
 /// The wrap is rebuilt as the dense Tensor `build_scalar_fast_result` builds
-/// for a quotient, its one lane absent and the reason in the absence map: the
-/// representation of a `DIV` result does not depend on whether it projected,
-/// on this route any more than on the column kernels or the general lift.
-pub(crate) fn build_scalar_fast_projection(wrap: &ScalarFastWrap) -> Value {
+/// for a quotient, its one lane absent — the dividend over zero in the
+/// columns — and the reason in the absence map: the representation of a
+/// `DIV` result does not depend on whether it projected, on this route any
+/// more than on the column kernels or the general lift.
+pub(crate) fn build_scalar_fast_projection(dividend: &Fraction, wrap: &ScalarFastWrap) -> Value {
     match wrap {
-        ScalarFastWrap::Scalar => division_by_zero_projection(),
+        ScalarFastWrap::Scalar => division_by_zero_projection(Some(dividend.clone())),
         ScalarFastWrap::Tensor(shape) => {
             let mut absences = BTreeMap::new();
             absences.insert(0, division_by_zero_absence());
-            let tensor =
-                DenseTensor::from_columns(vec![0i64], vec![0i64], shape.clone(), false, absences);
-            Value::from_dense_tensor(tensor, shape.clone())
+            Value::from_tensor_with_absences(vec![dividend.over_zero()], shape.clone(), absences)
         }
     }
 }

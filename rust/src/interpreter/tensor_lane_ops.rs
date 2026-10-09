@@ -12,9 +12,9 @@
 //! projected, and differs only in what a lane may answer with. The lanes are
 //! decided as `Value`s, so each projection keeps its reason, and the result
 //! is then promoted back to a dense Tensor wherever its lanes fit one: a
-//! dense Tensor holds an absent lane as the denominator-0 sentinel and its
-//! reason in the tensor's absence map, so a projection empties its own lane
-//! without costing the vector around it its representation.
+//! dense Tensor holds an absent quotient as the dividend over a denominator
+//! of 0 and its reason in the tensor's absence map, so a projection empties
+//! its own lane without costing the vector around it its representation.
 //!
 //! [`tensor_ops`]: crate::interpreter::tensor_ops
 
@@ -31,16 +31,16 @@ use crate::types::{Value, ValueData};
 ///
 /// Two representations record one fact. A NIL that lives as a `Value` carries
 /// its `AbsenceMetadata`, and therefore its reason; a NIL that lives as a
-/// dense tensor lane is the denominator-0 sentinel `Fraction::nil` stores,
-/// which records *that* the lane is absent and nothing about why. Both count
-/// here: this predicate exists to steer a broadcast away from the flat
-/// `Fraction` kernels, which can only produce the second kind.
+/// dense tensor lane is a pair with denominator 0 — the dividend over the
+/// zero — which records *that* the lane is absent and nothing about why.
+/// Both count here: this predicate exists to steer a broadcast away from the
+/// flat `Fraction` kernels, which can only produce the second kind.
 ///
 /// Reached only when a broadcast is about to choose a route, so the cost is
 /// one linear scan against a value the flat path would have walked anyway.
 pub(crate) fn contains_absent_lane(value: &Value) -> bool {
     match &value.data {
-        ValueData::Nil => true,
+        ValueData::Nil(_) => true,
         ValueData::Vector(items) => items.iter().any(contains_absent_lane),
         ValueData::Tensor { data, .. } => !data.all_lanes_valid(),
         ValueData::Scalar(f) => f.is_nil(),
@@ -236,7 +236,7 @@ fn flat_leaf_values(value: &Value) -> Vec<Value> {
 ///
 /// The promotion is the point. These lanes were decided as `Value`s so that a
 /// projection could keep its reason, and a dense Tensor keeps it too: the
-/// lane is the denominator-0 sentinel, the reason sits in the absence map
+/// lane is the dividend over a denominator of 0, the reason sits in the absence map
 /// (`DenseTensor::absences`). Answering a boxed Vector here instead made one
 /// zero divisor cost the whole result its columns — every Word downstream
 /// then read a million boxed lanes to find the one that was absent — and made

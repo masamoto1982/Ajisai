@@ -22,20 +22,21 @@
 //! (LANG.AUTHORITY.FREEDOM). `dense_kernels_tests` holds the two equal.
 //!
 //! An absent lane is not a reason to decline either, in an operand or in the
-//! answer. A dense Tensor holds one as it holds any other lane: the
-//! denominator-0 sentinel in the columns, and the reason in the Tensor's
-//! absence map, which is sized to the failures rather than to the data. So
-//! the two laws that meet absence are the kernels' own:
+//! answer. A dense Tensor holds one as it holds any other lane: a
+//! denominator of 0 in the columns, the dividend it holds in the numerator
+//! beside it, and the reason in the Tensor's absence map, which is sized to
+//! the failures rather than to the data. So the two laws that meet absence
+//! are the kernels' own:
 //!
 //! - **Passthrough** (LANG.FAILURE.PASSTHROUGH): an absent operand lane is
-//!   the result lane, the leftmost operand first, carried with its reason and
-//!   never re-minted. On the integer route the sentinel's numerator is 0, so
-//!   the vectorised loop runs over it like any lane and the absent lanes are
-//!   overwritten afterwards, from the sentinel scan, at the cost of the
-//!   failures rather than the data (`carry_absent_lanes`).
+//!   the result lane, the leftmost operand first, carried with its pair and
+//!   its reason and never re-minted. On the integer route the vectorised
+//!   loop runs over an absent lane's numerator like any lane, and the absent
+//!   lanes are overwritten afterwards, from the denominator scan, at the
+//!   cost of the failures rather than the data (`carry_absent_lanes`).
 //! - **Projection** (LANG.FAILURE.PROJECT): `DIV` by a zero lane writes the
-//!   sentinel, records `divisionByZero` for that lane, and keeps dividing the
-//!   rest.
+//!   dividend over that zero (`Fraction::over_zero`), records
+//!   `divisionByZero` for that lane, and keeps dividing the rest.
 //!
 //! The kernels used to hand both cases to the general route, which boxed a
 //! million lanes to say that one of them was absent, and left the result
@@ -72,9 +73,12 @@ fn hit<T>(answer: Option<T>) -> Option<T> {
 
 /// `out[i] = f(a[i], b[i])` on integer lanes, with the overflow flags of
 /// every lane gathered rather than checked one by one, so the loop is free
-/// to vectorise. A set flag declines the whole operation. An absent lane's
-/// sentinel numerator is 0, which `f` takes like any other integer; the lane
-/// is overwritten afterwards (`carry_absent_lanes`).
+/// to vectorise. A set flag declines the whole operation — unless only
+/// absent lanes raised it: an absent lane's numerator is the dividend it
+/// holds, which `f` takes like any other integer and which may overflow
+/// where no present lane does, and the lane is overwritten afterwards
+/// (`carry_absent_lanes`), so its flag is read again, lane by lane, only
+/// when a flag was raised at all.
 #[inline(always)]
 fn integer_lanes(
     a: Lanes,
@@ -108,6 +112,9 @@ fn integer_lanes(
         }
         (Lanes::Splat(..), Lanes::Splat(..)) => return None,
     }
+    if bad && (a.absent() || b.absent()) {
+        bad = (0..n).any(|i| a.den(i) != 0 && b.den(i) != 0 && f(a.num(i), b.num(i)).1);
+    }
     (!bad).then_some(out)
 }
 
@@ -117,8 +124,8 @@ const GCD_TABLE_MAX: u64 = 4096;
 
 /// `a / b` on integer lanes: each quotient reduced by one gcd, with the sign
 /// carried by the numerator; an absent operand lane carried, a zero divisor
-/// an absent lane. `None` for the one quotient a machine word cannot hold,
-/// `i64::MIN / -1`.
+/// an absent lane holding its dividend. `None` for the one quotient a
+/// machine word cannot hold, `i64::MIN / -1`.
 fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
     use crate::types::fraction::binary_gcd_u64;
     // A Tensor divided by one small integer (`7 DIV`, the common case) meets
@@ -145,7 +152,7 @@ fn integer_quotients(a: Lanes, b: Lanes, n: usize) -> Option<Value> {
         }
         let (x, y) = (a.num(i), b.num(i));
         if y == 0 {
-            out.project(i);
+            out.project(i, x);
             continue;
         }
         // gcd(x, y) = gcd(y, x mod y): one division brings both operands
@@ -201,8 +208,8 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
     let mut out = Out::with_capacity(n);
     for i in 0..n {
         let (x, y) = (a.at(i), b.at(i));
-        // A present lane never has denominator 0, so the sentinel alone says
-        // which operand lane is absent: that lane is the result, leftmost
+        // A present lane never has denominator 0, so the denominator alone
+        // says which operand lane is absent: that lane is the result, leftmost
         // first (LANG.FAILURE.PASSTHROUGH). Then a zero divisor projects its
         // own lane; a lane that outgrows a machine word is a boxed Vector,
         // the general route's to make.
@@ -215,7 +222,7 @@ fn arithmetic_lanes(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Opti
             continue;
         }
         if matches!(schema, ExactArithmeticSchema::Div) && y.0 == 0 {
-            out.project(i);
+            out.project(i, x.0);
             continue;
         }
         let (rn, rd) = match schema {
@@ -245,10 +252,10 @@ fn ordering_lanes(kind: OrderingKind, a: &Value, b: &Value) -> Option<Value> {
     let decide = |i: usize| -> Value {
         if absent {
             if a.den(i) == 0 {
-                return Value::nil_with_absence(a.absence(i));
+                return a.absent_value(i);
             }
             if b.den(i) == 0 {
-                return Value::nil_with_absence(b.absence(i));
+                return b.absent_value(i);
             }
         }
         let ordering = if integer {

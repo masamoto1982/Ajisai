@@ -208,21 +208,6 @@ impl std::hash::Hash for Fraction {
 
 impl Fraction {
     #[inline]
-    pub fn nil() -> Self {
-        Fraction {
-            repr: FractionRepr::Small(0, 0),
-        }
-    }
-
-    #[inline]
-    pub fn is_nil(&self) -> bool {
-        match &self.repr {
-            FractionRepr::Small(_, d) => *d == 0,
-            FractionRepr::Big(big) => big.denominator.is_zero(),
-        }
-    }
-
-    #[inline]
     pub fn is_small(&self) -> bool {
         matches!(self.repr, FractionRepr::Small(..))
     }
@@ -373,11 +358,13 @@ impl Fraction {
         }
     }
 
+    /// True for the number zero. An absent number is not zero, whatever its
+    /// numerator: `0/0` is as absent as `5/0`, and neither is a zero divisor.
     #[inline]
     pub fn is_zero(&self) -> bool {
         match &self.repr {
-            FractionRepr::Small(n, _) => *n == 0,
-            FractionRepr::Big(big) => big.numerator.is_zero(),
+            FractionRepr::Small(n, d) => *n == 0 && *d != 0,
+            FractionRepr::Big(big) => big.numerator.is_zero() && !big.denominator.is_zero(),
         }
     }
 

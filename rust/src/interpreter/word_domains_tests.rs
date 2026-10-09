@@ -80,7 +80,7 @@ fn domain_of(value: &Value) -> Option<ValueDomain> {
         ValueData::Text(_) => ValueDomain::String,
         ValueData::Record(_) => ValueDomain::Record,
         ValueData::Symbol(_) => ValueDomain::Symbol,
-        ValueData::Nil => return None,
+        ValueData::Nil(_) => return None,
     })
 }
 

@@ -79,13 +79,13 @@ async fn routes_agree(dense: &str, operand: &str, word: &str) {
     );
 }
 
-/// A flat range; absent lanes without a reason (the `NIL` literal) and with
-/// one (`NUM` of a non-number answers `invalidEncoding` per lane, kept dense
-/// with its reason); and a rank-2 tensor.
+/// A flat range; absent lanes — quotients by zero, the absence a dense
+/// Tensor holds as the dividend over zero, with its reason — among present
+/// ones and on their own; and a rank-2 tensor.
 const OPERANDS: [&str; 4] = [
     "0 9 RANGE",
-    "[ 1 NIL 3 NIL 5 ]",
-    "0 4 RANGE [ 'X' BIND 'x' NUM ] MAP",
+    "[ 1 2 3 4 5 ] [ 1 0 1 0 1 ] DIV",
+    "0 4 RANGE [ 0 DIV ] MAP",
     "0 11 RANGE [ 4 3 ] RESHAPE",
 ];
 

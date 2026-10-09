@@ -41,8 +41,8 @@ impl Fraction {
     }
 
     pub fn add(&self, other: &Fraction) -> Fraction {
-        if self.is_nil() || other.is_nil() {
-            return Self::nil();
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
 
         // Two `Small` integers: the overwhelmingly common operand pair (a
@@ -92,8 +92,8 @@ impl Fraction {
     }
 
     pub fn sub(&self, other: &Fraction) -> Fraction {
-        if self.is_nil() || other.is_nil() {
-            return Self::nil();
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
 
         // Two `Small` integers: the overwhelmingly common operand pair (a
@@ -213,8 +213,8 @@ impl Fraction {
     }
 
     pub fn mul(&self, other: &Fraction) -> Fraction {
-        if self.is_nil() || other.is_nil() {
-            return Self::nil();
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
 
         // As in `add`: an integer product is already in lowest terms.
@@ -268,11 +268,12 @@ impl Fraction {
     }
 
     pub fn div(&self, other: &Fraction) -> Fraction {
-        if self.is_nil() || other.is_nil() {
-            return Self::nil();
+        if let Some(absent) = self.absent_operand(other) {
+            return absent;
         }
+        // Division is total: a zero divisor answers the dividend over zero.
         if other.is_zero() {
-            panic!("Division by zero");
+            return self.over_zero();
         }
 
         if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
@@ -363,11 +364,10 @@ impl Fraction {
     }
 
     pub fn floor(&self) -> Fraction {
-        // Absence propagates, as it does through `add`, `sub`, `mul` and
-        // `div`: `Fraction::nil` is `0/0`, so without this an absent lane
-        // reached the division below and `[ NIL 1 ] FLOOR` aborted the process.
+        // Absence passes through as it is, as through the arithmetic: an absent
+        // lane must not reach the division below (`[ NIL 1 ] FLOOR` aborted).
         if self.is_nil() {
-            return Self::nil();
+            return self.clone();
         }
         if self.is_integer() {
             return Fraction::from_repr(self.repr.clone());
@@ -395,9 +395,9 @@ impl Fraction {
     }
 
     pub fn round(&self) -> Fraction {
-        // As `floor`: an absent lane is `0/0` and must not reach the division.
+        // As `floor`: an absent lane must not reach the division.
         if self.is_nil() {
-            return Self::nil();
+            return self.clone();
         }
         if self.is_integer() {
             return Fraction::from_repr(self.repr.clone());

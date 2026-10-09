@@ -12,12 +12,13 @@
 //!
 //! The result is the tensor the two-step route builds, lane for lane: a
 //! scalar's pair as it is held, an absent lane of a child Tensor as the
-//! `(0, 0)` its NIL reads as, a NIL value as `(0, 0)` with its reason, the
-//! absences at their offset in the whole, the shape from the same
-//! rectangular walk, and purity recomputed over every lane. Whatever that
-//! route would not have stored densely — a lane wider than a machine word,
-//! a Boolean, a String, an irrational, a Record, a ragged or empty
-//! Vector — answers `None` here, and the caller keeps the nested form; the
+//! pair it holds (the dividend over zero), an absent number as its pair
+//! with its reason, the absences at their offset in the whole, the shape
+//! from the same rectangular walk, and purity recomputed over every lane.
+//! Whatever that route would not have stored densely — a lane wider than a
+//! machine word, an absence that is not a number, a Boolean, a String, an
+//! irrational, a Record, a ragged or empty Vector — answers `None` here, and
+//! the caller keeps the nested form; the
 //! two-step route would have declined it too, which is why the caller no
 //! longer retries through it. `dense_columns_tests` holds the two equal.
 
@@ -167,8 +168,14 @@ fn append_value(value: &Value, columns: &mut Columns) -> Option<Shape> {
             columns.dens.push(d);
             Some(Shape::new())
         }
-        ValueData::Nil => {
-            columns.nums.push(0);
+        // An absent number is written as the pair it holds: the dividend a
+        // zero divisor refused, over that zero. An absence that is not a
+        // number has no pair to write, so the vector keeps its nested form,
+        // as it does for a String or a Boolean; a dividend past a machine
+        // word keeps it nested as any such lane does.
+        ValueData::Nil(pair) => {
+            let (n, _) = pair.as_ref()?.extract_i64_pair()?;
+            columns.nums.push(n);
             columns.dens.push(0);
             if let Some(metadata) = value.absence_metadata() {
                 columns.absences.insert(offset, metadata.clone());
@@ -179,10 +186,8 @@ fn append_value(value: &Value, columns: &mut Columns) -> Option<Shape> {
             data: tensor,
             shape,
         } => {
-            for (&n, &d) in tensor.numerators.iter().zip(&tensor.denominators) {
-                columns.nums.push(if d == 0 { 0 } else { n });
-                columns.dens.push(d);
-            }
+            columns.nums.extend_from_slice(&tensor.numerators);
+            columns.dens.extend_from_slice(&tensor.denominators);
             for (index, metadata) in tensor.absences() {
                 columns.absences.insert(offset + index, metadata.clone());
             }

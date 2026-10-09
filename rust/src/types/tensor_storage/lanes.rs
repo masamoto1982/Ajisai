@@ -10,7 +10,7 @@ impl DenseTensor {
     ///
     /// The same tensor `from_fractions_with_absences` builds from those lanes
     /// read one by one (`fraction_or_nil`): the pairs as stored, an absent
-    /// lane as the `(0, 0)` its NIL reads as, purity recomputed over the
+    /// lane as the dividend over zero it holds, purity recomputed over the
     /// slice, and the reasons of the absent lanes inside it moved with them.
     pub fn lanes(&self, start: usize, len: usize, shape: &[usize]) -> Self {
         let end = start + len;
@@ -21,7 +21,7 @@ impl DenseTensor {
             .iter()
             .zip(&self.denominators[start..end])
         {
-            numerators.push(if d == 0 { 0 } else { n });
+            numerators.push(n);
             denominators.push(d);
             is_pure_integer &= d == 1;
         }
