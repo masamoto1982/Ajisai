@@ -121,12 +121,15 @@ default is, so raising the playground/native default did not move it.
 
 The 120x gap between the two step budgets is the one a program notices first
 when it moves from the playground to an agent, because a block iteration costs
-one step per element: `0 99999 RANGE 0 [ ADD ] FOLD` walks 100,000 elements
-and is refused by `executionSteps` under the MCP profile, while the same sum as
-a vector operation (`V V ADD`, or `RANGE` and `FOLD` over a vector a tenth the
-size) runs in a handful of steps. The materialization ceiling admits a vector
-that the step ceiling cannot walk element by element: under this profile,
-block iteration is for tens of thousands of elements, and vector arithmetic
+one step per element *for every Word the block runs* (literals in the block
+cost nothing): `0 99999 RANGE 0 [ ADD ] FOLD` walks 100,000 elements through a
+one-Word block and is refused by `executionSteps` under the MCP profile, and
+`[ 3 MUL 1 ADD ] MAP` over 50,000 elements spends the same 100,000 steps
+through its two Words. The same sum as a vector operation (`V V ADD`, or
+`RANGE` and `FOLD` over a vector a tenth the size) runs in a handful of steps.
+The materialization ceiling admits a vector that the step ceiling cannot walk
+element by element: under this profile, block iteration is for a few tens of
+thousands of elements divided by the Words in the block, and vector arithmetic
 for the rest. The quickstart says so where an agent reads it, and the
 playground's splash shows the agent profile's ceilings beside its own
 (`AjisaiInterpreter.agent_host_profile()`).
@@ -198,10 +201,13 @@ own tab, at their own pace, for their own eyes.
 
 These are decisions, not defects. Each is recorded where it can be seen:
 
-- **`[ 0 100001 ] RANGE`** succeeds in the playground, materializing 100,002
-  elements, and answers `NIL(spaceExhausted)` under the MCP profile. Pinned as
-  a golden case with an explicit `hostDivergence` block
-  (`tools/mcp-server/golden/cases.json`).
+- **`0 100001 RANGE`** succeeds in the playground, materializing 100,002
+  elements, and is refused under the MCP profile as `resourceLimitExceeded`
+  naming `materializedElements`. The divergence is a failure on one host and
+  an answer on the other, never two answers: a crossed ceiling is an ERROR,
+  not a value, precisely so that two conforming hosts cannot answer one
+  program differently. Pinned as a golden case with an explicit
+  `hostDivergence` block (`tools/mcp-server/golden/cases.json`).
 - **A 1 MiB program** runs in the playground and is refused by the MCP server
   as `sourceTooLarge`.
 - **A computation past MCP's 5-second-equivalent work budget** completes in

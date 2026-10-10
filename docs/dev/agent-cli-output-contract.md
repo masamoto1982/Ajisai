@@ -535,10 +535,12 @@ compiled-in vocabulary, the failing interpreter's own dictionary, and — for
 `check` — the Words the same source defines.
 
 `resourceLimit` is `{ resource, limit, observed }` (plus `progress` for a
-cumulative meter) when a declared ceiling fired, and `null` otherwise. The same
-record sits in the diagnosis of a NIL a generative Word declined with
-`spaceExhausted`, which names `materializedElements`, `nestingDepth` or
-`numericLiteralDigits`. `resource` is the ceiling's own name
+cumulative meter) when a declared ceiling fired, and `null` otherwise. A
+generative Word asked for a result past a ceiling (`RANGE`, `FILL`, `RESHAPE`,
+`JSON-DECODE`, `NUM`, `POW`) fails the same way, naming `materializedElements`,
+`nestingDepth`, `numericLiteralDigits`, `bigintBits` or `algebraicTerms` with
+the size it measured before building; a ceiling is never a value. `resource`
+is the ceiling's own name
 (`sourceBytes`, `numericLiteralDigits`, `numericWork`, `collectionWork`,
 `bigintBits`, `algebraicTerms`, `nestingDepth`, `materializedElements`,
 `executionSteps`) — the same identifier a host publishes in

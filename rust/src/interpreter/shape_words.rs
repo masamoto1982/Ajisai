@@ -80,7 +80,7 @@ pub(super) fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
 /// Each axis is read as a `u64` on every target and narrowed saturating. An
 /// axis a 32-bit `usize` cannot hold is still a well-formed axis, too long to
 /// build, so it reaches the size check as one: declining it here made
-/// `[ 4294967296 ] 0 FILL` an `invalidShape` on wasm32 and `spaceExhausted`
+/// `[ 4294967296 ] 0 FILL` an `invalidShape` on wasm32 and a ceiling refusal
 /// natively.
 pub(super) fn parse_shape(shape_val: &Value) -> Option<Vec<usize>> {
     Some(
@@ -99,7 +99,7 @@ fn shape_axes(shape_val: &Value) -> Option<Vec<u64>> {
         .collect()
 }
 
-/// The element count a shape names, as a `spaceExhausted` diagnosis reports
+/// The element count a shape names, as a `materializedElements` refusal reports
 /// it: the product of the axes as written, in `u64` on every target (`None`
 /// past it), so the observed size is one number on wasm32 and natively. The
 /// product of `parse_shape`'s saturated axes is not that number on wasm32.
@@ -173,7 +173,8 @@ pub fn op_flatten(interp: &mut Interpreter) -> Result<()> {
 /// `RESHAPE ( [ vec ] [ shape ] -> [ reshaped ] )`: the Vector's leaves, in
 /// order, regrouped under `shape`. The product of the shape must equal the
 /// leaf count — nothing is padded or repeated — and a well-formed shape too
-/// large to materialize projects `spaceExhausted`, as `FILL` and `RANGE` do.
+/// large to materialize is refused as `resourceLimitExceeded`, as `FILL` and
+/// `RANGE` refuse one.
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     let shape_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let target = match interp.stack.pop() {
@@ -204,35 +205,33 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         ));
     };
     // A shape's rank is the nesting of the value it builds, so a rank past the
-    // nesting ceiling is declined before the value is built — building it is
+    // nesting ceiling is refused before the value is built — building it is
     // itself a walk one native frame per axis (`regroup`) — the way a count
     // past the materialization ceiling is.
     let max_nesting = interp.runtime_limits.max_nesting_depth;
     if shape.len() > max_nesting {
-        interp
-            .stack
-            .push(crate::interpreter::space_projection::nesting_exhausted_nil(
-                "RESHAPE",
-                max_nesting,
-                shape.len(),
-            ));
-        return Ok(());
+        let rank = shape.len();
+        put_back(interp, target, shape_val);
+        return Err(crate::interpreter::ceiling_refusal::nesting_refused(
+            max_nesting,
+            rank,
+        ));
     }
 
     let max_materialized = interp.runtime_limits.max_materialized_elements;
     let materialized = match checked_materialized_count(&shape) {
         Some(count) if count <= max_materialized => count,
         _ => {
-            // The same projection FILL makes for the same reason: a
-            // well-formed request the host declines (LANG.COLLECTIONS.BUDGET).
-            interp
-                .stack
-                .push(crate::interpreter::space_projection::space_exhausted_nil(
-                    "RESHAPE",
+            // The same refusal FILL makes for the same reason: a well-formed
+            // request past a host ceiling (LANG.COLLECTIONS.BUDGET).
+            let observed = shape_observed_size(&shape_val);
+            put_back(interp, target, shape_val);
+            return Err(
+                crate::interpreter::ceiling_refusal::materialization_refused(
                     max_materialized,
-                    shape_observed_size(&shape_val),
-                ));
-            return Ok(());
+                    observed,
+                ),
+            );
         }
     };
 

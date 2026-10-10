@@ -65,13 +65,26 @@ async fn pow_projects_what_has_no_value() {
     assert_eq!(top("1/0 -1 POW").await, "0/1");
     assert_eq!(top("1/0 2 POW").await, "1/0");
     assert_eq!(top("-1/0 2 POW").await, "1/0");
+    // `0/0` absorbs every operation (LANG.VALUES.EXACT), POW included, in
+    // either operand — the exponent 0 and the exponent `0/0` too, where the
+    // empty product and the domain miss would otherwise answer.
     assert_eq!(top("0/0 3 POW").await, "0/0");
     assert_eq!(top("0/0 1/2 POW").await, "0/0");
+    assert_eq!(top("0/0 0 POW").await, "0/0");
+    assert_eq!(top("0/0 -1 POW").await, "0/0");
+    assert_eq!(top("2 0/0 POW").await, "0/0");
+    assert_eq!(top("0/0 0/0 POW").await, "0/0");
+    assert_eq!(top("2 SQRT 0/0 POW").await, "0/0");
+    // The empty product is 1 for every other base, the points over zero
+    // included: nothing is multiplied, so no pair over zero reaches it.
+    assert_eq!(top("1/0 0 POW").await, "1/1");
+    assert_eq!(top("-1/0 0 POW").await, "1/1");
     assert_eq!(top("2 1/0 POW NIL-REASON").await, "'domainMiss'");
+    assert_eq!(top("2 -1/0 POW NIL-REASON").await, "'domainMiss'");
     assert_eq!(top("-8 1/3 POW NIL-REASON").await, "'domainMiss'");
     assert_eq!(top("-2 1/2 POW NIL-REASON").await, "'domainMiss'");
     assert_eq!(top("-2 SQRT 3/2 POW NIL-REASON").await, "'domainMiss'");
-    assert_eq!(top("2 1000000000 POW NIL-REASON").await, "'spaceExhausted'");
+    assert_eq!(error_of("2 1000000000 POW").await, "resourceLimitExceeded");
     assert_eq!(top("NIL 2 POW").await, "NIL");
     assert_eq!(error_of("'x' 2 POW").await, "nonNumeric");
     assert_eq!(error_of("[ 1 2 ] [ 1 2 3 ] POW").await, "shapeMismatch");
@@ -143,6 +156,16 @@ async fn under(limits: RuntimeLimits, source: &str) -> Result<Option<String>, Aj
     Ok(top_nil_reason(&interp).map(|reason| reason.as_protocol_str().to_string()))
 }
 
+/// The ceiling `source` is refused under, under `limits`; `None` when it
+/// answers.
+async fn refused_by(limits: RuntimeLimits, source: &str) -> Option<ResourceLimit> {
+    match with_limits(limits).execute(source).await {
+        Ok(()) => None,
+        Err(AjisaiError::ResourceLimitExceeded { resource, .. }) => Some(resource),
+        Err(e) => panic!("`{source}` must answer or be refused by name, got {e}"),
+    }
+}
+
 fn bits(max_bigint_bits: u64) -> RuntimeLimits {
     RuntimeLimits {
         max_bigint_bits,
@@ -198,27 +221,25 @@ async fn pow_is_charged_as_the_products_it_performs() {
 }
 
 /// A power past `bigintBits` or `algebraicTerms` is refused before it is
-/// computed — the `spaceExhausted` projection POW declares for an exponent
-/// past what the machine will materialize. It used to be computed whole, and
-/// only the operation after it, if any, met the ceiling.
+/// computed, by the ceiling's own name — the refusal `MUL` makes for the
+/// same width after computing it, made first. It used to be computed whole,
+/// and only the operation after it, if any, met the ceiling; and through
+/// engine 1.0.0-beta.1 it projected a NIL where every other ceiling raised.
 #[tokio::test]
 async fn a_power_past_the_size_ceilings_is_refused_before_it_is_computed() {
     assert_eq!(under(bits(1_000), "2 900 POW").await.unwrap(), None);
     assert_eq!(
-        under(bits(1_000), "2 1100 POW").await.unwrap().as_deref(),
-        Some("spaceExhausted")
+        refused_by(bits(1_000), "2 1100 POW").await,
+        Some(ResourceLimit::BigintBits)
     );
     assert_eq!(
-        under(bits(1_000), "1/3 -700 POW").await.unwrap().as_deref(),
-        Some("spaceExhausted")
+        refused_by(bits(1_000), "1/3 -700 POW").await,
+        Some(ResourceLimit::BigintBits)
     );
     // √P has coefficient 1; its tenth power is P⁵, 1,360 bits wide.
     assert_eq!(
-        under(bits(1_000), &format!("{PRIMORIAL_200} SQRT 10 POW"))
-            .await
-            .unwrap()
-            .as_deref(),
-        Some("spaceExhausted")
+        refused_by(bits(1_000), &format!("{PRIMORIAL_200} SQRT 10 POW")).await,
+        Some(ResourceLimit::BigintBits)
     );
     assert_eq!(
         under(bits(1_000), &format!("{PRIMORIAL_200} SQRT 6 POW"))
@@ -230,11 +251,8 @@ async fn a_power_past_the_size_ceilings_is_refused_before_it_is_computed() {
     // them can reach; a sum of two only ever into 2, either way up.
     let four = "2 SQRT 3 SQRT ADD 5 SQRT ADD 7 SQRT ADD";
     assert_eq!(
-        under(terms(4), &format!("{four} 6 POW"))
-            .await
-            .unwrap()
-            .as_deref(),
-        Some("spaceExhausted")
+        refused_by(terms(4), &format!("{four} 6 POW")).await,
+        Some(ResourceLimit::AlgebraicTerms)
     );
     assert_eq!(
         under(terms(8), &format!("{four} 6 POW")).await.unwrap(),
@@ -248,6 +266,32 @@ async fn a_power_past_the_size_ceilings_is_refused_before_it_is_computed() {
         under(terms(2), "2 SQRT 3 SQRT ADD -40 POW").await.unwrap(),
         None
     );
+}
+
+/// The operands of a refused power stay on the stack, as every refusal
+/// leaves them, and the ceiling's name, value and the observed width are
+/// reported, so an agent can tell the power to shrink from the host to
+/// change.
+#[tokio::test]
+async fn a_refused_power_names_its_ceiling_and_keeps_its_operands() {
+    let mut interp = with_limits(bits(1_000));
+    let err = interp
+        .execute("[ 1 2 ] 1100 POW")
+        .await
+        .expect_err("a lane past bigintBits refuses the whole lift");
+    assert!(
+        matches!(
+            err,
+            AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::BigintBits,
+                limit: 1_000,
+                observed: Some(1_101),
+                ..
+            }
+        ),
+        "{err:?}"
+    );
+    assert_eq!(interp.get_stack().len(), 2, "both operands put back");
 }
 
 /// `GCD` is Euclid on the operands' limbs, priced at least as `ADD` is on

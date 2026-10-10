@@ -10,7 +10,7 @@
 
 use crate::interpreter::runtime_limits::RuntimeLimits;
 use crate::interpreter::Interpreter;
-use crate::test_support::{top_nil_reason, with_limits};
+use crate::test_support::with_limits;
 
 // ── source-byte ceiling ────────────────────────────────────────────────
 
@@ -94,69 +94,73 @@ async fn digit_ceiling_counts_digits_only_not_sign_or_point() {
 
 // ── materialization ceiling (folded RANGE / FILL guards) ───────────────
 //
-// Phase 3 (structural-memory-safety roadmap): the materialization ceiling is
-// a *space water level*, so a well-formed but over-budget generative call
-// projects onto a diagnosable NIL (reason `SpaceExhausted`) instead
-// of a channel error — deterministically and synchronously, without
-// allocating anything huge. The other ceilings below stay ordinary errors.
+// The materialization ceiling bounds the size of one generated collection,
+// and a well-formed but over-budget generative call is refused by the
+// ceiling's name — `ResourceLimitExceeded`, `MaterializedElements` — before
+// anything is allocated, deterministically and synchronously, like every
+// other ceiling below (LANG.MACHINE.LIMITS). A ceiling is never a value.
+
+fn materialization_refusal(err: &crate::error::AjisaiError, limit: u64) -> bool {
+    matches!(
+        err,
+        crate::error::AjisaiError::ResourceLimitExceeded {
+            resource: crate::error::ResourceLimit::MaterializedElements,
+            limit: got,
+            ..
+        } if *got == limit
+    )
+}
 
 #[tokio::test]
-async fn range_projects_to_nil_at_a_low_injected_materialization_limit() {
+async fn range_is_refused_at_a_low_injected_materialization_limit() {
     let mut interp = with_limits(RuntimeLimits {
         max_materialized_elements: 10,
         ..RuntimeLimits::default()
     });
-    interp
+    let err = interp
         .execute("0 100 RANGE")
         .await
-        .expect("RANGE over the injected element cap must project onto NIL, not error");
-    assert_eq!(
-        top_nil_reason(&interp),
-        Some(crate::error::NilReason::SpaceExhausted),
-        "RANGE over the injected cap must leave a SpaceExhausted NIL"
+        .expect_err("RANGE over the injected element cap must be refused");
+    assert!(
+        materialization_refusal(&err, 10),
+        "RANGE over the injected cap must name the ceiling and its value: {err:?}"
     );
 }
 
 #[tokio::test]
-async fn fill_projects_to_nil_at_a_low_injected_materialization_limit() {
+async fn fill_is_refused_at_a_low_injected_materialization_limit() {
     let mut interp = with_limits(RuntimeLimits {
         max_materialized_elements: 10,
         ..RuntimeLimits::default()
     });
-    interp
+    let err = interp
         .execute("[ 100 ] 100 FILL")
         .await
-        .expect("FILL over the injected element cap must project onto NIL, not error");
-    assert_eq!(
-        top_nil_reason(&interp),
-        Some(crate::error::NilReason::SpaceExhausted),
-        "FILL over the injected cap must leave a SpaceExhausted NIL"
+        .expect_err("FILL over the injected element cap must be refused");
+    assert!(
+        materialization_refusal(&err, 10),
+        "FILL over the injected cap must name the ceiling and its value: {err:?}"
     );
 }
 
-// ── recovery: a space-exhausted NIL must not corrupt the interpreter ───
+// ── recovery: a refused materialization must not corrupt the interpreter ──
 
 #[tokio::test]
-async fn interpreter_stays_usable_after_a_materialization_space_projection() {
+async fn interpreter_stays_usable_after_a_materialization_refusal() {
     let mut interp = with_limits(RuntimeLimits {
         max_materialized_elements: 10,
         ..RuntimeLimits::default()
     });
-    assert_eq!(
-        {
-            interp.execute("0 100 RANGE").await.ok();
-            top_nil_reason(&interp)
-        },
-        Some(crate::error::NilReason::SpaceExhausted),
-    );
-    // A subsequent ordinary program must run cleanly on the same
-    // interpreter — no poisoned partial stack.
+    assert!(interp.execute("0 100 RANGE").await.is_err());
+    // The bounds are back where they were, and a subsequent ordinary program
+    // runs cleanly on the same interpreter — no poisoned partial stack.
+    assert_eq!(interp.get_stack().len(), 2);
     interp.set_runtime_limits(RuntimeLimits::default());
-    assert!(interp.execute("2 3 ADD").await.is_ok());
+    assert!(interp.execute("ADD").await.is_ok());
     assert_eq!(
         interp.get_stack().last().and_then(|v| v.as_i64()),
-        Some(5),
-        "2 3 ADD must evaluate to 5 after a materialization space projection"
+        Some(100),
+        "the restored bounds add up after a materialization refusal"
     );
 }
 

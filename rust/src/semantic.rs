@@ -12,11 +12,6 @@ pub enum AbsenceOrigin {
     NotFound,
     InvalidEncoding,
     IndexOutOfBounds,
-    /// A well-formed generative operation exceeded the space water level
-    /// (`max_materialized_elements`) and was projected to NIL under the
-    /// NIL Projection Rule (LANG.FAILURE.PROJECT). Used together with
-    /// `NilReason::SpaceExhausted`.
-    SpaceBudget,
     /// A well-formed operation was applied outside its domain — `SQRT` of a
     /// negative rational, the "well-formed domain miss" of LANG.FAILURE.PROJECT — and was
     /// projected to NIL under the NIL Projection Rule (LANG.FAILURE.PROJECT). Used
@@ -149,7 +144,6 @@ impl AbsenceOrigin {
             AbsenceOrigin::NotFound => "notFound",
             AbsenceOrigin::InvalidEncoding => "invalidEncoding",
             AbsenceOrigin::IndexOutOfBounds => "indexOutOfBounds",
-            AbsenceOrigin::SpaceBudget => "spaceBudget",
             AbsenceOrigin::DomainMiss => "domainMiss",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
             AbsenceOrigin::UserDeclared => "userDeclared",

@@ -2083,9 +2083,17 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-pow-projections" data-category="core">
-  <h3>POW is total where division is, and projects what has no real value by the declared reason</h3>
-  <pre class="ajisai-source">0 -1 POW -2 1/2 POW NIL-REASON 2 1000000000 POW NIL-REASON</pre>
-  <pre class="ajisai-expect-result">1/0 'domainMiss' 'spaceExhausted'</pre>
+  <h3>POW is total where division is, projects what has no real value by the declared reason, and is absorbed by 0/0 in either operand</h3>
+  <pre class="ajisai-source">0 -1 POW -2 1/2 POW NIL-REASON 0/0 0 POW 2 0/0 POW 1/0 0 POW</pre>
+  <pre class="ajisai-expect-result">1/0 'domainMiss' 0/0 0/0 1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-pow-size-ceiling" data-category="core">
+  <h3>POW refuses a result wider than bigintBits by the ceiling's name before computing it, never as a value (LANG.MACHINE.LIMITS)</h3>
+  <pre class="ajisai-source">2 1000000000 POW</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">bigintBits</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

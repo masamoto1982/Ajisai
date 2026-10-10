@@ -1,5 +1,5 @@
 //! Regression tests for generative-word materialization limits
-//! (`crate::interpreter::MAX_MATERIALIZED_ELEMENTS`).
+//! (`RuntimeLimits::max_materialized_elements`).
 //!
 //! `RANGE`, `FILL`, and `RESHAPE` each loop internally to build a vector or
 //! tensor, so they count as a single execution step and bypass the
@@ -8,53 +8,61 @@
 //! shapes whose element-count product overflows `usize`, into a
 //! `multiply with overflow` panic.
 //!
-//! Phase 3 of the structural-memory-safety roadmap turns the *space-budget*
-//! miss of the generative words — a well-formed input whose materialized result
-//! exceeds the ceiling — into a diagnosable projected NIL (reason
-//! `SpaceExhausted`) that a pipeline can recover with a chosen fallback, rather than
-//! a channel error. `RESHAPE` (back since the vocabulary-100 work order's
-//! Phase 2) projects the same way; its probe lives in `shape_words_tests`.
+//! A request past the ceiling is refused by the ceiling's name —
+//! `resourceLimitExceeded`, resource `materializedElements` — before anything
+//! is built, with the operands left on the stack as every refusal leaves
+//! them (LANG.MACHINE.LIMITS). It is never a value: a ceiling is the host's,
+//! and a NIL that flowed on from it let one program answer `ok` with
+//! different values on two hosts. `RESHAPE` refuses the same way; its probe
+//! lives in `shape_words_tests`.
 //!
 //! Two neighbouring probes live here as well: the extreme-index regressions
 //! (`i64::MIN` counts and indices past `u32`), and the shared stack rendering
 //! every observation surface goes through.
 
-use crate::error::NilReason;
+use crate::error::{AjisaiError, ResourceLimit};
 use crate::interpreter::Interpreter;
 use crate::test_support::top_nil_reason;
 use crate::types::display::render_stack;
 
+fn is_materialization_refusal(err: &AjisaiError) -> bool {
+    matches!(
+        err,
+        AjisaiError::ResourceLimitExceeded {
+            resource: ResourceLimit::MaterializedElements,
+            ..
+        }
+    )
+}
+
 #[tokio::test]
-async fn range_projects_unbounded_count_onto_a_space_ceiling() {
+async fn range_refuses_an_unbounded_count_by_the_ceilings_name() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("0 9999999999999 RANGE").await;
-    assert!(
-        result.is_ok(),
-        "an over-budget RANGE must project onto NIL, not error: {result:?}"
-    );
+    let err = interp
+        .execute("0 9999999999999 RANGE")
+        .await
+        .expect_err("an over-budget RANGE must be refused, never answered");
+    assert!(is_materialization_refusal(&err), "{err:?}");
     assert_eq!(
-        top_nil_reason(&interp),
-        Some(NilReason::SpaceExhausted),
-        "RANGE over the space ceiling must leave a SpaceExhausted NIL"
+        render_stack(interp.get_stack()),
+        vec!["0/1".to_string(), "9999999999999/1".to_string()],
+        "the bounds are put back, as every refusal leaves its operands"
     );
 }
 
 #[tokio::test]
-async fn range_space_projection_is_recoverable() {
-    // The whole point of a projected NIL over an error: a pipeline can
-    // recover it.
+async fn a_ceiling_is_never_recovered_as_a_value() {
+    // The whole point of an ERROR over a projected NIL: a fallback written
+    // for an absence must not be chosen by the host's ceiling. The program
+    // below answered `[ 42 ]` under a small ceiling and the sequence under a
+    // large one, both as `ok`, when the ceiling projected a NIL.
     let mut interp = Interpreter::new();
     let result = interp
         .execute("0 9999999999999 RANGE 'S' BIND [ 42 ] S S NIL? SELECT")
         .await;
     assert!(
-        result.is_ok(),
-        "the space-exhausted NIL must be recoverable: {result:?}"
-    );
-    assert_eq!(
-        top_nil_reason(&interp),
-        None,
-        "the fallback value, not a NIL, is on top"
+        result.is_err(),
+        "the ceiling must stop the run, not choose a branch: {result:?}"
     );
 }
 
@@ -73,70 +81,92 @@ async fn range_accepts_ordinary_size() {
 #[tokio::test]
 async fn range_handles_extreme_bounds_without_overflow() {
     // start/end at the i64 extremes: the span arithmetic must not overflow
-    // while computing the over-budget element count, and the result
-    // projects onto NIL.
+    // while computing the over-budget element count, and the request is
+    // refused by name.
     let mut interp = Interpreter::new();
     let program = format!("{} {} RANGE", i64::MIN, i64::MAX);
-    let result = interp.execute(&program).await;
-    assert!(
-        result.is_ok(),
-        "full-i64-span RANGE must project onto NIL, not panic: {result:?}"
-    );
-    assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
+    let err = interp
+        .execute(&program)
+        .await
+        .expect_err("full-i64-span RANGE must be refused, not panic");
+    assert!(is_materialization_refusal(&err), "{err:?}");
 }
 
 #[tokio::test]
 async fn range_infinite_direction_is_still_an_error() {
     // A malformed range (a bound that is not an integer) is not a budget
-    // miss; it remains an ordinary channel error.
+    // miss; it remains an ordinary channel error, under a different name.
     let mut interp = Interpreter::new();
-    let result = interp.execute("0 1/2 RANGE").await;
-    assert!(
-        result.is_err(),
-        "a non-integer RANGE bound stays a malformed-use error"
+    let err = interp
+        .execute("0 1/2 RANGE")
+        .await
+        .expect_err("a non-integer RANGE bound stays a malformed-use error");
+    assert!(!is_materialization_refusal(&err), "{err:?}");
+}
+
+#[tokio::test]
+async fn fill_refuses_an_oversized_product_by_the_ceilings_name() {
+    let mut interp = Interpreter::new();
+    let err = interp
+        .execute("[ 1000000 1000000 ] 7 FILL")
+        .await
+        .expect_err("a billion-element FILL must be refused, never answered");
+    assert!(is_materialization_refusal(&err), "{err:?}");
+    assert_eq!(
+        render_stack(interp.get_stack()),
+        vec!["[ 1000000/1 1000000/1 ]".to_string(), "7/1".to_string()],
+        "the shape and the value are put back"
     );
 }
 
 #[tokio::test]
-async fn fill_projects_oversized_product_onto_a_space_ceiling() {
-    let mut interp = Interpreter::new();
-    let result = interp.execute("[ 1000000 1000000 ] 7 FILL").await;
-    assert!(
-        result.is_ok(),
-        "a billion-element FILL must project onto NIL, not error: {result:?}"
-    );
-    assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
-}
-
-#[tokio::test]
-async fn fill_projects_shape_product_overflow_onto_a_space_ceiling() {
+async fn fill_refuses_a_shape_product_that_overflows() {
     // The product of these dimensions overflows usize; the old
-    // `shape.iter().product()` panicked here, then it errored, now it
-    // projects onto NIL.
+    // `shape.iter().product()` panicked here. The count has no number to
+    // report, but the ceiling does.
     let mut interp = Interpreter::new();
-    let result = interp
+    let err = interp
         .execute("[ 99999999 99999999 99999999 ] 1 FILL")
-        .await;
+        .await
+        .expect_err("an overflowing FILL shape must be refused, not panic");
     assert!(
-        result.is_ok(),
-        "an overflowing FILL shape must project onto NIL, not panic: {result:?}"
+        matches!(
+            err,
+            AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::MaterializedElements,
+                observed: None,
+                ..
+            }
+        ),
+        "{err:?}"
     );
-    assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
 }
 
 /// LANG.COLLECTIONS.BUDGET names JSON-DECODE beside RANGE and FILL: the
 /// members of every container in the text count together, nested ones
 /// included.
 #[tokio::test]
-async fn json_decode_projects_too_many_members_onto_a_space_ceiling() {
-    for (ceiling, reason) in [(4, Some(NilReason::SpaceExhausted)), (5, None)] {
+async fn json_decode_refuses_too_many_members_by_the_ceilings_name() {
+    for (ceiling, refused) in [(4, true), (5, false)] {
         let mut interp = Interpreter::new();
         let mut limits = *interp.runtime_limits();
         limits.max_materialized_elements = ceiling;
         interp.set_runtime_limits(limits);
         let result = interp.execute("'[1, 2, [3, 4]]' JSON-DECODE").await;
-        assert!(result.is_ok(), "ceiling {ceiling}: {result:?}");
-        assert_eq!(top_nil_reason(&interp), reason, "ceiling {ceiling}");
+        match result {
+            Err(err) => {
+                assert!(
+                    refused && is_materialization_refusal(&err),
+                    "ceiling {ceiling}: {err:?}"
+                );
+                assert_eq!(
+                    render_stack(interp.get_stack()),
+                    vec!["'[1, 2, [3, 4]]'".to_string()],
+                    "ceiling {ceiling}: the text is put back"
+                );
+            }
+            Ok(()) => assert!(!refused, "ceiling {ceiling}: must be refused"),
+        }
     }
 }
 

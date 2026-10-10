@@ -404,7 +404,8 @@ mod tests {
         let outcomes = conservative_outcomes();
         assert!(outcomes.contains("value"));
         assert!(outcomes.contains("error:stackUnderflow"));
-        assert!(outcomes.contains("nil:spaceExhausted"));
+        assert!(outcomes.contains("error:resourceLimitExceeded"));
+        assert!(outcomes.contains("nil:indexOutOfBounds"));
         assert!(outcomes.len() > 35, "{}", outcomes.len());
     }
 

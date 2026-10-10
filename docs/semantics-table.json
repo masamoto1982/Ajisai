@@ -63,7 +63,7 @@
       "id": "vectorHuge",
       "source": "[ 0 1000001 ]",
       "motivatedBy": [
-        "spaceExhausted"
+        "resourceLimitExceeded"
       ]
     },
     {
@@ -27534,7 +27534,7 @@
         "scalarOne",
         "scalarNullity"
       ],
-      "outcome": "nil:domainMiss"
+      "outcome": "value"
     },
     {
       "word": "POW",
@@ -27582,7 +27582,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -27630,7 +27630,7 @@
         "scalarZero",
         "scalarNullity"
       ],
-      "outcome": "nil:domainMiss"
+      "outcome": "value"
     },
     {
       "word": "POW",
@@ -27678,7 +27678,7 @@
         "scalarZero",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -27726,7 +27726,7 @@
         "scalarNegative",
         "scalarNullity"
       ],
-      "outcome": "nil:domainMiss"
+      "outcome": "value"
     },
     {
       "word": "POW",
@@ -27774,7 +27774,7 @@
         "scalarNegative",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -27822,7 +27822,7 @@
         "scalarNullity",
         "scalarNullity"
       ],
-      "outcome": "nil:domainMiss"
+      "outcome": "value"
     },
     {
       "word": "POW",
@@ -27918,7 +27918,7 @@
         "scalarLarge",
         "scalarNullity"
       ],
-      "outcome": "nil:domainMiss"
+      "outcome": "value"
     },
     {
       "word": "POW",
@@ -27966,7 +27966,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -28254,7 +28254,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -28446,7 +28446,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -28638,7 +28638,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "POW",
@@ -34746,7 +34746,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -34842,7 +34842,7 @@
         "scalarZero",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -34938,7 +34938,7 @@
         "scalarNegative",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -35538,7 +35538,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -35546,7 +35546,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -35554,7 +35554,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -35626,7 +35626,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",
@@ -35802,7 +35802,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "value"
+      "outcome": "error:resourceLimitExceeded"
     },
     {
       "word": "RANGE",

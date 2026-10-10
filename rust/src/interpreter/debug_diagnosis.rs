@@ -198,7 +198,7 @@ impl CauseClass {
 /// [`ErrorCategory`] cannot answer this. Every `NilReason` without a matching
 /// `AjisaiError` variant behind it lands on `ErrorCategory::Custom`, which
 /// maps to `Unknown`, so a projection the registry declares — `SQRT`'s
-/// negative radicand, `RANGE`'s materialization ceiling — reached the caller
+/// negative radicand, `GET`'s index past the end — reached the caller
 /// as `why: "unknown"` with "read the message" as its only next check. The
 /// reason had named the condition all along; this reads it.
 fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
@@ -206,10 +206,6 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         // A well-formed operand outside the operation's domain: a negative
         // radicand, an order asked of `0/0`.
         NilReason::DomainMiss => CauseClass::Domain,
-        // A budget rather than a mistake: the materialization ceiling answers
-        // to "the request is too big", not "the program is wrong" — the
-        // distinction `ResourceLimit` exists for.
-        NilReason::SpaceExhausted => CauseClass::ResourceLimit,
         NilReason::IndexOutOfBounds => CauseClass::Index,
         NilReason::NotFound | NilReason::InvalidEncoding => CauseClass::ValueShape,
         // Absence that no operation produced — a `NIL` in source, or one that

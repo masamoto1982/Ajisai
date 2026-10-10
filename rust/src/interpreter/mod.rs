@@ -76,6 +76,7 @@ pub(crate) mod lane_lift;
 // module path it used to have is kept for `agent::execution_receipt` and the
 // wasm bindings, which import it by that name.
 pub(crate) use self::host_profile_defaults as limit_profile;
+mod ceiling_refusal;
 pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
@@ -99,7 +100,6 @@ mod shape_words;
 mod shape_words_tests;
 pub(crate) mod simd_ops;
 pub mod sort;
-mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;

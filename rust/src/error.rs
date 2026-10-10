@@ -10,13 +10,13 @@ pub enum NilReason {
     // `LogicallyUnknown` was retired: no `NilReason` value represents the
     // logical truth value UNKNOWN (LANG.VALUES.TRUTH): UNKNOWN is a NIL read
     // in truth position, carrying whatever reason that NIL has.
-    /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
-    /// result would exceed the space water level (`max_materialized_elements`).
-    /// The NIL Projection Rule projects this to NIL with `absence.origin = spaceBudget`
-    /// (LANG.FAILURE.PROJECT) rather than aborting the process, so a pipeline can
-    /// recover it with a chosen fallback. Malformed inputs (an infinite `RANGE`, a
-    /// non-conforming `RESHAPE`) remain ordinary errors.
-    SpaceExhausted,
+    //
+    // `SpaceExhausted` was retired after 1.0.0-beta.1: a generative Word whose
+    // result would not fit under a host ceiling now raises
+    // `ResourceLimitExceeded` like every other ceiling (LANG.MACHINE.LIMITS).
+    // A ceiling is the host's, not the program's, and a NIL that flowed on
+    // from it let the same program answer `ok` with different values on two
+    // hosts; no reason may name a condition that depends on the host.
     /// A well-formed operation applied to an input outside its domain — the
     /// canonical case being `SQRT` of a negative rational, which
     /// LANG.FAILURE.PROJECT calls a "well-formed domain miss". The NIL
@@ -83,15 +83,9 @@ pub enum ResourceLimit {
     /// host publishes it as one more entry in the same limit table.
     ExecutionSteps,
     /// Materialized element count of one generated collection
-    /// (`max_materialized_elements`).
-    ///
-    /// The only ceiling in this vocabulary that is never *raised*: crossing it
-    /// is a well-formed operation that cannot produce a value within budget, so
-    /// the NIL Projection Rule projects it (LANG.FAILURE.PROJECT). It is named here all
-    /// the same, because a projection and a raise refuse for the same kind of
-    /// reason and a caller plans against the same published entry — and
-    /// without a name the projection could only say *that* a ceiling fired,
-    /// never which one or how much would have fitted.
+    /// (`max_materialized_elements`): what `RANGE`, `FILL`, `RESHAPE` and
+    /// `JSON-DECODE` measure before they build, and raise by this name when
+    /// the request will not fit (`interpreter::ceiling_refusal`).
     MaterializedElements,
 }
 
@@ -198,7 +192,6 @@ impl NilReason {
             NilReason::NotFound => "notFound",
             NilReason::InvalidEncoding => "invalidEncoding",
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
-            NilReason::SpaceExhausted => "spaceExhausted",
             NilReason::DomainMiss => "domainMiss",
             NilReason::Literal => "literal",
             NilReason::UserDeclared => "userDeclared",
@@ -213,7 +206,6 @@ impl NilReason {
         NilReason::NotFound,
         NilReason::InvalidEncoding,
         NilReason::IndexOutOfBounds,
-        NilReason::SpaceExhausted,
         NilReason::DomainMiss,
         NilReason::Literal,
         NilReason::UserDeclared,

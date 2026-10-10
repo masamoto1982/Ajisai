@@ -32,8 +32,8 @@ independent pieces of structural evidence say so:
    introducing a new one.
 3. **A gap identifier is the same kind of object as a NIL reason.** Both are
    stable ids for "why a well-formed partial operation produced nothing" —
-   `spaceExhausted` names why `RANGE` could not build the vector it was
-   asked for; `gap.recursiveDependency` names why inference could not decide
+   `domainMiss` names why `SQRT` had no answer for the radicand it was
+   given; `gap.recursiveDependency` names why inference could not decide
    a word's contract. Human-readable text may be reworded around either
    without changing what a caller can rely on.
 

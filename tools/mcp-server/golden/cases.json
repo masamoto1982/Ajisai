@@ -167,22 +167,23 @@
       }
     },
     {
-      "name": "agent materialization ceiling is a reason-carrying NIL",
+      "name": "agent materialization ceiling is an error named before anything is built",
       "source": "0 100001 RANGE",
       "expect": {
-        "/status": "ok",
-        "/stackDisplay/0": "NIL",
-        "/stack/0/semantics/absence/reason": "spaceExhausted",
-        "/errorFlowTrace/0/absence/reason": "spaceExhausted",
-        "/stack/0/semantics/absence/diagnosis/resourceLimit/resource": "materializedElements",
-        "/stack/0/semantics/absence/diagnosis/resourceLimit/limit": 100000,
-        "/stack/0/semantics/absence/diagnosis/resourceLimit/observed": 100002,
-        "/errorFlowTrace/0/diagnosis/why": "resourceLimit",
-        "/errorFlowTrace/0/diagnosis/resourceLimit/resource": "materializedElements"
+        "/status": "error",
+        "/diagnosis/why": "resourceLimit",
+        "/aiDiagnostic/category": "resourceLimitExceeded",
+        "/errorFlowTrace/0/kind": "wordError",
+        "/errorFlowTrace/0/word": "RANGE",
+        "/diagnosis/resourceLimit/resource": "materializedElements",
+        "/diagnosis/resourceLimit/limit": 100000,
+        "/diagnosis/resourceLimit/observed": 100002,
+        "/stackDisplay/0": "0/1",
+        "/stackDisplay/1": "100001/1"
       },
       "hostDivergence": {
         "playground": "succeeds, materializing 100002 elements",
-        "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: LANG.MACHINE.LIMITS makes limits a safety control rather than value semantics, so a conforming host chooses its own. Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
+        "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: LANG.MACHINE.LIMITS makes limits a safety control rather than value semantics, so a conforming host chooses its own — and that is exactly why a crossed ceiling is an ERROR and never a value. A host difference is visible here as a failure that names the ceiling, not as a different `ok` answer (through engine 1.0.0-beta.1 this projected a NIL that flowed on, and `0 X X NIL? SELECT` silently chose a different branch per host). Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
       }
     },
     {

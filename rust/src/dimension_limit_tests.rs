@@ -264,44 +264,46 @@ async fn a_value_built_past_the_nesting_ceiling_is_refused_not_aborted() {
     assert_eq!(interp.get_stack()[0].to_string(), "256/1");
 }
 
-/// A generative Word asked for a result nested past the ceiling declines
-/// it, as it declines a count past `materializedElements`, and names the
-/// ceiling it declined under.
+/// A generative Word asked for a result nested past the ceiling refuses
+/// it before building, as it refuses a count past `materializedElements`,
+/// by the ceiling's name — and leaves its operands where they were.
 #[tokio::test]
-async fn generative_words_decline_a_result_past_the_nesting_ceiling() {
+async fn generative_words_refuse_a_result_past_the_nesting_ceiling() {
     let axes = vec!["1"; 300].join(" ");
     let deep_json = format!("'{}{}' JSON-DECODE", "[".repeat(300), "]".repeat(300));
-    for (word, source) in [
-        ("FILL", format!("[ {axes} ] 7 FILL")),
-        ("RESHAPE", format!("[ 7 ] [ {axes} ] RESHAPE")),
-        ("JSON-DECODE", deep_json),
+    for (word, source, operands) in [
+        ("FILL", format!("[ {axes} ] 7 FILL"), 2),
+        ("RESHAPE", format!("[ 7 ] [ {axes} ] RESHAPE"), 2),
+        ("JSON-DECODE", deep_json, 1),
     ] {
         let mut interp = Interpreter::new();
-        interp
-            .execute(&source)
-            .await
-            .unwrap_or_else(|e| panic!("{word}: {e}"));
-        let top = &interp.get_stack()[0];
-        assert_eq!(
-            top.nil_reason(),
-            Some(&crate::error::NilReason::SpaceExhausted),
-            "{word}"
+        let err = interp.execute(&source).await.expect_err(&format!(
+            "{word}: a result past the nesting ceiling is refused"
+        ));
+        assert!(
+            matches!(
+                err,
+                crate::error::AjisaiError::ResourceLimitExceeded {
+                    resource: crate::error::ResourceLimit::NestingDepth,
+                    limit: 256,
+                    ..
+                }
+            ),
+            "{word}: {err:?}"
         );
-        let facts = top
-            .absence
-            .as_ref()
-            .and_then(|a| a.diagnosis.as_ref())
-            .and_then(|d| d.resource_limit.as_ref())
-            .unwrap_or_else(|| panic!("{word}: the NIL names its ceiling"));
-        assert_eq!(facts.resource, "nestingDepth", "{word}");
-        assert_eq!(facts.limit, 256, "{word}");
+        assert_eq!(
+            interp.get_stack().len(),
+            operands,
+            "{word}: operands put back"
+        );
     }
 }
 
 /// Text spelling a number too large to build meets the numeric-literal
-/// ceiling at every entry point that reads the numeric grammar: refused as
-/// source, declined by NUM and JSON-DECODE. Each used to spend minutes
-/// building `1e99999999`'s hundred-million-digit integer.
+/// ceiling at every entry point that reads the numeric grammar, and is
+/// refused the same way at each: as source, by NUM and by JSON-DECODE, which
+/// leave the text where it was. Each used to spend minutes building
+/// `1e99999999`'s hundred-million-digit integer.
 #[tokio::test]
 async fn every_reader_of_the_numeric_grammar_meets_the_digit_ceiling() {
     let mut interp = Interpreter::new();
@@ -321,18 +323,21 @@ async fn every_reader_of_the_numeric_grammar_meets_the_digit_ceiling() {
         ("JSON-DECODE", "'[1e99999999]' JSON-DECODE"),
     ] {
         let mut interp = Interpreter::new();
-        interp
+        let err = interp
             .execute(source)
             .await
-            .unwrap_or_else(|e| panic!("{word}: {e}"));
-        let top = &interp.get_stack()[0];
-        let facts = top
-            .absence
-            .as_ref()
-            .and_then(|a| a.diagnosis.as_ref())
-            .and_then(|d| d.resource_limit.as_ref())
-            .unwrap_or_else(|| panic!("{word}: the NIL names its ceiling"));
-        assert_eq!(facts.resource, "numericLiteralDigits", "{word}");
-        assert_eq!(facts.observed, Some(100_000_000), "{word}");
+            .expect_err(&format!("{word}: text past the digit ceiling is refused"));
+        assert!(
+            matches!(
+                err,
+                crate::error::AjisaiError::ResourceLimitExceeded {
+                    resource: crate::error::ResourceLimit::NumericLiteralDigits,
+                    observed: Some(100_000_000),
+                    ..
+                }
+            ),
+            "{word}: {err:?}"
+        );
+        assert_eq!(interp.get_stack().len(), 1, "{word}: the text is put back");
     }
 }

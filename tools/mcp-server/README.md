@@ -286,15 +286,19 @@ A resource-limit failure carries `diagnosis.resourceLimit`
 entry in `ajisai://limits` that fired and `limit` its value — every ceiling,
 `executionSteps` included, reports what it observed.
 
-A ceiling can refuse a call without failing it. A well-formed generative Word
-whose result will not fit — `0 100001 RANGE` against
-`materializedElements` — *projects* to NIL under the NIL Projection Rule, so
-the call is `status: ok` and there is no top-level `diagnosis` to carry
-anything. The same facts are on the value that came back instead:
-`stack[i].semantics.absence.diagnosis.resourceLimit`, and on the
-`nilProduced` entry of `errorFlowTrace`. Read them there when
-`absence.reason` is `spaceExhausted`; `reason` says a ceiling fired, and only
-these say which one, what it is set to, and what size crossed it.
+A ceiling never refuses a call without failing it. A well-formed generative
+Word whose result will not fit — `0 100001 RANGE` against
+`materializedElements`, a `FILL` or `RESHAPE` shape past it or past
+`nestingDepth`, `JSON-DECODE` of text that deep, `NUM` of a lexeme past
+`numericLiteralDigits`, `POW` past `bigintBits` — is `status: error` with
+`resourceLimitExceeded`, and `diagnosis.resourceLimit` names the ceiling, its
+value and the size requested, measured before anything was built; the Word's
+operands stay on the stack. A ceiling is the host's, not the program's, so
+crossing one is never a value: a NIL here would flow on like any other value
+and let one program answer `ok` with different values on two hosts (through
+engine 1.0.0-beta.1 it did, as `NIL(spaceExhausted)`). A host difference is
+always visible as a failure that names the ceiling, never as a different
+answer.
 
 ### Backends and provenance
 
@@ -337,10 +341,12 @@ and `docs/dev/mcp-host-profiles.md` say so explicitly rather than leaving the
 gap to be discovered.
 
 The playground applies a different, looser profile — `0 100001 RANGE`
-succeeds there and answers `NIL(spaceExhausted)` here, and its step budget is
-120 times this one's, so a block iteration that walks 100,000 elements there
-is refused here (`executionSteps`; the quickstart says what to write
-instead). Both hosts publish what they apply — the playground's splash shows
+succeeds there and is refused here (`resourceLimitExceeded`, naming
+`materializedElements`), and its step budget is 120 times this one's, so a
+block iteration that walks 100,000 elements there is refused here
+(`executionSteps`; the quickstart says what to write instead). A program
+that runs on both hosts answers the same on both: a ceiling only ever turns
+an answer into a named failure, never into a different answer. Both hosts publish what they apply — the playground's splash shows
 this profile's ceilings beside its own — and the divergence is recorded as an
 explicit `hostDivergence` block on the golden case that shows it.
 

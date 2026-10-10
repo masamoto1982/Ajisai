@@ -27,11 +27,6 @@
       "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (GET, WITHOUT), a value a Vector does not contain (INDEX-OF, BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
     },
     {
-      "id": "spaceExhausted",
-      "projectable": true,
-      "documentation": "A well-formed generative operation (RANGE, FILL, RESHAPE) whose materialized result would exceed the space water level. The only reason that projects rather than raises even for a request that could never fit."
-    },
-    {
       "id": "userDeclared",
       "projectable": true,
       "parameterized": true,
@@ -164,7 +159,7 @@
       "id": "resourceLimitExceeded",
       "kind": "structural",
       "attribution": "machine",
-      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, nestingDepth, a numeric literal's digit count, or a program's byte length."
+      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, nestingDepth, a numeric literal's digit count, a program's byte length, the numeric or collection work meter, or the elements one generative Word (RANGE, FILL, RESHAPE, JSON-DECODE) was asked to materialize. A ceiling belongs to the host, not to the program, so crossing one is never a value: the run stops here, naming the ceiling, its value and what crossed it, and the same program cannot answer `ok` with different values on hosts that declare different ceilings."
     },
     {
       "id": "selfReferentialDefinition",

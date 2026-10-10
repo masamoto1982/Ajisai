@@ -187,10 +187,8 @@ async fn range_bounds_past_i64_are_integers_and_build() {
         );
     }
     assert_eq!(
-        crate::test_support::reason("0 100000000000000000000 RANGE")
-            .await
-            .as_deref(),
-        Some("spaceExhausted")
+        crate::test_support::error_of("0 100000000000000000000 RANGE").await,
+        "resourceLimitExceeded"
     );
 }
 

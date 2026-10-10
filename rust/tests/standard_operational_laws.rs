@@ -1,7 +1,7 @@
 //! Observable contracts that justify retaining native operational Standard Words.
 
 use ajisai_core::interpreter::Interpreter;
-use ajisai_core::NilReason;
+use ajisai_core::ErrorCategory;
 
 fn rendered_stack(interpreter: &Interpreter) -> Vec<String> {
     interpreter
@@ -125,10 +125,21 @@ async fn fill_checks_overflow_and_ceiling_before_materializing() {
         "[ 99999999 99999999 99999999 ] 1 FILL",
     ] {
         let mut interpreter = Interpreter::new();
-        interpreter.execute(source).await.unwrap();
-        let value = interpreter.get_stack().last().expect("FILL result");
-        assert!(value.is_nil());
-        assert_eq!(value.nil_reason(), Some(&NilReason::SpaceExhausted));
+        let err = interpreter.execute(source).await.unwrap_err();
+        assert_eq!(
+            ErrorCategory::from_error(&err),
+            Some(ErrorCategory::ResourceLimitExceeded),
+            "`{source}`: {err:?}"
+        );
+        assert!(
+            err.to_string().contains("materializedElements"),
+            "`{source}`: the refusal names its ceiling: {err}"
+        );
+        assert_eq!(
+            interpreter.get_stack().len(),
+            2,
+            "`{source}`: operands put back"
+        );
     }
 }
 
