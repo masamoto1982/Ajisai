@@ -73,6 +73,45 @@ describe('detectParallelCapability', () => {
         ).toBe(1);
     });
 
+    // hardwareConcurrency = typeof reported === 'number' && Number.isFinite(reported)
+    //   ? Math.floor(reported) : 1, then clamped to >= 1.
+    // Pairs against (T, T) 6 -> 6: (F, *) '6' -> 1 shows the type check;
+    // (T, F) Infinity / NaN -> 1 shows the finiteness check.
+    it('reads hardwareConcurrency only when it is a finite number', () => {
+        const cores = (hardwareConcurrency: unknown) =>
+            detectParallelCapability({
+                crossOriginIsolated: true,
+                SharedArrayBuffer: SAB,
+                navigator: { hardwareConcurrency } as { hardwareConcurrency?: number },
+            }).hardwareConcurrency;
+        expect(cores(6)).toBe(6);
+        expect(cores('6')).toBe(1);
+        expect(cores(Infinity)).toBe(1);
+        expect(cores(NaN)).toBe(1);
+        expect(cores(6.9)).toBe(6);
+        expect(cores(-4)).toBe(1);
+    });
+
+    it('reads no navigator as one core', () => {
+        expect(detectParallelCapability({ crossOriginIsolated: true, SharedArrayBuffer: SAB }).hardwareConcurrency).toBe(1);
+    });
+
+    // typeof maxThreads === 'number' && maxThreads >= 1 caps the count.
+    // Pairs against (T, T) 4 -> 4: (F, *) absent -> 16 shows the type check;
+    // (T, F) 0 -> 16 shows the lower bound.
+    it('applies maxThreads only when it is a number of at least 1', () => {
+        const threads = (maxThreads?: number) =>
+            detectParallelCapability(scope(true, true, 16), maxThreads === undefined ? {} : { maxThreads })
+                .recommendedThreads;
+        expect(threads(4)).toBe(4);
+        expect(threads()).toBe(16);
+        expect(threads(0)).toBe(16);
+        expect(threads(-2)).toBe(16);
+        expect(threads(1)).toBe(1);
+        expect(threads(2.7)).toBe(2);
+        expect(threads(64)).toBe(16);
+    });
+
     it('caps recommendedThreads at maxThreads when threading is available', () => {
         const cap = detectParallelCapability(scope(true, true, 16), { maxThreads: 4 });
         expect(cap.hardwareConcurrency).toBe(16);
@@ -100,5 +139,24 @@ describe('describeParallelCapability', () => {
     it('attributes the missing-SharedArrayBuffer case', () => {
         const text = describeParallelCapability(detectParallelCapability(scope(true, false, 4)));
         expect(text).toContain('SharedArrayBuffer');
+    });
+
+    it('names missing isolation first when both are missing', () => {
+        const text = describeParallelCapability(detectParallelCapability(scope(false, false, 4)));
+        expect(text).toContain('COOP/COEP');
+        expect(text).not.toContain('SharedArrayBuffer unavailable');
+    });
+
+    it('falls back to a generic line for a capability whose fields disagree', () => {
+        // Unreachable from detectParallelCapability, which derives
+        // threadsAvailable from the other two; a hand-built record reaches it.
+        const text = describeParallelCapability({
+            crossOriginIsolated: true,
+            sharedArrayBuffer: true,
+            hardwareConcurrency: 4,
+            threadsAvailable: false,
+            recommendedThreads: 1,
+        });
+        expect(text).toBe('single-threaded fallback');
     });
 });

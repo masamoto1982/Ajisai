@@ -38,7 +38,8 @@ fn string_tok(s: &str) -> Token {
 // ever records one. A comment is the one construct a line break ends: `#` at
 // a fresh word position runs to the end of its line.
 //
-// One decision in the comment loop, `i < chars.len() && chars[i] != '\n'`:
+// One decision in the comment loop, `cursor.peek().is_some_and(|c| c != '\n')`
+// — a character remains (R) and it is not a line break (N):
 //   row 1: a newline ends the comment      -> the next line's tokens follow
 //   row 2: end of input ends the comment   -> nothing follows
 mod whitespace_and_comments {
@@ -67,13 +68,19 @@ mod whitespace_and_comments {
 }
 
 // AQ-VER-002-D
-// DUT: rust/src/tokenizer.rs `parse_control_directive_word`
+// DUT: rust/src/tokenizer.rs `tokenize_with_spans`, the whole-lexeme rule:
 //
-// `OR-NIL` has no symbol sugar: it is a spelled-out control directive
-// recognized only by its bare word, case-folded (LANG.FAILURE.RECOVERY). `^` and `~`
-// carry no meaning of their own, so both are ordinary Symbols the dictionary
-// does not have, and so is `=`: a single-char Symbol with no lookahead. We
-// cover that boundary plus the bare `=` Symbol.
+//     let token = parse_number_from_string(token_str)
+//         .unwrap_or_else(|| Token::Symbol(token_str.into()));
+//
+// A lexeme runs to the next whitespace and is read as a whole: a Number when
+// the numeric grammar accepts all of it, otherwise a Symbol. No character
+// looks ahead or splits a lexeme. (The `parse_control_directive_word`
+// recognizer this table once named no longer exists; `OR-NIL` has no symbol
+// sugar, LANG.FAILURE.RECOVERY.) `^` and `~` carry no meaning of their own, so
+// both are ordinary Symbols the dictionary does not have, and so is `=`:
+// a single-char Symbol with no lookahead. We cover that boundary plus the
+// bare `=` Symbol.
 mod single_char_symbols {
     use super::*;
 
@@ -208,11 +215,11 @@ mod string_close_delimiter {
 }
 
 // AQ-VER-002-F
-// DUT: rust/src/tokenizer.rs:464-474 in `parse_number_from_string`
+// DUT: rust/src/tokenizer.rs `parse_number_from_string`, the sign preamble
+// (the rest of the grammar is AQ-VER-002-G in `tokenizer_number_mcdc_tests`)
 //
-//     if chars[i] == '-' || chars[i] == '+' {
-//         if chars.len() == 1 { return None; }
-//         if !chars[i + 1].is_ascii_digit() { return None; }
+//     if chars[i] == b'-' || chars[i] == b'+' {
+//         if chars.len() == 1 || !chars[i + 1].is_ascii_digit() { return None; }
 //         i += 1;
 //     }
 //

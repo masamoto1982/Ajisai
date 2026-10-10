@@ -18,6 +18,10 @@ use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;
 
+// The tables past this file's line budget: AQ-VER-001-J to -N, and -O to -R.
+mod arithmetic;
+mod repr;
+
 fn small(n: i64, d: i64) -> Fraction {
     Fraction::new(BigInt::from(n), BigInt::from(d))
 }
@@ -176,9 +180,11 @@ mod cmp_small_fast_path {
 }
 
 // AQ-VER-001-C
-// DUT: rust/src/types/fraction.rs:232 in `Fraction::as_usize` (Small arm)
+// DUT: rust/src/types/fraction.rs `Fraction::as_usize` (Small arm; the Big
+// arm is AQ-VER-001-L in `fraction_mcdc_tests::repr`)
 //
-//     if *d == 1 && *n >= 0 { Some(*n as usize) } else { None }
+//     if *d != 1 || *n < 0 { return None; }   // = !(d == 1 && n >= 0)
+//     usize::try_from(*n).ok()
 //
 // Conditions:
 //   A = (d == 1)
@@ -584,46 +590,45 @@ mod add_small_fast_path_entry_guard {
 //   row 4: (X=T, Y=T, Z=F)         -> None;      UNREACHABLE (proof above)
 //
 // Because rows 2-4 cannot be constructed without violating the i64 range
-// invariant, classic MC/DC pair construction does not apply; the test below
-// instead exercises row 1 at the operand boundary closest to the i128 limit
+// invariant, classic MC/DC pair construction does not apply; the tests below
+// instead exercise row 1 at the operand boundary closest to the i128 limit
 // to demonstrate the proof's tightness empirically.
 // ---------------------------------------------------------------------------
 mod add_checked_chain_defensive {
     use super::*;
 
+    // The operands need two different denominators: a fraction such as
+    // i64::MAX/i64::MAX reduces to 1/1 and takes the integer fast path, and
+    // a shared denominator takes `b == d` (AQ-VER-001-D) — neither reaches
+    // the chain. Consecutive integers are coprime, so i64::MAX/(i64::MAX - 1)
+    // stays as written.
     #[test]
     fn aq_ver_001_i_row1_extreme_i64_inputs_succeed_in_i128() {
-        // Operands chosen at the i64 boundary so that |a*d| + |c*b| approaches
-        // (but does not exceed) i128::MAX.
-        //   a = i64::MAX, d = i64::MAX  -> ad = (2^63 - 1)^2 = 2^126 - 2^64 + 1
-        //   c = i64::MAX, b = i64::MAX  -> cb = same
-        //   sum = 2 * (2^126 - 2^64 + 1) = 2^127 - 2^65 + 2 < i128::MAX
-        // Both fractions are i64::MAX/i64::MAX = 1, so the sum is 2.
-        // Although the result is small, the intermediate i128 arithmetic
-        // exercises the X, Y, Z chain at the proof's worst case.
-        let lhs = small(i64::MAX, i64::MAX);
-        let rhs = small(i64::MAX, i64::MAX);
-        let result = lhs.add(&rhs);
-        assert_eq!(
-            result,
-            small(2, 1),
-            "i64::MAX/i64::MAX ADD i64::MAX/i64::MAX EQ 2"
+        //   a/b = i64::MAX/(i64::MAX - 1),  c/d = (i64::MAX - 1)/i64::MAX
+        //   ad = (2^63 - 1)^2,  cb = (2^63 - 2)^2,  ad + cb < 2^127
+        let (a, b) = (i64::MAX, i64::MAX - 1);
+        let result = small(a, b).add(&small(b, a));
+        let expected = Fraction::new(
+            BigInt::from(a) * a + BigInt::from(b) * b,
+            BigInt::from(a) * b,
         );
+        assert_eq!(result, expected);
+        assert!(!result.is_small(), "the sum's numerator is past a word");
     }
 
     #[test]
     fn aq_ver_001_i_row1_negative_extreme_i64_inputs_succeed_in_i128() {
-        // Negative-side worst case (avoiding the literal i64::MIN, which would
-        // panic in `compute_gcd_i64::abs()` during the Fraction::new normalizer
-        // at fraction.rs:8 before reaching the checked-chain DUT):
-        //   a = -i64::MAX, d = i64::MAX -> ad = -(2^63 - 1)^2
-        //   c = -i64::MAX, b = i64::MAX -> cb = -(2^63 - 1)^2
-        //   |ad + cb| = 2 * (2^63 - 1)^2 < 2^127 = i128::MAX + 1.
-        // Both fractions are -i64::MAX/i64::MAX = -1, sum = -2.
-        let lhs = small(-i64::MAX, i64::MAX);
-        let rhs = small(-i64::MAX, i64::MAX);
-        let result = lhs.add(&rhs);
-        assert_eq!(result, small(-2, 1), "-i64::MAX/i64::MAX + same = -2");
+        // |a| = 2^63, the bound the proof uses:
+        //   a/b = i64::MIN/i64::MAX,  c/d = -(2^63 - 1)/(2^63 - 2)
+        //   |ad + cb| = 2^63 (2^63 - 2) + (2^63 - 1)^2 = 2^127 - 2^65 + 1 < 2^127
+        let (b, d) = (i64::MAX, i64::MAX - 1);
+        let result = small(i64::MIN, b).add(&small(-i64::MAX, d));
+        let expected = Fraction::new(
+            BigInt::from(i64::MIN) * d + BigInt::from(-i64::MAX) * b,
+            BigInt::from(b) * d,
+        );
+        assert_eq!(result, expected);
+        assert!(!result.is_small(), "the sum's numerator is past a word");
     }
 }
 

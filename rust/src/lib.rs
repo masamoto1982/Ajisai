@@ -58,6 +58,9 @@ mod tokenizer_regression_tests_2;
 mod tokenizer_mcdc_tests;
 
 #[cfg(test)]
+mod tokenizer_number_mcdc_tests;
+
+#[cfg(test)]
 mod lexical_grammar_laws;
 
 #[cfg(test)]

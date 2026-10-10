@@ -299,6 +299,106 @@ fn a_nested_vector_reads_the_same_dense_or_boxed() {
     assert_eq!(dense, boxed);
 }
 
+// --- the decisions the rows above leave out ---
+//
+// `value_to_protocol` arms with no row above: BOTH and Record.
+// `number_protocol_value`, `if let Small(n, d)`: T (the pair from the words),
+//   F (the pair from the `BigInt`s) — one spelling either way.
+// `tensor_to_protocol`, `shape.is_empty() || shape.len() == 1` (E, O):
+//   (T, *) leaves for every lane;  (F, T) leaves;  (F, F) a row per index.
+
+#[test]
+fn both_is_a_boolean_with_no_two_valued_image() {
+    let node = value_to_protocol(&Value::both());
+    assert_eq!(node.type_str, "boolean");
+    assert_eq!(node.value, ProtocolValue::Null);
+    let truth = value_to_protocol(&Value::from_bool(true));
+    assert_eq!(truth.type_str, "boolean");
+    assert_eq!(truth.value, ProtocolValue::Bool(true));
+}
+
+#[test]
+fn a_record_crosses_as_its_two_aligned_sequences() {
+    let record = crate::types::RecordData::new(
+        vec![Value::from_string("a"), scalar(2)],
+        vec![scalar(1), Value::from_bool(false)],
+    )
+    .expect("distinct keys");
+    let node = value_to_protocol(&Value::from_record(record));
+    assert_eq!(node.type_str, "record");
+    let ProtocolValue::Record { keys, values } = &node.value else {
+        panic!("expected Record, got {:?}", node.value);
+    };
+    let key_types: Vec<_> = keys.iter().map(|k| k.type_str).collect();
+    assert_eq!(key_types, ["string", "number"]);
+    assert_eq!(keys[0].value, ProtocolValue::Text("a".to_string()));
+    assert_eq!(values[0].value, num("1", "1"));
+    assert_eq!(values[1].value, ProtocolValue::Bool(false));
+}
+
+#[test]
+fn a_number_is_spelled_the_same_from_words_or_from_bigints() {
+    use num_bigint::BigInt;
+    let half = Value::from_fraction(Fraction::new(BigInt::from(-1), BigInt::from(2)));
+    assert_eq!(value_to_protocol(&half).value, num("-1", "2"));
+    let wide = Fraction::new(BigInt::from(1) << 70, BigInt::from(3));
+    assert!(!wide.is_small());
+    assert_eq!(
+        value_to_protocol(&Value::from_fraction(wide)).value,
+        num("1180591620717411303424", "3")
+    );
+    for (point, numerator) in [
+        (Fraction::positive_infinity(), "1"),
+        (Fraction::negative_infinity(), "-1"),
+        (Fraction::nullity(), "0"),
+    ] {
+        let node = value_to_protocol(&Value::from_fraction(point));
+        assert_eq!(node.type_str, "number");
+        assert_eq!(node.value, num(numerator, "0"));
+    }
+}
+
+#[test]
+fn tensor_shape_decides_leaves_or_rows() {
+    // (T, *): no axes, so the lanes themselves (here, none).
+    let empty = value_to_protocol(&tensor(&[], &[]));
+    assert_eq!(empty.type_str, "vector");
+    assert!(children_of(&empty).is_empty());
+    // (F, T): one axis, leaves.
+    let flat = value_to_protocol(&tensor(&[4, 5], &[2]));
+    assert!(children_of(&flat).iter().all(|k| k.type_str == "number"));
+    // (F, F): a row per index, recursively — rank 3 as [2, 1, 2].
+    let deep = value_to_protocol(&tensor(&[1, 2, 3, 4], &[2, 1, 2]));
+    let rows = children_of(&deep);
+    assert_eq!(rows.len(), 2);
+    let inner = children_of(&rows[1]);
+    assert_eq!(inner.len(), 1);
+    assert_eq!(inner[0].type_str, "vector");
+    let leaves = children_of(&inner[0]);
+    assert_eq!(leaves[0].value, num("3", "1"));
+    assert_eq!(leaves[1].value, num("4", "1"));
+}
+
+#[test]
+fn a_dense_lane_keeps_a_fraction_and_a_point() {
+    let lanes = vec![
+        Fraction::new(1.into(), 2.into()),
+        Fraction::positive_infinity(),
+    ];
+    let dense = DenseTensor::from_fractions(lanes, vec![2]).expect("dense lanes");
+    let value = Value::new(
+        ValueData::Tensor {
+            data: Arc::new(dense),
+            shape: Arc::new(vec![2]),
+        },
+        None,
+    );
+    let node = value_to_protocol(&value);
+    let kids = children_of(&node);
+    assert_eq!(kids[0].value, num("1", "2"));
+    assert_eq!(kids[1].value, num("1", "0"));
+}
+
 mod protocol_property_tests {
     use super::*;
     use proptest::prelude::*;
