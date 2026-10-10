@@ -131,8 +131,9 @@ The materialization ceiling admits a vector that the step ceiling cannot walk
 element by element: under this profile, block iteration is for a few tens of
 thousands of elements divided by the Words in the block, and vector arithmetic
 for the rest. The quickstart says so where an agent reads it, and the
-playground's splash shows the agent profile's ceilings beside its own
-(`AjisaiInterpreter.agent_host_profile()`).
+playground's Playground badge tooltip shows the agent profile's ceilings
+beside its own (`AjisaiInterpreter.agent_host_profile()`); the splash names
+both profiles only.
 
 **Three ceilings are deliberately *not* derived from the time budget, and stay
 at their prior values (mostly) or a differently-reasoned one:**

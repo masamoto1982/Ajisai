@@ -17,7 +17,7 @@ const BUILD_TIMESTAMP = __AJISAI_BUILD_TIMESTAMP__;
 const COMPARE_NOTE =
     'Compare against the repository when the Playground disagrees with the specification.';
 
-/** The build half of the detail, in the order the splash screen lists it. */
+/** The build half of the badge tooltip's detail. */
 function buildDetailLines(): string[] {
     return [`Version: ${__AJISAI_RELEASE_VERSION__}`, `Build: ${BUILD_TIMESTAMP}`, COMPARE_NOTE];
 }
@@ -49,26 +49,20 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  *
  * The header says it on hover and the splash says it in plain text, which is
  * what makes the pair work: a tooltip does not exist on a touch device, so
- * the splash is how the detail reaches one — and once it has, the header does
- * not need to keep spending its brand row on a stamp nobody reads twice.
+ * the splash is how the version reaches one — and once it has, the header
+ * does not need to keep spending its brand row on a stamp nobody reads twice.
+ * The splash keeps it to one line so it still fits a phone screen at a glance.
  */
 function setBuildVersionLabel(): void {
     // Until the interpreter is up this is all there is to tell; the host
     // profile rewrites this tooltip with its ceilings appended.
     setPlaygroundBadgeTooltip(buildDetailLines());
 
-    // The splash spells the same thing out on screen, one labeled line each.
+    // The splash states which build in a single line; the compare note is
+    // for someone already chasing a discrepancy, so it stays in the tooltip.
     setLabelForAll(['#splash-version-line'], (el) => {
         el.hidden = false;
-        el.textContent = `Version: ${__AJISAI_RELEASE_VERSION__}`;
-    });
-    setLabelForAll(['#splash-build-line'], (el) => {
-        el.hidden = false;
-        el.textContent = `Build: ${BUILD_TIMESTAMP}`;
-    });
-    setLabelForAll(['#splash-build-note'], (el) => {
-        el.hidden = false;
-        el.textContent = COMPARE_NOTE;
+        el.textContent = `${__AJISAI_RELEASE_VERSION__} · build ${BUILD_TIMESTAMP}`;
     });
 }
 
@@ -80,8 +74,8 @@ function setBuildVersionLabel(): void {
  * different moments, so a caller that added only its own half would leave the
  * tooltip reading differently depending on which ran last.
  *
- * The splash's own badge is deliberately left alone — everything this tooltip
- * says is already on screen beside it there.
+ * The splash's own badge is deliberately left alone — the splash is a
+ * one-time summary, not the place to dig into the detail.
  */
 function setPlaygroundBadgeTooltip(lines: string[]): void {
     setLabelForAll(['header .version'], (el) => {
@@ -147,34 +141,27 @@ function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
     }
 
     // Now that the ceilings are known, the badge's tooltip can state the whole
-    // thing — the same detail, in the same order, the splash shows on screen.
+    // thing: build detail, then the full ceiling table.
     setPlaygroundBadgeTooltip([...buildDetailLines(), '', text, ...limitLines]);
 
-    // The splash has no hover to fall back on, so it gets the full ceiling
-    // table written out as plain, always-visible text instead of a title.
+    // The splash names the profiles only. The full table (eleven rows) pushed
+    // everything else off a phone screen; what a first visit needs is to know
+    // that this host and the MCP server enforce different ceilings at all.
     setLabelForAll(['#splash-host-profile'], (el) => {
         el.hidden = false;
-        el.textContent = text;
+        el.textContent =
+            agentProfile && agentProfile.profile !== profile.profile
+                ? `Limits: ${profile.profile} · MCP: ${agentProfile.profile}`
+                : `Limits: ${profile.profile}`;
     });
-    const limitsList = document.querySelector<HTMLElement>('#splash-limits');
-    if (limitsList) {
-        limitsList.hidden = false;
-        limitsList.replaceChildren(
-            ...limitLines.map((line) => {
-                const item = document.createElement('li');
-                item.textContent = line;
-                return item;
-            })
-        );
-    }
 }
 
 /**
- * First-visit walkthrough: shows the Ajisai logo, then auto-reveals the build
- * and resource-limit detail spelled out in full (see setBuildVersionLabel() /
- * setHostProfileLabel() above, which fill it in) — everything the header badge
- * can only offer through a hover title, which is what a touch device never
- * gets. Dismissed by click, tap, or any key press — never a wait the user is
+ * First-visit walkthrough: shows the Ajisai logo, then auto-reveals a curated
+ * two-line summary — which build, and which resource profiles apply (see
+ * setBuildVersionLabel() / setHostProfileLabel() above, which fill it in).
+ * The full detail stays on the header badge's hover title; the splash keeps
+ * only what fits a phone screen at a glance. Dismissed by click, tap, or any key press — never a wait the user is
  * forced to sit through — and shown at most once per session so reloading
  * mid-session to retry a program never re-interrupts. Runs independently of
  * WASM/GUI startup: the splash is pure DOM and does not gate

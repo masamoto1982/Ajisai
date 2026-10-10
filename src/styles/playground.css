@@ -335,9 +335,9 @@ header {
         color: var(--color-text);
     }
 
-    /* The header's badge carries the build and resource-limit detail in its
-       tooltip (setPlaygroundBadgeTooltip() in src/entry/entry-common.ts); the
-       splash copy has that detail written out beside it. */
+    /* The header's badge carries the full build and resource-limit detail in
+       its tooltip (setPlaygroundBadgeTooltip() in src/entry/entry-common.ts);
+       the splash shows only a curated summary of it. */
     & .version {
         cursor: help;
     }
@@ -412,7 +412,7 @@ header {
 
     /* The technical detail is revealed by a timer (splash-detail-visible); the
        hint below it never waits on that timer. */
-    &.splash-detail-visible :is(.splash-version-line, .splash-note, .splash-limits-heading, .splash-limits) {
+    &.splash-detail-visible :is(.splash-version-line, .splash-note) {
         opacity: 1;
         transform: translateY(0);
     }
@@ -458,11 +458,9 @@ header {
 }
 
 /* Written out as plain text rather than a hover title: a touch device has no
-   hover to read it from. */
+   hover to read it from. Kept to two short lines so the splash fits a phone. */
 .splash-version-line,
-.splash-note,
-.splash-limits-heading,
-.splash-limits {
+.splash-note {
     opacity: 0;
     transform: translateY(4px);
     transition: opacity 0.5s ease, transform 0.5s ease;
@@ -478,26 +476,6 @@ header {
     font-size: var(--text-2xs);
     color: var(--color-text-light);
     max-width: 32rem;
-}
-
-.splash-limits-heading {
-    font-size: var(--text-xs);
-    color: var(--color-text);
-    font-weight: var(--weight-medium);
-}
-
-/* The ceiling table: monospace so the name/value pairs line up, left-aligned
-   within the centred splash. */
-.splash-limits {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-3xs);
-    font-family: var(--font-stack-mono);
-    font-size: var(--text-2xs);
-    color: var(--color-text-light);
-    text-align: left;
 }
 
 .splash-hint {
@@ -525,9 +503,7 @@ header {
     }
 
     .splash-version-line,
-    .splash-note,
-    .splash-limits-heading,
-    .splash-limits {
+    .splash-note {
         transition: none;
         opacity: 1;
         transform: none;

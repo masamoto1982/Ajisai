@@ -10,8 +10,10 @@
     <link rel="stylesheet" href="/src/styles/playground.css">
 </head>
 <body data-active-area="input">
-    <!-- First-visit walkthrough: the logo, then the build and resource-limit
-         detail as plain text (a touch device cannot read a hover title).
+    <!-- First-visit walkthrough: the logo, then a curated two lines of
+         technical detail — which build, and which resource profile — kept
+         short enough to read at a glance on a phone. The full detail lives in
+         the header badge's tooltip.
          Click, tap, or any key skips it; see initSplashScreen() in
          src/entry/entry-common.ts. -->
     <div id="splash-screen" class="splash-screen utsuroi" role="dialog" aria-modal="true" aria-label="Ajisai" tabindex="-1" hidden>
@@ -22,10 +24,7 @@
                 <span class="version">Playground</span>
             </div>
             <p class="splash-version-line" id="splash-version-line" hidden></p>
-            <p class="splash-version-line" id="splash-build-line" hidden></p>
-            <p class="splash-note" id="splash-build-note" hidden></p>
-            <p class="splash-limits-heading" id="splash-host-profile" hidden></p>
-            <ul class="splash-limits" id="splash-limits" hidden></ul>
+            <p class="splash-note" id="splash-host-profile" hidden></p>
             <p class="splash-hint">Click, tap, or press any key to continue</p>
         </div>
     </div>
@@ -38,8 +37,8 @@
                         <img src="./images/QR_341216.png" alt="" class="logo">
                         <h1>Ajisai</h1>
                     </a>
-                    <!-- Carries the build and resource-limit detail in its tooltip
-                         (the same text the splash spells out). -->
+                    <!-- Carries the full build and resource-limit detail in its
+                         tooltip (the splash shows only a curated summary). -->
                     <span class="version">Playground</span>
                 </div>
             </div>
