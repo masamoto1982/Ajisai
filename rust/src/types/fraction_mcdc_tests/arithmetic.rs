@@ -325,3 +325,48 @@ mod rounding_and_sign {
         assert_eq!(parse("-1/0").abs(), Fraction::positive_infinity());
     }
 }
+
+// ---------------------------------------------------------------------------
+// AQ-VER-001-S
+// DUT: rust/src/types/fraction_arithmetic.rs `balanced_bigint_gcd`
+//
+//     if a.is_zero() { .. }                                     // A0
+//     if b.is_zero() { .. }                                     // B0
+//     if let Some(g) = gcd_with_word(wide, narrow) { .. }       // W  narrow one word
+//     if wide.bits() <= 128 { .. }                              // U  both two words
+//     if narrow.bits() > LEHMER_BITS { lehmer }                 // L
+//     narrow.gcd(&(wide % narrow))                              // the rest
+//
+// Each row answers through a different arm, held to `Integer::gcd`:
+//   A0 (0, x);  B0 (x, 0);  W (wide, one word);  U (two words, two words);
+//   L (wide, past two words);  rest (past two words, exactly two words).
+// The property tests reach these arms at random; these rows name each one.
+// Inside U, `(Some(x), Some(y))` from `to_u128` has no false row: a
+// magnitude of at most 128 bits always converts.
+// ---------------------------------------------------------------------------
+mod balanced_gcd_dispatch {
+    use crate::types::fraction_arithmetic::balanced_bigint_gcd;
+    use num_bigint::BigInt;
+    use num_integer::Integer;
+
+    fn p2(k: u32) -> BigInt {
+        BigInt::from(1) << k
+    }
+
+    fn check(a: BigInt, b: BigInt, expected: BigInt) {
+        assert_eq!(balanced_bigint_gcd(&a, &b), expected, "gcd({a}, {b})");
+        assert_eq!(balanced_bigint_gcd(&b, &a), expected, "gcd({b}, {a})");
+        assert_eq!(a.gcd(&b), expected, "oracle");
+    }
+
+    #[test]
+    fn aq_ver_001_s_each_arm_answers_the_gcd() {
+        check(BigInt::from(0), p2(200) * -3, p2(200) * 3);
+        check(p2(200) * 3 + 3, BigInt::from(6), BigInt::from(3));
+        check(p2(100) * 3, p2(90) * 5, p2(90));
+        check(p2(300) * 3, p2(150) * 5, p2(150));
+        check(p2(300) * 3, p2(100) * 5, p2(100));
+        check(p2(300) * 3 + 1, p2(100) * 5, BigInt::from(1));
+        check(p2(300) * -7, p2(127) * 7, p2(127) * 7);
+    }
+}

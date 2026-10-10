@@ -216,6 +216,10 @@ mod create_from_i128_machine_word_path {
 //   (F, F) 7/2 -> Some(3);  (T, F) 1/0 -> None [Z];  (F, T) -7/2 -> None [N]
 // as_usize Big (I = !d.is_one(), N = n < 0):
 //   (F, F) 2^63 -> Some;  (T, F) (2^63+2)/3 -> None [I];  (F, T) -(2^63+1) -> None [N]
+// The single-condition reads the coverage run found unexecuted: the
+// inherent `to_i64` on `Big`, `ToPrimitive::to_i64` / `to_f64` (a point
+// over zero has no image), `Display` of a `Big` non-integer, and the
+// empty-string and signed trailing-dot arms of `from_str`.
 // ---------------------------------------------------------------------------
 mod integer_reads {
     use super::*;
@@ -260,6 +264,37 @@ mod integer_reads {
             None,
             "N flips the outcome"
         );
+    }
+
+    #[test]
+    fn aq_ver_001_l_inherent_to_i64_on_big() {
+        // Integral but past i64, and not integral: both decline.
+        assert_eq!(big(pow2(63), 1).to_i64(), None);
+        assert_eq!(big(pow2(70) + 1, 3).to_i64(), None);
+        assert_eq!(small(-7, 1).to_i64(), Some(-7));
+        assert_eq!(small(7, 2).to_i64(), None);
+    }
+
+    #[test]
+    fn aq_ver_001_l_to_primitive_truncates_and_declines_points() {
+        assert_eq!(ToPrimitive::to_i64(&small(-7, 2)), Some(-3));
+        assert_eq!(ToPrimitive::to_i64(&Fraction::nullity()), None);
+        // (2^64 + 1) / 4 truncates to 2^62.
+        assert_eq!(ToPrimitive::to_i64(&big(pow2(64) + 1, 4)), Some(1 << 62));
+        assert_eq!(ToPrimitive::to_i64(&big(pow2(70) + 1, 3)), None);
+        assert_eq!(ToPrimitive::to_f64(&small(1, 4)), Some(0.25));
+        assert_eq!(ToPrimitive::to_f64(&Fraction::negative_infinity()), None);
+        let wide = ToPrimitive::to_f64(&big(pow2(70), 3)).unwrap();
+        assert!((wide - 2f64.powi(70) / 3.0).abs() < 1e6);
+    }
+
+    #[test]
+    fn aq_ver_001_l_display_and_the_remaining_parse_arms() {
+        assert_eq!(big(pow2(70) + 1, 3).to_string(), "1180591620717411303425/3");
+        assert_eq!(big(pow2(70), 1).to_string(), "1180591620717411303424");
+        assert!(Fraction::from_str("").is_err());
+        assert_eq!(Fraction::from_str("-5.").unwrap(), small(-5, 1));
+        assert_eq!(Fraction::from_str("+5.").unwrap(), small(5, 1));
     }
 
     #[test]
@@ -317,6 +352,13 @@ mod from_str_exponent_guard {
         assert_eq!(Fraction::from_str("0.0e-99999999999").unwrap(), small(0, 1));
         assert!(Fraction::from_str("1e99999999999").is_err());
     }
+
+    /// A non-ASCII letter is never the exponent marker.
+    #[test]
+    fn aq_ver_001_m_a_non_ascii_character_is_no_exponent() {
+        assert!(Fraction::from_str("１e5").is_err());
+        assert!(Fraction::from_str("1ｅ5").is_err());
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -329,6 +371,12 @@ mod from_str_exponent_guard {
 //   AQ-VER-001-B has (T, F) and (T, T); here (F, T), rational against a point.
 // cmp_finite and PartialEq, `(Some(..), Some(..))` on the i64 pairs (A, B):
 //   AQ-VER-001-B has (T, T) and (F, F); here (T, F) and (F, T).
+// impl Hash, Big arm: `!g.is_zero() && !g.is_one()` (reduce or not) and
+//   whether the reduced pair fits i64 (hash as words or as BigInts). Reduced
+//   Big pairs only reach (g = 1, does not fit); the other rows need a pair
+//   held unreduced, and must hash as the reduced value they equal.
+//   (`g.is_zero()` and a negative Big denominator have no row: a Big pair
+//   has a nonzero denominator, normalized positive by every constructor.)
 // PartialEq Small/Small `b == d` (C) and Big `ad == bd` (C'):
 //   C = F with the values equal needs a pair not in lowest terms (only
 //   `create_unreduced` builds one); it is what tells the cross-multiplication
@@ -380,6 +428,31 @@ mod mixed_representation_order_and_equality {
             a,
             big(pow2(70) + 1, 6),
             "(C'=F), unequal by cross-multiplication"
+        );
+    }
+
+    fn hash_of(f: &Fraction) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        f.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[test]
+    fn aq_ver_001_n_an_unreduced_big_pair_hashes_as_its_value() {
+        // Reduces, and stays past a word: hashed as BigInts.
+        let wide = Fraction::create_unreduced(pow2(71) + 2, BigInt::from(6));
+        assert!(!wide.is_small());
+        assert_eq!(hash_of(&wide), hash_of(&big(pow2(70) + 1, 3)));
+        // Reduces into a word: hashed as the Small value it equals.
+        let three = Fraction::create_unreduced(pow2(70) * 3, pow2(70));
+        assert!(!three.is_small());
+        assert_eq!(three, small(3, 1));
+        assert_eq!(hash_of(&three), hash_of(&small(3, 1)));
+        // Already reduced: hashed as itself, distinct from a nearby value.
+        assert_ne!(
+            hash_of(&big(pow2(70) + 1, 3)),
+            hash_of(&big(pow2(70) + 4, 3))
         );
     }
 

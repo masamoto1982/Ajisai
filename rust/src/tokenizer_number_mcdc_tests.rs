@@ -72,6 +72,8 @@ fn assert_names(lexemes: &[&str]) {
 //   is the lexeme ending right after `e`, which G9 then rejects.
 // G9 (E, N): (F, F) "2e5"; (T, *) "2e", "2e-" Symbol [E]; (F, T) "2ex",
 //   "2e+x" Symbol [N].
+// G0, `chars.is_empty()`: `tokenize` never hands it an empty lexeme, but
+//   the code-data decoder's `is_number_token_lexeme` can.
 // G10 has no true row: G1 has already required a digit, so `i > start`.
 // G11: T "2.5e-3" Number; F "2.5.5", "2e5e5", "2e5x" Symbol.
 // ---------------------------------------------------------------------------
@@ -115,6 +117,14 @@ mod number_grammar_body {
         assert_names(&["2.5.5", "2e5e5", "2e5x", "2e5.5", "5x", "1_000", "0x10"]);
     }
 
+    #[test]
+    fn aq_ver_002_g_g0_the_empty_lexeme_is_no_number() {
+        use crate::tokenizer::is_number_token_lexeme;
+        assert!(!is_number_token_lexeme(""));
+        assert!(is_number_token_lexeme("2.5e-3"));
+        assert!(!is_number_token_lexeme("2.5e"));
+    }
+
     /// A multi-byte character is never a digit, sign, point, `e` or `/`: it
     /// stops a number wherever it stands.
     #[test]
@@ -138,6 +148,9 @@ mod number_grammar_body {
 //     (Q, C): (T, T) close; (T, F) a quote inside; (F, *) content.
 //       C's None arm — end of input closes — is "'foo'" and "''";
 //       no closing quote at all is "'foo" and "'".
+//   `string_literal_pieces` (the inverse the source writer uses), `c == '\''
+//     && peek.is_some_and(whitespace)` (Q, W) and `!current.is_empty()` (E):
+//       (T, T) cut;  (T, F) a final quote stays;  E = F only for "".
 //   A quote or `#` opens a string or comment only at a word position.
 // ---------------------------------------------------------------------------
 mod structure_and_string_boundaries {
@@ -193,6 +206,16 @@ mod structure_and_string_boundaries {
             let err = tokenize(source).unwrap_err();
             assert!(err.contains("Unclosed literal"), "`{source}`: {err}");
         }
+    }
+
+    #[test]
+    fn aq_ver_002_h_string_pieces_cut_after_a_quote_before_whitespace() {
+        use crate::tokenizer::string_literal_pieces;
+        assert_eq!(string_literal_pieces("a' b"), ["a'", " b"]);
+        assert_eq!(string_literal_pieces("a'b"), ["a'b"]);
+        assert_eq!(string_literal_pieces("a'"), ["a'"]);
+        assert_eq!(string_literal_pieces("x' y' "), ["x'", " y'", " "]);
+        assert!(string_literal_pieces("").is_empty());
     }
 
     #[test]
