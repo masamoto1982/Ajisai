@@ -20,8 +20,10 @@
 //! grammar: a value nested past the nesting ceiling (`nestingDepth`,
 //! LANG.MACHINE.LIMITS) is well-formed JSON the machine will not hold (its own
 //! value representation walks structure recursively when it is compared,
-//! rendered or released), so such text projects `spaceExhausted`, the outcome
-//! every other materialization past a ceiling reaches, not `invalidEncoding`.
+//! rendered or released), so such text is refused as `resourceLimitExceeded`
+//! by the ceiling's name, the outcome every request past a host ceiling
+//! reaches, never `invalidEncoding`: the text is not wrong, it is too big
+//! for this host, and that is a failure rather than a value.
 
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -397,32 +399,31 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
             NilReason::InvalidEncoding,
             Recoverability::Recoverable,
         )),
-        Err(Reject::TooManyDigits(digits)) => interp.stack.push(
-            crate::interpreter::space_projection::numeric_literal_exhausted_nil(
-                "JSON-DECODE",
-                max_digits,
-                digits,
-            ),
-        ),
+        // A ceiling crossed while reading is a refusal, never a value
+        // (LANG.MACHINE.LIMITS): the text goes back and the run stops by name.
+        Err(Reject::TooManyDigits(digits)) => {
+            restore(interp, operand);
+            return Err(
+                crate::interpreter::ceiling_refusal::numeric_literal_refused(max_digits, digits),
+            );
+        }
         Err(Reject::TooDeep) => {
-            interp
-                .stack
-                .push(crate::interpreter::space_projection::nesting_exhausted_nil(
-                    "JSON-DECODE",
-                    max_nesting,
-                    max_nesting + 1,
-                ))
+            restore(interp, operand);
+            return Err(crate::interpreter::ceiling_refusal::nesting_refused(
+                max_nesting,
+                max_nesting + 1,
+            ));
         }
         // Counted as it is built, so the whole count is not known; one past
         // the ceiling is, as `TooDeep` reports one level past it.
         Err(Reject::TooLarge) => {
-            interp
-                .stack
-                .push(crate::interpreter::space_projection::space_exhausted_nil(
-                    "JSON-DECODE",
+            restore(interp, operand);
+            return Err(
+                crate::interpreter::ceiling_refusal::materialization_refused(
                     max_elements,
                     Some(max_elements as u128 + 1),
-                ))
+                ),
+            );
         }
     }
     Ok(())

@@ -198,20 +198,19 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     let element_count = match element_count {
         Some(count) if count <= max_materialized as u128 => count,
         _ => {
-            // Phase 3 (structural-memory-safety roadmap): a well-formed, finite
-            // range whose materialized length exceeds the space water level is a
-            // well-formed operation that cannot produce a value within budget. The
-            // NIL Projection Rule projects it onto a diagnosable NIL (reason
-            // `spaceExhausted`) so a pipeline can recover it with a chosen fallback,
-            // instead of a channel error that halts evaluation.
-            interp
-                .stack
-                .push(crate::interpreter::space_projection::space_exhausted_nil(
-                    "RANGE",
+            // A well-formed, finite range longer than the host materializes is
+            // refused by name (`resourceLimitExceeded`, `materializedElements`;
+            // LANG.MACHINE.LIMITS), with the bounds put back as every refusal
+            // leaves its operands. It is never a value: a ceiling is the
+            // host's, and a value must mean the same thing on every host.
+            interp.stack.push(start_val);
+            interp.stack.push(end_val);
+            return Err(
+                crate::interpreter::ceiling_refusal::materialization_refused(
                     max_materialized,
                     element_count,
-                ));
-            return Ok(());
+                ),
+            );
         }
     };
 

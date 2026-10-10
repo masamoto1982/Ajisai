@@ -1165,7 +1165,7 @@
         "core-pow-projections"
       ],
       "status": "Formalized",
-      "notes": "Exact power inside the exact field (power.rs): integer exponents by square-and-multiply in the base's tier, p/2 exponents over a non-negative rational base in the field through SQRT; every other exponent leaves the field and projects domainMiss. Division is total, so a zero base under a negative exponent is a point over zero; projects domainMiss and spaceExhausted as the contract declares.",
+      "notes": "Exact power inside the exact field (power.rs): integer exponents by square-and-multiply in the base's tier, p/2 exponents over a non-negative rational base in the field through SQRT; every other exponent leaves the field and projects domainMiss. Division is total, so a zero base under a negative exponent is a point over zero; 0/0 absorbs in either operand; projects domainMiss as the contract declares, and refuses a result past bigintBits or algebraicTerms by name before computing it.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2235,7 +2235,7 @@
         "standard-json-decode-invalid-encoding"
       ],
       "status": "Formalized",
-      "notes": "An iterative JSON reader (json_decode.rs) that lands objects on Records, arrays on Vectors and numbers on exact rationals; malformed text projects invalidEncoding, nesting past the machine's bound projects spaceExhausted.",
+      "notes": "An iterative JSON reader (json_decode.rs) that lands objects on Records, arrays on Vectors and numbers on exact rationals; malformed text projects invalidEncoding; nesting, digits or members past the machine's ceilings are refused as resourceLimitExceeded by the ceiling's name.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

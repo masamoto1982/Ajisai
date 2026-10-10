@@ -119,12 +119,6 @@
       "rationale": "The exhaustive table hands CONTRACT every domain representative, so the category is reached there too; stated beside its registry entry because the String case is the one a reader will try first, and the one LANG.DICTIONARY.ACYCLIC forbids answering."
     },
     {
-      "id": "spaceExhausted",
-      "source": "0 999999999999 RANGE",
-      "expect": "nil:spaceExhausted",
-      "rationale": "The table's domain representatives are small numbers, so no RANGE cell asks for more elements than the machine materializes. A pair of bounds a trillion apart is the witness."
-    },
-    {
       "id": "contractViolation",
       "source": "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE",
       "expect": "error:contractViolation",

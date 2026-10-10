@@ -848,9 +848,9 @@
     "source": "0 100001 RANGE"
    },
    "expect": {
-    "/status": "ok",
-    "/stackDisplay/0": "NIL",
-    "/stack/0/semantics/absence/reason": "spaceExhausted"
+    "/status": "error",
+    "/diagnosis/why": "resourceLimit",
+    "/diagnosis/resourceLimit/resource": "materializedElements"
    }
   },
   {

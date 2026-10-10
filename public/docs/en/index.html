@@ -532,7 +532,7 @@
                     <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer, and Ajisai does not handle them. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
 
                     <h3>The other cost: the host's safety controls</h3>
-                    <p>The costs so far accumulate naturally from exact arithmetic itself, even in a correctly written program. Separately, the host sets several limits to protect its computing resources. Each is a safety control on the host side, not language semantics, and the concrete numbers are set by the implementation. The same source may pass on a host that declares larger limits. What happens on overrun is fixed, however: if producing a single value exceeds a limit, the result is a reasoned <strong><code>NIL</code></strong>; if the run itself exceeds a limit so far that it cannot continue, it is an <strong>error</strong> and evaluation stops.</p>
+                    <p>The costs so far accumulate naturally from exact arithmetic itself, even in a correctly written program. Separately, the host sets several limits to protect its computing resources. Each is a safety control on the host side, not language semantics, and the concrete numbers are set by the implementation. The same source may pass on a host that declares larger limits. What happens on overrun is fixed, however: whichever limit is exceeded, the result is an <strong>error</strong> that names the limit, and evaluation stops. A limit belongs to the host, not to the program, so it never turns into a value the program could branch on.</p>
 
                     <h3 id="limits">Run-time errors: one result with several reasons</h3>
                     <p>Even a well-formed operation or input is an error once it exceeds what the host can support, and evaluation stops on the spot. There is more than one limit: overruns are reported under at least three names, depending on what was exceeded. The names differ because the fixes differ.</p>
@@ -549,11 +549,11 @@
                         </table>
                     </div>
                     <p><code>executionLimitExceeded</code> can be set explicitly with the CLI's <code>ajisai run --step-limit &lt;N&gt;</code>. The default is an implementation choice made by the host's runtime, not a fixed number this Reference promises.</p>
-                    <p class="ref-note">The three above are limits the interpreter counts, but the Playground has one more: a <strong>wall-clock</strong> cut-off. When a single run exceeds 5 seconds, it is stopped together with its worker and reported as <code>Execution timed out after 5000 ms</code>. This is neither language semantics nor an interpreter budget but a host-side guard that only this screen has. That is why it carries none of the names above; instead it comes with a diagnosis that says which guard stopped the run and suggests rewriting with bulk operations or pruning by rounding to a grid. Hover over the <code>resource limits:</code> badge next to the build indicator at the top of the screen to list the host's limits (this guard is listed there too). The MCP host declares a different, stricter materialization limit. That is why the same <code>0 100001 RANGE</code> succeeds in the Playground but is <code>NIL</code> (<code>spaceExhausted</code>) on the MCP host.</p>
+                    <p class="ref-note">The three above are limits the interpreter counts, but the Playground has one more: a <strong>wall-clock</strong> cut-off. When a single run exceeds 5 seconds, it is stopped together with its worker and reported as <code>Execution timed out after 5000 ms</code>. This is neither language semantics nor an interpreter budget but a host-side guard that only this screen has. That is why it carries none of the names above; instead it comes with a diagnosis that says which guard stopped the run and suggests rewriting with bulk operations or pruning by rounding to a grid. Hover over the <code>resource limits:</code> badge next to the build indicator at the top of the screen to list the host's limits (this guard is listed there too). The MCP host declares a different, stricter materialization limit. That is why the same <code>0 100001 RANGE</code> succeeds in the Playground but is an error (<code>resourceLimitExceeded</code>, naming <code>materializedElements</code>) on the MCP host. A program that runs on both hosts answers the same on both.</p>
                     <p class="ref-note">The work done by the whole program and the size of a single value are measured separately. Some Words, such as <code>0 99999 RANGE UNIQUE</code>, count as one step yet perform as many comparisons internally as there are elements, so the step budget alone does not show how heavy a value is. Recall the fraction whose denominator kept growing in the section on the cost of iteration: grow it without pruning to a grid, and exactly this <code>resourceLimitExceeded</code> is where it ends. <code>recursionLimitExceeded</code> is different again. <a href="#acyclic">A Word cannot call itself</a>, so this is not a recursion depth but the depth of a non-cyclic call chain that passes through many different Words, A→B→C→….</p>
 
-                    <h3>Materialization limits: a reasoned NIL</h3>
-                    <p><code>RANGE</code> and <code>FILL</code> have a limit on the size of the Vector one call produces. Even when the request itself is well-formed, trying to materialize beyond that limit gives a reasoned <strong><code>NIL</code></strong>, not an error. The reason is <code>spaceExhausted</code>. A dimension or shape that is itself wrong, such as a negative or non-integer number, is a different matter and is an error, as usual.</p>
+                    <h3>Materialization limits: an error, not a value</h3>
+                    <p><code>RANGE</code> and <code>FILL</code> have a limit on the size of the Vector one call produces. Even when the request itself is well-formed, trying to materialize beyond that limit is an <strong>error</strong>, <code>resourceLimitExceeded</code>, naming <code>materializedElements</code>, and nothing is built. It is not a <code>NIL</code>: a limit is the host's, and a <code>NIL</code> would flow on and let a fallback such as <code>0 X X NIL? SELECT</code> choose a different branch on a host with a smaller limit. A dimension or shape that is itself wrong, such as a negative or non-integer number, is an error too, under its own name.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -562,9 +562,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
-                                    <td><code>'spaceExhausted'</code></td>
-                                    <td class="notes">The request is well-formed but too large, so it is a reasoned <code>NIL</code>, not an error. <code>FILL</code> behaves the same way for the same reason.</td>
+                                    <td><code>0 999999999999 RANGE</code></td>
+                                    <td>error</td>
+                                    <td class="notes">The request is well-formed but too large, so it is refused by name (<code>resourceLimitExceeded</code>) and the two bounds stay on the stack. <code>FILL</code>, <code>RESHAPE</code> and <code>JSON-DECODE</code> behave the same way for the same reason.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1550,7 +1550,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3 id="powers">Powers, and reading integers and rationals: <code>POW</code>, <code>GCD</code>, <code>RATIO</code></h3>
-                    <p><code>x y POW</code> answers within the exact field. An integer exponent stays in the base's layer (<code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>), and an exponent <code>p/2</code> on a non-negative rational base stays in the field as a power of a square root (<code>2 1/2 POW</code> is exactly the same value as <code>2 SQRT</code>). Any other exponent — a denominator other than 1 or 2, <code>p/2</code> on an irrational base, an irrational exponent — leaves the field, so it projects <code>domainMiss</code>, even when the answer would be rational (<code>8 1/3 POW</code>). A negative power of <code>0</code> is a point over zero, since division is total (<code>0 -1 POW</code> is <code>1/0</code>); a <code>p/2</code> power of a negative base has no real answer and projects <code>domainMiss</code>; an exponent too large for the machine to hold projects <code>spaceExhausted</code>.</p>
+                    <p><code>x y POW</code> answers within the exact field. An integer exponent stays in the base's layer (<code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>), and an exponent <code>p/2</code> on a non-negative rational base stays in the field as a power of a square root (<code>2 1/2 POW</code> is exactly the same value as <code>2 SQRT</code>). Any other exponent — a denominator other than 1 or 2, <code>p/2</code> on an irrational base, an irrational exponent — leaves the field, so it projects <code>domainMiss</code>, even when the answer would be rational (<code>8 1/3 POW</code>). A negative power of <code>0</code> is a point over zero, since division is total (<code>0 -1 POW</code> is <code>1/0</code>); a <code>p/2</code> power of a negative base has no real answer and projects <code>domainMiss</code>; a result too wide for the host's <code>bigintBits</code> ceiling is an error (<code>resourceLimitExceeded</code>) raised before it is computed. <code>0/0</code> absorbs <code>POW</code> in either operand: <code>0/0 0 POW</code> and <code>2 0/0 POW</code> are <code>0/0</code>.</p>
                     <p><code>GCD</code> answers the non-negative greatest common divisor of two integers. Euclid's algorithm is an input-dependent iteration, which cannot be written by definition in this language, where iteration runs only over a Vector that already exists — the machine performs this computation all the time to keep every rational in lowest terms, and this Word merely makes it visible. <code>RATIO</code> opens a rational into a two-element Vector of its reduced numerator and denominator. Since the answer is a Vector, arithmetic lifts over it directly. A non-integer argument (<code>GCD</code>) or an irrational (<code>RATIO</code>) projects <code>domainMiss</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2069,19 +2069,19 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-POW">
 <h4><code>POW</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Exact power <code>x y POW</code>, element-wise over Vectors, answered inside the exact domain. An integer exponent keeps the result in the base's own tier: <code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>, <code>2 -1 POW</code> is <code>1/2</code>, and since division is total <code>0 -1 POW</code> is <code>1/0</code> and <code>1/0 -1 POW</code> is <code>0</code> (LANG.VALUES.EXACT). An exponent <code>p/2</code> over a non-negative rational base stays in the field too — <code>2 1/2 POW</code> is exactly what <code>2 SQRT</code> answers, and <code>2 3/2 POW</code> is <code>2 2 SQRT MUL</code>. A negative base under <code>p/2</code> has no real value and projects <code>domainMiss</code>; every other exponent — a denominator other than 1 or 2, <code>p/2</code> over an irrational base, an irrational exponent, an exponent over zero — leaves the field and projects <code>domainMiss</code> as well (<code>8 1/3 POW</code>, <code>2 2 SQRT POW</code>, <code>2 1/0 POW</code>); an exponent past what the machine will materialize projects <code>spaceExhausted</code>. <code>SQRT</code> remains the Word that builds the field; <code>POW</code> is not its sugar.</p>
+<p>Exact power <code>x y POW</code>, element-wise over Vectors, answered inside the exact domain. An integer exponent keeps the result in the base's own tier: <code>2 10 POW</code> is <code>1024</code>, <code>2 SQRT 2 POW</code> is <code>2</code>, <code>2 -1 POW</code> is <code>1/2</code>, <code>7 0 POW</code> is <code>1</code>, the empty product, and since division is total <code>0 -1 POW</code> is <code>1/0</code> and <code>1/0 -1 POW</code> is <code>0</code> (LANG.VALUES.EXACT). <code>0/0</code> absorbs POW as it absorbs every operation, in either operand: <code>0/0 0 POW</code> and <code>2 0/0 POW</code> are <code>0/0</code>. An exponent <code>p/2</code> over a non-negative rational base stays in the field too — <code>2 1/2 POW</code> is exactly what <code>2 SQRT</code> answers, and <code>2 3/2 POW</code> is <code>2 2 SQRT MUL</code>. A negative base under <code>p/2</code> has no real value and projects <code>domainMiss</code>; every other exponent — a denominator other than 1 or 2, <code>p/2</code> over an irrational base, an irrational exponent, <code>1/0</code> or <code>-1/0</code> — leaves the field and projects <code>domainMiss</code> as well (<code>8 1/3 POW</code>, <code>2 2 SQRT POW</code>, <code>2 1/0 POW</code>). A result wider than <code>bigintBits</code> or of more terms than <code>algebraicTerms</code> is refused as ERROR(<code>resourceLimitExceeded</code>) by the ceiling's name before it is computed, exactly as <code>MUL</code> refuses the same width (LANG.MACHINE.LIMITS). <code>SQRT</code> remains the Word that builds the field; <code>POW</code> is not its sugar.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>2 10 POW</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ x ] [ y ] -&gt; [ x^y ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>domainMiss</code>, <code>spaceExhausted</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>negativeBaseFractionalExponent,exponentOutsideTheField</code> → <code>domainMiss</code></dd>
 <dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Field</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-GCD">
@@ -2392,7 +2392,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr><td><code>SHAPE</code></td><td><code>[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] SHAPE</code></td><td class="notes"><code>[ 3/1 2/1 ]</code> — the length of each axis of a rectangular nesting. A ragged Vector such as <code>[ [ 1 2 ] [ 3 ] ]</code> has no shape, so it is <code>NIL</code> (<code>domainMiss</code>)</td></tr>
-                                <tr><td><code>RESHAPE</code></td><td><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></td><td class="notes"><code>[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</code> — rebuilds the leaves, in order, into a new shape. An error if the product of the shape differs from the number of leaves; a shape that is too large is <code>NIL</code> (<code>spaceExhausted</code>)</td></tr>
+                                <tr><td><code>RESHAPE</code></td><td><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></td><td class="notes"><code>[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</code> — rebuilds the leaves, in order, into a new shape. An error if the product of the shape differs from the number of leaves; a shape that is too large is an error (<code>resourceLimitExceeded</code>)</td></tr>
                                 <tr><td><code>FLATTEN</code></td><td><code>[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</code></td><td class="notes"><code>[ 1/1 2/1 3/1 4/1 ]</code> — folds every axis, however deep, into one. <code>CONCAT</code> goes only one level</td></tr>
                                 <tr><td><code>DEPTH</code></td><td><code>[ 1 [ 2 [ 3 ] ] ] DEPTH</code></td><td class="notes"><code>3/1</code> — the nesting depth. A number or text is <code>0</code>; a flat Vector is <code>1</code></td></tr>
                             </tbody>
@@ -2543,36 +2543,36 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-RANGE">
 <h4><code>RANGE</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Every integer from a start to an end, both included: <code>0 3 RANGE</code> is <code>[ 0 1 2 3 ]</code>, and <code>3 0 RANGE</code> counts down, <code>[ 3 2 1 0 ]</code>. There is no step operand — a stride is a multiplication of the sequence, <code>0 3 RANGE 3 MUL</code> is <code>[ 0 3 6 9 ]</code> — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (<code>invalidInteger</code>); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.</p>
+<p>Every integer from a start to an end, both included: <code>0 3 RANGE</code> is <code>[ 0 1 2 3 ]</code>, and <code>3 0 RANGE</code> counts down, <code>[ 3 2 1 0 ]</code>. There is no step operand — a stride is a multiplication of the sequence, <code>0 3 RANGE 3 MUL</code> is <code>[ 0 3 6 9 ]</code> — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (<code>invalidInteger</code>); a sequence longer than the host materializes is refused as ERROR(<code>resourceLimitExceeded</code>), naming the ceiling (<code>materializedElements</code>), as every host ceiling refuses (LANG.MACHINE.LIMITS): it is never a value, so the same program cannot answer differently on hosts with different ceilings. Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>0 5 RANGE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ start ] [ end ] -&gt; [ seq ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
 <dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>invalidInteger</code>, <code>shapeMismatch</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FILL">
 <h4><code>FILL</code> <span class="word-tier">Standard · operational</span></h4>
-<p>A Vector of a given shape with every leaf one value: <code>[ 2 3 ] 0 FILL</code> is <code>[ [ 0 0 0 ] [ 0 0 0 ] ]</code>, and <code>[ 2 ] 'a' FILL</code> is <code>[ 'a' 'a' ]</code>. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so <code>[ 0 ] 0 FILL</code> is <code>[ ]</code> and the empty shape <code>[ ]</code> answers the value itself, rank 0 — and anything else is <code>invalidShape</code>. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects NIL(spaceExhausted).</p>
+<p>A Vector of a given shape with every leaf one value: <code>[ 2 3 ] 0 FILL</code> is <code>[ [ 0 0 0 ] [ 0 0 0 ] ]</code>, and <code>[ 2 ] 'a' FILL</code> is <code>[ 'a' 'a' ]</code>. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so <code>[ 0 ] 0 FILL</code> is <code>[ ]</code> and the empty shape <code>[ ]</code> answers the value itself, rank 0 — and anything else is <code>invalidShape</code>. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize — too many elements (<code>materializedElements</code>), or more axes than the nesting ceiling (<code>nestingDepth</code>) — is refused as ERROR(<code>resourceLimitExceeded</code>) by the ceiling's name before anything is built (LANG.MACHINE.LIMITS).</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 2 2 ] 0 FILL</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ shape ] [ value ] -&gt; [ filled ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
 <dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>invalidShape</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-SHAPE">
@@ -2593,19 +2593,19 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-RESHAPE">
 <h4><code>RESHAPE</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Regroup a vector's leaves, in order, under a new shape: <code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code> is <code>[ [ 1 2 3 ] [ 4 5 6 ] ]</code>, and <code>SHAPE RESHAPE</code> on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so <code>[ 5 ] [ ] RESHAPE</code> is <code>5</code> and <code>[ ] [ 2 0 ] RESHAPE</code> is <code>[ [ ] [ ] ]</code>; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).</p>
+<p>Regroup a vector's leaves, in order, under a new shape: <code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code> is <code>[ [ 1 2 3 ] [ 4 5 6 ] ]</code>, and <code>SHAPE RESHAPE</code> on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so <code>[ 5 ] [ ] RESHAPE</code> is <code>5</code> and <code>[ ] [ 2 0 ] RESHAPE</code> is <code>[ [ ] [ ] ]</code>; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize — too many elements (<code>materializedElements</code>), or more axes than the nesting ceiling (<code>nestingDepth</code>) — is refused as ERROR(<code>resourceLimitExceeded</code>) by the ceiling's name before anything is built, as RANGE and FILL refuse one (LANG.COLLECTIONS.BUDGET).</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ vec ] [ shape ] -&gt; [ reshaped ]</span></dd>
 <dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
 <dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonVector</code>, <code>invalidShape</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.BUDGET</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.BUDGET</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FLATTEN">
@@ -3337,7 +3337,7 @@ FILTER</code></td>
 <h3 id="family-text">Contracts: Text</h3>
 <div class="word-entry" id="word-CHARS">
 <h4><code>CHARS</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>A text split into its characters, each a one-character text: <code>'héllo' CHARS</code> is <code>[ 'h' 'é' 'l' 'l' 'o' ]</code>, and <code>'' CHARS</code> is <code>[ ]</code>. JOIN puts them back. A Vector of texts lifts; a non-text is <code>nonText</code>.</p>
+<p>A text split into its characters, each a one-character text: <code>'héllo' CHARS</code> is <code>[ 'h' 'é' 'l' 'l' 'o' ]</code>, and <code>'' CHARS</code> is <code>[ ]</code>. A character is one Unicode code point, not a grapheme cluster: a precomposed <code>é</code> is one, a combining sequence or a family emoji built from several code points is several, each a text of its own. JOIN puts them back. A Vector of texts lifts; a non-text is <code>nonText</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>'hi' CHARS</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ text ] -&gt; [ chars ]</span></dd>
@@ -3473,19 +3473,19 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-NUM">
 <h4><code>NUM</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Parse text as a number, by the same grammar a source literal is read with: <code>'3/4' NUM</code> is <code>3/4</code>, <code>'0.25' NUM</code> is <code>1/4</code>, and <code>'5/0' NUM</code> is <code>1/0</code>, the pair reduced to its sign over zero (LANG.VALUES.EXACT). Text that spells no number — <code>'abc'</code>, <code>'.5'</code>, <code>'1_000'</code> — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (<code>'1e99999999'</code>), projects NIL(spaceExhausted). A non-String operand is an ERROR (<code>nonText</code>); a Vector of Strings lifts.</p>
+<p>Parse text as a number, by the same grammar a source literal is read with: <code>'3/4' NUM</code> is <code>3/4</code>, <code>'0.25' NUM</code> is <code>1/4</code>, and <code>'5/0' NUM</code> is <code>1/0</code>, the pair reduced to its sign over zero (LANG.VALUES.EXACT). Text that spells no number — <code>'abc'</code>, <code>'.5'</code>, <code>'1_000'</code> — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (<code>'1e99999999'</code>), is refused as ERROR(<code>resourceLimitExceeded</code>, <code>numericLiteralDigits</code>), exactly as the same lexeme in source is (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (<code>nonText</code>); a Vector of Strings lifts.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>'42' NUM</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ text ] -&gt; [ n ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>parseFailure,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>parseFailure</code> → <code>invalidEncoding</code></dd>
 <dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Field</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonText</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-STR">
@@ -3523,24 +3523,24 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-DECODE">
 <h4><code>JSON-DECODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>Read JSON text into a value: <code>'[1, 2]' JSON-DECODE</code> is <code>[ 1 2 ]</code>. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (<code>'0.1' JSON-DECODE</code> is exactly <code>1/10</code>), <code>true</code>/<code>false</code> Booleans and <code>null</code> a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects <code>invalidEncoding</code>, the reason <code>NUM</code> projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects <code>spaceExhausted</code>, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (<code>nonText</code>).</p>
+<p>Read JSON text into a value: <code>'[1, 2]' JSON-DECODE</code> is <code>[ 1 2 ]</code>. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (<code>'0.1' JSON-DECODE</code> is exactly <code>1/10</code>), <code>true</code>/<code>false</code> Booleans and <code>null</code> a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects <code>invalidEncoding</code>, the reason <code>NUM</code> projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, a number of more digits than the numeric-literal ceiling, or more members than the materialization ceiling admits is refused as ERROR(<code>resourceLimitExceeded</code>) by that ceiling's name, the outcome of every request past a host ceiling (LANG.MACHINE.LIMITS), never a value. A non-String operand is an ERROR (<code>nonText</code>).</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>'{&quot;a&quot;: 1, &quot;b&quot;: [true, null]}' JSON-DECODE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ text ] -&gt; [ value ]</span></dd>
 <dt>Stack</dt><dd>1 input(s) → 1 output(s)</dd>
 <dt>Operands</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>textIsNotJson,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
+<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>textIsNotJson</code> → <code>invalidEncoding</code></dd>
 <dt>Partiality</dt><dd><code>projecting</code></dd>
 <dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonText</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-JSON-ENCODE">
 <h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>Write a value as JSON text, the inverse of <code>JSON-DECODE</code>: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean <code>true</code>/<code>false</code>, a NIL <code>null</code>. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — <code>1/4</code> is <code>0.25</code> — and every other number is written as its Ajisai lexeme inside a string, <code>1/3</code> as <code>&quot;1/3&quot;</code> and <code>1/0</code> as <code>&quot;1/0&quot;</code>, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects <code>domainMiss</code>. Decoding what this Word writes gives back the value it was given, and a number written as a lexeme comes back as that String, from which <code>NUM</code> recovers the number.</p>
+<p>Write a value as JSON text, the inverse of <code>JSON-DECODE</code>: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean <code>true</code>/<code>false</code>, a NIL <code>null</code>. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — <code>1/4</code> is <code>0.25</code> — and every other number is written as its Ajisai lexeme inside a string, <code>1/3</code> as <code>&quot;1/3&quot;</code> and <code>1/0</code> as <code>&quot;1/0&quot;</code>, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects <code>domainMiss</code>. The round trip through <code>JSON-DECODE</code> is therefore not the identity for those numbers: JSON has no exact rational, so a number written as a lexeme comes back as that String, and <code>[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE</code> is <code>[ '1/3' 1/4 ]</code> — a String in the first lane, where the sender must apply <code>NUM</code> to recover the number. Every other value with a JSON image comes back as it was given.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>

@@ -257,16 +257,16 @@ The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is
 
 ## `POW`
 
-Exact power `x y POW`, element-wise over Vectors, answered inside the exact domain. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`, and since division is total `0 -1 POW` is `1/0` and `1/0 -1 POW` is `0` (LANG.VALUES.EXACT). An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2 2 SQRT MUL`. A negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent, an exponent over zero — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`, `2 1/0 POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.
+Exact power `x y POW`, element-wise over Vectors, answered inside the exact domain. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`, `7 0 POW` is `1`, the empty product, and since division is total `0 -1 POW` is `1/0` and `1/0 -1 POW` is `0` (LANG.VALUES.EXACT). `0/0` absorbs POW as it absorbs every operation, in either operand: `0/0 0 POW` and `2 0/0 POW` are `0/0`. An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2 2 SQRT MUL`. A negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent, `1/0` or `-1/0` — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`, `2 1/0 POW`). A result wider than `bigintBits` or of more terms than `algebraicTerms` is refused as ERROR(`resourceLimitExceeded`) by the ceiling's name before it is computed, exactly as `MUL` refuses the same width (LANG.MACHINE.LIMITS). `SQRT` remains the Word that builds the field; `POW` is not its sugar.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → domainMiss, spaceExhausted
+- **NIL policy:** `passthroughThenProject`; projection: negativeBaseFractionalExponent,exponentOutsideTheField → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`, `LANG.CONTRACT.FIELD`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`, `LANG.CONTRACT.FIELD`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `2 10 POW`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -406,31 +406,31 @@ Take N values off the stack and answer them as one Vector, first-pushed first: `
 
 ## `RANGE`
 
-Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidInteger`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.
+Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidInteger`); a sequence longer than the host materializes is refused as ERROR(`resourceLimitExceeded`), naming the ceiling (`materializedElements`), as every host ceiling refuses (LANG.MACHINE.LIMITS): it is never a value, so the same program cannot answer differently on hosts with different ceilings. Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `0 5 RANGE`
 - **ERROR conditions:** `invalidInteger`, `shapeMismatch`
 
 ## `FILL`
 
-A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects NIL(spaceExhausted).
+A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize — too many elements (`materializedElements`), or more axes than the nesting ceiling (`nestingDepth`) — is refused as ERROR(`resourceLimitExceeded`) by the ceiling's name before anything is built (LANG.MACHINE.LIMITS).
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 2 2 ] 0 FILL`
 - **ERROR conditions:** `invalidShape`
 
@@ -450,16 +450,16 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 
 ## `RESHAPE`
 
-Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize — too many elements, or more axes than the nesting ceiling — projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
+Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize — too many elements (`materializedElements`), or more axes than the nesting ceiling (`nestingDepth`) — is refused as ERROR(`resourceLimitExceeded`) by the ceiling's name before anything is built, as RANGE and FILL refuse one (LANG.COLLECTIONS.BUDGET).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE`
 - **ERROR conditions:** `nonVector`, `invalidShape`
 
@@ -794,7 +794,7 @@ Reduce a vector step by step, answering the accumulator after each element rathe
 
 ## `CHARS`
 
-A text split into its characters, each a one-character text: `'héllo' CHARS` is `[ 'h' 'é' 'l' 'l' 'o' ]`, and `'' CHARS` is `[ ]`. JOIN puts them back. A Vector of texts lifts; a non-text is `nonText`.
+A text split into its characters, each a one-character text: `'héllo' CHARS` is `[ 'h' 'é' 'l' 'l' 'o' ]`, and `'' CHARS` is `[ ]`. A character is one Unicode code point, not a grapheme cluster: a precomposed `é` is one, a combining sequence or a family emoji built from several code points is several, each a text of its own. JOIN puts them back. A Vector of texts lifts; a non-text is `nonText`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
@@ -914,16 +914,16 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 
 ## `NUM`
 
-Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`, and `'5/0' NUM` is `1/0`, the pair reduced to its sign over zero (LANG.VALUES.EXACT). Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (`'1e99999999'`), projects NIL(spaceExhausted). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.
+Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`, and `'5/0' NUM` is `1/0`, the pair reduced to its sign over zero (LANG.VALUES.EXACT). Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding), and text spelling a number of more digits than the numeric-literal ceiling allows a source literal, its exponent counted (`'1e99999999'`), is refused as ERROR(`resourceLimitExceeded`, `numericLiteralDigits`), exactly as the same lexeme in source is (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: parseFailure,materializationBudgetExceeded → invalidEncoding, spaceExhausted
+- **NIL policy:** `passthroughThenProject`; projection: parseFailure → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.CONTRACT.FIELD`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.CONTRACT.FIELD`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `'42' NUM`
 - **ERROR conditions:** `nonText`
 
@@ -958,22 +958,22 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 
 ## `JSON-DECODE`
 
-Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is exactly `1/10`), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, or a number of more digits than the numeric-literal ceiling, projects `spaceExhausted`, the outcome of every materialization past a ceiling (LANG.MACHINE.LIMITS). A non-String operand is an ERROR (`nonText`).
+Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is exactly `1/10`), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past the nesting ceiling, a number of more digits than the numeric-literal ceiling, or more members than the materialization ceiling admits is refused as ERROR(`resourceLimitExceeded`) by that ceiling's name, the outcome of every request past a host ceiling (LANG.MACHINE.LIMITS), never a value. A non-String operand is an ERROR (`nonText`).
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: textIsNotJson,materializationBudgetExceeded → invalidEncoding, spaceExhausted
+- **NIL policy:** `passthroughThenProject`; projection: textIsNotJson → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `'{"a": 1, "b": [true, null]}' JSON-DECODE`
 - **ERROR conditions:** `nonText`
 
 ## `JSON-ENCODE`
 
-Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other number is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"` and `1/0` as `"1/0"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. Decoding what this Word writes gives back the value it was given, and a number written as a lexeme comes back as that String, from which `NUM` recovers the number.
+Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other number is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"` and `1/0` as `"1/0"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. The round trip through `JSON-DECODE` is therefore not the identity for those numbers: JSON has no exact rational, so a number written as a lexeme comes back as that String, and `[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE` is `[ '1/3' 1/4 ]` — a String in the first lane, where the sender must apply `NUM` to recover the number. Every other value with a JSON image comes back as it was given.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`

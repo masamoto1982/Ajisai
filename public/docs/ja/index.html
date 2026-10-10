@@ -529,7 +529,7 @@
                     <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しないので、Ajisaiはそれらを扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
 
                     <h3>もう一つのコスト: ホストの安全制御</h3>
-                    <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、1つの値そのものの生成が上限を超えれば理由付きの<strong><code>NIL</code></strong>に、実行そのものが続けられないほど超えれば<strong>エラー</strong>になり評価が停止します。</p>
+                    <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときの結果は決まっていて、どの上限を超えても、その上限の名前を添えた<strong>エラー</strong>になり評価が停止します。上限はプログラムではなくホストのものなので、プログラムが分岐に使える値になることはありません。</p>
 
                     <h3 id="limits">実行時エラー: 複数の理由を持つ一つの結果</h3>
                     <p>整った操作や入力であっても、ホストが支えられる限度を超えればエラーになり、評価はその場で停止します。限度は1つではなく、超過したものが何かによって少なくとも3つの名前で報告されます。名前が違うのは、直し方も違うからです。</p>
@@ -546,11 +546,11 @@
                         </table>
                     </div>
                     <p><code>executionLimitExceeded</code>には、CLIの<code>ajisai run --step-limit &lt;N&gt;</code>で明示的に指定できるという特徴があります。既定値はホストの実行環境が定める実装上の選択であり、本書が固定の数として約束するものではありません。</p>
-                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>0 100001 RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
+                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>0 100001 RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>materializedElements</code>を名指すエラー(<code>resourceLimitExceeded</code>)になるのはこのためです。両方のホストで動くプログラムは、両方で同じ答えを返します。</p>
                     <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>0 99999 RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。格子に丸めて刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
 
-                    <h3>具体化の上限: 理由付きのNIL</h3>
-                    <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong><code>NIL</code></strong>になります。理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
+                    <h3>具体化の上限: 値ではなくエラー</h3>
+                    <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、何も組み立てずに<code>materializedElements</code>を名指す<strong>エラー</strong>(<code>resourceLimitExceeded</code>)になります。<code>NIL</code>にはなりません。上限はホストのものであり、<code>NIL</code>は流れ続けるので、<code>0 X X NIL? SELECT</code>のような代替処理が、上限の小さいホストでだけ別の分岐を選んでしまうからです。負の数や非整数のように、次元や形状の指定そのものが誤っている場合も、それぞれの名前のエラーになります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -559,9 +559,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
-                                    <td><code>'spaceExhausted'</code></td>
-                                    <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの<code>NIL</code>になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
+                                    <td><code>0 999999999999 RANGE</code></td>
+                                    <td>error</td>
+                                    <td class="notes">要求は整った形だが大きすぎるので、名前付きで拒否され(<code>resourceLimitExceeded</code>)、2つの端はスタックに残る。<code>FILL</code>、<code>RESHAPE</code>、<code>JSON-DECODE</code>も同じ理由で同じ振る舞いをする。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1547,7 +1547,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3 id="powers">累乗と、整数・有理数を読む: <code>POW</code>・<code>GCD</code>・<code>RATIO</code></h3>
-                    <p><code>x y POW</code>は、厳密な体の中で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、非負の有理数の底に対する指数<code>p/2</code>なら平方根のべきとして体の中に留まります（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）。それ以外の指数——分母が1でも2でもない指数、無理数の底に対する<code>p/2</code>、無理数の指数——は体の外に出るので、答えが有理数になる場合（<code>8 1/3 POW</code>）も含めて<code>domainMiss</code>を投影します。<code>0</code>の負のべきは、除算が全域的なので0の上の点(<code>0 -1 POW</code>は<code>1/0</code>)、負の底の<code>p/2</code>べきは実数の答えを持たないので<code>domainMiss</code>、機械が保持できないほど大きな指数は<code>spaceExhausted</code>を投影します。</p>
+                    <p><code>x y POW</code>は、厳密な体の中で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、非負の有理数の底に対する指数<code>p/2</code>なら平方根のべきとして体の中に留まります（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）。それ以外の指数——分母が1でも2でもない指数、無理数の底に対する<code>p/2</code>、無理数の指数——は体の外に出るので、答えが有理数になる場合（<code>8 1/3 POW</code>）も含めて<code>domainMiss</code>を投影します。<code>0</code>の負のべきは、除算が全域的なので0の上の点(<code>0 -1 POW</code>は<code>1/0</code>)、負の底の<code>p/2</code>べきは実数の答えを持たないので<code>domainMiss</code>、ホストの<code>bigintBits</code>上限より広い結果は、計算する前にエラー(<code>resourceLimitExceeded</code>)になります。<code>0/0</code>はどちらのオペランドにあっても<code>POW</code>を吸収し、<code>0/0 0 POW</code>も<code>2 0/0 POW</code>も<code>0/0</code>です。</p>
                     <p><code>GCD</code>は2つの整数の最大公約数を非負で答えます。ユークリッドの互除法は入力依存の反復であり、すでにあるベクトルの上でしか反復しないこの言語では定義で書けません——機械はすべての有理数を既約に保つためにこの計算を常に行っており、このワードはそれを見えるようにするだけです。<code>RATIO</code>は有理数を既約の分子と分母の2要素ベクトルに開きます。答えがベクトルなので、算術はそのまま持ち上がります。整数でない引数（<code>GCD</code>）や無理数（<code>RATIO</code>）は<code>domainMiss</code>を投影します。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2066,19 +2066,19 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-POW">
 <h4><code>POW</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>厳密なべき乗<code>x y POW</code>。ベクトルには要素ごとに働き、厳密な定義域の中で答える。整数の指数なら結果は底と同じ層に留まる。<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>、<code>2 -1 POW</code>は<code>1/2</code>。除算は全域的なので<code>0 -1 POW</code>は<code>1/0</code>、<code>1/0 -1 POW</code>は<code>0</code>(LANG.VALUES.EXACT)。非負の有理数の底に対する指数<code>p/2</code>も体の中に留まる。<code>2 1/2 POW</code>は<code>2 SQRT</code>の答えとまったく同じで、<code>2 3/2 POW</code>は<code>2 2 SQRT MUL</code>。<code>p/2</code>乗の負の底は実数の値を持たず<code>domainMiss</code>を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する<code>p/2</code>、無理数の指数、0の上の指数)も体の外に出るので<code>domainMiss</code>を投影する(<code>8 1/3 POW</code>、<code>2 2 SQRT POW</code>、<code>2 1/0 POW</code>)。機械が具体化できる範囲を超える指数は<code>spaceExhausted</code>を投影する。体を組み立てるワードは今も<code>SQRT</code>であり、<code>POW</code>はその糖衣ではない。</p>
+<p>厳密なべき乗<code>x y POW</code>。ベクトルには要素ごとに働き、厳密な定義域の中で答える。整数の指数なら結果は底と同じ層に留まる。<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>、<code>2 -1 POW</code>は<code>1/2</code>、<code>7 0 POW</code>は空積の<code>1</code>。除算は全域的なので<code>0 -1 POW</code>は<code>1/0</code>、<code>1/0 -1 POW</code>は<code>0</code>(LANG.VALUES.EXACT)。<code>0/0</code>はあらゆる演算を吸収するのと同じくPOWも吸収し、どちらのオペランドにあってもよい。<code>0/0 0 POW</code>も<code>2 0/0 POW</code>も<code>0/0</code>。非負の有理数の底に対する指数<code>p/2</code>も体の中に留まる。<code>2 1/2 POW</code>は<code>2 SQRT</code>の答えとまったく同じで、<code>2 3/2 POW</code>は<code>2 2 SQRT MUL</code>。<code>p/2</code>乗の負の底は実数の値を持たず<code>domainMiss</code>を投影する。それ以外の指数(分母が1でも2でもないもの、無理数の底に対する<code>p/2</code>、無理数の指数、<code>1/0</code>や<code>-1/0</code>)も体の外に出るので<code>domainMiss</code>を投影する(<code>8 1/3 POW</code>、<code>2 2 SQRT POW</code>、<code>2 1/0 POW</code>)。<code>bigintBits</code>より広い、または<code>algebraicTerms</code>より多くの項を持つ結果は、<code>MUL</code>が同じ幅を拒否するのとまったく同じように、計算する前に上限の名前を添えたERROR(<code>resourceLimitExceeded</code>)として拒否される(LANG.MACHINE.LIMITS)。体を組み立てるワードは今も<code>SQRT</code>であり、<code>POW</code>はその糖衣ではない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>2 10 POW</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] [ y ] -&gt; [ x^y ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize</code> → <code>domainMiss</code>, <code>spaceExhausted</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>negativeBaseFractionalExponent,exponentOutsideTheField</code> → <code>domainMiss</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>体</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonNumeric</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-GCD">
@@ -2389,7 +2389,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr><td><code>SHAPE</code></td><td><code>[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] SHAPE</code></td><td class="notes"><code>[ 3/1 2/1 ]</code> — 矩形の入れ子の各軸の長さ。<code>[ [ 1 2 ] [ 3 ] ]</code>のように不揃いなベクトルには形がないので<code>NIL</code>(<code>domainMiss</code>)</td></tr>
-                                <tr><td><code>RESHAPE</code></td><td><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></td><td class="notes"><code>[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</code> — 葉を順に、新しい形に組み直す。形の積が葉の数と違えばエラー。大きすぎる形は<code>NIL</code>(<code>spaceExhausted</code>)</td></tr>
+                                <tr><td><code>RESHAPE</code></td><td><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></td><td class="notes"><code>[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</code> — 葉を順に、新しい形に組み直す。形の積が葉の数と違えばエラー。大きすぎる形はエラー(<code>resourceLimitExceeded</code>)</td></tr>
                                 <tr><td><code>FLATTEN</code></td><td><code>[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</code></td><td class="notes"><code>[ 1/1 2/1 3/1 4/1 ]</code> — どれだけ深くてもすべての軸を1本に畳む。<code>CONCAT</code>は1段だけ</td></tr>
                                 <tr><td><code>DEPTH</code></td><td><code>[ 1 [ 2 [ 3 ] ] ] DEPTH</code></td><td class="notes"><code>3/1</code> — 入れ子の深さ。数やテキストは<code>0</code>、平坦なベクトルは<code>1</code></td></tr>
                             </tbody>
@@ -2540,36 +2540,36 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-RANGE">
 <h4><code>RANGE</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>始点から終点までのすべての整数(両端を含む)。<code>0 3 RANGE</code>は<code>[ 0 1 2 3 ]</code>、<code>3 0 RANGE</code>は降順の<code>[ 3 2 1 0 ]</code>。刻み幅のオペランドはない。刻みは数列の掛け算で、<code>0 3 RANGE 3 MUL</code>は<code>[ 0 3 6 9 ]</code>。だから方向は両端だけで決まり、どんな両端の組も無限の数列を表さない。整数でない端はERROR(<code>invalidInteger</code>)、機械が具体化できるより長い数列はNIL(spaceExhausted)を投影する。両端は葉なので、端のベクトルはレーンごとに1つの数列へ持ち上がる。</p>
+<p>始点から終点までのすべての整数(両端を含む)。<code>0 3 RANGE</code>は<code>[ 0 1 2 3 ]</code>、<code>3 0 RANGE</code>は降順の<code>[ 3 2 1 0 ]</code>。刻み幅のオペランドはない。刻みは数列の掛け算で、<code>0 3 RANGE 3 MUL</code>は<code>[ 0 3 6 9 ]</code>。だから方向は両端だけで決まり、どんな両端の組も無限の数列を表さない。整数でない端はERROR(<code>invalidInteger</code>)。ホストが具体化できるより長い数列は、他のあらゆるホスト上限と同じく、上限の名前(<code>materializedElements</code>)を添えたERROR(<code>resourceLimitExceeded</code>)として拒否される(LANG.MACHINE.LIMITS)。決して値にはならないので、上限の異なるホストで同じプログラムが異なる答えを返すことはない。両端は葉なので、端のベクトルはレーンごとに1つの数列へ持ち上がる。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>0 5 RANGE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ start ] [ end ] -&gt; [ seq ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
 <dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>invalidInteger</code>, <code>shapeMismatch</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FILL">
 <h4><code>FILL</code> <span class="word-tier">Standard · operational</span></h4>
-<p>与えた形の、すべての葉が1つの値であるベクトル。<code>[ 2 3 ] 0 FILL</code>は<code>[ [ 0 0 0 ] [ 0 0 0 ] ]</code>、<code>[ 2 ] 'a' FILL</code>は<code>[ 'a' 'a' ]</code>。RESHAPEと同じく形が先に来る。形はSHAPEが答えるもの、つまり非負の整数のベクトルで、<code>[ 0 ] 0 FILL</code>は<code>[ ]</code>、空の形<code>[ ]</code>は値そのもの(ランク0)を答える。それ以外は<code>invalidShape</code>。値はどの領域の葉でもよく、値のベクトルはそれぞれ1つの埋められたベクトルへ持ち上がる。具体化するには大きすぎる形(要素が多すぎる、または軸が入れ子の上限を超える)はNIL(spaceExhausted)を投影する。</p>
+<p>与えた形の、すべての葉が1つの値であるベクトル。<code>[ 2 3 ] 0 FILL</code>は<code>[ [ 0 0 0 ] [ 0 0 0 ] ]</code>、<code>[ 2 ] 'a' FILL</code>は<code>[ 'a' 'a' ]</code>。RESHAPEと同じく形が先に来る。形はSHAPEが答えるもの、つまり非負の整数のベクトルで、<code>[ 0 ] 0 FILL</code>は<code>[ ]</code>、空の形<code>[ ]</code>は値そのもの(ランク0)を答える。それ以外は<code>invalidShape</code>。値はどの領域の葉でもよく、値のベクトルはそれぞれ1つの埋められたベクトルへ持ち上がる。具体化するには大きすぎる形(要素が多すぎる<code>materializedElements</code>、または軸が入れ子の上限<code>nestingDepth</code>を超える)は、何かを組み立てる前に、上限の名前を添えたERROR(<code>resourceLimitExceeded</code>)として拒否される(LANG.MACHINE.LIMITS)。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 2 2 ] 0 FILL</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ shape ] [ value ] -&gt; [ filled ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>data</code>, <code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
 <dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>invalidShape</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-SHAPE">
@@ -2590,19 +2590,19 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-RESHAPE">
 <h4><code>RESHAPE</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ベクトルの葉を順に、新しい形のもとへ組み直す。<code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code>は<code>[ [ 1 2 3 ] [ 4 5 6 ] ]</code>で、矩形のベクトルに<code>SHAPE RESHAPE</code>を施せば元に戻る。葉とは、どれだけ深く入れ子になっていても、FLATTENが答えるものすべてである。形はSHAPEが答えるもの、つまり空のものを含む非負の整数のベクトルで、その積は葉の数と等しくなければならない。<code>[ 5 ] [ ] RESHAPE</code>は<code>5</code>、<code>[ ] [ 2 0 ] RESHAPE</code>は<code>[ [ ] [ ] ]</code>。それ以外の形はERROR(invalidShape)。合わせるために何かを詰めたり繰り返したりはしないからである。具体化するには大きすぎる整った形(要素が多すぎる、または軸が入れ子の上限を超える)は、RANGEやFILLと同じくNIL(spaceExhausted)を投影する(LANG.COLLECTIONS.BUDGET)。</p>
+<p>ベクトルの葉を順に、新しい形のもとへ組み直す。<code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code>は<code>[ [ 1 2 3 ] [ 4 5 6 ] ]</code>で、矩形のベクトルに<code>SHAPE RESHAPE</code>を施せば元に戻る。葉とは、どれだけ深く入れ子になっていても、FLATTENが答えるものすべてである。形はSHAPEが答えるもの、つまり空のものを含む非負の整数のベクトルで、その積は葉の数と等しくなければならない。<code>[ 5 ] [ ] RESHAPE</code>は<code>5</code>、<code>[ ] [ 2 0 ] RESHAPE</code>は<code>[ [ ] [ ] ]</code>。それ以外の形はERROR(invalidShape)。合わせるために何かを詰めたり繰り返したりはしないからである。具体化するには大きすぎる整った形(要素が多すぎる<code>materializedElements</code>、または軸が入れ子の上限<code>nestingDepth</code>を超える)は、RANGEやFILLと同じく、何かを組み立てる前に上限の名前を添えたERROR(<code>resourceLimitExceeded</code>)として拒否される(LANG.COLLECTIONS.BUDGET)。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ shape ] -&gt; [ reshaped ]</span></dd>
 <dt>スタック</dt><dd>入力 2 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>data</code>, <code>data</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>materializationBudgetExceeded</code> → <code>spaceExhausted</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
 <dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>invalidShape</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.BUDGET</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.COLLECTIONS.BUDGET</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FLATTEN">
@@ -3334,7 +3334,7 @@ FILTER</code></td>
 <h3 id="family-text">契約: 文字列</h3>
 <div class="word-entry" id="word-CHARS">
 <h4><code>CHARS</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>テキストを1文字ずつのテキストに分割する。<code>'héllo' CHARS</code>は<code>[ 'h' 'é' 'l' 'l' 'o' ]</code>、<code>'' CHARS</code>は<code>[ ]</code>。元に戻すのはJOIN。テキストのベクトルは持ち上がり、テキストでないものは<code>nonText</code>。</p>
+<p>テキストを1文字ずつのテキストに分割する。<code>'héllo' CHARS</code>は<code>[ 'h' 'é' 'l' 'l' 'o' ]</code>、<code>'' CHARS</code>は<code>[ ]</code>。1文字とはUnicodeのコードポイント1つであり、書記素クラスタではない。合成済みの<code>é</code>は1つだが、結合文字列や複数のコードポイントから成る家族の絵文字は複数に分かれ、それぞれが1つのテキストになる。元に戻すのはJOIN。テキストのベクトルは持ち上がり、テキストでないものは<code>nonText</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'hi' CHARS</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ chars ]</span></dd>
@@ -3470,19 +3470,19 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-NUM">
 <h4><code>NUM</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。<code>'3/4' NUM</code>は<code>3/4</code>、<code>'0.25' NUM</code>は<code>1/4</code>、<code>'5/0' NUM</code>は、対をその符号を0の上に置いた点に簡約した<code>1/0</code>(LANG.VALUES.EXACT)。数を綴らないテキスト(<code>'abc'</code>、<code>'.5'</code>、<code>'1_000'</code>)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(<code>'1e99999999'</code>)はNIL(spaceExhausted)を投影する。StringでないオペランドはERROR(<code>nonText</code>)。Stringのベクトルは持ち上がる。</p>
+<p>テキストを、ソースのリテラルを読むのと同じ文法で数として解析する。<code>'3/4' NUM</code>は<code>3/4</code>、<code>'0.25' NUM</code>は<code>1/4</code>、<code>'5/0' NUM</code>は、対をその符号を0の上に置いた点に簡約した<code>1/0</code>(LANG.VALUES.EXACT)。数を綴らないテキスト(<code>'abc'</code>、<code>'.5'</code>、<code>'1_000'</code>)はNIL(invalidEncoding)を投影し、指数を含めて数値リテラルの上限がソースのリテラルに許すより多くの桁を綴るテキスト(<code>'1e99999999'</code>)は、ソース中の同じ字句と全く同じように、ERROR(<code>resourceLimitExceeded</code>、<code>numericLiteralDigits</code>)として拒否される(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(<code>nonText</code>)。Stringのベクトルは持ち上がる。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'42' NUM</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ n ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>parseFailure,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>parseFailure</code> → <code>invalidEncoding</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>体</dt><dd><code>leaving</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.FAILURE.TRICHOTOMY</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.CONTRACT.FIELD</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-STR">
@@ -3520,24 +3520,24 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-DECODE">
 <h4><code>JSON-DECODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>JSONテキストを値として読む。<code>'[1, 2]' JSON-DECODE</code>は<code>[ 1 2 ]</code>。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(<code>'0.1' JSON-DECODE</code>は厳密に<code>1/10</code>)、<code>true</code>/<code>false</code>は真偽値、<code>null</code>はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は<code>invalidEncoding</code>を投影する。これは<code>NUM</code>が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値や、数値リテラルの上限より多くの桁の数は<code>spaceExhausted</code>を投影する。上限を超えるあらゆる具体化の結末である(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(<code>nonText</code>)。</p>
+<p>JSONテキストを値として読む。<code>'[1, 2]' JSON-DECODE</code>は<code>[ 1 2 ]</code>。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(<code>'0.1' JSON-DECODE</code>は厳密に<code>1/10</code>)、<code>true</code>/<code>false</code>は真偽値、<code>null</code>はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は<code>invalidEncoding</code>を投影する。これは<code>NUM</code>が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値、数値リテラルの上限より多くの桁の数、具体化の上限より多くのメンバーは、その上限の名前を添えたERROR(<code>resourceLimitExceeded</code>)として拒否される。ホストの上限を超えるあらゆる要求の結末であり、決して値にはならない(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(<code>nonText</code>)。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'{&quot;a&quot;: 1, &quot;b&quot;: [true, null]}' JSON-DECODE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ text ] -&gt; [ value ]</span></dd>
 <dt>スタック</dt><dd>入力 1 → 出力 1</dd>
 <dt>オペランド</dt><dd><code>leaf</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>textIsNotJson,materializationBudgetExceeded</code> → <code>invalidEncoding</code>, <code>spaceExhausted</code></dd>
+<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>textIsNotJson</code> → <code>invalidEncoding</code></dd>
 <dt>部分性</dt><dd><code>projecting</code></dd>
 <dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonText</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.DISJOINT</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.VALUES.EXACT</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-JSON-ENCODE">
 <h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>、<code>1/0</code>は<code>&quot;1/0&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。このワードが書いたものを解読すると与えた値が戻り、字句として書かれた数はそのStringとして戻るので、<code>NUM</code>で数を取り戻せる。</p>
+<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>、<code>1/0</code>は<code>&quot;1/0&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。そのため、<code>JSON-DECODE</code>との往復はこれらの数については恒等にならない。JSONには厳密な有理数がないので、字句として書かれた数はそのStringとして戻り、<code>[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE</code>は<code>[ '1/3' 1/4 ]</code>、つまり最初のレーンはStringになる。数を取り戻すには受け手が<code>NUM</code>を適用する。JSONに像を持つそれ以外の値は、与えたとおりに戻る。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>

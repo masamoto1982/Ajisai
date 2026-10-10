@@ -46,16 +46,16 @@ A chain of reasoning does not mean permission to write long. It means the logica
 | 消防車の目的 | 火災の消火 |
 | 消防車の色 | 赤 |
 
-Ajisai's specification already has real content in the bad shape. `LANG.MACHINE.LIMITS` currently reads:
+Ajisai's specification once had real content in the bad shape. An early draft of `LANG.MACHINE.LIMITS` read:
 
-> Two limits exist and they mean different things. The **execution-step limit** bounds total work; exhausting it raises its registered ERROR. The **materialization ceiling** bounds how large a single generated collection may become; a well-formed request that exceeds it projects to NIL with reason `spaceExhausted`.
+> Two limits exist and they mean different things. The **execution-step limit** bounds total work; exhausting it raises its registered ERROR. The **materialization ceiling** bounds how large a single generated collection may become; a well-formed request that exceeds it raises the same ERROR under the ceiling's own name.
 
-Each half of that sentence is an independent fact about one of two subjects — this is the table case:
+Each half of that sentence is an independent fact about one of two subjects — this is the table case (the clause now holds it as one, with one row per ceiling):
 
 | Limit | Bounds | On exhaustion |
 |---|---|---|
-| Execution-step limit | Total work | Registered ERROR |
-| Materialization ceiling | Size of one generated collection | NIL, reason `spaceExhausted` |
+| Execution-step limit | Total work | ERROR, `executionLimitExceeded` |
+| Materialization ceiling | Size of one generated collection | ERROR, `resourceLimitExceeded`, naming `materializedElements` |
 
 By contrast, `LANG.VALUES.EXACT` must **stay prose**:
 

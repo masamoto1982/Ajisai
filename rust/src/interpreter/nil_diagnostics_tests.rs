@@ -223,8 +223,8 @@ mod upstream_nil_link_tests {
     /// every `data` operand, so the Word that refuses it is one whose operand is
     /// a block — here `EXEC`.
     #[tokio::test]
-    async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
-        let report = report("0 100001 RANGE EXEC").await;
+    async fn an_index_past_the_end_reaches_the_top_level_diagnosis() {
+        let report = report("[ 1 2 ] 5 GET EXEC").await;
         assert_eq!(report["status"], "error");
 
         let codes = check_codes(&report);
@@ -238,20 +238,20 @@ mod upstream_nil_link_tests {
             .as_str()
             .expect("english detail");
         assert!(
-            detail.contains("RANGE") && detail.contains("spaceExhausted"),
+            detail.contains("GET") && detail.contains("indexOutOfBounds"),
             "the check must name the producer and the reason: {detail}"
         );
 
         let evidence = evidence(&report);
         assert!(
-            evidence.contains(&"upstreamNilProducer=RANGE".to_string())
-                && evidence.contains(&"upstreamNilReason=spaceExhausted".to_string()),
+            evidence.contains(&"upstreamNilProducer=GET".to_string())
+                && evidence.contains(&"upstreamNilReason=indexOutOfBounds".to_string()),
             "a machine matches on evidence, so the cause belongs there too: {evidence:?}"
         );
     }
 
     /// The same link for an absence with a different origin, so the behaviour is
-    /// the NIL-flow rule and not a special case for the resource ceiling.
+    /// the NIL-flow rule and not a special case for one producer.
     #[tokio::test]
     async fn a_domain_miss_reaches_the_top_level_diagnosis_too() {
         let report = report("-1 SQRT EXEC").await;

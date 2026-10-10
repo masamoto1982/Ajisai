@@ -84,13 +84,17 @@
         "kind": "source",
         "source": "0 100001 RANGE",
         "expect": {
-          "/status": "ok",
-          "/stackDisplay/0": "NIL",
-          "/stack/0/semantics/absence/reason": "spaceExhausted",
-          "/errorFlowTrace/0/absence/reason": "spaceExhausted"
+          "/status": "error",
+          "/diagnosis/why": "resourceLimit",
+          "/aiDiagnostic/category": "resourceLimitExceeded",
+          "/diagnosis/resourceLimit/resource": "materializedElements",
+          "/diagnosis/resourceLimit/limit": 100000,
+          "/diagnosis/resourceLimit/observed": 100002,
+          "/stackDisplay/0": "0/1",
+          "/stackDisplay/1": "100001/1"
         }
       },
-      "note": "A generative ceiling is a reason-carrying NIL, not an error: the program is well formed and the absence is recoverable with `^`."
+      "note": "A generative ceiling is an error like every other ceiling, refused by name before anything is built, with the bounds left on the stack. It is never a value: through engine 1.0.0-beta.1 it projected a NIL(spaceExhausted), and that NIL flowed on, so the same program answered `ok` with different values here and in the playground."
     },
     "numericLiteralDigits": {
       "coverage": "boundary",
@@ -249,7 +253,7 @@
           "/diagnosis/resourceLimit/observed": 257
         }
       },
-      "note": "Each FOLD step wraps the accumulator one level deeper, so 255 steps over `[ ]` reach 256 and succeed and the 256th reaches 257 and is refused by name. Every walk over a value descends one native frame per level, so before this ceiling a program that nested a value a few thousand deep aborted the process instead of failing. A literal written that deep is refused the same way; a generative Word asked for a result that deep (FILL or RESHAPE with that many axes, JSON-DECODE of text nested that deep) declines it as NIL(spaceExhausted) instead, as it does a count past `materializedElements`."
+      "note": "Each FOLD step wraps the accumulator one level deeper, so 255 steps over `[ ]` reach 256 and succeed and the 256th reaches 257 and is refused by name. Every walk over a value descends one native frame per level, so before this ceiling a program that nested a value a few thousand deep aborted the process instead of failing. A literal written that deep is refused the same way, and so is a generative Word asked for a result that deep (FILL or RESHAPE with that many axes, JSON-DECODE of text nested that deep), by the same name and before building, as it refuses a count past `materializedElements`."
     }
   }
 }

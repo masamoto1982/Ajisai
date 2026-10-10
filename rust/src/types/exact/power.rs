@@ -29,8 +29,10 @@ pub enum PowOutcome {
     Value(ExactReal),
     /// A negative base under `p/2`, or an answer outside the field.
     DomainMiss,
-    /// An exponent too large to materialize.
-    SpaceExhausted,
+    /// A result wider than [`INTEGER_POWER_RESULT_BITS`], the bound this
+    /// module keeps for itself; the host's own `bigintBits` ceiling is
+    /// checked by the caller against [`ExactReal::power_size`] first.
+    TooWide,
     /// The work budget could not factor the base's radicand into its
     /// square-free normal form (`squarefree.rs`).
     WorkExhausted,
@@ -102,6 +104,15 @@ impl ExactReal {
     /// caller's to take, by [`Self::power_by_integer`], once it has read
     /// [`Self::power_size`] and decided the power is worth taking.
     pub fn plan_pow_within(&self, exponent: &ExactReal, budget: &mut u64) -> PowPlan {
+        // `0/0` absorbs every operation (LANG.VALUES.EXACT), in either
+        // operand: `0/0 0 POW` is not the empty product and `2 0/0 POW` is
+        // not a domain miss, since the nullity met the operation first.
+        let is_nullity = |x: &ExactReal| x.as_rational().is_some_and(Fraction::is_nullity);
+        if is_nullity(self) || is_nullity(exponent) {
+            return PowPlan::Answered(PowOutcome::Value(ExactReal::from_fraction(
+                Fraction::nullity(),
+            )));
+        }
         let Some(y) = exponent.as_rational() else {
             return PowPlan::Answered(PowOutcome::DomainMiss);
         };
@@ -114,11 +125,6 @@ impl ExactReal {
         }
         if q != BigInt::from(2) {
             return PowPlan::Answered(PowOutcome::DomainMiss);
-        }
-        // `0/0` has no sign to read: its root is itself, and so is every
-        // power of that root (`fraction_extended`).
-        if matches!(self, ExactReal::Rational(q) if q.is_nullity()) {
-            return PowPlan::Answered(PowOutcome::Value(self.clone()));
         }
         PowPlan::Answered(match sign_of(self) {
             Ordering::Less => PowOutcome::DomainMiss,
@@ -149,7 +155,7 @@ impl ExactReal {
     pub fn power_by_integer(&self, n: &BigInt) -> PowOutcome {
         let base_bits = BigInt::from(self.max_coefficient_bits().max(2));
         if n.abs() * base_bits > BigInt::from(INTEGER_POWER_RESULT_BITS) {
-            return PowOutcome::SpaceExhausted;
+            return PowOutcome::TooWide;
         }
         if n.is_zero() {
             return PowOutcome::Value(ExactReal::from_fraction(Fraction::from(1)));

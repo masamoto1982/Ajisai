@@ -519,7 +519,7 @@
     "resource",
     "limit"
    ],
-   "description": "Which declared ceiling a resource-limit failure crossed, or a generative Word declined a result under (the diagnosis of a NIL(spaceExhausted), which can name `materializedElements`). `resource` names an entry of the `ajisai://limits` profile, and `limit` is its value, so no result needs the profile read to be acted on. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
+   "description": "Which declared ceiling a resource-limit failure crossed — a value or meter that grew past it, or a result a generative Word was asked to build past it (`materializedElements`, `nestingDepth`, `numericLiteralDigits`), measured before anything was built. `resource` names an entry of the `ajisai://limits` profile, and `limit` is its value, so no result needs the profile read to be acted on. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
    "properties": {
     "resource": {
      "type": "string",

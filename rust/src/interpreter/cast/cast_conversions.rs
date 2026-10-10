@@ -196,7 +196,8 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     // The numeric-literal ceiling holds here as it does in source: the text
     // is read by the same grammar, and `'1e99999999' NUM` would otherwise
     // spend minutes building a hundred-million-digit integer from eleven
-    // characters. Declined like any materialization past a ceiling.
+    // characters. Refused by name, as the tokenizer refuses the same lexeme
+    // in source (LANG.MACHINE.LIMITS); the operand stays where it was.
     let limit = interp.runtime_limits.max_numeric_literal_digits;
     let too_large = interp
         .stack
@@ -206,13 +207,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
         .map(crate::tokenizer::denoted_digit_count)
         .filter(|&digits| digits > limit as u64);
     if let Some(digits) = too_large {
-        interp.stack.pop();
-        interp.stack.push(
-            crate::interpreter::space_projection::numeric_literal_exhausted_nil(
-                "NUM", limit, digits,
-            ),
-        );
-        return Ok(());
+        return Err(crate::interpreter::ceiling_refusal::numeric_literal_refused(limit, digits));
     }
     apply_unary_cast(interp, convert_value_to_number)
 }

@@ -6,6 +6,16 @@ beta, and promises compatibility from 1.0.0; this file records changes to
 the adapter's own surface — tool list, envelope fields, resources and
 descriptions.
 
+## Unreleased
+
+An engine rule changes and the goldens, Word summaries, quickstart and README this server serves say so; `result.schema.json` only reworded a description. No tool, envelope field or resource changes.
+
+### Changed
+
+- **A host ceiling is never a value.** A generative Word asked for a result past a ceiling — `RANGE`, `FILL`, `RESHAPE` past `materializedElements`, a `FILL`/`RESHAPE` shape or `JSON-DECODE` text past `nestingDepth`, `NUM` or `JSON-DECODE` past `numericLiteralDigits`, `POW` past `bigintBits` or `algebraicTerms` — now fails as `resourceLimitExceeded`, naming the ceiling, its value and the size requested in `diagnosis.resourceLimit`, with the Word's operands left on the stack. It used to project `NIL(spaceExhausted)` and answer `status: ok`; that NIL flowed on like any other value, so `0 100001 RANGE LENGTH` answered `100001` in the playground and `NIL` here, and `0 X X NIL? SELECT` chose a different branch per host without any failure to notice. The NIL reason `spaceExhausted` no longer exists; `outcomes` predicts `error:resourceLimitExceeded` where it predicted `nil:spaceExhausted`.
+- **`0/0` absorbs `POW` in either operand.** `0/0 0 POW` and `2 0/0 POW` are `0/0`, as LANG.VALUES.EXACT's "0/0 absorbs every operation" says; `0/0 0 POW` used to answer `1`, and `2 0/0 POW` a `domainMiss`. `1/0 0 POW` stays `1`, the empty product. `1/0` and `-1/0` as exponents still project `domainMiss`.
+- **The quickstart's step budget is stated per Word.** A block iteration costs one step per element for every Word the block runs, so a two-Word block walks 50,000 elements under the 100,000-step budget, not "tens of thousands" for any block. `CHARS` says it splits by code point, not grapheme cluster.
+
 ## 0.8.2
 
 An engine rule changes and the Word summaries, quickstart and goldens this server serves say so; no tool, envelope field or resource changes.

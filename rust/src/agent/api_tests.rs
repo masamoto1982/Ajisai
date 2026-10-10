@@ -70,11 +70,15 @@ async fn compute_applies_injected_internal_cost_limits() {
     )
     .await;
     let json = response.to_json();
-    assert_eq!(json["status"], "ok");
+    assert_eq!(json["status"], "error");
+    assert_eq!(json["outcome"], "error:resourceLimitExceeded");
+    assert_eq!(json["aiDiagnostic"]["category"], "resourceLimitExceeded");
     assert_eq!(
-        json["stack"][0]["semantics"]["absence"]["reason"],
-        "spaceExhausted"
+        json["diagnosis"]["resourceLimit"]["resource"],
+        "materializedElements"
     );
+    assert_eq!(json["diagnosis"]["resourceLimit"]["limit"], 10);
+    assert_eq!(json["diagnosis"]["resourceLimit"]["observed"], 12);
 }
 
 /// `outcome` names a run in `outcomes`' own vocabulary — a value, a NIL

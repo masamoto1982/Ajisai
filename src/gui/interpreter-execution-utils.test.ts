@@ -344,7 +344,7 @@ describe('renderDiagnosisReport', () => {
             when: 'executeWord',
             where: { kind: 'coreWord', word: 'RANGE' },
             why: 'resourceLimit',
-            summary: 'executeWord / RANGE (coreWord) / resourceLimit (nil:spaceExhausted)',
+            summary: 'executeWord / RANGE (coreWord) / resourceLimit (error:resourceLimitExceeded)',
             evidence: [],
             resourceLimit: { resource: 'materializedElements', limit: 1_000_000, observed: 4_000_000 },
             nextChecks: []

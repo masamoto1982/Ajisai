@@ -1,6 +1,7 @@
 //! Behavioral probes for the shape Words (LANG.COLLECTIONS.LIFT): the two
 //! projections `SHAPE` and `RESHAPE` declare.
 
+use crate::error::{AjisaiError, ResourceLimit};
 use crate::interpreter::runtime_limits::RuntimeLimits;
 use crate::interpreter::Interpreter;
 use crate::test_support::{error_of, reason, top, top_of};
@@ -31,28 +32,36 @@ async fn a_ragged_vector_projects_domain_miss_from_shape() {
     }
 }
 
-/// A well-formed shape too large to materialize projects the same reason
-/// FILL and RANGE project, and never allocates first.
+/// A well-formed shape too large to materialize is refused by the same
+/// ceiling FILL and RANGE refuse under, never allocates first, and leaves
+/// both operands where they were.
 #[tokio::test]
-async fn an_over_budget_reshape_projects_space_exhausted() {
+async fn an_over_budget_reshape_is_refused_by_name() {
     let mut interp = Interpreter::new();
     interp.set_runtime_limits(RuntimeLimits {
         max_materialized_elements: 8,
         ..RuntimeLimits::default()
     });
-    interp
+    let err = interp
         .execute("[ 1 2 3 4 5 6 7 8 9 ] [ 3 3 ] RESHAPE")
         .await
-        .expect("an over-budget RESHAPE projects rather than erroring");
-    let answer = interp.stack.last().cloned().expect("an answer");
-    assert!(answer.is_nil(), "must project NIL, got {answer:?}");
+        .expect_err("an over-budget RESHAPE is refused");
+    assert!(
+        matches!(
+            err,
+            AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::MaterializedElements,
+                limit: 8,
+                observed: Some(9),
+                ..
+            }
+        ),
+        "{err:?}"
+    );
     assert_eq!(
-        answer
-            .absence_metadata()
-            .and_then(|absence| absence.reason.as_ref())
-            .map(|reason| reason.as_protocol_str().to_string())
-            .as_deref(),
-        Some("spaceExhausted")
+        interp.stack.len(),
+        2,
+        "the Vector and the shape are put back"
     );
 }
 
@@ -76,16 +85,15 @@ async fn a_zero_length_axis_does_not_slip_under_the_ceiling() {
             max_materialized_elements: 8,
             ..RuntimeLimits::default()
         });
-        interp
-            .execute(code)
-            .await
-            .unwrap_or_else(|e| panic!("`{code}` must not raise, got {e}"));
-        let answer = interp.stack.last().cloned().expect("an answer");
-        let exhausted = answer
-            .absence_metadata()
-            .and_then(|absence| absence.reason.as_ref())
-            .is_some_and(|reason| reason.as_protocol_str() == "spaceExhausted");
-        assert_eq!(exhausted, over, "`{code}` answered {answer:?}");
+        let refused = match interp.execute(code).await {
+            Ok(()) => false,
+            Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::MaterializedElements,
+                ..
+            }) => true,
+            Err(e) => panic!("`{code}` must answer or be refused by name, got {e}"),
+        };
+        assert_eq!(refused, over, "`{code}`");
     }
 }
 
@@ -112,7 +120,7 @@ async fn a_mismatched_shape_raises_invalid_shape() {
 }
 
 /// A shape axis or a `COLLECT` count past `u32::MAX` is well-formed and too
-/// large — `spaceExhausted`, `stackUnderflow` — never malformed, and the
+/// large — `resourceLimitExceeded`, `stackUnderflow` — never malformed, and the
 /// observed element count is the product of the axes as written. On wasm32,
 /// where `usize` is 32 bits, the axis used to be declined as `invalidShape`,
 /// the count as `invalidInteger`, and a product past 32 bits reported no
@@ -125,11 +133,7 @@ async fn counts_past_32_bits_are_too_large_not_malformed() {
         "[ 2 ] 0 FILL [ 4294967296 ] RESHAPE",
         "[ 99999 99999 ] 0 FILL",
     ] {
-        assert_eq!(
-            reason(code).await.as_deref(),
-            Some("spaceExhausted"),
-            "`{code}`"
-        );
+        assert_eq!(error_of(code).await, "resourceLimitExceeded", "`{code}`");
     }
     assert_eq!(error_of("1 2 3 4294967299 COLLECT").await, "stackUnderflow");
     for (shape, observed) in [

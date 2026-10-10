@@ -183,18 +183,16 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             "expected a shape: a Vector of non-negative integers",
         ));
     };
-    // The shape's rank is the nesting of the value FILL builds: declined past
+    // The shape's rank is the nesting of the value FILL builds: refused past
     // the nesting ceiling before building, as RESHAPE does.
     let max_nesting = interp.runtime_limits.max_nesting_depth;
     if shape.len() > max_nesting {
-        interp
-            .stack
-            .push(crate::interpreter::space_projection::nesting_exhausted_nil(
-                "FILL",
-                max_nesting,
-                shape.len(),
-            ));
-        return Ok(());
+        let rank = shape.len();
+        restore(interp, shape_val, value_val);
+        return Err(crate::interpreter::ceiling_refusal::nesting_refused(
+            max_nesting,
+            rank,
+        ));
     }
 
     // Compute the element count with overflow protection and reject anything
@@ -209,20 +207,18 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     let materialized = match checked_materialized_count(&shape) {
         Some(count) if count <= max_materialized => count,
         _ => {
-            // Phase 3 (structural-memory-safety roadmap): a well-formed shape
-            // whose element product exceeds the space water level (or overflows
-            // `usize`) is a well-formed operation that cannot materialize within
-            // budget. The NIL Projection Rule projects it onto a diagnosable NIL
-            // (reason `spaceExhausted`), recoverable with a chosen fallback, instead of
-            // a channel error.
-            interp
-                .stack
-                .push(crate::interpreter::space_projection::space_exhausted_nil(
-                    "FILL",
+            // A well-formed shape whose element product exceeds the ceiling (or
+            // overflows `usize`) is refused by name before anything is
+            // allocated (`resourceLimitExceeded`, `materializedElements`;
+            // LANG.MACHINE.LIMITS), its operands put back.
+            let observed = super::shape_words::shape_observed_size(&shape_val);
+            restore(interp, shape_val, value_val);
+            return Err(
+                crate::interpreter::ceiling_refusal::materialization_refused(
                     max_materialized,
-                    super::shape_words::shape_observed_size(&shape_val),
-                ));
-            return Ok(());
+                    observed,
+                ),
+            );
         }
     };
     if let Err(e) =

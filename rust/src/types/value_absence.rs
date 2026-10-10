@@ -27,7 +27,6 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::NotFound => AbsenceOrigin::NotFound,
         NilReason::InvalidEncoding => AbsenceOrigin::InvalidEncoding,
         NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
-        NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
         NilReason::DomainMiss => AbsenceOrigin::DomainMiss,
         NilReason::Literal => AbsenceOrigin::Literal,
         NilReason::UserDeclared => AbsenceOrigin::UserDeclared,

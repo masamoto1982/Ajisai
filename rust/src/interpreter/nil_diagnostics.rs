@@ -299,13 +299,13 @@ impl Interpreter {
 // Linking a downstream type failure back to the NIL that caused it.
 //
 // A NIL flows like any other value (LANG.FAILURE.PASSTHROUGH), so the Word
-// that *fails* is routinely not the Word that went wrong. `0 100001 RANGE
-// LENGTH` is the canonical shape: `RANGE` correctly answers
-// `NIL(spaceExhausted)`, `LENGTH` is handed a Nil where it declares a Vector,
-// and the run ends as `LENGTH: expected a Vector, got Nil`.
+// that *fails* is routinely not the Word that went wrong. `-1 SQRT LENGTH`
+// is the canonical shape: `SQRT` correctly answers `NIL(domainMiss)`,
+// `LENGTH` is handed a Nil where it declares a Vector, and the run ends as
+// `LENGTH: expected a Vector, got Nil`.
 //
-// That top-level message is true and useless. The cause — a materialization
-// ceiling crossed two Words earlier — was reachable only by walking
+// That top-level message is true and useless. The cause — a domain missed
+// two Words earlier — was reachable only by walking
 // `errorFlowTrace` and reading `absence.reason` off an earlier node, which the
 // README had to tell readers to do. A diagnosis that needs a README to point
 // past it is not doing the job the diagnosis exists for, and "read the other

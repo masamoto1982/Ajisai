@@ -5,7 +5,7 @@
 use num_bigint::BigInt;
 use num_traits::Signed;
 
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, NilReason, ResourceLimit, Result};
 use crate::interpreter::arithmetic_meter::measure_operand;
 use crate::interpreter::exact_work::{charge_comparison, power_work};
 use crate::interpreter::record_ops;
@@ -213,8 +213,9 @@ fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
 /// The scalar law of `POW`, lifted by [`lift_binary_numeric`].
 ///
 /// A power is sized and priced before it is taken. One past `bigintBits` or
-/// `algebraicTerms` is the `spaceExhausted` projection POW declares for an
-/// exponent past what the machine will materialize, and the products that
+/// `algebraicTerms` is refused by that ceiling's name before it is computed
+/// (`resourceLimitExceeded`, LANG.MACHINE.LIMITS), exactly as the same
+/// width reached by repeated `MUL` is refused after; and the products that
 /// take one are charged to `budget` as `MUL` would charge them.
 fn pow_scalar(
     x: &Value,
@@ -235,10 +236,11 @@ fn pow_scalar(
         PowPlan::Answered(outcome) => outcome,
         PowPlan::Integer { base, exponent } => {
             let size = base.power_size(&exponent);
-            if size.bits > limits.max_bigint_bits || size.terms > limits.max_algebraic_terms as u64
-            {
-                PowOutcome::SpaceExhausted
-            } else if !budget.charge(power_work(&base, &exponent)) {
+            limits.check_algebraic_size(
+                usize::try_from(size.terms).unwrap_or(usize::MAX),
+                size.bits,
+            )?;
+            if !budget.charge(power_work(&base, &exponent)) {
                 PowOutcome::WorkExhausted
             } else {
                 base.power_by_integer(&exponent)
@@ -249,7 +251,16 @@ fn pow_scalar(
         PowOutcome::WorkExhausted => return Err(budget.exhausted_error()),
         PowOutcome::Value(er) => Value::from_exact_real(er),
         PowOutcome::DomainMiss => nil(NilReason::DomainMiss, Recoverability::Recoverable),
-        PowOutcome::SpaceExhausted => nil(NilReason::SpaceExhausted, Recoverability::Unknown),
+        // Sized against `bigintBits` above, which is never wider than the
+        // bound `power_by_integer` keeps for itself.
+        PowOutcome::TooWide => {
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::BigintBits,
+                limit: limits.max_bigint_bits,
+                observed: None,
+                progress: None,
+            })
+        }
     })
 }
 

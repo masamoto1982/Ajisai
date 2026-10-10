@@ -81,7 +81,7 @@ const DOMAINS = [
   { id: 'textShort', source: "'a'", motivatedBy: [] },
   { id: 'vectorPair', source: '[ 1 2 ]', motivatedBy: [] },
   { id: 'vectorTriple', source: '[ 1 2 3 ]', motivatedBy: ['shapeMismatch'] },
-  { id: 'vectorHuge', source: '[ 0 1000001 ]', motivatedBy: ['spaceExhausted'] },
+  { id: 'vectorHuge', source: '[ 0 1000001 ]', motivatedBy: ['resourceLimitExceeded'] },
   { id: 'nilLiteral', source: 'NIL', motivatedBy: ['literal'] },
   { id: 'codeBlock', source: '[ 1 ]', motivatedBy: [] },
 ];
@@ -249,7 +249,7 @@ async function buildTable(ajisaiBin) {
     schemaVersion: 2,
     generator: 'scripts/generate-semantics-table.mjs',
     // The runtime ceilings this table assumes. A cell whose outcome depends
-    // on a ceiling (`vectorHuge` reaching `spaceExhausted`) is only reliably
+    // on a ceiling (`vectorHuge` reaching `resourceLimitExceeded`) is only reliably
     // reproducible under the same profile — see MCP_README's "the playground
     // applies a different, looser profile" (Phase 3 pitfall C). This is the
     // native CLI's own built-in default (`AJISAI_BIN`/`AJISAI_REPO` unset),
