@@ -122,7 +122,7 @@
                     <h4>1. Basic display rules</h4>
                     <ul class="ref-list">
                         <li><strong>Numbers</strong>: shown as exact fractions of the form <code>numerator/denominator</code>. The integer <code>3</code> is rendered as <code>3/1</code>.</li>
-                        <li><strong>Booleans</strong>: shown as <code>TRUE</code> or <code>FALSE</code>.</li>
+                        <li><strong>Booleans</strong>: shown as <code>TRUE</code>, <code>FALSE</code> or <code>BOTH</code>.</li>
                         <li><strong>Absence of a value</strong>: shown as <code>NIL</code>.</li>
                     </ul>
                     <p>These are the standard renderings in the Stack area, and they match what the Expected value column of this Reference states. If the screen shows <code>3</code> rather than <code>3/1</code>, the LaTeX display mode described next is switched on. The setting is remembered by the browser and survives a reload, so it may still be on from an earlier visit. When comparing against the Expected value column, take the unchecked state as the baseline.</p>
@@ -172,21 +172,18 @@
 <path d="M170,216 L198,216" class="arrow" marker-end="url(#lexer-arrow)"/>
 <rect x="200" y="196" width="460" height="40" rx="5" class="action"/><text x="214" y="221" class="label">cut one word up to the next whitespace → step 2</text>
 <text x="20" y="276" class="stage">2. Classify the word — by the whole word, left to right</text>
-<rect x="20" y="290" width="120" height="44" rx="5"/><text x="80" y="317" text-anchor="middle" class="label">exactly [ or ]</text>
-<path d="M80,334 L80,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="80" y="370" text-anchor="middle" class="result">delimiter</text>
-<rect x="150" y="290" width="120" height="44" rx="5"/><text x="210" y="317" text-anchor="middle" class="label">contains [ or ]</text>
-<path d="M210,334 L210,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="210" y="370" text-anchor="middle" class="result err">source error</text>
-<rect x="280" y="290" width="120" height="44" rx="5"/><text x="340" y="317" text-anchor="middle" class="label">zero denominator</text>
-<path d="M340,334 L340,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="340" y="370" text-anchor="middle" class="result err">source error</text>
-<rect x="410" y="290" width="120" height="44" rx="5"/><text x="470" y="317" text-anchor="middle" class="label">matches number</text>
-<path d="M470,334 L470,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="470" y="370" text-anchor="middle" class="result">number literal</text>
-<rect x="540" y="290" width="120" height="44" rx="5"/><text x="600" y="317" text-anchor="middle" class="label">anything else</text>
-<path d="M600,334 L600,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="600" y="370" text-anchor="middle" class="result">name</text>
+<rect x="20" y="290" width="151" height="44" rx="5"/><text x="95.5" y="317" text-anchor="middle" class="label">exactly [ or ]</text>
+<path d="M95.5,334 L95.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="95.5" y="370" text-anchor="middle" class="result">delimiter</text>
+<rect x="183" y="290" width="151" height="44" rx="5"/><text x="258.5" y="317" text-anchor="middle" class="label">contains [ or ]</text>
+<path d="M258.5,334 L258.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="258.5" y="370" text-anchor="middle" class="result err">source error</text>
+<rect x="346" y="290" width="151" height="44" rx="5"/><text x="421.5" y="317" text-anchor="middle" class="label">matches number</text>
+<path d="M421.5,334 L421.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="421.5" y="370" text-anchor="middle" class="result">number literal</text>
+<rect x="509" y="290" width="151" height="44" rx="5"/><text x="584.5" y="317" text-anchor="middle" class="label">anything else</text>
+<path d="M584.5,334 L584.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="584.5" y="370" text-anchor="middle" class="result">name</text>
 <rect x="20" y="392" width="640" height="44" rx="5" class="action"/><text x="34" y="419" class="label">3. Check [ ] pairing over the tokens — a stray ] or an unclosed [ is a source error</text>
 </svg></div>
 <ol class="ref-list">
@@ -199,7 +196,6 @@
 <ol class="ref-list">
 <li>Exactly <code>[</code> or <code>]</code>: a delimiter (the start or end of a Vector).</li>
 <li>Otherwise containing <code>[</code> or <code>]</code>: a source error (<code>bracketMustStandAlone</code>).</li>
-<li>The shape of a fraction with a zero denominator (<code>1/0</code>): a source error (<code>zeroDenominator</code>).</li>
 <li>The whole word matches the number grammar: a number literal.</li>
 <li>Everything else: a name.</li>
 </ol>
@@ -248,13 +244,12 @@
 </table>
 </div>
 <h3 id="source-errors">Source errors</h3>
-<p>These five are the only errors lexical analysis can raise, all classified <code>malformedSource</code>.</p>
+<p>These four are the only errors lexical analysis can raise, all classified <code>malformedSource</code>.</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>Condition</th><th>Example</th><th>Meaning</th></tr></thead>
 <tbody>
 <tr><td><code>unclosedLiteral</code></td><td><code>'foo</code></td><td class="notes">A string literal reached the end of input without a closing quote followed by whitespace.</td></tr>
-<tr><td><code>zeroDenominator</code></td><td><code>1/0</code></td><td class="notes">A fraction literal's denominator is zero.</td></tr>
 <tr><td><code>bracketMustStandAlone</code></td><td><code>[1</code></td><td class="notes">A word contains <code>[</code> or <code>]</code> without being exactly that delimiter.</td></tr>
 <tr><td><code>unexpectedCloseBracket</code></td><td><code>]</code></td><td class="notes"><code>]</code> appeared with no <code>[</code> open.</td></tr>
 <tr><td><code>unclosedBracket</code></td><td><code>[</code></td><td class="notes">Input ended with a <code>[</code> still open.</td></tr>
@@ -271,7 +266,7 @@
 <p>A program is evaluated element by element, left to right. What happens depends on the kind of element:</p>
 <ul class="ref-list">
 <li><strong>A number or string literal</strong>: its value is pushed onto the stack.</li>
-<li><strong>A Vector</strong> <code>[ ... ]</code>: pushed as a Vector without evaluating its contents. Names inside stay as Symbols, except <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>.</li>
+<li><strong>A Vector</strong> <code>[ ... ]</code>: pushed as a Vector without evaluating its contents. Names inside stay as Symbols, except <code>TRUE</code>, <code>FALSE</code>, <code>BOTH</code> and <code>NIL</code>.</li>
 <li><strong>A name</strong>: if it is bound, its value is pushed; otherwise the Word of that name in the dictionary is called. If it is neither, it is an error (<em>Unknown word</em>).</li>
 </ul>
 <h3 id="value-kinds">Values on the stack</h3>
@@ -281,7 +276,7 @@
 <li><strong>Strings</strong> (<a href="#el-string">2.2 Strings</a>)</li>
 <li><strong>Vectors</strong>: sequences of values, also read as code (<a href="#el-vector">2.3 Vectors</a>)</li>
 <li><strong>Symbols</strong>: names held as data (<a href="#name-inside-brackets">2.4.1 Bindings</a>)</li>
-<li><strong>Booleans</strong>: <code>TRUE</code> and <code>FALSE</code> (<a href="#comparison">2.4.2.1 Logic, comparison, arithmetic</a>)</li>
+<li><strong>Booleans</strong>: <code>TRUE</code>, <code>FALSE</code> and <code>BOTH</code> (<a href="#comparison">2.4.2.1 Logic, comparison, arithmetic</a>)</li>
 <li><strong>Records</strong>: keys paired with values (<a href="#records">2.4.2.3 Keyed data</a>)</li>
 <li><strong><code>NIL</code></strong>: absence with a reason (<a href="#failure">1.2.1 Outcomes</a>)</li>
 </ul>
@@ -529,7 +524,7 @@
                     </div>
                     <h3>A closed form beats a loop</h3>
                     <p>Before reaching for an iterative method, check whether the problem has a closed form. In exact arithmetic a closed form is not only faster; it is a different kind of answer. Least squares, ridge regression with a rational penalty, k-nearest neighbours, naive Bayes over rational probabilities, decision trees with Gini splits, the perceptron and the simplex method all have exact solutions without iteration. Ajisai returns the coefficients as exactly those rationals: an <code>R²</code> that comes back as <code>529/532</code> is the exact answer.</p>
-                    <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer, and Ajisai does not handle them. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
+                    <p class="ref-note">Transcendental functions — exponentials, logarithms, trigonometric functions, arbitrary powers — have no rational answer, and Ajisai does not handle them. <code>SQRT</code> is the only irrational the language constructs exactly, as an <strong>algebraic number</strong>, and <code>POW</code> with an integer or <code>p/2</code> exponent stays inside that field. The number domain is this field in its entirety, so every comparison is decided as <code>TRUE</code> or <code>FALSE</code> in finite time, except an order asked of <code>0/0</code>, which has none and answers <code>NIL</code> (<code>domainMiss</code>).</p>
 
                     <h3>The other cost: the host's safety controls</h3>
                     <p>The costs so far accumulate naturally from exact arithmetic itself, even in a correctly written program. Separately, the host sets several limits to protect its computing resources. Each is a safety control on the host side, not language semantics, and the concrete numbers are set by the implementation. The same source may pass on a host that declares larger limits. What happens on overrun is fixed, however: whichever limit is exceeded, the result is an <strong>error</strong> that names the limit, and evaluation stops. A limit belongs to the host, not to the program, so it never turns into a value the program could branch on.</p>
@@ -573,7 +568,6 @@
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Being <code>NIL</code>, it can be <a href="#recovery">replaced with a fallback value</a> so the program moves on: <code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code> recovers to the empty Vector. An error has no such recovery.</p>
                 
                 
                 </section>
@@ -738,7 +732,7 @@
                                 <tr>
                                     <td><code>2 SQRT 2 LT</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">An irrational such as \(\sqrt{2}\) is a lazily evaluated continued fraction, and comparisons against it are computed exactly.</td>
+                                    <td class="notes">An irrational such as \(\sqrt{2}\) is held exactly, in the normal form of its field, and comparisons against it are computed exactly.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -751,7 +745,7 @@
                     <p>Irrationals have one display form: the value's normal form written as a single token with no whitespace. <code>2 SQRT</code> is <code>sqrt(2)</code>, <code>1 2 SQRT ADD</code> is <code>1/1+sqrt(2)</code>, <code>2 SQRT 3 SQRT SUB</code> is <code>sqrt(2)-sqrt(3)</code>, and <code>8 SQRT</code> is <code>2/1*sqrt(2)</code> (the radicand is normalized to be square-free). Nothing is truncated or approximated, and inside a Vector it reads as a single element. The <code>stackDisplay</code> of the CLI and MCP hosts and the Playground's Stack area all show this same token. The CLI and MCP also list the same terms, structured, under <code>semantics.exactTerms</code>.</p>
                     <p class="ref-note">This is display-only output, not source syntax. Writing <code>sqrt(2)</code> in a program gives an unknown name. <code>(</code> <code>)</code> are name characters, not syntax, so written in a program they do not act as parentheses.</p>
                     <h3 id="division-by-zero">Dividing by zero</h3>
-                    <p>Every number is a reduced pair of integers over a non-negative denominator, and <code>DIV</code> is total: it is multiplication by the reciprocal, and every number has one. Dividing by zero does not stop the program and produces no absence: the answer is the dividend's sign over zero. Because the gcd of <code>n</code> and <code>0</code> is <code>|n|</code>, every pair over zero reduces to one of exactly three numbers — <code>1/0</code>, <code>-1/0</code> and <code>0/0</code> — so <code>100 0 DIV</code> is <code>1/0</code> for the same reason <code>4/2</code> is <code>2/1</code>, and <code>1/0</code> is a literal as <code>1/2</code> is. The three points compute by the same pair formulas as every other number: <code>1/0 5 ADD</code> is <code>1/0</code>, <code>1 1/0 DIV</code> is <code>0</code>, <code>1/0 1/0 ADD</code> is <code>0/0</code>. <code>-1/0</code> lies below every other number and <code>1/0</code> above; <code>0/0</code> absorbs everything it meets and has no place in the order, so a comparison that asks for one projects <code>NIL</code> (<code>domainMiss</code>) and reads as "unknown" (<a href="#logic">three-valued logic</a>). In a Vector only the element that was divided by zero becomes a point over zero; the quotients beside it are ordinary quotients.</p>
+                    <p>Every number is a reduced pair of integers over a non-negative denominator, and <code>DIV</code> is total: it is multiplication by the reciprocal, and every number has one. Dividing by zero does not stop the program and produces no absence: the answer is the dividend's sign over zero. Because the gcd of <code>n</code> and <code>0</code> is <code>|n|</code>, every pair over zero reduces to one of exactly three numbers — <code>1/0</code>, <code>-1/0</code> and <code>0/0</code> — so <code>100 0 DIV</code> is <code>1/0</code> for the same reason <code>4/2</code> is <code>2/1</code>, and <code>1/0</code> is a literal as <code>1/2</code> is. The three points compute by the same pair formulas as every other number: <code>1/0 5 ADD</code> is <code>1/0</code>, <code>1 1/0 DIV</code> is <code>0</code>, <code>1/0 1/0 ADD</code> is <code>0/0</code>. <code>-1/0</code> lies below every other number and <code>1/0</code> above; <code>0/0</code> absorbs everything it meets and has no place in the order, so a comparison that asks for one projects <code>NIL</code> (<code>domainMiss</code>) and reads as "unknown" (<a href="#logic">four-valued logic</a>). In a Vector only the element that was divided by zero becomes a point over zero; the quotients beside it are ordinary quotients.</p>
                     <p class="ref-note">At the three points, and nowhere else, the laws of a field that mention zero give way: <code>0 1/0 MUL</code> is <code>0/0</code>, not <code>0</code>; <code>1/0 1/0 SUB</code> is <code>0/0</code>, not <code>0</code>; and the distributive law fails there. The machine does not restore them by special case. A program that must not reach the points tests its divisor first; one that reaches them keeps computing, and <code>EQ</code> still decides, since <code>0/0 0/0 EQ</code> is <code>TRUE</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -984,7 +978,7 @@ FILTER</code></td>
                     <p class="ref-note">That is all there is to partial application in Ajisai. There is no separate Word for it, and none is needed, because a block is a value whose contents can be computed like any other Vector's.</p>
 
                     <h3 id="blocks-frames">Blocks and evaluation frames (<code>[ ]</code>)</h3>
-                    <p>A block has <strong>no stack discipline of its own</strong>. The Word that evaluates a block decides what the block can reach and what it may leave behind. Read with the wrong rule, an <code>ADD</code> inside a block either finds two operands or finds none. There are five rules, and the block's own text does not say which one applies. The Word that receives the block decides.</p>
+                    <p>A block has <strong>no stack discipline of its own</strong>. The Word that evaluates a block decides what the block can reach and what it may leave behind. Read with the wrong rule, an <code>ADD</code> inside a block either finds two operands or finds none. The table below lists every case, and the block's own text does not say which one applies. The Word that receives the block decides.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -1010,7 +1004,7 @@ FILTER</code></td>
                 <section id="el-name" class="ref-page">
                     <h2><span class="secnum">2.4</span> Names</h2>
 <p>A name is every word that is not a number, a string or a square bracket. Any character other than whitespace and the square brackets can be part of a name; but a word beginning with <code>#</code> is a comment and one beginning with <code>'</code> is a string, so a name never begins with either (<a href="#tokens">1.1 Separating elements</a>).</p>
-<p>Evaluating a name pushes its value if the name is bound (<a href="#names">2.4.1 Bindings</a>), and otherwise calls the Word of that name (<a href="#words">2.4.2 Words</a>). A name that is neither is an error (<em>Unknown word</em>). A name written inside <code>[ ]</code> is not evaluated; except for <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, it becomes a value called a Symbol.</p>
+<p>Evaluating a name pushes its value if the name is bound (<a href="#names">2.4.1 Bindings</a>), and otherwise calls the Word of that name (<a href="#words">2.4.2 Words</a>). A name that is neither is an error (<em>Unknown word</em>). A name written inside <code>[ ]</code> is not evaluated; except for <code>TRUE</code>, <code>FALSE</code>, <code>BOTH</code> and <code>NIL</code>, it becomes a value called a Symbol.</p>
 <h3>Symbols and how tokens are recognized</h3>
                     <p>A symbol in Ajisai is simply a name spelled with symbol characters. Every Word is called by its one English name, and no Word has a symbol spelling. <code>+</code> and <code>&lt;</code> are ordinary names too, undefined unless you define them. Because a symbol is just one way of spelling a name, even a multi-character symbol does not complicate the rule above: a token ends only at whitespace, never partway through. A token's meaning is decided by the lexeme of the whole token, not by its first character. For example, <code>1/2</code> is parsed as a whole fraction literal, while a lone <code>/</code> is parsed as a plain name.</p>
                     <h3>A name is a Word or a binding, never both</h3>
@@ -1154,7 +1148,7 @@ FILTER</code></td>
                     <h2><span class="secnum">2.4.2</span> Words (<code>DEF</code>)</h2>
 <p>A Word is a named operation registered in the dictionary. Called by its name, it consumes operands from the stack and pushes the outputs its contract registers, if any. The built-in Words are grouped by what they do into <a href="#word-index">families</a>, and each family page ends with the contract of each of its Words. The individual Word is the last unit of this Reference.</p>
 <h3 id="all-words">Every operation is a Word</h3>
-<p>Ajisai's lexical structure tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Arithmetic and comparison, branching, iteration, definition and binding — even <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code>, which push one value — are ordinary <strong>Words</strong>, each with one English name, held in the dictionary and called by name.</p>
+<p>Ajisai's lexical structure tells apart only numbers, strings, names and the one pair <code>[</code> <code>]</code>. There are no reserved words. Arithmetic and comparison, branching, iteration, definition and binding — even <code>TRUE</code>, <code>FALSE</code>, <code>BOTH</code> and <code>NIL</code>, which push one value — are ordinary <strong>Words</strong>, each with one English name, held in the dictionary and called by name.</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>Role</th><th>Words</th></tr></thead>
@@ -1162,7 +1156,7 @@ FILTER</code></td>
 <tr><td class="notes">Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
 <tr><td class="notes">Comparison</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
 <tr><td class="notes">Logic</td><td><code>AND</code> <code>NOT</code></td></tr>
-<tr><td class="notes">Truth values and absence</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
+<tr><td class="notes">Truth values and absence</td><td><code>TRUE</code> <code>FALSE</code> <code>BOTH</code> <code>NIL</code></td></tr>
 <tr><td class="notes">Choice</td><td><code>SELECT</code></td></tr>
 <tr><td class="notes">Iteration</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
 <tr><td class="notes">Definition and binding</td><td><code>DEF</code> <code>BIND</code></td></tr>
@@ -1173,7 +1167,7 @@ FILTER</code></td>
 <h3 id="dictionaries">Dictionaries and Word identity</h3>
                     <h3>Two tiers: <code>Core</code> and <code>User</code></h3>
                     <p>The dictionary has <strong>two tiers</strong>, and that is all. <strong>Core</strong> holds the 78 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you defined with <code>DEF</code>.</p>
-                    <p>These 78 Words divide into the <strong>48-Word Semantic Kernel</strong> and <strong>30 Standard Words</strong>. A Kernel Word either builds or observes some kind of value, or is the one explicit way to do something — running a code block, recovering from NIL, changing the dictionary, output. A Standard Word, such as <code>SUB</code>, <code>MIN</code>, <code>SORT</code> or <code>TRIM</code>, gives a frequent idea one fixed name and contract. The division only tells you where a Word sits in the design; it changes nothing about how you use it. All 78 are ordinary Core Words in the same single flat dictionary, reached by their plain names, with the same contracts, examples and error conditions. Each Word's tier is listed with the <a href="#word-index">built-in Words</a> and in each page's contracts, and it is also shown when you look the Word up.</p>
+                    <p>These 78 Words divide into the <strong>50-Word Semantic Kernel</strong> and <strong>28 Standard Words</strong>. A Kernel Word either builds or observes some kind of value, or is the one explicit way to do something — running a code block, recovering from NIL, changing the dictionary, output. A Standard Word, such as <code>SUB</code>, <code>MIN</code>, <code>SORT</code> or <code>TRIM</code>, gives a frequent idea one fixed name and contract. The division only tells you where a Word sits in the design; it changes nothing about how you use it. All 78 are ordinary Core Words in the same single flat dictionary, reached by their plain names, with the same contracts, examples and error conditions. Each Word's tier is listed with the <a href="#word-index">built-in Words</a> and in each page's contracts, and it is also shown when you look the Word up.</p>
                     <h3 id="define">Making a new Word with <code>DEF</code></h3>
                     <p>A new Word is defined from a code block and a name: <code>[ body ] 'NAME' DEF</code>. The body runs every time the Word is called.</p>
                     <div class="sample">
@@ -1516,7 +1510,7 @@ FILTER</code></td>
                         <li><strong>Sign</strong>: negation is written <code>x -1 MUL</code>, and absolute value <code>x 'X' BIND X X MUL SQRT</code>.</li>
                         <li><strong>Extremes</strong>: <code>MIN</code> (minimum), <code>MAX</code> (maximum)</li>
                         <li><strong>Square root</strong>: <code>SQRT</code></li>
-                        <li><strong>Rounding</strong>: <code>FLOOR</code> (round down), <code>ROUND</code> (round half up). Ceiling is written <code>x -1 MUL FLOOR -1 MUL</code>.</li>
+                        <li><strong>Rounding</strong>: <code>FLOOR</code> (round down), <code>ROUND</code> (round to nearest, a tie away from zero). Ceiling is written <code>x -1 MUL FLOOR -1 MUL</code>.</li>
                         <li><strong>Rounding to a grid</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code> rounds a value to a multiple of <code>1/d</code>. Use it to stop denominators from growing in loops and iterative computations. See <a href="#iterative">The cost of iteration</a> for more.</li>
                     </ul>
                     <p class="ref-note">Division by zero does not crash the program and produces no absence: the affected element becomes its sign over zero, a number, and the elements beside it are quotients. Every Word after the division computes with the point by the same pair formulas. See <a href="#division-by-zero">Dividing by zero</a> for more.</p>
@@ -1696,7 +1690,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3>Exact comparison</h3>
-                    <p class="ref-note">Comparison decides exactly across every value the Words can build, rationals and square roots included. So a comparison always returns <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
+                    <p class="ref-note">Comparison decides exactly across every value the Words can build, rationals and square roots included. So a comparison always returns <code>TRUE</code> or <code>FALSE</code> in finite time, with one exception: <code>0/0</code> has no place in the order, so an order asked of it answers <code>NIL</code> (<code>domainMiss</code>).</p>
 
                     <h3 id="logic">Logic</h3>
                     <p>Ajisai's truth is four-valued, after Belnap: <code>TRUE</code>, <code>FALSE</code>, <code>BOTH</code> (told true and told false at once) and UNKNOWN (a <code>NIL</code> read in truth position). Two logical Words, <code>AND</code> and <code>NOT</code>, combine them. Like any other Word, each is written by its spelling. Logical OR is written by De Morgan's law as <code>a NOT b NOT AND NOT</code>. <code>NOT</code> swaps <code>TRUE</code> and <code>FALSE</code> and leaves <code>BOTH</code> and UNKNOWN as they are; <code>AND</code> of <code>BOTH</code> and UNKNOWN is <code>FALSE</code>.</p>
@@ -2410,7 +2404,7 @@ FILTER</code></td>
                     <p class="ref-note">More structural Words: <code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>. To search instead of indexing, an ascending Vector uses <code>BSEARCH</code> (<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2/1 ]</code> — binary search: the iteration of halving an interval again and again is not something you can write yourself). <code>BSEARCH</code> raises an error when given a Vector that is not ascending.</p>
 
                     <h3 id="ordering">Ordering, counting and shape</h3>
-                    <p>The operations that need to see a whole Vector at once are covered by seven Words. Each of them could be written out using only the rest of the vocabulary, but written out it costs asymptotically more. That alone is why they exist as Words.</p>
+                    <p>The operations that need to see a whole Vector at once are covered by six Words. Each of them could be written out using only the rest of the vocabulary, but written out it costs asymptotically more. That alone is why they exist as Words.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -2868,8 +2862,8 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <h3 id="record-lifting">Only arithmetic and comparison lift onto the values</h3>
-                    <p>The only existing Words that act on a Record are <a href="#arithmetic">arithmetic</a> and <a href="#comparison">comparison</a>. Combining a number or a Vector with a Record leaves the keys as they are and applies the operation to each value. Two Records combine value by value <strong>only when their key columns are equal</strong>; otherwise it is a <code>shapeMismatch</code> error. Every other Word — <code>LENGTH</code>, <code>MAP</code>, <code>AND</code>, <code>CHARS</code> and so on — raises its own operand error when given a Record. To treat a Record as a Vector, cross over explicitly with <code>VALUES</code>.</p>
+                    <h3 id="record-lifting">Element-wise Words lift onto the values</h3>
+                    <p>Every Word that works element by element — <a href="#arithmetic">arithmetic</a>, <a href="#comparison">comparison</a>, logic and text Words such as <code>NOT</code>, <code>UPPER</code> or <code>CHARS</code> — acts on a Record's values. Combining a number or a Vector with a Record leaves the keys as they are and applies the operation to each value. Two Records combine value by value <strong>only when their key columns are equal</strong>; otherwise it is a <code>shapeMismatch</code> error. A Word that reads a Vector as a whole — <code>LENGTH</code>, <code>MAP</code>, <code>FOLD</code> and so on — raises its own operand error when given a Record. To treat a Record as a Vector, cross over explicitly with <code>VALUES</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3642,8 +3636,8 @@ SELECT</code></td>
                         </div>
                     </div>
                     <h3>When neither is chosen</h3>
-                    <p>If an <a href="#nil">absence (NIL)</a> arrives in the Boolean position, it is <strong>UNKNOWN</strong> (<a href="#logic">three-valued logic</a>). UNKNOWN chooses neither candidate and answers the absence it read, <em>reason and all</em>. So you can ask afterwards, with <code>NIL-REASON</code>, "why could this not branch?".</p>
-                    <p class="ref-note">There is no state of "no clause matched". There are always two candidates, and the Boolean is TRUE, FALSE or UNKNOWN, so <code>SELECT</code> always has an answer. This is why forgetting an else clause can never crash at run time.</p>
+                    <p>If an <a href="#nil">absence (NIL)</a> arrives in the Boolean position, it is <strong>UNKNOWN</strong> (<a href="#logic">four-valued logic</a>). UNKNOWN chooses neither candidate and answers the absence it read, <em>reason and all</em>. So you can ask afterwards, with <code>NIL-REASON</code>, "why could this not branch?".</p>
+                    <p class="ref-note">There is no state of "no clause matched". There are always two candidates, and the Boolean is TRUE, FALSE, BOTH or UNKNOWN, so <code>SELECT</code> always has an answer: BOTH chooses both candidates, answering them reconciled, which is a <code>conflict</code> NIL when they differ. This is why forgetting an else clause can never crash at run time.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3787,7 +3781,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">An empty Vector answers an empty Vector (zero lanes in, zero lanes out; the seed is not returned). A Vector that is absent (<code>NIL</code>) answers that absence, reason and all. Here it differs from <code>FOLD</code>, which answers the <em>seed</em> in both cases — with nothing to fold, the answer is the seed. These are two sides of the same rule: the shape of the answer follows the shape of the question.</p>
+                    <p class="ref-note">An empty Vector answers an empty Vector (zero lanes in, zero lanes out; the seed is not returned). A Vector that is absent (<code>NIL</code>) answers that absence, reason and all. Here it differs from <code>FOLD</code>, which answers the <em>seed</em> for an empty Vector — with nothing to fold, the answer is the seed — and, like every Word, passes an absent Vector through. These are two sides of the same rule: the shape of the answer follows the shape of the question.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -4207,7 +4201,7 @@ SELECT</code></td>
                                 <tr>
                                     <td><code>42 PRINT</code></td>
                                     <td>—</td>
-                                    <td class="notes">The default mode consumes the operand: the stack becomes empty and the value appears only in the output area.</td>
+                                    <td class="notes"><code>PRINT</code> consumes the operand: the stack becomes empty and the value appears only in the output area.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -4346,7 +4340,7 @@ SELECT</code></td>
                         </tbody>
                     </table>
                     </div>
-                    <p>The comparison Words work only at the top layer. They are exact and total across every Ajisai value, and they answer the mathematical question. The layers below take no part in the value model, so representation and display never affect a comparison's result.</p>
+                    <p>The comparison Words work only at the top layer. They are exact across every Ajisai value and answer the mathematical question; the one question they cannot answer is an order asked of <code>0/0</code>, which projects <code>domainMiss</code>. The layers below take no part in the value model, so representation and display never affect a comparison's result.</p>
                 
                 
                 </section>
