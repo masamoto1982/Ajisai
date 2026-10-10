@@ -1,7 +1,7 @@
 {
   "_comment": [
     "Per-file branch and line coverage floor for every Rust file the traceability",
-    "matrix names as the implementation of a QL-A requirement. CI fails when a",
+    "matrix names as the implementation of a QL-A or QL-B requirement. CI fails when a",
     "file's covered fraction drops below its entry (scripts/check-coverage-ratchet.mjs).",
     "Measured with `cargo +<toolchain> llvm-cov --branch --workspace` and",
     "PROPTEST_RNG_SEED fixed, as the Rust branch coverage step in",
@@ -60,6 +60,16 @@
         "count": 136
       }
     },
+    "rust/src/tokenizer.rs": {
+      "branches": {
+        "covered": 129,
+        "count": 136
+      },
+      "lines": {
+        "covered": 244,
+        "count": 249
+      }
+    },
     "rust/src/types/value_protocol.rs": {
       "branches": {
         "covered": 9,
@@ -68,6 +78,26 @@
       "lines": {
         "covered": 103,
         "count": 108
+      }
+    },
+    "rust/src/coreword_registry.rs": {
+      "branches": {
+        "covered": 7,
+        "count": 8
+      },
+      "lines": {
+        "covered": 169,
+        "count": 172
+      }
+    },
+    "rust/src/kernel/generated/word_registry.rs": {
+      "branches": {
+        "covered": 0,
+        "count": 0
+      },
+      "lines": {
+        "covered": 71,
+        "count": 78
       }
     }
   }

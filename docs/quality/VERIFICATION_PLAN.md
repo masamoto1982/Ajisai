@@ -22,19 +22,19 @@ Define minimum verification evidence required for Ajisai changes.
   reporting less. Installing it needs
   `rustup toolchain install nightly-2026-10-09 --component llvm-tools-preview` and
   `cargo install cargo-llvm-cov --locked`.
-- QL-A files may not lose coverage. The CI step (`Rust branch coverage` in the
+- QL-A and QL-B files may not lose coverage. The CI step (`Rust branch coverage` in the
   `quality-gate` job) runs the suite under instrumentation, then
-  `QL-A coverage ratchet` (`npm run check:coverage-ratchet`,
+  `QL-A / QL-B coverage ratchet` (`npm run check:coverage-ratchet`,
   `scripts/check-coverage-ratchet.mjs`) fails the job when any Rust file
-  `TRACEABILITY_MATRIX.md` names as a QL-A requirement's implementation has a
+  `TRACEABILITY_MATRIX.md` names as a QL-A or QL-B requirement's implementation has a
   lower covered fraction of branches or lines than
   `docs/quality/coverage-baseline.json` records for it. It is a ratchet, not a
-  fixed percentage: new code in a QL-A file must be covered at least as well
+  fixed percentage: new code in a gated file must be covered at least as well
   as the file already was. A change that moves a figure — a better-covered
-  file, a new QL-A row, a deliberate trade — re-records the baseline in the
+  file, a new QL-A or QL-B row, a deliberate trade — re-records the baseline in the
   same diff (`node scripts/check-coverage-ratchet.mjs
   rust/target/coverage/coverage.json --update`), where the reviewer sees it
-  move. The baseline also has to match the matrix: a QL-A file with no entry,
+  move. The baseline also has to match the matrix: a gated file with no entry,
   or an entry for a file that is no longer one, fails.
 - The counts are compared across runs, so they are measured reproducibly: CI
   pins the nightly the baseline names (`toolchain`) and fixes proptest's seed
@@ -54,11 +54,13 @@ Define minimum verification evidence required for Ajisai changes.
   - Baseline checks + targeted semantic/regression tests.
   - MC/DC-like checklist reviewed for modified boolean logic paths.
   - Traceability matrix row updates required (`TRACEABILITY_MATRIX.md`).
-  - QL-A coverage ratchet holds; a moved figure re-records
+  - QL-A / QL-B coverage ratchet holds; a moved figure re-records
     `docs/quality/coverage-baseline.json` in the same change.
 - **QL-B**
   - Baseline checks + impacted unit/integration tests.
   - Traceability updates for requirement-to-test linkage (`TRACEABILITY_MATRIX.md`).
+  - QL-A / QL-B coverage ratchet holds; a moved figure re-records
+    `docs/quality/coverage-baseline.json` in the same change.
 - **QL-C**
   - Baseline checks; focused verification accepted if unaffected stacks are justified.
 - **QL-D**

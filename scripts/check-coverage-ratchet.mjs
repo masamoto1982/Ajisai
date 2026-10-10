@@ -1,20 +1,22 @@
 #!/usr/bin/env node
-// QL-A coverage ratchet: no file the traceability matrix names as the
-// implementation of a QL-A requirement may lose branch or line coverage.
+// QL-A / QL-B coverage ratchet: no file the traceability matrix names as the
+// implementation of a QL-A or QL-B requirement may lose branch or line
+// coverage. (The matrix has no QL-C or QL-D rows; a gated level added to
+// GATED_LEVELS is all it takes to cover one.)
 //
-// docs/quality/coverage-baseline.json records, per QL-A file, the branches
+// docs/quality/coverage-baseline.json records, per gated file, the branches
 // and lines covered out of those counted. A run fails when a file's covered
 // fraction falls below its recorded one — compared exactly, as
 // covered·baseCount < baseCovered·count, so no rounding decides a verdict.
-// It is a ratchet, not a fixed threshold: new code in a QL-A file must be
+// It is a ratchet, not a fixed threshold: new code in a gated file must be
 // covered at least as well as the file already was, and a file that gets
 // better can be locked in with --update, in the same change, where a
 // reviewer sees the baseline move.
 //
-// The baseline must match the matrix in both directions: a QL-A file with no
+// The baseline must match the matrix in both directions: a gated file with no
 // baseline entry fails (a new requirement row needs a recorded floor), and an
-// entry for a file that is no longer a QL-A implementation fails (a floor
-// must not outlive its subject). A QL-A file the native build does not
+// entry for a file that is no longer a gated implementation fails (a floor
+// must not outlive its subject). A gated file the native build does not
 // compile (feature-gated, such as the wasm bindings) is skipped and named;
 // its verification is the suite that builds it.
 //
@@ -36,6 +38,7 @@ const TAG = 'coverage-ratchet';
 const baselinePath = 'docs/quality/coverage-baseline.json';
 const METRICS = ['branches', 'lines'];
 const TOOLCHAIN = 'nightly-2026-10-09';
+const GATED_LEVELS = new Set(['QL-A', 'QL-B']);
 
 const args = process.argv.slice(2);
 const update = args.includes('--update');
@@ -47,9 +50,11 @@ if (!exportPath) {
 
 const report = reporter(TAG);
 const { files } = readCoverageExport(exportPath, TAG);
-const qlA = [...tracedRustFiles()].filter(([, { level }]) => level === 'QL-A').map(([path]) => path);
-const measured = qlA.filter((path) => files.has(path));
-const unbuilt = qlA.filter((path) => !files.has(path));
+const gated = [...tracedRustFiles()]
+  .filter(([, { level }]) => GATED_LEVELS.has(level))
+  .map(([path]) => path);
+const measured = gated.filter((path) => files.has(path));
+const unbuilt = gated.filter((path) => !files.has(path));
 
 const pick = (summary) =>
   Object.fromEntries(METRICS.map((m) => [m, { covered: summary[m].covered, count: summary[m].count }]));
@@ -59,7 +64,7 @@ if (update) {
   const recorded = {
     _comment: [
       'Per-file branch and line coverage floor for every Rust file the traceability',
-      'matrix names as the implementation of a QL-A requirement. CI fails when a',
+      'matrix names as the implementation of a QL-A or QL-B requirement. CI fails when a',
       "file's covered fraction drops below its entry (scripts/check-coverage-ratchet.mjs).",
       'Measured with `cargo +<toolchain> llvm-cov --branch --workspace` and',
       'PROPTEST_RNG_SEED fixed, as the Rust branch coverage step in',
@@ -70,7 +75,7 @@ if (update) {
     files: Object.fromEntries(measured.map((path) => [path, pick(files.get(path))])),
   };
   writeFileSync(resolve(repoRoot, baselinePath), `${JSON.stringify(recorded, null, 2)}\n`);
-  console.log(`[${TAG}] recorded ${measured.length} QL-A file(s) in ${baselinePath}`);
+  console.log(`[${TAG}] recorded ${measured.length} QL-A/QL-B file(s) in ${baselinePath}`);
   process.exit(0);
 }
 
@@ -89,7 +94,7 @@ const improved = [];
 for (const path of measured) {
   const base = baseline.files?.[path];
   if (!base) {
-    report.fail(`${path} implements a QL-A requirement but has no entry in ${baselinePath}; record one with --update`);
+    report.fail(`${path} implements a QL-A or QL-B requirement but has no entry in ${baselinePath}; record one with --update`);
     continue;
   }
   const now = pick(files.get(path));
@@ -111,10 +116,10 @@ for (const path of measured) {
 }
 for (const path of Object.keys(baseline.files ?? {})) {
   if (!measured.includes(path)) {
-    report.fail(`${baselinePath} has an entry for ${path}, which is not a measured QL-A implementation file; remove it with --update`);
+    report.fail(`${baselinePath} has an entry for ${path}, which is not a measured QL-A or QL-B implementation file; remove it with --update`);
   }
 }
 
 for (const path of unbuilt) console.log(`[${TAG}] skipped ${path}: not in the native build`);
 for (const line of improved) console.log(`[${TAG}] improved: ${line} (lock it in with --update)`);
-report.done(`${measured.length} QL-A file(s) at or above their recorded branch and line coverage`);
+report.done(`${measured.length} QL-A/QL-B file(s) at or above their recorded branch and line coverage`);

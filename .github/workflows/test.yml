@@ -49,7 +49,7 @@ jobs:
         # threshold (docs/quality/VERIFICATION_PLAN.md) — the numbers are
         # evidence for a reviewer, not a gate.
         #
-        # The QL-A ratchet below compares these counts with a recorded
+        # The QL-A / QL-B ratchet below compares these counts with a recorded
         # baseline, so they must be reproducible: the nightly is pinned to the
         # one docs/quality/coverage-baseline.json names (scripts/
         # check-coverage-ratchet.mjs refuses a mismatch), and proptest's seed
@@ -85,8 +85,8 @@ jobs:
         # a requirement's implementation, into the job summary.
         run: node scripts/coverage-summary.mjs rust/target/coverage/coverage.json >> "$GITHUB_STEP_SUMMARY"
 
-      - name: QL-A coverage ratchet
-        # Blocking: no Rust file implementing a QL-A requirement may lose
+      - name: QL-A / QL-B coverage ratchet
+        # Blocking: no Rust file implementing a QL-A or QL-B requirement may lose
         # branch or line coverage against docs/quality/coverage-baseline.json.
         # A change that legitimately moves a figure re-records the baseline in
         # the same diff — see scripts/check-coverage-ratchet.mjs.
