@@ -25,7 +25,7 @@
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "domain",
-      "description": "Boolean truth domain {T,F}; a direct-sum component of V, disjoint from numbers.",
+      "description": "Boolean truth domain {T,F,B}, with UNKNOWN as an absence read in truth position: Belnap's FOUR; a direct-sum component of V, disjoint from numbers.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "TRUE",
@@ -64,7 +64,7 @@
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "operation",
-      "description": "Strong Kleene meet (greatest lower bound) on K3; the algebraic primitive AND derives from.",
+      "description": "Belnap meet (greatest lower bound of the truth order) on FOUR, the strong Kleene meet on its K3 restriction; the algebraic primitive AND derives from.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "AND"
@@ -79,13 +79,30 @@
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "operation",
-      "description": "Order-reversing involution on K3 fixing U; the algebraic primitive NOT derives from.",
+      "description": "Truth-order-reversing involution on FOUR fixing U and B; the algebraic primitive NOT derives from.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "NOT"
       ],
       "can_derive": [
         "NOT"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "algebra.k3.knowledge-join",
+      "algebraic_family": "boolean-truth",
+      "core_tier": "identity",
+      "kind": "operation",
+      "description": "Join of the information order: absence below every value, a conflict above; on truth values Belnap's knowledge join, T join F = B. The algebraic primitive RECONCILE derives from.",
+      "admission_reason": "Accepted as the operation that brings B into the truth domain; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "RECONCILE",
+        "SELECT"
+      ],
+      "can_derive": [
+        "RECONCILE",
+        "SELECT"
       ],
       "status": "accepted"
     },
@@ -656,6 +673,31 @@
       "core_tier": "identity"
     },
     {
+      "id": "core.both",
+      "kind": "coreword",
+      "surface": "BOTH",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.5",
+        "SPECIFICATION.html §12"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/belnap_truth_conformance_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-both-literal"
+      ],
+      "status": "Formalized",
+      "notes": "Boolean value told both TRUE and FALSE; distinct from every number and from absence.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "boolean-truth",
+      "core_tier": "identity"
+    },
+    {
       "id": "core.nil",
       "kind": "coreword",
       "surface": "NIL",
@@ -777,10 +819,11 @@
         "rust/tests/algebraic_laws.rs"
       ],
       "conformance_cases": [
-        "core-kleene-and-definite"
+        "core-kleene-and-definite",
+        "core-belnap-and-both-unknown"
       ],
       "status": "Formalized",
-      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN. The U rows arise from a NIL read in truth position; they are pinned by native logic tests.",
+      "notes": "Belnap conjunction over TRUE/FALSE/BOTH/UNKNOWN; the strong Kleene table on its three-valued restriction. The U rows arise from a NIL read in truth position; they are pinned by native logic tests.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -788,7 +831,7 @@
       ],
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
-      "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values"
+      "implementation_schema": "logic::compute_conjunction lifted by lane_lift::lift_lanes"
     },
     {
       "id": "core.not",
@@ -805,7 +848,7 @@
         "core-kleene-not-definite"
       ],
       "status": "Formalized",
-      "notes": "Strong Kleene negation.",
+      "notes": "Belnap negation: exchanges TRUE and FALSE, fixes BOTH and UNKNOWN.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -813,7 +856,7 @@
       ],
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
-      "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value"
+      "implementation_schema": "logic::compute_inverted_value"
     },
     {
       "id": "core.arithmetic.rational",
@@ -1245,18 +1288,48 @@
       "conformance_cases": [
         "core-select-chooses-by-truth",
         "core-select-chooses-lane-by-lane",
-        "core-select-unknown-truth-chooses-neither"
+        "core-select-unknown-truth-chooses-neither",
+        "core-select-both-reconciles"
       ],
       "status": "Formalized",
-      "notes": "K3-honest choice between two values: UNKNOWN chooses neither and answers the absence it read. Nothing is evaluated, so the choice is an ordinary lifted operation rather than a control construct.",
+      "notes": "FOUR-honest choice between two values: UNKNOWN chooses neither and answers the absence it read, BOTH chooses both and answers them reconciled. Nothing is evaluated, so the choice is an ordinary lifted operation rather than a control construct.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.k3.domain"
+        "algebra.k3.domain",
+        "algebra.k3.knowledge-join"
       ],
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "implementation_schema": "logic::compute_selection lifted by lane_lift::lift_lanes"
+    },
+    {
+      "id": "core.reconcile",
+      "kind": "coreword",
+      "surface": "RECONCILE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.5"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/belnap_truth_conformance_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-reconcile-agrees",
+        "core-reconcile-truths-are-both",
+        "core-reconcile-conflict"
+      ],
+      "status": "Formalized",
+      "notes": "What two sources agree on: absence yields, equal values agree, different truth values are BOTH, other different values project NIL(conflict), which absorbs. Associative, commutative and idempotent.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.k3.knowledge-join",
+        "algebra.absence.domain"
+      ],
+      "algebraic_family": "boolean-truth",
+      "core_tier": "identity",
+      "implementation_schema": "logic::reconcile"
     },
     {
       "id": "core.exec",
@@ -2692,62 +2765,6 @@
       "core_tier": "material",
       "standard_relation": "operational",
       "native_retention_reason": "One traversal instead of a scan of the key vector per distinct key, which is O(n*k) with the index plumbing written by hand."
-    },
-    {
-      "id": "module.algo.index-of",
-      "kind": "coreword",
-      "surface": "INDEX-OF",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/search_ops.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-index-of"
-      ],
-      "status": "Formalized",
-      "notes": "Projects the first equal element position from an indexed sequence, or NIL if absent.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.order",
-        "algebra.absence.domain"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "standard_relation": "derivable"
-    },
-    {
-      "id": "core.member",
-      "kind": "coreword",
-      "surface": "MEMBER?",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
-      ],
-      "law_tests": [
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-member",
-        "standard-member-needle-is-an-element",
-        "standard-member-over-text"
-      ],
-      "status": "Formalized",
-      "notes": "Membership over value equality: whether one value occurs in the vector, derivable as INDEX-OF NIL? NOT.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "standard_relation": "derivable"
     },
     {
       "id": "core.bsearch",

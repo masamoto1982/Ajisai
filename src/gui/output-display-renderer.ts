@@ -386,6 +386,8 @@ export const formatValue = (item: Value, depth: number): string => {
         case 'symbol':
             return String(item.value);
         case 'boolean':
+            // BOTH is a Boolean with no two-valued image: its value is null.
+            if (item.value === null) return 'BOTH';
             return item.value ? 'TRUE' : 'FALSE';
         case 'vector':
             return formatVector(item.value, depth);

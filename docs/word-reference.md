@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **78 Words**, of which **48** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **78 Words**, of which **50** form the Semantic Kernel and **28** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -31,9 +31,22 @@ The truth value FALSE: `FALSE` is `1 2 EQ`. It is a Boolean, not the number zero
 - **Clauses:** `LANG.VALUES.TRUTH`
 - **Syntax:** `FALSE`
 
+## `BOTH`
+
+The truth value BOTH: a truth told TRUE and told FALSE at once (LANG.VALUES.TRUTH), as `TRUE FALSE RECONCILE` answers. It is a Boolean, so `BOTH NIL?` is `FALSE`; `BOTH NOT` is `BOTH`, `BOTH TRUE AND` is `BOTH`, `BOTH FALSE AND` is `FALSE`, and `BOTH NIL AND` is `FALSE`. `SELECT` given BOTH answers its two candidates reconciled.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `booleanLogic`
+- **Stack:** 0 input(s) → 1 output(s)
+- **NIL policy:** `preserveReason`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.TRUTH`
+- **Syntax:** `BOTH`
+
 ## `AND`
 
-Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE FALSE AND` is `FALSE`, and element-wise over Vectors, `[ TRUE TRUE ] [ TRUE FALSE ] AND` is `[ TRUE FALSE ]`. A NIL read here is UNKNOWN: FALSE settles the answer against it, `NIL FALSE AND` is `FALSE`, and anything else leaves it UNKNOWN with its reason kept. A disjunction is `a NOT b NOT AND NOT`. An operand that is neither a truth value nor a NIL is `nonTruthValue`.
+Conjunction under Belnap's four-valued table (LANG.VALUES.TRUTH): `TRUE FALSE AND` is `FALSE`, and element-wise over Vectors, `[ TRUE TRUE ] [ TRUE FALSE ] AND` is `[ TRUE FALSE ]`. A NIL read here is UNKNOWN: FALSE settles the answer against it, `NIL FALSE AND` is `FALSE`, BOTH meets it at FALSE, `BOTH NIL AND` is `FALSE`, and TRUE leaves it UNKNOWN with its reason kept. A disjunction is `a NOT b NOT AND NOT`. An operand that is neither a truth value nor a NIL is `nonTruthValue`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
@@ -48,7 +61,7 @@ Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE FALSE AND` 
 
 ## `NOT`
 
-Negation under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE NOT` is `FALSE`, and element-wise over Vectors, `[ TRUE FALSE ] NOT` is `[ FALSE TRUE ]`. UNKNOWN — a NIL read here — stays UNKNOWN with its reason kept. An operand that is neither a truth value nor a NIL is `nonTruthValue`.
+Negation under Belnap's four-valued table (LANG.VALUES.TRUTH): `TRUE NOT` is `FALSE`, and element-wise over Vectors, `[ TRUE FALSE ] NOT` is `[ FALSE TRUE ]`. BOTH stays BOTH, `BOTH NOT` is `BOTH`, and UNKNOWN — a NIL read here — stays UNKNOWN with its reason kept. An operand that is neither a truth value nor a NIL is `nonTruthValue`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
@@ -63,7 +76,7 @@ Negation under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE NOT` is `FALSE
 
 ## `SELECT`
 
-Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
+Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. A BOTH lane chooses both, answering the two candidates reconciled (RECONCILE): `1 1 BOTH SELECT` is `1`, and two different candidates are a conflict. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
@@ -76,9 +89,23 @@ Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SE
 - **Syntax:** `[ 'yes' ] [ 'no' ] TRUE SELECT`
 - **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
+## `RECONCILE`
+
+What two sources agree on (LANG.VALUES.TRUTH): `1 1 RECONCILE` is `1`, and an absence yields to what the other source holds, `NIL 5 RECONCILE` is `5`. Two different truth values are BOTH, `TRUE FALSE RECONCILE` is `BOTH`; any other two different values have nothing they agree on and project NIL(conflict), `'Tokyo' 'Osaka' RECONCILE NIL-REASON` is `'conflict'`. A conflict is not settled by a third source, so the Word is associative, commutative and idempotent, and a FOLD of it over many sources does not depend on their order. Like EQ it compares its operands whole: `[ 1 2 ] [ 1 3 ] RECONCILE` is a conflict, and a program that reconciles lane by lane ZIPs and MAPs.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `booleanLogic`
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `element`, `element` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `consumeNil`; projection: sourcesDisagree → conflict
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.DENOTATION`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `TRUE FALSE RECONCILE`
+
 ## `EQ`
 
-Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, `100 0 DIV 1/0 EQ` is `TRUE`, `0/0 0/0 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `-1 SQRT 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.
+Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, `100 0 DIV 1/0 EQ` is `TRUE`, `0/0 0/0 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `-1 SQRT 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality UNIQUE and RECONCILE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
@@ -302,7 +329,7 @@ A number opened into its reduced numerator and denominator, as a two-element Vec
 
 ## `GET`
 
-Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. For the same reason a Record key that is itself a Vector, a Record or NIL is not addressed by GET: `R VALUES R KEYS k INDEX-OF GET` reads it, since INDEX-OF compares its needle whole. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
+Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. For the same reason a Record key that is itself a Vector, a Record or NIL is not addressed by GET: it is read through `KEYS` and `VALUES`, comparing each key whole with EQ. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -584,7 +611,7 @@ Write a container: a copy of a Vector with the element at an index replaced, or 
 
 ## `GROUP`
 
-Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` reads one group by name, with no `UNIQUE` or `INDEX-OF` to find it — a key that is a Scalar, String, Boolean or Symbol; a group keyed by a Vector, a Record or NIL is read through `KEYS` and `VALUES` instead. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` reads one group by name, with no `UNIQUE` or search to find it — a key that is a Scalar, String, Boolean or Symbol; a group keyed by a Vector, a Record or NIL is read through `KEYS` and `VALUES` instead. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
@@ -597,39 +624,9 @@ Bundle values by the key at the same position, as a Record from key to the Vecto
 - **Syntax:** `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP`
 - **ERROR conditions:** `nonVector`, `shapeMismatch`
 
-## `INDEX-OF`
-
-The index of the first element equal to the value: `[ 10 20 30 ] 20 INDEX-OF` is `1`. The value is an element, compared whole, so a Vector needle looks for an equal Vector. A value the Vector does not contain projects NIL(notFound); MEMBER? asks the same question as a truth value.
-
-- **Vocabulary tier:** Standard (`namedPattern`)
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
-- **Syntax:** `[ 1 2 ] 2 INDEX-OF`
-- **ERROR conditions:** `nonVector`
-
-## `MEMBER?`
-
-Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts, nested vectors and NILs as well as numbers. The needle is one value, compared rather than read, so a Vector needle is looked for as an element: `[ [ 1 ] 2 ] [ 1 ] MEMBER?` is `TRUE`. It is `INDEX-OF NIL? NOT`.
-
-- **Vocabulary tier:** Standard (`namedPattern`)
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] 2 MEMBER?`
-- **ERROR conditions:** `nonVector`
-
 ## `BSEARCH`
 
-The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing, and one holding `0/0`, which has no order, projects NIL(domainMiss), as does a key of `0/0` in its own lane (LANG.VALUES.EXACT). Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
+The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing, and one holding `0/0`, which has no order, projects NIL(domainMiss), as does a key of `0/0` in its own lane (LANG.VALUES.EXACT). Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against a linear scan's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
@@ -749,7 +746,7 @@ A block applied to each element of a Vector, in order, answering a Vector of the
 
 ## `FILTER`
 
-The elements of a Vector for which a predicate block answers TRUE, in order: `[ 1 2 3 4 ] [ 2 GT ] FILTER` is `[ 3 4 ]`. The block's answer is read as a truth value, and an UNKNOWN drops the element like FALSE does. A non-Vector is `nonVector`, a non-block `notExecutable`, a block that leaves other than exactly one value `blockContractViolation`, and an answer that is not a truth value `nonTruthValue`.
+The elements of a Vector for which a predicate block answers TRUE or BOTH, in order: `[ 1 2 3 4 ] [ 2 GT ] FILTER` is `[ 3 4 ]`. The block's answer is read as a truth value, BOTH keeps the element as TRUE does, since it was told true, and an UNKNOWN drops it like FALSE does. A non-Vector is `nonVector`, a non-block `notExecutable`, a block that leaves other than exactly one value `blockContractViolation`, and an answer that is not a truth value `nonTruthValue`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
@@ -884,7 +881,7 @@ Split a string into a vector of substrings at every occurrence of a separator: `
 
 ## `SEARCH`
 
-The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(notFound). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
+The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(notFound). An empty needle is found at 0. This is a first-match search for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
@@ -973,7 +970,7 @@ Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object beco
 
 ## `JSON-ENCODE`
 
-Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other number is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"` and `1/0` as `"1/0"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. The round trip through `JSON-DECODE` is therefore not the identity for those numbers: JSON has no exact rational, so a number written as a lexeme comes back as that String, and `[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE` is `[ '1/3' 1/4 ]` — a String in the first lane, where the sender must apply `NUM` to recover the number. Every other value with a JSON image comes back as it was given.
+Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other number is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"` and `1/0` as `"1/0"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, BOTH, an irrational, a Record with a non-String key — projects `domainMiss`. The round trip through `JSON-DECODE` is therefore not the identity for those numbers: JSON has no exact rational, so a number written as a lexeme comes back as that String, and `[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE` is `[ '1/3' 1/4 ]` — a String in the first lane, where the sender must apply `NUM` to recover the number. Every other value with a JSON image comes back as it was given.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`

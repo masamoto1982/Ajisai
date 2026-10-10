@@ -155,6 +155,8 @@ pub(crate) mod nil_diagnostics;
 #[cfg(test)]
 mod arithmetic_meter_tests;
 #[cfg(test)]
+mod belnap_truth_conformance_tests;
+#[cfg(test)]
 mod collection_meter_tests;
 #[cfg(test)]
 mod debug_diagnosis_tests;

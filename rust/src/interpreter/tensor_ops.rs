@@ -71,10 +71,12 @@ impl FlatTensor {
                 "nonNumeric",
                 "expected a number or vector, got an exact irrational value",
             )),
-            ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::declared(
-                "nonNumeric",
-                "expected a number or vector, got a boolean or symbol",
-            )),
+            ValueData::Boolean(_) | ValueData::Both | ValueData::Symbol(_) => {
+                Err(AjisaiError::declared(
+                    "nonNumeric",
+                    "expected a number or vector, got a boolean or symbol",
+                ))
+            }
         }
     }
 

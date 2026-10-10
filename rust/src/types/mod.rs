@@ -66,6 +66,9 @@ pub enum ValueData {
     /// number: `TRUE` is not the scalar `1` and `FALSE` is not the scalar `0`,
     /// so `TRUE 1 EQ` is false.
     Boolean(bool),
+    /// BOTH (LANG.VALUES.TRUTH): a Boolean of its own variant, so every
+    /// two-valued fast path keeps its `bool` and simply declines it.
+    Both,
     Scalar(Fraction),
     /// An exact real value outside the rationals: an algebraic normal form
     /// over `SQRT` (`Σ cᵢ√mᵢ`). Constructed only by
@@ -76,22 +79,15 @@ pub enum ValueData {
         data: Arc<DenseTensor>,
         shape: Arc<Vec<usize>>,
     },
-    /// An absent value. Why it is absent lives in `Value::absence`, and that
-    /// reason is the whole of what a program can observe (LANG.VALUES.NIL).
-    /// A quotient by zero is not one: it is a Scalar over zero
-    /// (`fraction_extended`).
+    /// An absent value; why lives in `Value::absence` (LANG.VALUES.NIL). A
+    /// quotient by zero is not one: it is a Scalar over zero.
     Nil,
     /// A bare name in code position — a Word reference that is data until
-    /// something executes it. Promoted from the hidden `'symbol'` tag
-    /// REFLECT's canonical wire format used to carry (LANG.SOURCE.REFLECTION,
-    /// now removed): the concept was already there, encoded; this makes it a
-    /// value in its own right instead of a String wearing a tag.
+    /// something executes it, a value in its own right (LANG.VALUES.DISJOINT).
     Symbol(Arc<str>),
-    /// A String: a sequence of Unicode scalar values, and one of the six
-    /// disjoint domains of LANG.VALUES.DISJOINT.
-    ///
-    /// Holding the content directly makes the domain the tag: nothing has to
-    /// be inferred from the elements, and `'A' [ 65 ] EQ` is false.
+    /// A String: a sequence of Unicode scalar values (LANG.VALUES.DISJOINT).
+    /// Holding the content directly makes the domain the tag, so
+    /// `'A' [ 65 ] EQ` is false.
     Text(Arc<str>),
     /// A Record: an insertion-ordered keyed correspondence, the seventh
     /// disjoint domain (LANG.RECORDS.STRUCTURE). It is not a Vector — no
@@ -104,6 +100,7 @@ impl PartialEq for ValueData {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (ValueData::Boolean(a), ValueData::Boolean(b)) => a == b,
+            (ValueData::Both, ValueData::Both) => true,
             (ValueData::Scalar(a), ValueData::Scalar(b)) => a == b,
             (ValueData::ExactScalar(a), ValueData::ExactScalar(b)) => a == b,
             (ValueData::Vector(a), ValueData::Vector(b)) => a == b,
@@ -155,6 +152,7 @@ const HASH_TAG_NIL: u8 = 5;
 const HASH_TAG_SYMBOL: u8 = 6;
 const HASH_TAG_TEXT: u8 = 7;
 const HASH_TAG_RECORD: u8 = 8;
+const HASH_TAG_BOTH: u8 = 9;
 
 impl std::hash::Hash for ValueData {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -163,6 +161,7 @@ impl std::hash::Hash for ValueData {
                 state.write_u8(HASH_TAG_BOOLEAN);
                 b.hash(state);
             }
+            ValueData::Both => state.write_u8(HASH_TAG_BOTH),
             ValueData::Scalar(f) => {
                 state.write_u8(HASH_TAG_SCALAR);
                 f.hash(state);
@@ -293,6 +292,7 @@ impl ValueData {
             }
             ValueData::Tensor { shape, .. } => u32::try_from(shape.len()).unwrap_or(u32::MAX),
             ValueData::Boolean(_)
+            | ValueData::Both
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil

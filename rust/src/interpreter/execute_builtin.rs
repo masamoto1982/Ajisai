@@ -256,6 +256,11 @@ impl Interpreter {
                 self.stack.push(Value::from_bool(false));
                 Ok(())
             }
+            WordId::Both => {
+                self.stack.push(Value::both());
+                Ok(())
+            }
+            WordId::Reconcile => logic::op_reconcile(self),
             WordId::Nil => {
                 self.stack.push(Value::nil());
                 Ok(())
@@ -307,10 +312,8 @@ impl Interpreter {
             WordId::Group => ordering_ops::op_group(self),
             WordId::Zip => shape_words::op_zip(self),
             WordId::Put => shape_words::op_put(self),
-            WordId::IndexOf => search_ops::op_index_of(self),
             WordId::Absent => declared_nil_contract::op_absent(self),
             WordId::Fail => declared_nil_contract::op_fail(self),
-            WordId::Member => search_ops::op_member(self),
             WordId::Bsearch => search_ops::op_bsearch(self),
             WordId::Record => record_ops::op_record(self),
             WordId::Keys => record_ops::op_keys(self),

@@ -202,6 +202,10 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
             bytes.push(b'B');
             bytes.push(u8::from(*b));
         }
+        ValueData::Both => {
+            bytes.push(b'B');
+            bytes.push(2);
+        }
         ValueData::Text(s) => {
             bytes.push(b'S');
             write_str(bytes, s);

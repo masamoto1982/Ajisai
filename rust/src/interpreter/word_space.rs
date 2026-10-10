@@ -83,7 +83,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Add | Sub | Mul | Div => (Linear, true),
         // Comparisons and logic may produce elementwise results; O(input),
         // not audited as tight.
-        Eq | Lt | Gt | And | Not | Select => (Linear, false),
+        Eq | Lt | Gt | And | Not | Select | Reconcile => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
         Map | Filter | Fold | Scan => (Unbounded, false),
@@ -95,7 +95,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // `Digest` a fixed-length text after walking its operand once.
         Contract | Digest => (Const, false),
         NilCheck | NilReason | Absent | Fail => (Const, false),
-        True | False | Nil => (Const, false),
+        True | False | Both | Nil => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse | Flatten | Reshape => (Linear, true),
         // Shape observations: an answer bounded by the operand's rank.
@@ -121,7 +121,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // The number-closing Words: element-wise like the rest of the family.
         Pow | Gcd | Ratio => (Linear, false),
         Sort | Order => (Linear, true),
-        IndexOf | Member | Bsearch => (Linear, false),
+        Bsearch => (Linear, false),
         // Ordering, grouping and shape Words: the result is bounded by the
         // operands' total size, and a vector operand attains the bound.
         Unique | Tally | Zip | Put | Group => (Linear, true),

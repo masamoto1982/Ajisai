@@ -16,7 +16,7 @@
           "enum": ["nil", "boolean", "number", "string", "vector", "symbol", "record"]
         },
         "value": {
-          "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number -> {numerator, denominator} (arbitrary-precision decimal strings, the pair reduced and the denominator non-negative: zero exactly for the three points over zero, `1/0`, `-1/0`, `0/0`, LANG.VALUES.EXACT); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue; record -> {keys, values}, two arrays of observedValue of equal length, aligned position by position (LANG.RECORDS.STRUCTURE). null for any type when `elided` is present.",
+          "description": "Shape depends on `type`: nil -> null; boolean -> boolean, or null for BOTH; number -> {numerator, denominator} (arbitrary-precision decimal strings, the pair reduced and the denominator non-negative: zero exactly for the three points over zero, `1/0`, `-1/0`, `0/0`, LANG.VALUES.EXACT); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue; record -> {keys, values}, two arrays of observedValue of equal length, aligned position by position (LANG.RECORDS.STRUCTURE). null for any type when `elided` is present.",
           "oneOf": [
             { "type": "null" },
             { "type": "boolean" },
@@ -53,8 +53,8 @@
       "additionalProperties": false,
       "properties": {
         "truthValue": {
-          "description": "Present on a Boolean node, and only there (rust/src/types/value_absence.rs::truth_value). UNKNOWN is a NIL (LANG.VALUES.TRUTH) and is observed through `absence`, not here.",
-          "enum": ["true", "false"]
+          "description": "Present on a Boolean node, and only there (rust/src/types/value_absence.rs::truth_value). BOTH is a Boolean whose `value` is null. UNKNOWN is a NIL (LANG.VALUES.TRUTH) and is observed through `absence`, not here.",
+          "enum": ["true", "false", "both"]
         },
         "absence": { "$ref": "#/$defs/absence" },
         "approximate": {

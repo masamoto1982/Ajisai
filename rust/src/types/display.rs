@@ -51,6 +51,7 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         // UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it takes the `Nil` arm
         // above. A Boolean renders as TRUE/FALSE however it was produced.
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
+        ValueData::Both => "BOTH".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
         // A Record renders as the phrase that builds it: its keys and its

@@ -1,4 +1,4 @@
-//! The dense routes of `TAKE`, `DROP`, `CONCAT`, `MEMBER?`, `INDEX-OF` and
+//! The dense routes of `TAKE`, `DROP`, `CONCAT`, and
 //! `BSEARCH` answer exactly what the materializing route answers, at the same
 //! price.
 //!
@@ -152,12 +152,6 @@ async fn concat_answers_alike_on_both_routes() {
 
 #[tokio::test]
 async fn the_searches_answer_alike_on_both_routes() {
-    for operand in OPERANDS {
-        for needle in ["3", "20", "99", "[ 3 4 5 ]", "NIL"] {
-            routes_agree(operand, needle, "MEMBER?").await;
-            routes_agree(operand, needle, "INDEX-OF").await;
-        }
-    }
     for operand in ["0 9 RANGE", "0 9 RANGE 1/3 MUL"] {
         for keys in ["3", "1/3", "[ 0 9 10 ]", "[ 2/3 5 ]", "-1"] {
             routes_agree(operand, keys, "BSEARCH").await;

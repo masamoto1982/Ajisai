@@ -1311,15 +1311,15 @@ FILTER</code></td>
                 
                 <h3 id="word-index">組み込みワード</h3>
 <!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
-<p>正準な語彙の全78語を族ごとにまとめたものです(<code>spec/words.json</code>から生成)。48語がSemantic Kernel、30語がStandardワードで、どれも平易な名前で参照できる普通のCoreワードです。階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>)。ワードを選ぶとその契約(構文・スタック効果・NIL方針・ERROR条件など)へ、頁名を選ぶとサンプル付きの解説へ移ります。</p>
+<p>正準な語彙の全78語を族ごとにまとめたものです(<code>spec/words.json</code>から生成)。50語がSemantic Kernel、28語がStandardワードで、どれも平易な名前で参照できる普通のCoreワードです。階層は設計の中での位置を示すだけです(<a href="#dictionaries">辞書とワードの同一性</a>)。ワードを選ぶとその契約(構文・スタック効果・NIL方針・ERROR条件など)へ、頁名を選ぶとサンプル付きの解説へ移ります。</p>
 <div class="ref-table-wrap word-jump">
 <table class="ref-table">
 <thead><tr><th>族</th><th>ワード</th><th>解説の頁</th></tr></thead>
 <tbody>
-<tr><td class="notes">論理</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
+<tr><td class="notes">論理</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-BOTH"><code>BOTH</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a> <a href="#word-RECONCILE"><code>RECONCILE</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
 <tr><td class="notes">比較</td><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
 <tr><td class="notes">厳密な算術</td><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td><td class="notes"><a href="#operators">2.4.2.1 論理・比較・算術</a></td></tr>
-<tr><td class="notes">ベクトル</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">2.4.2.2 ベクトル操作</a></td></tr>
+<tr><td class="notes">ベクトル</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">2.4.2.2 ベクトル操作</a></td></tr>
 <tr><td class="notes">Record</td><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td><td class="notes"><a href="#records">2.4.2.3 キーによる対応</a></td></tr>
 <tr><td class="notes">反復</td><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td><td class="notes"><a href="#control">2.4.2.5 選択と反復</a></td></tr>
 <tr><td class="notes">文字列</td><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td><td class="notes"><a href="#strings-ops">2.4.2.4 文字列操作</a></td></tr>
@@ -1696,9 +1696,10 @@ FILTER</code></td>
                     <p class="ref-note">比較は、有理数も平方根も含め、ワードが組み立てられるすべての値にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
 
                     <h3 id="logic">論理</h3>
-                    <p>Ajisaiには<code>AND</code>と<code>NOT</code>という2つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。どちらも、ほかのワードと同じく綴りのまま書きます。論理和はド・モルガンの法則どおり<code>a NOT b NOT AND NOT</code>と書きます。</p>
+                    <p>Ajisaiの真理値はベルナップの四値です。<code>TRUE</code>、<code>FALSE</code>、<code>BOTH</code>(真とも偽とも告げられた値)、UNKNOWN(真偽の位置で読まれた<code>NIL</code>)の4つを、<code>AND</code>と<code>NOT</code>という2つの論理ワードで合成します。どちらも、ほかのワードと同じく綴りのまま書きます。論理和はド・モルガンの法則どおり<code>a NOT b NOT AND NOT</code>と書きます。<code>NOT</code>は<code>TRUE</code>と<code>FALSE</code>を入れ替え、<code>BOTH</code>とUNKNOWNはそのままにします。<code>BOTH</code>とUNKNOWNの<code>AND</code>は<code>FALSE</code>です。</p>
+                    <p><code>RECONCILE</code>は2つの情報源が一致するものを答えます。等しい値は一致し、不在の情報源はもう一方に譲り、異なる2つの真偽値は<code>BOTH</code>、それ以外の異なる2つの値は理由が<code>conflict</code>の<code>NIL</code>になります。食い違いは3つ目の情報源では解消しないので、多数の情報源に<code>RECONCILE</code>を畳み込んでも順序によらず同じ答えになります。<code>SELECT</code>は<code>BOTH</code>を受け取ると、2つの候補を突き合わせた結果を答えます。</p>
                     <h3>NILはそのまま伝わる</h3>
-                    <p><code>NIL</code>は真偽の位置では「不明」として読まれ、強いクリーネ論理で合成されます。もう一方のオペランドだけで答えが決まる場合はその答えになり(<code>FALSE</code>を含む<code>AND</code>は<code>FALSE</code>)、決まらない場合は<code>NIL</code>がその理由を保ったまま結果に残ります。</p>
+                    <p><code>NIL</code>は真偽の位置では「不明」として読まれ、ベルナップの表で合成されます(<code>BOTH</code>が現れなければ強いクリーネ論理と同じ)。もう一方のオペランドだけで答えが決まる場合はその答えになり(<code>FALSE</code>を含む<code>AND</code>は<code>FALSE</code>)、決まらない場合は<code>NIL</code>がその理由を保ったまま結果に残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1710,6 +1711,16 @@ FILTER</code></td>
                                     <td><code>TRUE FALSE AND</code></td>
                                     <td><code>FALSE</code></td>
                                     <td class="notes">確定した2つの値の論理AND。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>TRUE FALSE RECONCILE</code></td>
+                                    <td><code>BOTH</code></td>
+                                    <td class="notes">異なる真偽値を告げる2つの情報源。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>NIL 5 RECONCILE</code></td>
+                                    <td><code>5/1</code></td>
+                                    <td class="notes">不在の情報源はもう一方に譲る。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1808,9 +1819,24 @@ FILTER</code></td>
 <dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
 </dl>
 </div>
+<div class="word-entry" id="word-BOTH">
+<h4><code>BOTH</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>真偽値のBOTH。TRUEとFALSEの両方を告げられた真理値で(LANG.VALUES.TRUTH)、<code>TRUE FALSE RECONCILE</code>が答える値である。真偽値なので<code>BOTH NIL?</code>は<code>FALSE</code>。<code>BOTH NOT</code>は<code>BOTH</code>、<code>BOTH TRUE AND</code>は<code>BOTH</code>、<code>BOTH FALSE AND</code>は<code>FALSE</code>、<code>BOTH NIL AND</code>は<code>FALSE</code>。<code>SELECT</code>はBOTHを受け取ると、2つの候補を突き合わせた結果を答える。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>BOTH</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">-&gt; [ BOTH ]</span></dd>
+<dt>スタック</dt><dd>入力 0 → 出力 1</dd>
+<dt>NIL方針</dt><dd><code>preserveReason</code>; 投影: なし</dd>
+<dt>部分性</dt><dd><code>total</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
+</dl>
+</div>
 <div class="word-entry" id="word-AND">
 <h4><code>AND</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>強いクリーネの真理値表による論理積(LANG.VALUES.TRUTH)。<code>TRUE FALSE AND</code>は<code>FALSE</code>で、ベクトルには要素ごとに働き、<code>[ TRUE TRUE ] [ TRUE FALSE ] AND</code>は<code>[ TRUE FALSE ]</code>になる。ここで読まれたNILはUNKNOWNである。FALSEがあれば答えはFALSEに決まり(<code>NIL FALSE AND</code>は<code>FALSE</code>)、それ以外はUNKNOWNのまま理由を保つ。論理和は<code>a NOT b NOT AND NOT</code>と書く。真偽値でもNILでもないオペランドは<code>nonTruthValue</code>。</p>
+<p>ベルナップの四値の真理値表による論理積(LANG.VALUES.TRUTH)。<code>TRUE FALSE AND</code>は<code>FALSE</code>で、ベクトルには要素ごとに働き、<code>[ TRUE TRUE ] [ TRUE FALSE ] AND</code>は<code>[ TRUE FALSE ]</code>になる。ここで読まれたNILはUNKNOWNである。FALSEがあれば答えはFALSEに決まり(<code>NIL FALSE AND</code>は<code>FALSE</code>)、BOTHとはFALSEで交わり(<code>BOTH NIL AND</code>は<code>FALSE</code>)、TRUEとはUNKNOWNのまま理由を保つ。論理和は<code>a NOT b NOT AND NOT</code>と書く。真偽値でもNILでもないオペランドは<code>nonTruthValue</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>TRUE FALSE AND</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a AND b ]</span></dd>
@@ -1827,7 +1853,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-NOT">
 <h4><code>NOT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>強いクリーネの真理値表による否定(LANG.VALUES.TRUTH)。<code>TRUE NOT</code>は<code>FALSE</code>で、ベクトルには要素ごとに働き、<code>[ TRUE FALSE ] NOT</code>は<code>[ FALSE TRUE ]</code>になる。UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは<code>nonTruthValue</code>。</p>
+<p>ベルナップの四値の真理値表による否定(LANG.VALUES.TRUTH)。<code>TRUE NOT</code>は<code>FALSE</code>で、ベクトルには要素ごとに働き、<code>[ TRUE FALSE ] NOT</code>は<code>[ FALSE TRUE ]</code>になる。BOTHはBOTHのまま(<code>BOTH NOT</code>は<code>BOTH</code>)で、UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは<code>nonTruthValue</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>TRUE NOT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] -&gt; [ NOT a ]</span></dd>
@@ -1844,7 +1870,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SELECT">
 <h4><code>SELECT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>すでに計算済みの2つの値から、真偽値で一方を選ぶ。<code>'yes' 'no' TRUE SELECT</code>は<code>'yes'</code>、<code>'yes' 'no' FALSE SELECT</code>は<code>'no'</code>。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。</p>
+<p>すでに計算済みの2つの値から、真偽値で一方を選ぶ。<code>'yes' 'no' TRUE SELECT</code>は<code>'yes'</code>、<code>'yes' 'no' FALSE SELECT</code>は<code>'no'</code>。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。BOTHのレーンは両方を選び、2つの候補を突き合わせた結果(RECONCILE)を答える。<code>1 1 BOTH SELECT</code>は<code>1</code>で、異なる2つの候補は食い違いになる。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'yes' ] [ 'no' ] TRUE SELECT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ whenTrue ] [ whenFalse ] [ mask ] -&gt; [ chosen ]</span></dd>
@@ -1859,10 +1885,26 @@ FILTER</code></td>
 <dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
 </dl>
 </div>
+<div class="word-entry" id="word-RECONCILE">
+<h4><code>RECONCILE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>2つの情報源が一致するもの(LANG.VALUES.TRUTH)。<code>1 1 RECONCILE</code>は<code>1</code>で、不在はもう一方の情報源が持つ値に譲る(<code>NIL 5 RECONCILE</code>は<code>5</code>)。異なる2つの真偽値はBOTHになり(<code>TRUE FALSE RECONCILE</code>は<code>BOTH</code>)、それ以外の異なる2つの値は一致するものを持たず、NIL(conflict)を投影する(<code>'Tokyo' 'Osaka' RECONCILE NIL-REASON</code>は<code>'conflict'</code>)。食い違いは3つ目の情報源では解消しないので、この語は結合的・可換・冪等であり、多数の情報源にFOLDしても順序に依存しない。EQと同じくオペランドを丸ごと比べる。<code>[ 1 2 ] [ 1 3 ] RECONCILE</code>は食い違いで、レーンごとに突き合わせるプログラムはZIPとMAPを使う。</p>
+<dl class="word-contract">
+<dt>構文</dt><dd><code>TRUE FALSE RECONCILE</code></dd>
+<dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ agreed ]</span></dd>
+<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
+<dt>オペランド</dt><dd><code>element</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL方針</dt><dd><code>consumeNil</code>; 投影: <code>sourcesDisagree</code> → <code>conflict</code></dd>
+<dt>部分性</dt><dd><code>projecting</code></dd>
+<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
+<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>作用</dt><dd>なし</dd>
+<dt>条項</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
 <h3 id="family-comparison">契約: 比較</h3>
 <div class="word-entry" id="word-EQ">
 <h4><code>EQ</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。<code>1 1/1 EQ</code>は<code>TRUE</code>、<code>2 SQRT 2 SQRT MUL 2 EQ</code>は<code>TRUE</code>、<code>100 0 DIV 1/0 EQ</code>は<code>TRUE</code>、<code>0/0 0/0 EQ</code>は<code>TRUE</code>、<code>[ 1 2 ] [ 1 2 ] EQ</code>は<code>TRUE</code>。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。<code>-1 SQRT 1 EQ</code>は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、<code>[ NIL ] [ NIL ] EQ</code>は<code>TRUE</code>。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に<code>1 COLLECT</code>で包む。</p>
+<p>2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。<code>1 1/1 EQ</code>は<code>TRUE</code>、<code>2 SQRT 2 SQRT MUL 2 EQ</code>は<code>TRUE</code>、<code>100 0 DIV 1/0 EQ</code>は<code>TRUE</code>、<code>0/0 0/0 EQ</code>は<code>TRUE</code>、<code>[ 1 2 ] [ 1 2 ] EQ</code>は<code>TRUE</code>。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。<code>-1 SQRT 1 EQ</code>は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、<code>[ NIL ] [ NIL ] EQ</code>は<code>TRUE</code>。これはUNIQUEとRECONCILEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に<code>1 COLLECT</code>で包む。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>1 1 EQ</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
@@ -2362,7 +2404,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。含まれるかどうかだけを問うなら<code>MEMBER?</code>（<code>[ 1 2 3 ] 2 MEMBER?</code>は<code>TRUE</code>）、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
+                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。インデックス指定の代わりに検索するには、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
 
                     <h3 id="ordering">順序付け、計数、形状</h3>
                     <p>ベクトル全体を一度に見る必要がある操作は、7つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
@@ -2422,7 +2464,7 @@ FILTER</code></td>
 <h3 id="family-collection">契約: ベクトル</h3>
 <div class="word-entry" id="word-GET">
 <h4><code>GET</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。<code>[ 10 20 30 ] 1 GET</code>は<code>20</code>、<code>R 'x' GET</code>はRが<code>'x'</code>の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。<code>[ 10 20 30 ] [ 2 0 ] GET</code>は<code>[ 30 10 ]</code>で、並べ替えや収集が1回の呼び出しで済む。同じ理由で、それ自体がベクトル・Record・NILであるRecordのキーはGETでは指せない。<code>R VALUES R KEYS k INDEX-OF GET</code>で読める。INDEX-OFは探す値を丸ごと比べるからである。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、<code>[ 10 20 30 ] [ 0 9 ] GET</code>は<code>[ 10/1 NIL ]</code>。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(<code>nonContainer</code>)、整数でないインデックスは<code>invalidInteger</code>。</p>
+<p>コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。<code>[ 10 20 30 ] 1 GET</code>は<code>20</code>、<code>R 'x' GET</code>はRが<code>'x'</code>の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。<code>[ 10 20 30 ] [ 2 0 ] GET</code>は<code>[ 30 10 ]</code>で、並べ替えや収集が1回の呼び出しで済む。同じ理由で、それ自体がベクトル・Record・NILであるRecordのキーはGETでは指せない。<code>KEYS</code>と<code>VALUES</code>を通し、各キーをEQで丸ごと比べて読む。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、<code>[ 10 20 30 ] [ 0 9 ] GET</code>は<code>[ 10/1 NIL ]</code>。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(<code>nonContainer</code>)、整数でないインデックスは<code>invalidInteger</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 10 20 30 ] 1 GET</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ container ] [ key ] -&gt; [ value ]</span></dd>
@@ -2723,43 +2765,9 @@ FILTER</code></td>
 <dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
-<div class="word-entry" id="word-INDEX-OF">
-<h4><code>INDEX-OF</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>値と等しい最初の要素のインデックス。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1</code>。値は1つの要素として丸ごと比較されるので、ベクトルを探せば等しいベクトルを探す。ベクトルが含まない値はNIL(notFound)を投影する。同じ問いを真偽値で問うのはMEMBER?。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>[ 1 2 ] 2 INDEX-OF</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ x ] -&gt; [ idx ]</span></dd>
-<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
-<dt>オペランド</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthroughThenProject</code>; 投影: <code>notFound</code> → <code>notFound</code></dd>
-<dt>部分性</dt><dd><code>projecting</code></dd>
-<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-MEMBER_3f">
-<h4><code>MEMBER?</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>値がベクトルの中に現れるかどうか。<code>[ 1 2 3 ] 2 MEMBER?</code>は<code>TRUE</code>。所属は値の等価性、つまりUNIQUEやINDEX-OFが使う等価性なので、数だけでなくテキスト、入れ子のベクトル、NILにも働く。探す値は1つの値で、読まれるのではなく比較されるので、ベクトルを探せば1つの要素として探す。<code>[ [ 1 ] 2 ] [ 1 ] MEMBER?</code>は<code>TRUE</code>。これは<code>INDEX-OF NIL? NOT</code>である。</p>
-<dl class="word-contract">
-<dt>構文</dt><dd><code>[ 1 2 3 ] 2 MEMBER?</code></dd>
-<dt>スタック効果</dt><dd><span class="notation">[ vec ] [ x ] -&gt; [ TRUE | FALSE ]</span></dd>
-<dt>スタック</dt><dd>入力 2 → 出力 1</dd>
-<dt>オペランド</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL方針</dt><dd><code>passthrough</code>; 投影: なし</dd>
-<dt>部分性</dt><dd><code>total</code></dd>
-<dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
-<dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>作用</dt><dd>なし</dd>
-<dt>ERROR条件</dt><dd><code>nonVector</code></dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
-</dl>
-</div>
 <div class="word-entry" id="word-BSEARCH">
 <h4><code>BSEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2 ]</code>で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ<code>unsortedInput</code>を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序を持たない<code>0/0</code>を含むベクトルはNIL(domainMiss)を投影し、<code>0/0</code>のキーも自分のレーンに同じものを投影する(LANG.VALUES.EXACT)。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。</p>
+<p>昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2 ]</code>で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ<code>unsortedInput</code>を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序を持たない<code>0/0</code>を含むベクトルはNIL(domainMiss)を投影し、<code>0/0</code>のキーも自分のレーンに同じものを投影する(LANG.VALUES.EXACT)。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用は線形走査のO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ sorted ] [ keys ] -&gt; [ indices ]</span></dd>
@@ -2937,7 +2945,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GROUP">
 <h4><code>GROUP</code> <span class="word-tier">Standard · operational</span></h4>
-<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは<code>R 'a' GET</code>で名前によって読めるので、<code>UNIQUE</code>や<code>INDEX-OF</code>で探す必要はない。ただしそれはキーがScalar・String・Boolean・Symbolのときで、ベクトル・Record・NILをキーとするグループは<code>KEYS</code>と<code>VALUES</code>を通して読む。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
+<p>値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。<code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code>は<code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは<code>R 'a' GET</code>で名前によって読めるので、<code>UNIQUE</code>や探索で探す必要はない。ただしそれはキーがScalar・String・Boolean・Symbolのときで、ベクトル・Record・NILをキーとするグループは<code>KEYS</code>と<code>VALUES</code>を通して読む。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>
@@ -3436,7 +3444,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SEARCH">
 <h4><code>SEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>あるテキストが別のテキストの中に最初に現れる位置(文字単位)。<code>'hello world' 'world' SEARCH</code>は<code>6</code>で、CHARSと同じ数え方をする。<code>'hello' 'z' SEARCH</code>はNIL(notFound)。空の探すテキストは0で見つかる。これはテキスト版のINDEX-OFで、CHARSの上で書けば位置ごとに窓を比較することになるが、このワードは1回の走査で行う。</p>
+<p>あるテキストが別のテキストの中に最初に現れる位置(文字単位)。<code>'hello world' 'world' SEARCH</code>は<code>6</code>で、CHARSと同じ数え方をする。<code>'hello' 'z' SEARCH</code>はNIL(notFound)。空の探すテキストは0で見つかる。これはテキスト版の最初の一致の探索で、CHARSの上で書けば位置ごとに窓を比較することになるが、このワードは1回の走査で行う。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'hello world' 'world' SEARCH</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ text ] [ needle ] -&gt; [ index ]</span></dd>
@@ -3537,7 +3545,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-ENCODE">
 <h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>、<code>1/0</code>は<code>&quot;1/0&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。そのため、<code>JSON-DECODE</code>との往復はこれらの数については恒等にならない。JSONには厳密な有理数がないので、字句として書かれた数はそのStringとして戻り、<code>[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE</code>は<code>[ '1/3' 1/4 ]</code>、つまり最初のレーンはStringになる。数を取り戻すには受け手が<code>NUM</code>を適用する。JSONに像を持つそれ以外の値は、与えたとおりに戻る。</p>
+<p>値をJSONテキストとして書く。<code>JSON-DECODE</code>の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は<code>true</code>/<code>false</code>、NILは<code>null</code>になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(<code>1/4</code>は<code>0.25</code>)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(<code>1/3</code>は<code>&quot;1/3&quot;</code>、<code>1/0</code>は<code>&quot;1/0&quot;</code>)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、BOTH、無理数、Stringでないキーを持つRecord)は<code>domainMiss</code>を投影する。そのため、<code>JSON-DECODE</code>との往復はこれらの数については恒等にならない。JSONには厳密な有理数がないので、字句として書かれた数はそのStringとして戻り、<code>[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE</code>は<code>[ '1/3' 1/4 ]</code>、つまり最初のレーンはStringになる。数を取り戻すには受け手が<code>NUM</code>を適用する。JSONに像を持つそれ以外の値は、与えたとおりに戻る。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>
@@ -3787,7 +3795,7 @@ SELECT</code></td>
                                 <tr>
                                     <td><code>[ 1 3 5 8 ] [ 2 DIV 'M' BIND M FLOOR M EQ ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] 2 MEMBER?</code>(<code>TRUE</code>)のほうが簡単。</td>
+                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] [ 2 EQ ] FILTER LENGTH 0 GT</code>(<code>TRUE</code>)のほうが簡単。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -3884,7 +3892,7 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-FILTER">
 <h4><code>FILTER</code> <span class="word-tier">Standard · operational</span></h4>
-<p>述語ブロックがTRUEと答えるベクトルの要素を、順に答える。<code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code>は<code>[ 3 4 ]</code>。ブロックの答えは真偽値として読まれ、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロックは<code>blockContractViolation</code>、真偽値でない答えは<code>nonTruthValue</code>。</p>
+<p>述語ブロックがTRUEかBOTHと答えるベクトルの要素を、順に答える。<code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code>は<code>[ 3 4 ]</code>。ブロックの答えは真偽値として読まれ、BOTHは真と告げられているのでTRUEと同じく要素を残し、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロックは<code>blockContractViolation</code>、真偽値でない答えは<code>nonTruthValue</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 ] [ 2 EQ ] FILTER</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ pred ] -&gt; [ kept ]</span></dd>
@@ -4292,7 +4300,7 @@ SELECT</code></td>
                         </div>
                     </div>
                     <h3>キーによる順序付け: 同点も含めて</h3>
-                    <p>値をソートしてから元の位置を調べ直すのは、順序付けを得る自明な方法ですが、まさに重要な場面で間違った答えを出します。距離が等しい2つがあると、<code>SORT</code>してから<code>INDEX-OF</code>すると同じ位置を2回見つけてしまい、「最も近い3つ」が2つの近傍を返したり4つを返したりし得ます。<code>ORDER</code>は<code>SORT</code>が捨ててしまう問い、すなわち<em>どの位置がどの順か</em>に答え、しかも安定に答えます。したがって等しいキーは、書かれていた順序を保ちます。</p>
+                    <p>値をソートしてから元の位置を調べ直すのは、順序付けを得る自明な方法ですが、まさに重要な場面で間違った答えを出します。距離が等しい2つがあると、<code>SORT</code>してから値ごとに位置を探すと同じ位置を2回見つけてしまい、「最も近い3つ」が2つの近傍を返したり4つを返したりし得ます。<code>ORDER</code>は<code>SORT</code>が捨ててしまう問い、すなわち<em>どの位置がどの順か</em>に答え、しかも安定に答えます。したがって等しいキーは、書かれていた順序を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

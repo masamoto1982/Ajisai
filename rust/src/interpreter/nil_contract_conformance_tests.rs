@@ -188,23 +188,20 @@ fn divergence_baseline_does_not_grow() {
     );
 }
 
-/// A search Word's needle is an `element`: it is compared, not read, so an
-/// absent needle is looked for like any other value — the NIL whose reason
-/// matches — rather than passed through or refused.
+/// An `element` operand is compared, not read, so an absent one is a value
+/// like any other rather than passed through or refused: `RECONCILE` lets it
+/// yield to a present source and keeps it when both are absent.
 #[test]
-fn a_search_needle_is_an_element() {
+fn an_element_operand_is_compared_not_read() {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("tokio current-thread runtime");
 
     for (program, current) in [
-        // Found: the Vector holds a NIL with the same reason.
-        ("-1 SQRT 1 COLLECT -1 SQRT MEMBER?", Outcome::Value),
-        ("-1 SQRT 1 COLLECT -1 SQRT INDEX-OF", Outcome::Value),
-        // Not found: MEMBER? answers FALSE, INDEX-OF projects `notFound`.
-        ("[ 1 ] -1 SQRT MEMBER?", Outcome::Value),
-        ("[ 1 ] -1 SQRT INDEX-OF", Outcome::NilWithReason),
+        ("-1 SQRT 1 RECONCILE", Outcome::Value),
+        ("1 -1 SQRT RECONCILE", Outcome::Value),
+        ("-1 SQRT -1 SQRT RECONCILE", Outcome::NilWithReason),
     ] {
         assert_eq!(
             runtime.block_on(observe(program)),

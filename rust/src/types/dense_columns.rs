@@ -166,6 +166,7 @@ fn append_value(value: &Value, columns: &mut Columns) -> Option<Shape> {
         | ValueData::ExactScalar(_)
         | ValueData::Record(_)
         | ValueData::Boolean(_)
+        | ValueData::Both
         | ValueData::Text(_)
         | ValueData::Symbol(_) => None,
     }

@@ -25,6 +25,15 @@ const ADMITTED_WITHOUT_OP: &[(&str, &str)] = &[
         "a Word literal: lowered as `Op::PushWord`, never called by id",
     ),
     (
+        "BOTH",
+        "a Word literal, and not a plain value: a walk that meets it declines",
+    ),
+    (
+        "RECONCILE",
+        "two different plain values reconcile to BOTH or a NIL, neither plain, \
+         so a walk would decline whenever the Word had anything to decide",
+    ),
+    (
         "SQRT",
         "its law leaves the rationals for every rational that is not a square, \
          so a walk would almost always be abandoned at its first element",
@@ -103,8 +112,29 @@ fn the_admitted_words_are_these() {
     assert_eq!(
         admitted,
         [
-            "ADD", "AND", "DEPTH", "DIV", "EQ", "FALSE", "FLOOR", "GCD", "GT", "LT", "MAX", "MIN",
-            "MUL", "NIL?", "NOT", "POW", "ROUND", "SELECT", "SQRT", "SUB", "TRUE",
+            "ADD",
+            "AND",
+            "BOTH",
+            "DEPTH",
+            "DIV",
+            "EQ",
+            "FALSE",
+            "FLOOR",
+            "GCD",
+            "GT",
+            "LT",
+            "MAX",
+            "MIN",
+            "MUL",
+            "NIL?",
+            "NOT",
+            "POW",
+            "RECONCILE",
+            "ROUND",
+            "SELECT",
+            "SQRT",
+            "SUB",
+            "TRUE",
         ]
     );
 }

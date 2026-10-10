@@ -155,9 +155,9 @@ async fn passthrough_blanket_collapses_to_nil() {
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABSENT", "BSEARCH", "CONTRACT", "DROP", "FORMAT", "GCD", "GET", "GT", "INDEX-OF",
+    "ABSENT", "BSEARCH", "CONTRACT", "DROP", "FORMAT", "GCD", "GET", "GT",
     "JSON-DECODE", "JSON-ENCODE", "LT", "MAX", "MIN", "NIL-REASON", "NUM", "ORDER", "POW", "PUT",
-    "RATIO", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
+    "RATIO", "RECONCILE", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
 
 /// The order Words project on `0/0`: it is a number (LANG.VALUES.EXACT) but

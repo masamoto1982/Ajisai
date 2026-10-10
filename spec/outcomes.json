@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "nilReasons": [
     {
+      "id": "conflict",
+      "projectable": true,
+      "documentation": "Two sources RECONCILE compared hold different values that are not both truth values, so there is no one value they agree on — `'Tokyo' 'Osaka' RECONCILE`. Two different truth values are not this: they reconcile to BOTH (LANG.VALUES.TRUTH). The one absorbing absence: a conflict already found is not settled by a third source."
+    },
+    {
       "id": "domainMiss",
       "projectable": true,
       "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational; an order asked of `0/0`, which has none (LT, GT, MIN, MAX, SORT, ORDER, BSEARCH), a decimal asked of a number over zero (FORMAT), and NIL-REASON asked of a value that is not a NIL are others."
@@ -24,7 +29,7 @@
     {
       "id": "notFound",
       "projectable": true,
-      "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (GET, WITHOUT), a value a Vector does not contain (INDEX-OF, BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
+      "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (GET, WITHOUT), a value a Vector does not contain (BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
     },
     {
       "id": "userDeclared",

@@ -168,6 +168,9 @@ pub(crate) fn value_to_protocol(value: &Value) -> ProtocolNode {
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
+        // BOTH is a Boolean with no two-valued image: `value` is null and
+        // `semantics.truthValue` says "both".
+        ValueData::Both => ("boolean", ProtocolValue::Null),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large
             // denominator. The resulting node carries `semantics:

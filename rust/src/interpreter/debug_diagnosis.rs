@@ -214,6 +214,9 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         NilReason::Literal => CauseClass::NilFlow,
         // The program said so itself: the cause is in its own logic.
         NilReason::UserDeclared => CauseClass::UserLogic,
+        // The sources RECONCILE compared hold different values: the cause is
+        // in the values themselves, not in how the program used them.
+        NilReason::Conflict => CauseClass::ValueShape,
     }
 }
 

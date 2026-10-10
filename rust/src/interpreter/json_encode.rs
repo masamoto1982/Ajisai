@@ -115,7 +115,8 @@ fn encode(out: &mut String, value: &Value) -> Option<()> {
         ValueData::Text(s) => write_string(out, s),
         ValueData::Scalar(f) => write_rational(out, f),
         ValueData::ExactScalar(ExactReal::Rational(f)) => write_rational(out, f),
-        ValueData::ExactScalar(_) | ValueData::Symbol(_) => return None,
+        // JSON has two truth values; BOTH, like an irrational, has no image.
+        ValueData::ExactScalar(_) | ValueData::Symbol(_) | ValueData::Both => return None,
         ValueData::Vector(_) | ValueData::Tensor { .. } => {
             out.push('[');
             for i in 0..value.len() {

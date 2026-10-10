@@ -2,14 +2,14 @@
 import { existsSync } from 'node:fs';
 import { readJson, reporter, words as wordsDocument } from './lib/common.mjs';
 
-const KERNEL = new Set(`TRUE FALSE AND NOT EQ LT GT
+const KERNEL = new Set(`TRUE FALSE BOTH AND NOT RECONCILE EQ LT GT
 ADD MUL DIV FLOOR SQRT POW
 GET LENGTH CONCAT COLLECT RANGE FOLD MAP SHAPE RESHAPE FLATTEN DEPTH
 RECORD KEYS VALUES WITHOUT HAS? MERGE PUT
 CHARS JOIN NUM STR
 SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DIGEST PRINT`.split(/\s+/));
 const STANDARD = new Set(`SUB ROUND MIN MAX GCD RATIO
-TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP GROUP INDEX-OF MEMBER? BSEARCH FILTER SCAN
+TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP GROUP BSEARCH FILTER SCAN
 TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
 // The retired names live in spec/retired-words.json, the one representation
 // this gate and rust/tests/beta_removed_words.rs both read: this side asserts
@@ -23,7 +23,7 @@ const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'opera
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
 const DERIVABLE = new Set(`SUB ROUND MIN MAX
-TAKE DROP REVERSE INDEX-OF MEMBER? TRIM TOKENIZE`.split(/\s+/));
+TAKE DROP REVERSE TRIM TOKENIZE`.split(/\s+/));
 // `FORMAT` and the JSON pair are Phase 6 of the vocabulary-100 work order:
 // `FORMAT` is the one rounding boundary (a FLOOR-and-STR spelling would
 // scatter it), and JSON nesting is input-dependent repetition no definition
@@ -43,13 +43,12 @@ const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP GROUP 
 // spelling, and a Kernel Word is not on the table.
 //
 // The order is use, least first, as counted in the lexicon pilot's programs
-// (tools/lexicon-emergence/runs/pilot-2026-09-23): MEMBER? 0 (as MEMBER, whose
-// one-index batch form was its only non-derivable use and is gone), INDEX-OF 0, REVERSE 6,
+// (tools/lexicon-emergence/runs/pilot-2026-09-23): REVERSE 6,
 // TRIM 10, TOKENIZE 12, MAX 13, MIN 14, TAKE 16, DROP 32, SUB 54 (written `-`).
 // `ROUND` is deliberately absent though it is derivable: its Kernel phrase
 // branches on the sign of its operand, which is the one of these a reader is
 // likely to write wrongly by hand.
-const RETIREMENT_QUEUE = 'MEMBER? INDEX-OF REVERSE TRIM TOKENIZE MAX MIN TAKE DROP SUB'.split(/\s+/);
+const RETIREMENT_QUEUE = 'REVERSE TRIM TOKENIZE MAX MIN TAKE DROP SUB'.split(/\s+/);
 
 const words = wordsDocument().entries;
 const coverage = readJson('docs/formalization-coverage.json');
@@ -72,8 +71,8 @@ for (const name of setDifference(KERNEL, kernelWords)) fail(`${name}: missing Se
 for (const name of setDifference(kernelWords, KERNEL)) fail(`${name}: unexpected Semantic Kernel classification`);
 for (const name of setDifference(STANDARD, standardWords)) fail(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) fail(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 48) fail(`Semantic Kernel has ${kernelWords.size} Words; expected 48`);
-if (standardWords.size !== 30) fail(`Standard vocabulary has ${standardWords.size} Words; expected 30`);
+if (kernelWords.size !== 50) fail(`Semantic Kernel has ${kernelWords.size} Words; expected 50`);
+if (standardWords.size !== 28) fail(`Standard vocabulary has ${standardWords.size} Words; expected 28`);
 
 if (words.length !== 78) fail(`canonical inventory has ${words.length} Words; expected 78`);
 for (const name of REMOVED) if (wordNames.has(name)) fail(`${name}: removed Word remains canonical`);
