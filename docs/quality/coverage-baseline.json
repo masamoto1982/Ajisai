@@ -1,12 +1,12 @@
 {
   "_comment": [
-    "Per-file branch and line coverage floor for every Rust file the traceability",
-    "matrix names as the implementation of a QL-A or QL-B requirement. CI fails when a",
-    "file's covered fraction drops below its entry (scripts/check-coverage-ratchet.mjs).",
-    "Measured with `cargo +<toolchain> llvm-cov --branch --workspace` and",
-    "PROPTEST_RNG_SEED fixed, as the Rust branch coverage step in",
-    ".github/workflows/test.yml runs it. Re-record, in the change that moves a",
-    "figure, with: node scripts/check-coverage-ratchet.mjs <coverage.json> --update"
+    "Per-file branch and line coverage floor for every Rust and TypeScript file the",
+    "traceability matrix names as the implementation of a QL-A or QL-B requirement.",
+    "CI fails when a file's covered fraction drops below its entry",
+    "(scripts/check-coverage-ratchet.mjs). Rust is measured with",
+    "`cargo +<toolchain> llvm-cov --branch --workspace` and PROPTEST_RNG_SEED fixed;",
+    "TypeScript with `npm run test:coverage` (Vitest, istanbul). Re-record, in the",
+    "change that moves a figure, with: npm run check:coverage-ratchet -- --update"
   ],
   "toolchain": "nightly-2026-10-09",
   "files": {
@@ -78,6 +78,16 @@
       "lines": {
         "covered": 103,
         "count": 108
+      }
+    },
+    "src/platform/index.ts": {
+      "branches": {
+        "covered": 11,
+        "count": 14
+      },
+      "lines": {
+        "covered": 12,
+        "count": 16
       }
     },
     "rust/src/coreword_registry.rs": {

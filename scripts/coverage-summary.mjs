@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Renders a `cargo llvm-cov report --json --summary-only` export as Markdown
-// for the CI job summary: the workspace totals, then every Rust file the
-// traceability matrix names as the implementation of a requirement, with the
-// requirement and quality level beside it.
+// Renders CI's two coverage reports as Markdown for the job summary: the Rust
+// (`cargo llvm-cov`) and TypeScript (Vitest, istanbul) totals, then every
+// source file the traceability matrix names as the implementation of a
+// requirement, with the requirement and quality level beside it.
 //
 // The file list is read from docs/quality/TRACEABILITY_MATRIX.md rather than
 // written down here, so a requirement row added or retargeted there shows up
@@ -13,41 +13,50 @@
 // docs/quality/coverage-baseline.json; every other figure here is evidence
 // for a reviewer, not a threshold.
 //
-// Usage: node scripts/coverage-summary.mjs <coverage.json>
+// Usage: node scripts/coverage-summary.mjs --rust <coverage.json> --ts <coverage-summary.json>
 
-import { readCoverageExport, tracedRustFiles } from './lib/coverage.mjs';
+import { languageOf, readCoverageExport, readVitestSummary, tracedFiles } from './lib/coverage.mjs';
 
-const exportPath = process.argv[2];
-if (!exportPath) {
-  console.error('usage: node scripts/coverage-summary.mjs <coverage.json>');
+const TAG = 'coverage-summary';
+const flag = (name) => {
+  const at = process.argv.indexOf(name);
+  return at === -1 ? undefined : process.argv[at + 1];
+};
+const rustPath = flag('--rust');
+const tsPath = flag('--ts');
+if (!rustPath || !tsPath) {
+  console.error('usage: node scripts/coverage-summary.mjs --rust <coverage.json> --ts <coverage-summary.json>');
   process.exit(2);
 }
 
-const { totals: total, files: byPath } = readCoverageExport(exportPath, 'coverage-summary');
-const traced = tracedRustFiles();
+const reports = { rust: readCoverageExport(rustPath, TAG), ts: readVitestSummary(tsPath, TAG) };
 
 const pct = ({ count, covered }) => (count === 0 ? '—' : `${((100 * covered) / count).toFixed(1)}%`);
 const cell = (metric) => `${pct(metric)} (${metric.count - metric.covered} missed)`;
 
 const out = [];
-out.push('## Rust coverage (`cargo llvm-cov --branch`, pinned nightly)', '');
-out.push('QL-A and QL-B files are gated: CI fails if one loses branch or line coverage against `docs/quality/coverage-baseline.json`. Every other figure is reported only.', '');
-out.push('| Scope | Branches | Lines | Regions | Functions |', '|---|---|---|---|---|');
+out.push('## Coverage', '');
 out.push(
-  `| **Workspace** | ${cell(total.branches)} | ${cell(total.lines)} | ${cell(total.regions)} | ${pct(total.functions)} |`,
+  'QL-A and QL-B files are gated: CI fails if one loses branch or line coverage against `docs/quality/coverage-baseline.json`. Every other figure is reported only.',
+  '',
 );
+out.push('| Scope | Branches | Lines | Regions / statements | Functions |', '|---|---|---|---|---|');
+for (const [label, { totals }] of [
+  ['**Rust** (`cargo llvm-cov --branch`, pinned nightly)', reports.rust],
+  ['**TypeScript** (Vitest, istanbul)', reports.ts],
+]) {
+  out.push(`| ${label} | ${cell(totals.branches)} | ${cell(totals.lines)} | ${cell(totals.regions)} | ${pct(totals.functions)} |`);
+}
 out.push('', '### Files implementing a traced requirement', '');
-out.push('| File | Requirement | QL | Branches | Lines | Regions |', '|---|---|---|---|---|---|');
-for (const [path, { requirements, level }] of traced) {
-  const summary = byPath.get(path);
-  const where = `\`${path.replace(/^rust\//, '')}\``;
+out.push('| File | Requirement | QL | Branches | Lines | Regions / statements |', '|---|---|---|---|---|---|');
+for (const [path, { requirements, level }] of tracedFiles()) {
+  const summary = reports[languageOf(path)].files.get(path);
+  const head = `| \`${path}\` | ${requirements.join(', ')} | ${level}`;
   if (!summary) {
-    out.push(`| ${where} | ${requirements.join(', ')} | ${level} | not in the native build (feature-gated) | | |`);
+    out.push(`${head} | not measured (feature-gated or untested build) | | |`);
     continue;
   }
-  out.push(
-    `| ${where} | ${requirements.join(', ')} | ${level} | ${cell(summary.branches)} | ${cell(summary.lines)} | ${cell(summary.regions)} |`,
-  );
+  out.push(`${head} | ${cell(summary.branches)} | ${cell(summary.lines)} | ${cell(summary.regions)} |`);
 }
 out.push('');
 console.log(out.join('\n'));

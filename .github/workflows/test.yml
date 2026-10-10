@@ -80,18 +80,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Rust coverage summary
-        # Workspace totals and every Rust file the traceability matrix names as
-        # a requirement's implementation, into the job summary.
-        run: node scripts/coverage-summary.mjs rust/target/coverage/coverage.json >> "$GITHUB_STEP_SUMMARY"
-
-      - name: QL-A / QL-B coverage ratchet
-        # Blocking: no Rust file implementing a QL-A or QL-B requirement may lose
-        # branch or line coverage against docs/quality/coverage-baseline.json.
-        # A change that legitimately moves a figure re-records the baseline in
-        # the same diff — see scripts/check-coverage-ratchet.mjs.
-        run: npm run check:coverage-ratchet
-
       - name: Install dependencies
         # npm ci: reproducible install from the committed package-lock.json
         # (R1-1); fails rather than silently re-resolving on lock drift.
@@ -308,8 +296,36 @@ jobs:
       - name: ESLint
         run: npm run lint
 
-      - name: TypeScript MC/DC tests (Vitest)
-        run: npm test
+      - name: TypeScript MC/DC tests (Vitest, with coverage)
+        # The same suite `npm test` runs, instrumented by istanbul (see
+        # vitest.config.ts). Istanbul counts from the source, so the figures do
+        # not move with the Node version, which the ratchet below relies on.
+        run: npm run test:coverage
+
+      - name: Upload TypeScript coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-coverage
+          path: coverage/ts/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Coverage summary
+        # Rust and TypeScript totals, and every file the traceability matrix
+        # names as a requirement's implementation, into the job summary.
+        run: >-
+          node scripts/coverage-summary.mjs
+          --rust rust/target/coverage/coverage.json
+          --ts coverage/ts/coverage-summary.json
+          >> "$GITHUB_STEP_SUMMARY"
+
+      - name: QL-A / QL-B coverage ratchet
+        # Blocking: no Rust or TypeScript file implementing a QL-A or QL-B
+        # requirement may lose branch or line coverage against
+        # docs/quality/coverage-baseline.json. A change that legitimately moves
+        # a figure re-records the baseline in the same diff — see
+        # scripts/check-coverage-ratchet.mjs.
+        run: npm run check:coverage-ratchet
 
       - name: MCP protocol and real-backend integration
         # Blocking: builds the actual Rust CLI, drives the server through an
