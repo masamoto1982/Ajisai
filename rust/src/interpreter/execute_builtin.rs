@@ -248,23 +248,19 @@ impl Interpreter {
             WordId::And => logic::op_and(self),
             WordId::Not => logic::op_not(self),
             WordId::Select => logic::op_select(self),
-            WordId::True => {
-                self.stack.push(Value::from_bool(true));
-                Ok(())
-            }
-            WordId::False => {
-                self.stack.push(Value::from_bool(false));
-                Ok(())
-            }
-            WordId::Both => {
-                self.stack.push(Value::both());
+            // One arm, one temporary: this match sits on every nested
+            // call's native frame, and an unoptimized build gives each
+            // arm's `Value` its own slot.
+            WordId::True | WordId::False | WordId::Both | WordId::Nil => {
+                self.stack.push(match id {
+                    WordId::True => Value::from_bool(true),
+                    WordId::False => Value::from_bool(false),
+                    WordId::Both => Value::both(),
+                    _ => Value::nil(),
+                });
                 Ok(())
             }
             WordId::Reconcile => logic::op_reconcile(self),
-            WordId::Nil => {
-                self.stack.push(Value::nil());
-                Ok(())
-            }
             WordId::Exec => self.in_block_frame("EXEC", control::op_exec),
             WordId::Contract => reflection_ops::op_contract(self),
             WordId::Digest => reflection_ops::op_digest(self),
