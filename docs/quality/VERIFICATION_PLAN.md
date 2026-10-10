@@ -22,32 +22,37 @@ Define minimum verification evidence required for Ajisai changes.
   reporting less. Installing it needs
   `rustup toolchain install nightly-2026-10-09 --component llvm-tools-preview` and
   `cargo install cargo-llvm-cov --locked`.
-- QL-A and QL-B files may not lose coverage. The CI step (`Rust branch coverage` in the
-  `quality-gate` job) runs the suite under instrumentation, then
-  `QL-A / QL-B coverage ratchet` (`npm run check:coverage-ratchet`,
-  `scripts/check-coverage-ratchet.mjs`) fails the job when any Rust file
+- `npm run test:coverage` for TypeScript: the Vitest suite under istanbul,
+  reports in `coverage/ts/`. Istanbul counts from the source, so the figures
+  are the same on every Node version.
+- QL-A and QL-B files may not lose coverage. The `quality-gate` job runs both
+  suites under instrumentation (`Rust branch coverage`, and `TypeScript MC/DC
+  tests (Vitest, with coverage)`), then `QL-A / QL-B coverage ratchet`
+  (`npm run check:coverage-ratchet`, `scripts/check-coverage-ratchet.mjs`)
+  fails the job when any Rust or TypeScript file
   `TRACEABILITY_MATRIX.md` names as a QL-A or QL-B requirement's implementation has a
   lower covered fraction of branches or lines than
   `docs/quality/coverage-baseline.json` records for it. It is a ratchet, not a
   fixed percentage: new code in a gated file must be covered at least as well
   as the file already was. A change that moves a figure — a better-covered
   file, a new QL-A or QL-B row, a deliberate trade — re-records the baseline in the
-  same diff (`node scripts/check-coverage-ratchet.mjs
-  rust/target/coverage/coverage.json --update`), where the reviewer sees it
+  same diff (`npm run check:coverage-ratchet -- --update`, after both
+  coverage runs), where the reviewer sees it
   move. The baseline also has to match the matrix: a gated file with no entry,
   or an entry for a file that is no longer one, fails.
 - The counts are compared across runs, so they are measured reproducibly: CI
   pins the nightly the baseline names (`toolchain`) and fixes proptest's seed
-  (`PROPTEST_RNG_SEED`). To reproduce locally:
+  (`PROPTEST_RNG_SEED`); the TypeScript side needs nothing more than
+  `npm run test:coverage`. To reproduce the Rust side locally:
   `rustup toolchain install nightly-2026-10-09 --component llvm-tools-preview`,
   then in `rust/`, `PROPTEST_RNG_SEED=20261010 cargo +nightly-2026-10-09
   llvm-cov --branch --workspace --no-report` and `cargo +nightly-2026-10-09
   llvm-cov report --branch --json --summary-only --output-path
   target/coverage/coverage.json`.
 - Every other coverage figure is reported, not gated: the job summary lists
-  the workspace totals and every traced Rust file
-  (`scripts/coverage-summary.mjs`), and the `rust-coverage` artifact holds the
-  LCOV and HTML reports.
+  the Rust and TypeScript totals and every traced file
+  (`scripts/coverage-summary.mjs`), and the `rust-coverage` and `ts-coverage`
+  artifacts hold the LCOV and HTML reports.
 
 ## Level-Based Evidence Expectations
 - **QL-A**

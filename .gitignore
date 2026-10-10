@@ -12,6 +12,7 @@ pnpm-lock.yaml
 
 # TypeScript/Vite
 dist/
+coverage/
 *.tsbuildinfo
 
 # OS関連
