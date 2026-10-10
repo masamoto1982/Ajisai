@@ -346,8 +346,9 @@ succeeds there and is refused here (`resourceLimitExceeded`, naming
 block iteration that walks 100,000 elements there is refused here
 (`executionSteps`; the quickstart says what to write instead). A program
 that runs on both hosts answers the same on both: a ceiling only ever turns
-an answer into a named failure, never into a different answer. Both hosts publish what they apply — the playground's splash shows
-this profile's ceilings beside its own — and the divergence is recorded as an
+an answer into a named failure, never into a different answer. Both hosts publish what they apply — the playground names
+both profiles on its splash and lists this profile's ceilings beside its own
+in the Playground badge's tooltip — and the divergence is recorded as an
 explicit `hostDivergence` block on the golden case that shows it.
 
 ## Resources
