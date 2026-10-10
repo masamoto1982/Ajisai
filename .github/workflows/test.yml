@@ -42,15 +42,40 @@ jobs:
         # the rest of the job stays on stable. Under the old advisory gate the
         # step had been failing silently on stable since it was written; the
         # blocking gate surfaced that on its first run.
+        #
+        # The instrumented run leaves its profiles in target/; the reports are
+        # read back from them without re-running the suite: JSON for the job
+        # summary below, LCOV and HTML as an artifact. No figure is a merge
+        # threshold (docs/quality/VERIFICATION_PLAN.md) — the numbers are
+        # evidence for a reviewer, not a gate.
         working-directory: rust
         run: |
           rustup toolchain install nightly --component llvm-tools-preview
           cargo +nightly llvm-cov --branch --workspace --no-report
+          mkdir -p target/coverage
+          cargo +nightly llvm-cov report --branch --json --summary-only --output-path target/coverage/coverage.json
+          cargo +nightly llvm-cov report --branch --lcov --output-path target/coverage/lcov.info
+          cargo +nightly llvm-cov report --branch --html --output-dir target/coverage
+
+      - name: Upload Rust coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-coverage
+          path: |
+            rust/target/coverage/lcov.info
+            rust/target/coverage/html/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '20'
+
+      - name: Rust coverage summary
+        # Workspace totals and every Rust file the traceability matrix names as
+        # a requirement's implementation, into the job summary.
+        run: node scripts/coverage-summary.mjs rust/target/coverage/coverage.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install dependencies
         # npm ci: reproducible install from the committed package-lock.json

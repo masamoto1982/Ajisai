@@ -22,11 +22,15 @@ Define minimum verification evidence required for Ajisai changes.
   reporting less. Installing it needs
   `rustup toolchain install nightly --component llvm-tools-preview` and
   `cargo install cargo-llvm-cov --locked`.
-- No coverage percentage is a merge threshold. The CI step runs the instrumented
-  suite with `--no-report`, so what it certifies is that the workspace builds and
-  passes under coverage instrumentation, not that any figure was met. Read a
-  number by running `cargo +nightly llvm-cov report --branch --summary-only`
-  afterwards.
+- No coverage percentage is a merge threshold. The CI step (`Rust branch
+  coverage` in the `quality-gate` job) certifies that the workspace builds and
+  passes under coverage instrumentation, not that any figure was met. It then
+  reports what it measured: the job summary lists the workspace totals and
+  every Rust file `TRACEABILITY_MATRIX.md` names as a requirement's
+  implementation (`scripts/coverage-summary.mjs`), and the `rust-coverage`
+  artifact holds the LCOV and HTML reports. A figure that drops on a QL-A file
+  is a question for the reviewer, not a red check. Locally, read a number with
+  `cargo +nightly llvm-cov report --branch --summary-only` after the run.
 
 ## Level-Based Evidence Expectations
 - **QL-A**
