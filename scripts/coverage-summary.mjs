@@ -8,15 +8,14 @@
 // written down here, so a requirement row added or retargeted there shows up
 // in the summary without touching this script.
 //
-// This reports; it does not gate. VERIFICATION_PLAN.md makes no coverage
-// percentage a merge threshold, so the numbers are evidence for a reviewer —
-// a figure that drops on a QL-A file is a question to ask, not a red check.
+// The summary only reports. The gate is scripts/check-coverage-ratchet.mjs,
+// which fails CI when a QL-A file loses branch or line coverage against
+// docs/quality/coverage-baseline.json; every other figure here is evidence
+// for a reviewer, not a threshold.
 //
 // Usage: node scripts/coverage-summary.mjs <coverage.json>
 
-import { readFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
-import { readText, repoRoot } from './lib/common.mjs';
+import { readCoverageExport, tracedRustFiles } from './lib/coverage.mjs';
 
 const exportPath = process.argv[2];
 if (!exportPath) {
@@ -24,39 +23,16 @@ if (!exportPath) {
   process.exit(2);
 }
 
-const exported = JSON.parse(readFileSync(resolve(exportPath), 'utf8'));
-const data = exported.data?.[0];
-if (!data?.files || !data?.totals) {
-  console.error(`${exportPath} is not an llvm-cov JSON export (no data[0].files / totals)`);
-  process.exit(1);
-}
-
-// Requirement rows: | **AQ-REQ-00N** | statement | implementation | verification | QL |
-const traced = new Map();
-for (const line of readText('docs/quality/TRACEABILITY_MATRIX.md').split('\n')) {
-  const cells = line.split('|').map((cell) => cell.trim());
-  const requirement = cells[1]?.match(/AQ-REQ-\d{3}/)?.[0];
-  if (!requirement || cells.length < 6) continue;
-  const level = cells[5];
-  for (const [, path] of cells[3].matchAll(/`(rust\/src\/[^`]+\.rs)`/g)) {
-    const entry = traced.get(path) ?? { requirements: [], level };
-    entry.requirements.push(requirement);
-    traced.set(path, entry);
-  }
-}
-
-const byPath = new Map(
-  data.files.map((file) => [relative(repoRoot, file.filename).split('\\').join('/'), file.summary]),
-);
+const { totals: total, files: byPath } = readCoverageExport(exportPath, 'coverage-summary');
+const traced = tracedRustFiles();
 
 const pct = ({ count, covered }) => (count === 0 ? '—' : `${((100 * covered) / count).toFixed(1)}%`);
 const cell = (metric) => `${pct(metric)} (${metric.count - metric.covered} missed)`;
 
 const out = [];
-out.push('## Rust coverage (`cargo +nightly llvm-cov --branch`)', '');
-out.push('Reported, not gated: no coverage figure is a merge threshold (`docs/quality/VERIFICATION_PLAN.md`).', '');
+out.push('## Rust coverage (`cargo llvm-cov --branch`, pinned nightly)', '');
+out.push('QL-A files are gated: CI fails if one loses branch or line coverage against `docs/quality/coverage-baseline.json`. Every other figure is reported only.', '');
 out.push('| Scope | Branches | Lines | Regions | Functions |', '|---|---|---|---|---|');
-const total = data.totals;
 out.push(
   `| **Workspace** | ${cell(total.branches)} | ${cell(total.lines)} | ${cell(total.regions)} | ${pct(total.functions)} |`,
 );
