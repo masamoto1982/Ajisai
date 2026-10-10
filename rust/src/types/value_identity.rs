@@ -68,7 +68,9 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         ValueData::Text(_) => None,
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) => nested_vector_shape(items),
-        ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
+        ValueData::Boolean(_) | ValueData::Both | ValueData::Symbol(_) | ValueData::Record(_) => {
+            None
+        }
     }
 }
 
@@ -159,6 +161,18 @@ impl Value {
     #[inline]
     pub fn from_bool(b: bool) -> Self {
         Self::new(ValueData::Boolean(b), None)
+    }
+
+    /// The truth value BOTH (LANG.VALUES.TRUTH).
+    #[inline]
+    pub fn both() -> Self {
+        Self::new(ValueData::Both, None)
+    }
+
+    /// Whether this is the truth value BOTH.
+    #[inline]
+    pub fn is_both(&self) -> bool {
+        matches!(self.data, ValueData::Both)
     }
 
     /// The definite truth value carried by a Boolean data value, or `None`
@@ -282,7 +296,7 @@ impl Value {
     pub fn domain_name(&self) -> &'static str {
         match &self.data {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => "Scalar",
-            ValueData::Boolean(_) => "Boolean",
+            ValueData::Boolean(_) | ValueData::Both => "Boolean",
             ValueData::Text(_) => "String",
             ValueData::Vector(_) | ValueData::Tensor { .. } => "Vector",
             ValueData::Record(_) => "Record",
@@ -341,6 +355,7 @@ impl Value {
                 tensor_to_nested_values(data, shape),
             )),
             ValueData::Boolean(_)
+            | ValueData::Both
             | ValueData::Text(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -376,6 +391,9 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         match &self.data {
             ValueData::Boolean(b) => *b,
+            // BOTH is told true (LANG.VALUES.TRUTH), so it holds here as it
+            // does for `FILTER`.
+            ValueData::Both => true,
             // `is_truthy` is a total two-valued coercion. NIL — UNKNOWN in
             // truth position — collapses to `false`. Words that must honour
             // the third value read it before asking for a definite truth

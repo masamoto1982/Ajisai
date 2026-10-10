@@ -20,6 +20,8 @@ pub enum AbsenceOrigin {
     HostEnvironment,
     /// The program declared the absence itself (`ABSENT`).
     UserDeclared,
+    /// `RECONCILE` found its sources disagreeing.
+    Conflict,
     Unknown,
 }
 
@@ -147,6 +149,7 @@ impl AbsenceOrigin {
             AbsenceOrigin::DomainMiss => "domainMiss",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
             AbsenceOrigin::UserDeclared => "userDeclared",
+            AbsenceOrigin::Conflict => "conflict",
             AbsenceOrigin::Unknown => "unknown",
         }
     }

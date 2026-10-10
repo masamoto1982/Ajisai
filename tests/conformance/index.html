@@ -471,6 +471,48 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-both-literal" data-category="core">
+  <h3>BOTH is a Boolean told both TRUE and FALSE, not an absence</h3>
+  <pre class="ajisai-source">BOTH NIL?</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-belnap-and-both-unknown" data-category="core">
+  <h3>BOTH and UNKNOWN meet at FALSE under Belnap's AND</h3>
+  <pre class="ajisai-source">BOTH NIL AND</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-reconcile-agrees" data-category="core">
+  <h3>Equal sources agree, and an absent source yields to the other</h3>
+  <pre class="ajisai-source">1 1 RECONCILE NIL 5 RECONCILE</pre>
+  <pre class="ajisai-expect-result">1/1 5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-reconcile-truths-are-both" data-category="core">
+  <h3>Two different truth values reconcile to BOTH</h3>
+  <pre class="ajisai-source">TRUE FALSE RECONCILE</pre>
+  <pre class="ajisai-expect-result">BOTH</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-reconcile-conflict" data-category="core">
+  <h3>Two different values that are not truth values have nothing they agree on</h3>
+  <pre class="ajisai-source">'Tokyo' 'Osaka' RECONCILE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'conflict'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-select-both-reconciles" data-category="core">
+  <h3>A BOTH truth chooses both candidates, answering them reconciled</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 3 ] [ BOTH ] SELECT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-kleene-not-definite" data-category="core">
   <h3>Kleene NOT of TRUE is FALSE</h3>
   <pre class="ajisai-source">TRUE NOT</pre>
@@ -2585,20 +2627,6 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-index-of-found" data-category="core">
-  <h3>INDEX-OF reports a 0-origin position</h3>
-  <pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre>
-  <pre class="ajisai-expect-result">1/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-index-of-missing-projects" data-category="core">
-  <h3>INDEX-OF projects to NIL with reason notFound when absent</h3>
-  <pre class="ajisai-source">[ 1 2 ] 5 INDEX-OF NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'notFound'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <!-- ===================== ALGO module (core: pure words) ===================== -->
 
 <!-- ===================== TIME module (core: pure civil words) ===================== -->
@@ -2666,7 +2694,7 @@ W</pre>
 <section class="ajisai-case" id="standard-unique" data-category="core"><h3>UNIQUE</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] UNIQUE</pre><pre class="ajisai-expect-result">[ 'b' 'a' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-tally" data-category="core"><h3>TALLY answers a Record from each distinct element to its count, keys in UNIQUE order (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] TALLY</pre><pre class="ajisai-expect-result">[ 'b' 'a' 'c' ] [ 2/1 1/1 1/1 ] RECORD</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="record-vector-key-is-not-addressed-by-key" data-category="core"><h3>A key operand is a leaf, so a Vector names several keys rather than a Vector-valued key (LANG.RECORDS.STRUCTURE, LANG.COLLECTIONS.LIFT)</h3><pre class="ajisai-source">[ [ 1 2 ] [ 1 2 ] [ 3 ] ] TALLY [ 3 ] HAS?</pre><pre class="ajisai-expect-result">[ FALSE ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="record-vector-key-read-through-keys-and-values" data-category="core"><h3>A Vector-valued key is read through KEYS and VALUES, INDEX-OF comparing its needle whole (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ [ 1 2 ] [ 1 2 ] [ 3 ] ] TALLY 'T' BIND T VALUES T KEYS [ 1 2 ] INDEX-OF GET</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="record-vector-key-read-through-keys-and-values" data-category="core"><h3>A Vector-valued key is read through KEYS and VALUES, EQ comparing each key whole and RECONCILE keeping the one match (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ [ 1 2 ] [ 1 2 ] [ 3 ] ] TALLY 'T' BIND T VALUES NIL T KEYS [ [ 1 2 ] EQ ] MAP SELECT NIL [ RECONCILE ] FOLD</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-zip" data-category="core"><h3>ZIP</h3><pre class="ajisai-source">[ [ 1 2 3 ] [ 4 5 6 ] ] ZIP</pre><pre class="ajisai-expect-result">[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-drop" data-category="core">
   <h3>DROP answers everything after the first N</h3>
@@ -2942,24 +2970,6 @@ W</pre>
   <pre class="ajisai-expect-error">expected a Record</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="standard-member" data-category="core">
-  <h3>MEMBER? answers whether one value occurs in the vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 2 MEMBER? [ 1 2 3 ] 5 MEMBER?</pre>
-  <pre class="ajisai-expect-result">TRUE FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="standard-member-needle-is-an-element" data-category="core">
-  <h3>The needle is compared, not read: a Vector needle is looked for as an element</h3>
-  <pre class="ajisai-source">[ [ 1 ] 2 ] [ 1 ] MEMBER? [ 1 2 ] [ 2 ] MEMBER?</pre>
-  <pre class="ajisai-expect-result">TRUE FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="standard-member-over-text" data-category="core">
-  <h3>Membership is value equality, so texts work too</h3>
-  <pre class="ajisai-source">[ 'a' 'b' ] 'b' MEMBER?</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 <section class="ajisai-case" id="standard-bsearch" data-category="core">
   <h3>BSEARCH answers the index of each key in an ascending vector</h3>
   <pre class="ajisai-source">[ 1 3 5 7 ] [ 5 1 ] BSEARCH</pre>
@@ -2967,7 +2977,7 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-bsearch-first-of-equal-keys" data-category="core">
-  <h3>Equal keys answer the first of them, as INDEX-OF does</h3>
+  <h3>Equal keys answer the first of them, as a first match does</h3>
   <pre class="ajisai-source">[ 1 3 3 3 7 ] 3 BSEARCH</pre>
   <pre class="ajisai-expect-result">1/1</pre>
   <div class="ajisai-expect-effects"></div>
@@ -3151,7 +3161,6 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="standard-index-of" data-category="core"><h3>INDEX-OF</h3><pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-min" data-category="core"><h3>MIN</h3><pre class="ajisai-source">1 2 MIN</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-max" data-category="core"><h3>MAX</h3><pre class="ajisai-source">1 2 MAX</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
 

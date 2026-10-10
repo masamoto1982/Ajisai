@@ -61,6 +61,7 @@ enum PersistData {
     Bool {
         v: bool,
     },
+    Both,
     Scalar {
         n: String,
         d: String,
@@ -116,6 +117,7 @@ enum PersistData {
 fn encode_data(data: &ValueData) -> PersistData {
     match data {
         ValueData::Boolean(b) => PersistData::Bool { v: *b },
+        ValueData::Both => PersistData::Both,
         ValueData::Scalar(f) => {
             let (n, d) = frac_to_parts(f);
             PersistData::Scalar { n, d }
@@ -168,6 +170,7 @@ fn encode_data(data: &ValueData) -> PersistData {
 fn decode_data(data: &PersistData) -> Result<ValueData, String> {
     Ok(match data {
         PersistData::Bool { v } => ValueData::Boolean(*v),
+        PersistData::Both => ValueData::Both,
         PersistData::Scalar { n, d } => ValueData::Scalar(frac_from_parts(n, d)?),
         PersistData::ExactRat { n, d } => {
             ValueData::ExactScalar(ExactReal::Rational(frac_from_parts(n, d)?))

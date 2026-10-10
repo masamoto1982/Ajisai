@@ -7,8 +7,8 @@
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "canonicalWords": 78,
-    "semanticKernelWords": 48,
-    "standardWords": 30,
+    "semanticKernelWords": 50,
+    "standardWords": 28,
     "corewords": 78,
     "surface_forms": 4,
     "manifestEntries": 82
@@ -49,6 +49,23 @@
       "classification": "Core"
     },
     {
+      "id": "core.both",
+      "kind": "coreword",
+      "surface": "BOTH",
+      "family": "booleanLogic",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "BOTH",
+      "coverage_entry_id": "core.both",
+      "semantic_role": "Primitive",
+      "algebraic_family": "boolean-truth",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
@@ -63,7 +80,7 @@
       "derived_from": [
         "algebra.k3.meet"
       ],
-      "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values",
+      "implementation_schema": "logic::compute_conjunction lifted by lane_lift::lift_lanes",
       "classification": "Core"
     },
     {
@@ -81,7 +98,7 @@
       "derived_from": [
         "algebra.k3.involution"
       ],
-      "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value",
+      "implementation_schema": "logic::compute_inverted_value",
       "classification": "Core"
     },
     {
@@ -97,9 +114,29 @@
       "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.k3.domain"
+        "algebra.k3.domain",
+        "algebra.k3.knowledge-join"
       ],
       "implementation_schema": "logic::compute_selection lifted by lane_lift::lift_lanes",
+      "classification": "Core"
+    },
+    {
+      "id": "core.reconcile",
+      "kind": "coreword",
+      "surface": "RECONCILE",
+      "family": "booleanLogic",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "RECONCILE",
+      "coverage_entry_id": "core.reconcile",
+      "semantic_role": "Derived",
+      "algebraic_family": "boolean-truth",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.k3.knowledge-join",
+        "algebra.absence.domain"
+      ],
+      "implementation_schema": "logic::reconcile",
       "classification": "Core"
     },
     {
@@ -733,42 +770,6 @@
         "algebra.structure-lift.reshape-group",
         "algebra.structure-lift.indexed-sequence",
         "algebra.record.keyed-correspondence"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.index-of",
-      "kind": "coreword",
-      "surface": "INDEX-OF",
-      "family": "collection",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "INDEX-OF",
-      "coverage_entry_id": "module.algo.index-of",
-      "semantic_role": "Derived",
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.order",
-        "algebra.absence.domain"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.member",
-      "kind": "coreword",
-      "surface": "MEMBER?",
-      "family": "collection",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "MEMBER?",
-      "coverage_entry_id": "core.member",
-      "semantic_role": "Derived",
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
       ],
       "classification": "Core"
     },

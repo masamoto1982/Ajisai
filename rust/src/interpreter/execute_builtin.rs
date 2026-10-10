@@ -248,18 +248,19 @@ impl Interpreter {
             WordId::And => logic::op_and(self),
             WordId::Not => logic::op_not(self),
             WordId::Select => logic::op_select(self),
-            WordId::True => {
-                self.stack.push(Value::from_bool(true));
+            // One arm, one temporary: this match sits on every nested
+            // call's native frame, and an unoptimized build gives each
+            // arm's `Value` its own slot.
+            WordId::True | WordId::False | WordId::Both | WordId::Nil => {
+                self.stack.push(match id {
+                    WordId::True => Value::from_bool(true),
+                    WordId::False => Value::from_bool(false),
+                    WordId::Both => Value::both(),
+                    _ => Value::nil(),
+                });
                 Ok(())
             }
-            WordId::False => {
-                self.stack.push(Value::from_bool(false));
-                Ok(())
-            }
-            WordId::Nil => {
-                self.stack.push(Value::nil());
-                Ok(())
-            }
+            WordId::Reconcile => logic::op_reconcile(self),
             WordId::Exec => self.in_block_frame("EXEC", control::op_exec),
             WordId::Contract => reflection_ops::op_contract(self),
             WordId::Digest => reflection_ops::op_digest(self),
@@ -307,10 +308,8 @@ impl Interpreter {
             WordId::Group => ordering_ops::op_group(self),
             WordId::Zip => shape_words::op_zip(self),
             WordId::Put => shape_words::op_put(self),
-            WordId::IndexOf => search_ops::op_index_of(self),
             WordId::Absent => declared_nil_contract::op_absent(self),
             WordId::Fail => declared_nil_contract::op_fail(self),
-            WordId::Member => search_ops::op_member(self),
             WordId::Bsearch => search_ops::op_bsearch(self),
             WordId::Record => record_ops::op_record(self),
             WordId::Keys => record_ops::op_keys(self),

@@ -282,6 +282,7 @@ impl Interpreter {
                     match upper.as_ref() {
                         "TRUE" => values.push(Value::from_bool(true)),
                         "FALSE" => values.push(Value::from_bool(false)),
+                        "BOTH" => values.push(Value::both()),
                         "NIL" => values.push(Value::nil()),
                         // A bare name is a Symbol: data until something
                         // executes it, dictionary-independent (building the

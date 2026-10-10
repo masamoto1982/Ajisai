@@ -264,7 +264,7 @@ fn a_leaving_body_names_where_it_leaves() {
     let reports = report_contracts(
         "[ 'xs' BIND xs 0 [ ADD ] FOLD xs LENGTH DIV ] 'MEAN' DEF\n\
          [ 2 DIV ] 'HALF' DEF\n\
-         [ MEAN HALF 1/0 MIN ] 'BOTH' DEF",
+         [ MEAN HALF 1/0 MIN ] 'SPREAD' DEF",
     );
     let exits = |name: &str| {
         reports
@@ -276,7 +276,7 @@ fn a_leaving_body_names_where_it_leaves() {
     assert_eq!(exits("MEAN"), ("leaving", vec!["DIV".to_string()]));
     assert_eq!(exits("HALF"), ("closed", Vec::new()));
     assert_eq!(
-        exits("BOTH"),
+        exits("SPREAD"),
         ("leaving", vec!["MEAN".to_string(), "1/0".to_string()])
     );
     let decls = field_decls("[ [ 1 ] LENGTH DIV ] 'W' DEF\n#:contract W field=closed");

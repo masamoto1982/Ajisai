@@ -57,7 +57,7 @@ for (const word of words.entries) {
   if (word.vocabularyTier === 'kernel' && 'standardKind' in word) fail(`${word.name} is Kernel but declares standardKind`);
   if (!manifestNames.has(word.name)) fail(`${word.name} is absent from the frozen manifest`);
   // A Word that tests its operands and answers a truth value is named with a
-  // trailing `?` (NIL?, HAS?, MEMBER?), and a `?` name always answers one.
+  // trailing `?` (NIL?, HAS?), and a `?` name always answers one.
   // Relations and connectives (EQ LT GT, AND NOT SELECT) are operators, named
   // for the operation, and exempt.
   const answersTruth = /-> \[ (TRUE \| FALSE|truths?) \]/.test(word.documentation.stackEffect);

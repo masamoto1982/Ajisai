@@ -46,6 +46,7 @@ pub(crate) fn value_symbol_names(value: &Value, out: &mut Vec<std::sync::Arc<str
         | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
         | ValueData::Boolean(_)
+        | ValueData::Both
         | ValueData::Text(_)
         | ValueData::Nil => {}
     }

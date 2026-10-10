@@ -362,7 +362,7 @@ async fn every_charging_word_charges_something() {
         "1 32 RANGE TALLY",
         "1 32 RANGE 1 32 RANGE GROUP",
         "1 32 RANGE 1 32 RANGE 2 COLLECT ZIP",
-        "1 32 RANGE -1 INDEX-OF",
+        "1 32 RANGE -1 BSEARCH",
         "[ 4 4 ] 0 FILL",
     ] {
         assert!(

@@ -160,7 +160,7 @@ async fn sort_is_deterministic_and_restores_malformed_operands() {
 /// equal keys keep their original positions.
 ///
 /// Stability is the property the reference's hand-written ranking idiom existed
-/// to recover — `SORT` then `INDEX-OF` finds the same position twice when two
+/// to recover — `SORT` then a first-match search finds the same position twice when two
 /// keys tie, so "the k nearest" could hand back k-1 or k+1 neighbours. Native
 /// retention rests on this and on the cost: the idiom is O(n²) interpreted
 /// steps, which is what put a ceiling of about ninety training points on a
@@ -195,7 +195,7 @@ async fn order_is_the_stable_permutation_sort_applies() {
 /// `UNIQUE` and `TALLY` are one pass read two ways: `TALLY`'s keys are
 /// `UNIQUE`'s answer, in the same order, and its values the aligned counts
 /// (LANG.RECORDS.STRUCTURE), whatever the element domain. Written out, each
-/// is an O(n²) scan with `INDEX-OF`, and they are the counting step of a
+/// is an O(n²) first-match scan, and they are the counting step of a
 /// majority vote, a class prior, a histogram, a Gini and a naive-Bayes tally.
 #[tokio::test]
 async fn unique_and_tally_agree_on_order_and_length() {
@@ -283,19 +283,19 @@ async fn group_partitions_without_loss() {
         .is_err());
 }
 
-/// `BSEARCH` answers what `INDEX-OF` answers on an ascending vector — the
-/// first index of the key, or a `notFound` absence — and refuses an
-/// unsorted operand rather than answering from it.
+/// `BSEARCH` answers what a first match over `GET` and `EQ` answers on an
+/// ascending vector — the first index of the key, or a `notFound` absence —
+/// and refuses an unsorted operand rather than answering from it.
 #[tokio::test]
-async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() {
+async fn bsearch_agrees_with_a_first_match_on_ascending_input_and_refuses_unsorted() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 1 3 3 7 ] [ 3 7 4 ] BSEARCH [ 1 3 3 7 ] 3 INDEX-OF [ 1 3 3 7 ] 7 INDEX-OF [ 1 3 3 7 ] 4 INDEX-OF NIL-REASON")
+        .execute("[ 1 3 3 7 ] [ 3 7 4 ] BSEARCH [ 1 3 3 7 ] 4 BSEARCH NIL-REASON")
         .await
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "'notFound'"]
+        ["[ 1/1 3/1 NIL ]", "'notFound'"]
     );
 
     let mut interpreter = Interpreter::new();

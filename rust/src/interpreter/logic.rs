@@ -1,65 +1,58 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::Interpreter;
-use crate::types::Value;
+use crate::semantic::Recoverability;
+use crate::types::{Value, ValueData};
+
+/// One of the four truth values of LANG.VALUES.TRUTH, read from a lane in
+/// truth position.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Truth {
+    True,
+    False,
+    Both,
+    /// A NIL read in truth position, whatever its reason.
+    Unknown,
+}
 
 /// The truth value of a `booleanLogic` operand.
 ///
-/// The Boolean domain is the *whole* definite input domain of `AND`,
-/// `NOT`, and `SELECT`'s truth operand: every Word of the family cites
-/// LANG.VALUES.TRUTH in `spec/words.json` and each of these contracts
-/// registers `nonTruthValue` as its error condition. NIL is handled separately by
-/// [`truth_or_unknown`], not by this accessor, because NIL is not itself a
-/// definite truth value — it is UNKNOWN (LANG.VALUES.TRUTH).
+/// TRUE, FALSE and BOTH are the Boolean data values and NIL reads as UNKNOWN
+/// (LANG.VALUES.TRUTH); nothing else is a truth value, so a scalar, a String
+/// or a Vector standing in truth position is the `nonTruthValue` every Word
+/// of the family registers. `0` and `1` are not truth values
+/// (LANG.VALUES.DISJOINT): a caller who means a numeric test writes it,
+/// `0 EQ NOT`.
 ///
-/// A truth operand lifts (LANG.COLLECTIONS.LIFT), so this accessor sees one lane
-/// at a time: [`lift_lanes`] has already aligned the operands, and a Vector
-/// reaching here is a Vector standing where a truth value belongs, which is
-/// the `nonTruthValue` it reports. Masks are built by the comparison Words,
-/// which lift the same way, so `[ 1 2 3 ] [ 2 ] GT [ 1 2 3 ] [ 2 ] LT AND` is
-/// an ordinary phrase rather than a shape error.
-///
-/// So a scalar is not an operand. These Words used to select between a Boolean
-/// path and an element-wise numeric path based on operand shape, which made
-/// `0` and `1` behave as truth values and contradicted LANG.VALUES.DISJOINT
-/// ("FALSE is not scalar zero, TRUE is not scalar one"). The numeric path also
-/// returned a Scalar that the display rendered as `TRUE`, so `1 1 AND` printed
-/// `TRUE` while `1 1 AND TRUE EQ` decided FALSE. A caller who means a numeric
-/// test writes it: `0 EQ NOT`.
-fn operand_truth(value: &Value) -> Result<bool> {
-    value.as_truth().ok_or_else(|| {
-        AjisaiError::declared(
+/// A truth operand lifts (LANG.COLLECTIONS.LIFT), so this sees one lane at a
+/// time: [`lift_lanes`] has already aligned the operands, and a Vector
+/// reaching here is a Vector standing where a truth value belongs.
+fn operand_truth(value: &Value) -> Result<Truth> {
+    match &value.data {
+        ValueData::Boolean(true) => Ok(Truth::True),
+        ValueData::Boolean(false) => Ok(Truth::False),
+        ValueData::Both => Ok(Truth::Both),
+        ValueData::Nil => Ok(Truth::Unknown),
+        _ => Err(AjisaiError::declared(
             "nonTruthValue",
             format!("expected a truth value, got {}", value.domain_name()),
-        )
-    })
-}
-
-/// The definite truth of a `booleanLogic` operand, or `None` for UNKNOWN.
-///
-/// UNKNOWN has no dedicated data representation (LANG.VALUES.TRUTH): any NIL
-/// standing in truth position reads as UNKNOWN, whatever its reason. A
-/// non-NIL, non-Boolean operand is still the `nonTruthValue` ERROR that
-/// [`operand_truth`] raises.
-fn truth_or_unknown(value: &Value) -> Result<Option<bool>> {
-    if value.is_nil() {
-        return Ok(None);
+        )),
     }
-    operand_truth(value).map(Some)
 }
 
-/// Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): FALSE
-/// absorbs into `AND` even against an UNKNOWN operand, because the absorbing
-/// value is decided by the definite operand alone. Only where neither operand
-/// is FALSE does an UNKNOWN operand surface in the result — the left
-/// operand's, when both are UNKNOWN, matching left-to-right evaluation order.
+/// Conjunction under Belnap's table (LANG.VALUES.TRUTH), the meet of the
+/// truth order FALSE < UNKNOWN, BOTH < TRUE. FALSE absorbs everything, TRUE
+/// is the identity, and UNKNOWN and BOTH, neither below the other, meet at
+/// FALSE. Restricted to TRUE, FALSE and UNKNOWN it is the strong Kleene
+/// table. Where the answer is an operand it is that operand whole, so an
+/// UNKNOWN keeps its reason — the left one's, when both are UNKNOWN.
 fn compute_conjunction(a: &Value, b: &Value) -> Result<Value> {
-    match (truth_or_unknown(a)?, truth_or_unknown(b)?) {
-        (Some(x), Some(y)) => Ok(Value::from_bool(x && y)),
-        (Some(false), None) | (None, Some(false)) => Ok(Value::from_bool(false)),
-        (Some(true), None) => Ok(b.clone()),
-        (None, Some(true)) | (None, None) => Ok(a.clone()),
-    }
+    use Truth::*;
+    Ok(match (operand_truth(a)?, operand_truth(b)?) {
+        (False, _) | (_, False) | (Unknown, Both) | (Both, Unknown) => Value::from_bool(false),
+        (True, _) | (Both, Both) | (Unknown, Unknown) => b.clone(),
+        (_, True) => a.clone(),
+    })
 }
 
 /// `AND` over whole operands: the scalar law above, applied lane by lane
@@ -68,31 +61,71 @@ fn lifted_conjunction(a: &Value, b: &Value) -> Result<Value> {
     lift_lanes([a, b], &|[x, y]| compute_conjunction(x, y))
 }
 
-/// `SELECT`'s scalar law: a definite truth chooses one of the two values it
-/// was handed, and UNKNOWN chooses neither.
+/// `SELECT`'s scalar law: TRUE and FALSE choose one of the two values it was
+/// handed, UNKNOWN chooses neither, and BOTH chooses both — the two
+/// candidates reconciled, so they answer what they agree on.
 ///
 /// Nothing is evaluated here. Both candidates are values the program already
 /// built, so the work that produced them happened before `SELECT` ran, once
 /// each and in the order they were written — which is why `SELECT` is `pure`
 /// and `const` on the step axis where `COND` was `unbounded` on all three.
 fn compute_selection(when_true: &Value, when_false: &Value, mask: &Value) -> Result<Value> {
-    match truth_or_unknown(mask)? {
-        Some(true) => Ok(when_true.clone()),
-        Some(false) => Ok(when_false.clone()),
+    Ok(match operand_truth(mask)? {
+        Truth::True => when_true.clone(),
+        Truth::False => when_false.clone(),
+        Truth::Both => reconcile(when_true, when_false),
         // UNKNOWN chooses neither: the answer is the absence the truth
         // operand carried, reason intact, so `NIL-REASON` can still say why.
-        None => Ok(mask.clone()),
-    }
+        Truth::Unknown => mask.clone(),
+    })
 }
 
 fn compute_inverted_value(val: &Value) -> Result<Value> {
-    // NOT has no second operand to absorb into, so UNKNOWN simply inverts to
-    // UNKNOWN: an absent operand flows out unchanged, keeping its reason
-    // (LANG.VALUES.TRUTH's NOT row).
-    if val.is_nil() {
-        return Ok(val.clone());
+    // NOT swaps TRUE and FALSE and leaves the two values between them where
+    // they are: UNKNOWN flows out unchanged, keeping its reason, and BOTH
+    // stays BOTH (LANG.VALUES.TRUTH's NOT row).
+    Ok(match operand_truth(val)? {
+        Truth::True => Value::from_bool(false),
+        Truth::False => Value::from_bool(true),
+        Truth::Both | Truth::Unknown => val.clone(),
+    })
+}
+
+/// `RECONCILE`'s scalar law: what two sources agree on (LANG.VALUES.TRUTH).
+///
+/// It is the join of the information order — an absence knows least, a
+/// conflict most. A conflict absorbs, an absence yields to the other source,
+/// equal values agree, two different truth values are BOTH, and any other
+/// two different values project NIL(conflict). Making the conflict absorbing
+/// rather than one more absence that yields is what keeps the Word
+/// associative: `1 2 RECONCILE 3 RECONCILE` and `1 2 3 RECONCILE RECONCILE`
+/// are both the conflict.
+pub(crate) fn reconcile(a: &Value, b: &Value) -> Value {
+    let is_conflict = |v: &Value| v.nil_reason() == Some(&NilReason::Conflict);
+    if is_conflict(a) || b.is_nil() && !is_conflict(b) {
+        return a.clone();
     }
-    Ok(Value::from_bool(!operand_truth(val)?))
+    if is_conflict(b) || a.is_nil() || a == b {
+        return b.clone();
+    }
+    let is_truth = |v: &Value| matches!(v.data, ValueData::Boolean(_) | ValueData::Both);
+    if is_truth(a) && is_truth(b) {
+        Value::both()
+    } else {
+        Value::nil_with_reason(NilReason::Conflict, Recoverability::Recoverable)
+    }
+}
+
+/// `RECONCILE` — what two sources agree on. Like `EQ` it reads its
+/// operands whole, so two Vectors agree when they are one value.
+pub fn op_reconcile(interp: &mut Interpreter) -> Result<()> {
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::stack_underflow());
+    }
+    let b_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    interp.stack.push(reconcile(&a_val, &b_val));
+    Ok(())
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {

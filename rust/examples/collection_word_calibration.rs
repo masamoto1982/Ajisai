@@ -188,7 +188,6 @@ fn section_element_count() {
         Case::with("TAKE", "[ 100 ]"),
         Case::with("PUT", "0 7"),
         Case::with("CONCAT", "[ 1 2 3 ]"),
-        Case::with("INDEX-OF", "-1"),
         Case::unary("SORT"),
         Case::unary("ORDER"),
         Case::unary("UNIQUE"),

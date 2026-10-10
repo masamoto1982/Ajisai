@@ -42,6 +42,12 @@ pub enum NilReason {
     /// `NIL-REASON` answers, and is part of the value (LANG.VALUES.NIL) — the
     /// first parameterized reason, recorded as such in `spec/outcomes.json`.
     UserDeclared,
+    /// Two sources `RECONCILE` was asked to agree on hold different values
+    /// that are not both truth values, so there is no one value they agree
+    /// on (LANG.VALUES.TRUTH). Unlike every other absence it is absorbing
+    /// under `RECONCILE`: a disagreement already found is not settled by a
+    /// third source, which keeps the Word associative.
+    Conflict,
 }
 
 /// One named internal-computation ceiling from
@@ -195,6 +201,7 @@ impl NilReason {
             NilReason::DomainMiss => "domainMiss",
             NilReason::Literal => "literal",
             NilReason::UserDeclared => "userDeclared",
+            NilReason::Conflict => "conflict",
         }
     }
 
@@ -209,6 +216,7 @@ impl NilReason {
         NilReason::DomainMiss,
         NilReason::Literal,
         NilReason::UserDeclared,
+        NilReason::Conflict,
     ];
 
     /// The reason a protocol string names, or `None` when it names none.

@@ -76,7 +76,7 @@ assert.deepEqual(
 
 // ── and every name they mention is real ─────────────────────────────────
 //
-// Uppercase tokens that look like Words. `NIL?` and `INDEX-OF` carry
+// Uppercase tokens that look like Words. `NIL?` and `NIL-REASON` carry
 // punctuation, so the pattern has to admit `?` and `-` without swallowing
 // ordinary prose or the `RPN`/`MCP` style acronyms, which are excluded by
 // being absent from the registry only if they were meant as Words — hence the

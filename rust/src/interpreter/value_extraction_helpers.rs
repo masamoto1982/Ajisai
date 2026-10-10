@@ -35,7 +35,10 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .collect(),
             ValueData::ExactScalar(_) => vec![],
-            ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => vec![],
+            ValueData::Boolean(_)
+            | ValueData::Both
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => vec![],
         }
     }
 

@@ -21,6 +21,10 @@
     {
       "reason": "Folded into GET and PUT: reading and writing a Record by key is what reading and writing a Vector by index is, so one pair of Words covers both containers, and PUT took WITH's Kernel seat.",
       "names": ["AT", "WITH"]
+    },
+    {
+      "reason": "Gave their slots to the four-valued truth domain (2026-10): BOTH and RECONCILE took the head of the retirement queue in scripts/check-minimal-core.mjs. Both were derivable Standards with no recorded use: INDEX-OF is a first match over GET and EQ, and MEMBER? the same chain answering a truth value.",
+      "names": ["MEMBER?", "INDEX-OF"]
     }
   ]
 }

@@ -222,7 +222,7 @@ const silentMistakes = [
     title: 'A one-element vector where a Word wants an element',
     wrong: '[ 1 2 3 ] [ 1 ] [ 9 ] PUT',
     right: '[ 1 2 3 ] 1 9 PUT',
-    fix: 'PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. Write a scalar bare (§2) and this cannot happen; a one-element vector is a vector, everywhere, and no error says so.',
+    fix: 'PUT and GET take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. Write a scalar bare (§2) and this cannot happen; a one-element vector is a vector, everywhere, and no error says so.',
   },
 ];
 
@@ -444,8 +444,8 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: \`1 2 ADD\`.
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
-- A scalar is written bare: \`${canonicalExampleCode('scalar')}\`, \`${canonicalExampleCode('div')}\`. Data lives in vectors: \`[ 1 2 3 ]\`, and vectors nest for ragged and grouped data. \`[ 42 ]\` is a one-element *vector*, not another way to write 42 — arithmetic broadcasts it like a scalar, but a Word that takes an *element* (\`PUT\`, \`GET\`, \`INDEX-OF\`) stores or reads the vector itself, and nothing errors (§7). Write scalars bare and the question never arises.
-- Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
+- A scalar is written bare: \`${canonicalExampleCode('scalar')}\`, \`${canonicalExampleCode('div')}\`. Data lives in vectors: \`[ 1 2 3 ]\`, and vectors nest for ragged and grouped data. \`[ 42 ]\` is a one-element *vector*, not another way to write 42 — arithmetic broadcasts it like a scalar, but a Word that takes an *element* (\`PUT\`, \`GET\`, \`RECONCILE\`) stores or reads the vector itself, and nothing errors (§7). Write scalars bare and the question never arises.
+- Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\` / \`BOTH\` (told both; \`TRUE FALSE RECONCILE\`), with a NIL read as UNKNOWN. Absence: \`NIL\`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
 - Named data is a Record, built by \`RECORD\` from a Vector of keys and a Vector of values: \`${canonicalExampleCode('record-basic')}\`. It is not a Vector and is never code. It displays as \`${canonicalExampleDisplay('record-basic')}\` — the keys, the values and the Word that joins them, which is also valid source that rebuilds it.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).

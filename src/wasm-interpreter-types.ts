@@ -233,11 +233,11 @@ export interface ProtocolAbsence {
 
 export interface ProtocolValueSemantics {
     /**
-     * Truth axis (LANG.VALUES.TRUTH): present only on a Boolean. UNKNOWN is a
-     * NIL read in truth position and is observed as a NIL (`type: 'nil'`,
-     * with its `absence`), never on this axis.
+     * Truth axis (LANG.VALUES.TRUTH): present only on a Boolean, `'both'` for
+     * BOTH. UNKNOWN is a NIL read in truth position and is observed as a NIL
+     * (`type: 'nil'`, with its `absence`), never on this axis.
      */
-    truthValue?: 'true' | 'false';
+    truthValue?: 'true' | 'false' | 'both';
     absence?: ProtocolAbsence;
     /**
      * Present and `true` only when this node's numeric `value` is a *best

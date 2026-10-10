@@ -9,21 +9,29 @@
       "source": "766d4eb63f0d0c21",
       "summary": "真偽値のFALSE。`FALSE`は`1 2 EQ`である。これは真偽値であって数の0ではない(LANG.VALUES.DISJOINT)ので、`FALSE 0 EQ`は`FALSE`になる。"
     },
+    "BOTH": {
+      "source": "0a5a51634ea8d016",
+      "summary": "真偽値のBOTH。TRUEとFALSEの両方を告げられた真理値で(LANG.VALUES.TRUTH)、`TRUE FALSE RECONCILE`が答える値である。真偽値なので`BOTH NIL?`は`FALSE`。`BOTH NOT`は`BOTH`、`BOTH TRUE AND`は`BOTH`、`BOTH FALSE AND`は`FALSE`、`BOTH NIL AND`は`FALSE`。`SELECT`はBOTHを受け取ると、2つの候補を突き合わせた結果を答える。"
+    },
     "AND": {
-      "source": "b0f182f70b252bc7",
-      "summary": "強いクリーネの真理値表による論理積(LANG.VALUES.TRUTH)。`TRUE FALSE AND`は`FALSE`で、ベクトルには要素ごとに働き、`[ TRUE TRUE ] [ TRUE FALSE ] AND`は`[ TRUE FALSE ]`になる。ここで読まれたNILはUNKNOWNである。FALSEがあれば答えはFALSEに決まり(`NIL FALSE AND`は`FALSE`)、それ以外はUNKNOWNのまま理由を保つ。論理和は`a NOT b NOT AND NOT`と書く。真偽値でもNILでもないオペランドは`nonTruthValue`。"
+      "source": "06cb1f5560b63610",
+      "summary": "ベルナップの四値の真理値表による論理積(LANG.VALUES.TRUTH)。`TRUE FALSE AND`は`FALSE`で、ベクトルには要素ごとに働き、`[ TRUE TRUE ] [ TRUE FALSE ] AND`は`[ TRUE FALSE ]`になる。ここで読まれたNILはUNKNOWNである。FALSEがあれば答えはFALSEに決まり(`NIL FALSE AND`は`FALSE`)、BOTHとはFALSEで交わり(`BOTH NIL AND`は`FALSE`)、TRUEとはUNKNOWNのまま理由を保つ。論理和は`a NOT b NOT AND NOT`と書く。真偽値でもNILでもないオペランドは`nonTruthValue`。"
     },
     "NOT": {
-      "source": "bd4096d4800e62d8",
-      "summary": "強いクリーネの真理値表による否定(LANG.VALUES.TRUTH)。`TRUE NOT`は`FALSE`で、ベクトルには要素ごとに働き、`[ TRUE FALSE ] NOT`は`[ FALSE TRUE ]`になる。UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは`nonTruthValue`。"
+      "source": "f5852c08873006f0",
+      "summary": "ベルナップの四値の真理値表による否定(LANG.VALUES.TRUTH)。`TRUE NOT`は`FALSE`で、ベクトルには要素ごとに働き、`[ TRUE FALSE ] NOT`は`[ FALSE TRUE ]`になる。BOTHはBOTHのまま(`BOTH NOT`は`BOTH`)で、UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは`nonTruthValue`。"
     },
     "SELECT": {
-      "source": "2db00d1d9a109672",
-      "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
+      "source": "bab4df12021556da",
+      "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。BOTHのレーンは両方を選び、2つの候補を突き合わせた結果(RECONCILE)を答える。`1 1 BOTH SELECT`は`1`で、異なる2つの候補は食い違いになる。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
+    },
+    "RECONCILE": {
+      "source": "c197519036b53bce",
+      "summary": "2つの情報源が一致するもの(LANG.VALUES.TRUTH)。`1 1 RECONCILE`は`1`で、不在はもう一方の情報源が持つ値に譲る(`NIL 5 RECONCILE`は`5`)。異なる2つの真偽値はBOTHになり(`TRUE FALSE RECONCILE`は`BOTH`)、それ以外の異なる2つの値は一致するものを持たず、NIL(conflict)を投影する(`'Tokyo' 'Osaka' RECONCILE NIL-REASON`は`'conflict'`)。食い違いは3つ目の情報源では解消しないので、この語は結合的・可換・冪等であり、多数の情報源にFOLDしても順序に依存しない。EQと同じくオペランドを丸ごと比べる。`[ 1 2 ] [ 1 3 ] RECONCILE`は食い違いで、レーンごとに突き合わせるプログラムはZIPとMAPを使う。"
     },
     "EQ": {
-      "source": "d3445537cf2b316e",
-      "summary": "2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。`1 1/1 EQ`は`TRUE`、`2 SQRT 2 SQRT MUL 2 EQ`は`TRUE`、`100 0 DIV 1/0 EQ`は`TRUE`、`0/0 0/0 EQ`は`TRUE`、`[ 1 2 ] [ 1 2 ] EQ`は`TRUE`。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。`-1 SQRT 1 EQ`は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、`[ NIL ] [ NIL ] EQ`は`TRUE`。これはMEMBER?・INDEX-OF・UNIQUEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に`1 COLLECT`で包む。"
+      "source": "258c833b77c50775",
+      "summary": "2つの値が同じ1つの値かどうか(LANG.VALUES.DENOTATION)。どう組み立てたかは問わない。`1 1/1 EQ`は`TRUE`、`2 SQRT 2 SQRT MUL 2 EQ`は`TRUE`、`100 0 DIV 1/0 EQ`は`TRUE`、`0/0 0/0 EQ`は`TRUE`、`[ 1 2 ] [ 1 2 ] EQ`は`TRUE`。EQはオペランドを丸ごと比較し、要素ごとには持ち上がらない。両オペランドを読むので、他のデータオペランドと同じく、不在のオペランドがそのまま答えになる(LANG.FAILURE.PASSTHROUGH)。`-1 SQRT 1 EQ`は、比較するものがないので、その不在がすでにそうであったUNKNOWNになる。ベクトルの中のNILは他と同じ1つの要素で、理由によって比較されるので、`[ NIL ] [ NIL ] EQ`は`TRUE`。これはUNIQUEとRECONCILEが使う等価性でもある。不在かもしれない2つの値を素通しではなく比較したいときは、それぞれを先に`1 COLLECT`で包む。"
     },
     "LT": {
       "source": "c975c333f1cf219e",
@@ -82,8 +90,8 @@
       "summary": "数を既約の分子と分母に開き、分母を非負とする2要素のベクトルで答える。`6/4 RATIO`は`[ 3 2 ]`、`-3 RATIO`は`[ -3 1 ]`、`100 0 DIV RATIO`は`[ 1 0 ]`。0の上のすべての対はその符号を0の上に置いた点に簡約されるからである(LANG.VALUES.EXACT)。ベクトルには要素ごとに働く。この言語は厳密な分数を掲げており、これがその2つの部分を読み戻すワードである。答えはベクトルなので、算術は他のベクトルと同じようにその上へ持ち上がる。無理数(`2 SQRT`)には分子がなく`domainMiss`を投影する。"
     },
     "GET": {
-      "source": "f7a2bc0a5c62b8d8",
-      "summary": "コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。`[ 10 20 30 ] 1 GET`は`20`、`R 'x' GET`はRが`'x'`の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。`[ 10 20 30 ] [ 2 0 ] GET`は`[ 30 10 ]`で、並べ替えや収集が1回の呼び出しで済む。同じ理由で、それ自体がベクトル・Record・NILであるRecordのキーはGETでは指せない。`R VALUES R KEYS k INDEX-OF GET`で読める。INDEX-OFは探す値を丸ごと比べるからである。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、`[ 10 20 30 ] [ 0 9 ] GET`は`[ 10/1 NIL ]`。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(`nonContainer`)、整数でないインデックスは`invalidInteger`。"
+      "source": "cf011734e282438f",
+      "summary": "コンテナを読む。ベクトルならインデックスの位置の要素、Recordならキーの下の値。`[ 10 20 30 ] 1 GET`は`20`、`R 'x' GET`はRが`'x'`の下に持つもの。負のインデックスは末尾から数える。キーは葉なので、インデックスやキーのベクトルは、名指した順の答えのベクトルへ持ち上がる。`[ 10 20 30 ] [ 2 0 ] GET`は`[ 30 10 ]`で、並べ替えや収集が1回の呼び出しで済む。同じ理由で、それ自体がベクトル・Record・NILであるRecordのキーはGETでは指せない。`KEYS`と`VALUES`を通し、各キーをEQで丸ごと比べて読む。何も指さないものは形は正しいが答えのない問いなので、エラーではなくその場で投影する。両端を越えたインデックスはNIL(indexOutOfBounds)、Recordが持たないキーはNIL(notFound)で、`[ 10 20 30 ] [ 0 9 ] GET`は`[ 10/1 NIL ]`。HAS?は存在だけを問うので、格納されたNILとキーの不在を区別できる。書き込み側はPUT。第1オペランドがベクトルでもRecordでもなければERROR(`nonContainer`)、整数でないインデックスは`invalidInteger`。"
     },
     "LENGTH": {
       "source": "b60d793b53aec9b8",
@@ -158,20 +166,12 @@
       "summary": "コンテナに書く。ベクトルならインデックスの要素を置き換えた複製、Recordならキーを設定した複製。`[ 1 2 3 ] 1 9 PUT`は`[ 1 9 3 ]`、`R 'z' 3 PUT`は`'z'`を3にしたR。Recordにすでにあるキーは位置を保って新しい値を取り、ないキーは末尾に足されるので、キーの順序はキーが加わった順を記録する。ベクトルの位置はその長さで決まっているので、両端を越えたインデックスはどの枠も名指さず、GETと同じくNIL(indexOutOfBounds)を投影する。呼び出し側が保ちたかったベクトルは、自分で書いたそのベクトルである。値は運ばれるだけなのでNIL(格納された不在)を含め何でもよい。どちらのオペランドも変更されない。コンテナは値だからである。読み取り側はGET。第1オペランドがベクトルでもRecordでもなければERROR(`nonContainer`)、整数でないインデックスは`invalidInteger`。"
     },
     "GROUP": {
-      "source": "9cdc9cbfe0f71c31",
-      "summary": "値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。`[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP`は`[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは`R 'a' GET`で名前によって読めるので、`UNIQUE`や`INDEX-OF`で探す必要はない。ただしそれはキーがScalar・String・Boolean・Symbolのときで、ベクトル・Record・NILをキーとするグループは`KEYS`と`VALUES`を通して読む。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。"
-    },
-    "INDEX-OF": {
-      "source": "119ae66cb3aa687e",
-      "summary": "値と等しい最初の要素のインデックス。`[ 10 20 30 ] 20 INDEX-OF`は`1`。値は1つの要素として丸ごと比較されるので、ベクトルを探せば等しいベクトルを探す。ベクトルが含まない値はNIL(notFound)を投影する。同じ問いを真偽値で問うのはMEMBER?。"
-    },
-    "MEMBER?": {
-      "source": "1b310b6456ad1e65",
-      "summary": "値がベクトルの中に現れるかどうか。`[ 1 2 3 ] 2 MEMBER?`は`TRUE`。所属は値の等価性、つまりUNIQUEやINDEX-OFが使う等価性なので、数だけでなくテキスト、入れ子のベクトル、NILにも働く。探す値は1つの値で、読まれるのではなく比較されるので、ベクトルを探せば1つの要素として探す。`[ [ 1 ] 2 ] [ 1 ] MEMBER?`は`TRUE`。これは`INDEX-OF NIL? NOT`である。"
+      "source": "8e60360e058cc2f8",
+      "summary": "値を同じ位置のキーで束ね、キーからその値のベクトルへのRecordで答える。`[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP`は`[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`で、キーは最初の出現順、どの値もちょうど1回ずつ保たれる。クラスごとの集計、重心の更新、層別の分割の中核である。1つのグループは`R 'a' GET`で名前によって読めるので、`UNIQUE`や探索で探す必要はない。ただしそれはキーがScalar・String・Boolean・Symbolのときで、ベクトル・Record・NILをキーとするグループは`KEYS`と`VALUES`を通して読む。RECORDと同じくキーが先に来る。両オペランドとも同じ長さのベクトルでなければならない。"
     },
     "BSEARCH": {
-      "source": "5667c0f9a552b5ac",
-      "summary": "昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。`[ 1 3 5 7 ] [ 5 ] BSEARCH`は`[ 2 ]`で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ`unsortedInput`を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序を持たない`0/0`を含むベクトルはNIL(domainMiss)を投影し、`0/0`のキーも自分のレーンに同じものを投影する(LANG.VALUES.EXACT)。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用はINDEX-OFのO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。"
+      "source": "c63d19d1c13078fe",
+      "summary": "昇順のベクトルの中の各キーのインデックスを、区間を半分にしながら探す。`[ 1 3 5 7 ] [ 5 ] BSEARCH`は`[ 2 ]`で、単独のキーは単独のインデックスを答え、ないキーのレーンはNIL(notFound)。ベクトルは昇順でなければならず、そうでなければ`unsortedInput`を送出する。順序のないデータの上の二分探索は、何も答えないのではなく何かを答えてしまうからである。順序を持たない`0/0`を含むベクトルはNIL(domainMiss)を投影し、`0/0`のキーも自分のレーンに同じものを投影する(LANG.VALUES.EXACT)。順序の確認はベクトルを1回走査するだけで、その後の各キーはO(log n)なので、m個のキーの費用は線形走査のO(m·n)に対してO(n + m log n)。区間が空になるまで半分にし続けるのはデータに長さが依存するループであり、際限のないループを持たない言語には書けない。"
     },
     "RECORD": {
       "source": "f10752c3e5475b9f",
@@ -202,8 +202,8 @@
       "summary": "ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。`[ 1 2 3 ] [ 2 MUL ] MAP`は`[ 2 4 6 ]`。ブロックの結果は、ベクトルを含め、ブロックが残したちょうど1つの値(LANG.COLLECTIONS.HIGHER)。`[ 1 2 ] [ 1 COLLECT ] MAP`は`[ [ 1 ] [ 2 ] ]`。不在のベクトルはその不在を答える。ベクトルでないものは`nonVector`、ブロックでないものは`notExecutable`、ちょうど1つ以外の値を残すブロック——何も残さない、または`[ 2 MUL 7 ]`のように余分に残す——は`blockContractViolation`。"
     },
     "FILTER": {
-      "source": "bcedc4a9784fddc2",
-      "summary": "述語ブロックがTRUEと答えるベクトルの要素を、順に答える。`[ 1 2 3 4 ] [ 2 GT ] FILTER`は`[ 3 4 ]`。ブロックの答えは真偽値として読まれ、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは`nonVector`、ブロックでないものは`notExecutable`、ちょうど1つ以外の値を残すブロックは`blockContractViolation`、真偽値でない答えは`nonTruthValue`。"
+      "source": "44c439bf34a94990",
+      "summary": "述語ブロックがTRUEかBOTHと答えるベクトルの要素を、順に答える。`[ 1 2 3 4 ] [ 2 GT ] FILTER`は`[ 3 4 ]`。ブロックの答えは真偽値として読まれ、BOTHは真と告げられているのでTRUEと同じく要素を残し、UNKNOWNはFALSEと同じく要素を落とす。ベクトルでないものは`nonVector`、ブロックでないものは`notExecutable`、ちょうど1つ以外の値を残すブロックは`blockContractViolation`、真偽値でない答えは`nonTruthValue`。"
     },
     "FOLD": {
       "source": "1d3959d744c57c3c",
@@ -238,8 +238,8 @@
       "summary": "区切り文字が現れるたびに文字列を分け、部分文字列のベクトルにする。`'a,b,c' ',' TOKENIZE`は`[ 'a' 'b' 'c' ]`。空の区切り文字はCHARSと同じくすべての文字の間で分ける。空の区切り文字に対する逆はJOIN。"
     },
     "SEARCH": {
-      "source": "8e7a41402a7de147",
-      "summary": "あるテキストが別のテキストの中に最初に現れる位置(文字単位)。`'hello world' 'world' SEARCH`は`6`で、CHARSと同じ数え方をする。`'hello' 'z' SEARCH`はNIL(notFound)。空の探すテキストは0で見つかる。これはテキスト版のINDEX-OFで、CHARSの上で書けば位置ごとに窓を比較することになるが、このワードは1回の走査で行う。"
+      "source": "14b917311ac7a1b4",
+      "summary": "あるテキストが別のテキストの中に最初に現れる位置(文字単位)。`'hello world' 'world' SEARCH`は`6`で、CHARSと同じ数え方をする。`'hello' 'z' SEARCH`はNIL(notFound)。空の探すテキストは0で見つかる。これはテキスト版の最初の一致の探索で、CHARSの上で書けば位置ごとに窓を比較することになるが、このワードは1回の走査で行う。"
     },
     "REPLACE": {
       "source": "8fab8ce4d0debe05",
@@ -262,8 +262,8 @@
       "summary": "JSONテキストを値として読む。`'[1, 2]' JSON-DECODE`は`[ 1 2 ]`。オブジェクトはメンバー名をその順にキーとするRecord、配列はベクトル、文字列はString、数はそれが綴る厳密な有理数(`'0.1' JSON-DECODE`は厳密に`1/10`)、`true`/`false`は真偽値、`null`はNILになる。1つのJSON値でないテキスト(壊れている、空、末尾に余分がある、オブジェクトが同じメンバーを2回名指す)は`invalidEncoding`を投影する。これは`NUM`が数を綴らないテキストに投影する理由と同じである。入れ子の深さはワードではなくテキストが決めるので、すでにあるベクトルの上でしか反復しないこの言語では書けない。入れ子の上限を超えた値、数値リテラルの上限より多くの桁の数、具体化の上限より多くのメンバーは、その上限の名前を添えたERROR(`resourceLimitExceeded`)として拒否される。ホストの上限を超えるあらゆる要求の結末であり、決して値にはならない(LANG.MACHINE.LIMITS)。StringでないオペランドはERROR(`nonText`)。"
     },
     "JSON-ENCODE": {
-      "source": "611098ed2b23f7fe",
-      "summary": "値をJSONテキストとして書く。`JSON-DECODE`の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は`true`/`false`、NILは`null`になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(`1/4`は`0.25`)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(`1/3`は`\"1/3\"`、`1/0`は`\"1/0\"`)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、無理数、Stringでないキーを持つRecord)は`domainMiss`を投影する。そのため、`JSON-DECODE`との往復はこれらの数については恒等にならない。JSONには厳密な有理数がないので、字句として書かれた数はそのStringとして戻り、`[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE`は`[ '1/3' 1/4 ]`、つまり最初のレーンはStringになる。数を取り戻すには受け手が`NUM`を適用する。JSONに像を持つそれ以外の値は、与えたとおりに戻る。"
+      "source": "831ac60471079f74",
+      "summary": "値をJSONテキストとして書く。`JSON-DECODE`の逆である。StringをキーとするRecordはキー順のオブジェクト、ベクトルは配列、Stringは文字列、真偽値は`true`/`false`、NILは`null`になる。有限の十進表記を持つ有理数(分母が2^a·5^bの形)はJSONの数として厳密に書かれ(`1/4`は`0.25`)、それ以外のすべての数はAjisaiの字句を文字列に入れて書かれる(`1/3`は`\"1/3\"`、`1/0`は`\"1/0\"`)。どの桁も丸めて捨てられることはない。エンコーダは値が黙って精度を失う場所ではない。JSONに像を持たない値(Symbol、BOTH、無理数、Stringでないキーを持つRecord)は`domainMiss`を投影する。そのため、`JSON-DECODE`との往復はこれらの数については恒等にならない。JSONには厳密な有理数がないので、字句として書かれた数はそのStringとして戻り、`[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE`は`[ '1/3' 1/4 ]`、つまり最初のレーンはStringになる。数を取り戻すには受け手が`NUM`を適用する。JSONに像を持つそれ以外の値は、与えたとおりに戻る。"
     },
     "EXEC": {
       "source": "24306a660d879dd5",

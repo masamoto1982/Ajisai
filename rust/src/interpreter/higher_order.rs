@@ -147,9 +147,9 @@ fn compile_executable_code(interp: &mut Interpreter, val: &Value) -> Result<Exec
 }
 
 /// Whether a higher-order block's predicate result keeps its element, read in
-/// truth position (LANG.VALUES.TRUTH): TRUE keeps it, and FALSE and UNKNOWN — a
-/// NIL read here, whatever its reason — do not, since only a predicate that
-/// holds selects.
+/// truth position (LANG.VALUES.TRUTH): TRUE and BOTH — the values told true —
+/// keep it, and FALSE and UNKNOWN — a NIL read here, whatever its reason — do
+/// not, since only a predicate that holds selects.
 ///
 /// The domains are disjoint (LANG.VALUES.DISJOINT), so nothing else is a truth
 /// value: a scalar is not a Boolean even when it is non-zero, and a singleton
@@ -162,6 +162,10 @@ fn compile_executable_code(interp: &mut Interpreter, val: &Value) -> Result<Exec
 pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
     if let Some(b) = condition_result.as_truth() {
         return Ok(b);
+    }
+    // BOTH is told true, so it keeps the element (LANG.VALUES.TRUTH).
+    if condition_result.is_both() {
+        return Ok(true);
     }
     if condition_result.is_nil() {
         return Ok(false);

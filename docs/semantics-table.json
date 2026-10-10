@@ -97,6 +97,11 @@
       "outcome": "value"
     },
     {
+      "word": "BOTH",
+      "inputs": [],
+      "outcome": "value"
+    },
+    {
       "word": "AND",
       "inputs": [
         "scalarOne",
@@ -16883,6 +16888,1158 @@
         "codeBlock"
       ],
       "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "scalarNullity"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarNullity",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "scalarNullity"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "scalarNullity"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "nil:conflict"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RECONCILE",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
     },
     {
       "word": "EQ",
@@ -55494,2310 +56651,6 @@
     },
     {
       "word": "GROUP",
-      "inputs": [
-        "codeBlock",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarOne",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarZero",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNegative",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarNullity",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "scalarLarge",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "booleanTrue",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "textShort",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "scalarZero"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "scalarNegative"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "scalarNullity"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "scalarLarge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "booleanTrue"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "textShort"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "vectorPair"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "vectorTriple"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "vectorHuge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "nilLiteral"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorPair",
-        "codeBlock"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "scalarZero"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "scalarNegative"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "scalarNullity"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "scalarLarge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "booleanTrue"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "textShort"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "vectorPair"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "vectorTriple"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "vectorHuge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "nilLiteral"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorTriple",
-        "codeBlock"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "scalarOne"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "scalarNegative"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "scalarNullity"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "scalarLarge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "booleanTrue"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "textShort"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "vectorPair"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "vectorTriple"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "vectorHuge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "nilLiteral"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "vectorHuge",
-        "codeBlock"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "scalarOne"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "scalarZero"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "scalarNegative"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "scalarNullity"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "scalarLarge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "booleanTrue"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "textShort"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "vectorPair"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "vectorTriple"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "vectorHuge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "nilLiteral",
-        "codeBlock"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "scalarZero"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "scalarNegative"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "scalarNullity"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "scalarLarge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "booleanTrue"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "textShort"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "vectorPair"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "vectorTriple"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "vectorHuge"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "nilLiteral"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "INDEX-OF",
-      "inputs": [
-        "codeBlock",
-        "codeBlock"
-      ],
-      "outcome": "nil:notFound"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarOne",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarZero",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNegative",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarNullity",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "scalarLarge",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "booleanTrue",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "scalarNullity"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "nilLiteral"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "textShort",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "scalarNullity"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "nilLiteral"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorPair",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "scalarNullity"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "nilLiteral"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorTriple",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "scalarNullity"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "nilLiteral"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "vectorHuge",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "scalarOne"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "scalarZero"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "scalarNegative"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "scalarNullity"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "scalarLarge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "booleanTrue"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "textShort"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "vectorPair"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "vectorTriple"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "vectorHuge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "nilLiteral",
-        "codeBlock"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "scalarNullity"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
-      "inputs": [
-        "codeBlock",
-        "nilLiteral"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MEMBER?",
       "inputs": [
         "codeBlock",
         "codeBlock"

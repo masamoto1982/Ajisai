@@ -43,6 +43,7 @@ pub(crate) fn contains_absent_lane(value: &Value) -> bool {
         ValueData::Tensor { .. }
         | ValueData::Scalar(_)
         | ValueData::Boolean(_)
+        | ValueData::Both
         | ValueData::ExactScalar(_)
         | ValueData::Symbol(_)
         | ValueData::Text(_) => false,

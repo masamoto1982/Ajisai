@@ -474,7 +474,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 10 20 30 ] 20 INDEX-OF"
+    "source": "[ 10 20 30 ] 20 BSEARCH"
    },
    "expect": {
     "/status": "ok",
@@ -586,7 +586,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] 2 MEMBER?"
+    "source": "[ 1 2 3 ] [ 2 EQ ] FILTER LENGTH 0 GT"
    },
    "expect": {
     "/status": "ok",

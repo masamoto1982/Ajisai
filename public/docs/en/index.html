@@ -1314,15 +1314,15 @@ FILTER</code></td>
                 
                 <h3 id="word-index">Built-in Words</h3>
 <!-- BEGIN generated word index (scripts/generate-word-reference.mjs; do not edit) -->
-<p>The 78 Words of the canonical vocabulary, by family, generated from <code>spec/words.json</code>. 48 of them form the Semantic Kernel and 30 are Standard Words; every one is an ordinary Core Word reached by its plain name, and the tier only says where it sits in the design (<a href="#dictionaries">Dictionaries and Word identity</a>). Choose a Word for its contract — syntax, stack effect, NIL policy, ERROR conditions — or a page for the explanation with samples.</p>
+<p>The 78 Words of the canonical vocabulary, by family, generated from <code>spec/words.json</code>. 50 of them form the Semantic Kernel and 28 are Standard Words; every one is an ordinary Core Word reached by its plain name, and the tier only says where it sits in the design (<a href="#dictionaries">Dictionaries and Word identity</a>). Choose a Word for its contract — syntax, stack effect, NIL policy, ERROR conditions — or a page for the explanation with samples.</p>
 <div class="ref-table-wrap word-jump">
 <table class="ref-table">
 <thead><tr><th>Family</th><th>Words</th><th>Explained in</th></tr></thead>
 <tbody>
-<tr><td class="notes">Logic</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
+<tr><td class="notes">Logic</td><td><a href="#word-TRUE"><code>TRUE</code></a> <a href="#word-FALSE"><code>FALSE</code></a> <a href="#word-BOTH"><code>BOTH</code></a> <a href="#word-AND"><code>AND</code></a> <a href="#word-NOT"><code>NOT</code></a> <a href="#word-SELECT"><code>SELECT</code></a> <a href="#word-RECONCILE"><code>RECONCILE</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
 <tr><td class="notes">Comparison</td><td><a href="#word-EQ"><code>EQ</code></a> <a href="#word-LT"><code>LT</code></a> <a href="#word-GT"><code>GT</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
 <tr><td class="notes">Exact arithmetic</td><td><a href="#word-ADD"><code>ADD</code></a> <a href="#word-SUB"><code>SUB</code></a> <a href="#word-MUL"><code>MUL</code></a> <a href="#word-DIV"><code>DIV</code></a> <a href="#word-FLOOR"><code>FLOOR</code></a> <a href="#word-ROUND"><code>ROUND</code></a> <a href="#word-MIN"><code>MIN</code></a> <a href="#word-MAX"><code>MAX</code></a> <a href="#word-SQRT"><code>SQRT</code></a> <a href="#word-POW"><code>POW</code></a> <a href="#word-GCD"><code>GCD</code></a> <a href="#word-RATIO"><code>RATIO</code></a></td><td class="notes"><a href="#operators">2.4.2.1 Logic, comparison, arithmetic</a></td></tr>
-<tr><td class="notes">Vectors</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-INDEX-OF"><code>INDEX-OF</code></a> <a href="#word-MEMBER_3f"><code>MEMBER?</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">2.4.2.2 Vector operations</a></td></tr>
+<tr><td class="notes">Vectors</td><td><a href="#word-GET"><code>GET</code></a> <a href="#word-LENGTH"><code>LENGTH</code></a> <a href="#word-TAKE"><code>TAKE</code></a> <a href="#word-DROP"><code>DROP</code></a> <a href="#word-CONCAT"><code>CONCAT</code></a> <a href="#word-REVERSE"><code>REVERSE</code></a> <a href="#word-COLLECT"><code>COLLECT</code></a> <a href="#word-RANGE"><code>RANGE</code></a> <a href="#word-FILL"><code>FILL</code></a> <a href="#word-SHAPE"><code>SHAPE</code></a> <a href="#word-RESHAPE"><code>RESHAPE</code></a> <a href="#word-FLATTEN"><code>FLATTEN</code></a> <a href="#word-DEPTH"><code>DEPTH</code></a> <a href="#word-SORT"><code>SORT</code></a> <a href="#word-ORDER"><code>ORDER</code></a> <a href="#word-UNIQUE"><code>UNIQUE</code></a> <a href="#word-ZIP"><code>ZIP</code></a> <a href="#word-PUT"><code>PUT</code></a> <a href="#word-BSEARCH"><code>BSEARCH</code></a></td><td class="notes"><a href="#vector-ops">2.4.2.2 Vector operations</a></td></tr>
 <tr><td class="notes">Records</td><td><a href="#word-TALLY"><code>TALLY</code></a> <a href="#word-GROUP"><code>GROUP</code></a> <a href="#word-RECORD"><code>RECORD</code></a> <a href="#word-KEYS"><code>KEYS</code></a> <a href="#word-VALUES"><code>VALUES</code></a> <a href="#word-WITHOUT"><code>WITHOUT</code></a> <a href="#word-HAS_3f"><code>HAS?</code></a> <a href="#word-MERGE"><code>MERGE</code></a></td><td class="notes"><a href="#records">2.4.2.3 Keyed data</a></td></tr>
 <tr><td class="notes">Iteration</td><td><a href="#word-MAP"><code>MAP</code></a> <a href="#word-FILTER"><code>FILTER</code></a> <a href="#word-FOLD"><code>FOLD</code></a> <a href="#word-SCAN"><code>SCAN</code></a></td><td class="notes"><a href="#control">2.4.2.5 Choice and iteration</a></td></tr>
 <tr><td class="notes">Text</td><td><a href="#word-CHARS"><code>CHARS</code></a> <a href="#word-JOIN"><code>JOIN</code></a> <a href="#word-TRIM"><code>TRIM</code></a> <a href="#word-UPPER"><code>UPPER</code></a> <a href="#word-LOWER"><code>LOWER</code></a> <a href="#word-TOKENIZE"><code>TOKENIZE</code></a> <a href="#word-SEARCH"><code>SEARCH</code></a> <a href="#word-REPLACE"><code>REPLACE</code></a> <a href="#word-NUM"><code>NUM</code></a> <a href="#word-STR"><code>STR</code></a> <a href="#word-FORMAT"><code>FORMAT</code></a> <a href="#word-JSON-DECODE"><code>JSON-DECODE</code></a> <a href="#word-JSON-ENCODE"><code>JSON-ENCODE</code></a></td><td class="notes"><a href="#strings-ops">2.4.2.4 String operations</a></td></tr>
@@ -1699,9 +1699,10 @@ FILTER</code></td>
                     <p class="ref-note">Comparison decides exactly across every value the Words can build, rationals and square roots included. So a comparison always returns <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
 
                     <h3 id="logic">Logic</h3>
-                    <p>Ajisai has two logical Words, <code>AND</code> and <code>NOT</code>, which operate on the Booleans <code>TRUE</code> and <code>FALSE</code>. Like any other Word, each is written by its spelling. Logical OR is written by De Morgan's law as <code>a NOT b NOT AND NOT</code>.</p>
+                    <p>Ajisai's truth is four-valued, after Belnap: <code>TRUE</code>, <code>FALSE</code>, <code>BOTH</code> (told true and told false at once) and UNKNOWN (a <code>NIL</code> read in truth position). Two logical Words, <code>AND</code> and <code>NOT</code>, combine them. Like any other Word, each is written by its spelling. Logical OR is written by De Morgan's law as <code>a NOT b NOT AND NOT</code>. <code>NOT</code> swaps <code>TRUE</code> and <code>FALSE</code> and leaves <code>BOTH</code> and UNKNOWN as they are; <code>AND</code> of <code>BOTH</code> and UNKNOWN is <code>FALSE</code>.</p>
+                    <p><code>RECONCILE</code> answers what two sources agree on: equal values agree, an absent source yields to the other, two different truth values are <code>BOTH</code>, and any other two different values are a <code>NIL</code> whose reason is <code>conflict</code>. A conflict is not settled by a third source, so folding <code>RECONCILE</code> over many sources gives the same answer in any order. <code>SELECT</code> given <code>BOTH</code> answers its two candidates reconciled.</p>
                     <h3>NIL passes through</h3>
-                    <p>In a truth position, <code>NIL</code> reads as "unknown" and combines under strong Kleene logic. When the other operand alone decides the answer, that is the answer (an <code>AND</code> with a <code>FALSE</code> is <code>FALSE</code>); when it does not, <code>NIL</code> stays in the result with its reason intact.</p>
+                    <p>In a truth position, <code>NIL</code> reads as "unknown" and combines under Belnap's tables, which are strong Kleene logic wherever <code>BOTH</code> is absent. When the other operand alone decides the answer, that is the answer (an <code>AND</code> with a <code>FALSE</code> is <code>FALSE</code>); when it does not, <code>NIL</code> stays in the result with its reason intact.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1713,6 +1714,16 @@ FILTER</code></td>
                                     <td><code>TRUE FALSE AND</code></td>
                                     <td><code>FALSE</code></td>
                                     <td class="notes">Logical AND of two decided values.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>TRUE FALSE RECONCILE</code></td>
+                                    <td><code>BOTH</code></td>
+                                    <td class="notes">Two sources telling different truths.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>NIL 5 RECONCILE</code></td>
+                                    <td><code>5/1</code></td>
+                                    <td class="notes">An absent source yields to the other.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1811,9 +1822,24 @@ FILTER</code></td>
 <dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
 </dl>
 </div>
+<div class="word-entry" id="word-BOTH">
+<h4><code>BOTH</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>The truth value BOTH: a truth told TRUE and told FALSE at once (LANG.VALUES.TRUTH), as <code>TRUE FALSE RECONCILE</code> answers. It is a Boolean, so <code>BOTH NIL?</code> is <code>FALSE</code>; <code>BOTH NOT</code> is <code>BOTH</code>, <code>BOTH TRUE AND</code> is <code>BOTH</code>, <code>BOTH FALSE AND</code> is <code>FALSE</code>, and <code>BOTH NIL AND</code> is <code>FALSE</code>. <code>SELECT</code> given BOTH answers its two candidates reconciled.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>BOTH</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">-&gt; [ BOTH ]</span></dd>
+<dt>Stack</dt><dd>0 input(s) → 1 output(s)</dd>
+<dt>NIL policy</dt><dd><code>preserveReason</code>; projection: none</dd>
+<dt>Partiality</dt><dd><code>total</code></dd>
+<dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code></dd>
+</dl>
+</div>
 <div class="word-entry" id="word-AND">
 <h4><code>AND</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): <code>TRUE FALSE AND</code> is <code>FALSE</code>, and element-wise over Vectors, <code>[ TRUE TRUE ] [ TRUE FALSE ] AND</code> is <code>[ TRUE FALSE ]</code>. A NIL read here is UNKNOWN: FALSE settles the answer against it, <code>NIL FALSE AND</code> is <code>FALSE</code>, and anything else leaves it UNKNOWN with its reason kept. A disjunction is <code>a NOT b NOT AND NOT</code>. An operand that is neither a truth value nor a NIL is <code>nonTruthValue</code>.</p>
+<p>Conjunction under Belnap's four-valued table (LANG.VALUES.TRUTH): <code>TRUE FALSE AND</code> is <code>FALSE</code>, and element-wise over Vectors, <code>[ TRUE TRUE ] [ TRUE FALSE ] AND</code> is <code>[ TRUE FALSE ]</code>. A NIL read here is UNKNOWN: FALSE settles the answer against it, <code>NIL FALSE AND</code> is <code>FALSE</code>, BOTH meets it at FALSE, <code>BOTH NIL AND</code> is <code>FALSE</code>, and TRUE leaves it UNKNOWN with its reason kept. A disjunction is <code>a NOT b NOT AND NOT</code>. An operand that is neither a truth value nor a NIL is <code>nonTruthValue</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>TRUE FALSE AND</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ a AND b ]</span></dd>
@@ -1830,7 +1856,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-NOT">
 <h4><code>NOT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Negation under the strong Kleene table (LANG.VALUES.TRUTH): <code>TRUE NOT</code> is <code>FALSE</code>, and element-wise over Vectors, <code>[ TRUE FALSE ] NOT</code> is <code>[ FALSE TRUE ]</code>. UNKNOWN — a NIL read here — stays UNKNOWN with its reason kept. An operand that is neither a truth value nor a NIL is <code>nonTruthValue</code>.</p>
+<p>Negation under Belnap's four-valued table (LANG.VALUES.TRUTH): <code>TRUE NOT</code> is <code>FALSE</code>, and element-wise over Vectors, <code>[ TRUE FALSE ] NOT</code> is <code>[ FALSE TRUE ]</code>. BOTH stays BOTH, <code>BOTH NOT</code> is <code>BOTH</code>, and UNKNOWN — a NIL read here — stays UNKNOWN with its reason kept. An operand that is neither a truth value nor a NIL is <code>nonTruthValue</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>TRUE NOT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] -&gt; [ NOT a ]</span></dd>
@@ -1847,7 +1873,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SELECT">
 <h4><code>SELECT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Choose between two already-computed values by a truth value: <code>'yes' 'no' TRUE SELECT</code> is <code>'yes'</code> and <code>'yes' 'no' FALSE SELECT</code> is <code>'no'</code>. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.</p>
+<p>Choose between two already-computed values by a truth value: <code>'yes' 'no' TRUE SELECT</code> is <code>'yes'</code> and <code>'yes' 'no' FALSE SELECT</code> is <code>'no'</code>. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. A BOTH lane chooses both, answering the two candidates reconciled (RECONCILE): <code>1 1 BOTH SELECT</code> is <code>1</code>, and two different candidates are a conflict. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'yes' ] [ 'no' ] TRUE SELECT</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ whenTrue ] [ whenFalse ] [ mask ] -&gt; [ chosen ]</span></dd>
@@ -1862,10 +1888,26 @@ FILTER</code></td>
 <dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.COLLECTIONS.LIFT</code></dd>
 </dl>
 </div>
+<div class="word-entry" id="word-RECONCILE">
+<h4><code>RECONCILE</code> <span class="word-tier">Semantic Kernel</span></h4>
+<p>What two sources agree on (LANG.VALUES.TRUTH): <code>1 1 RECONCILE</code> is <code>1</code>, and an absence yields to what the other source holds, <code>NIL 5 RECONCILE</code> is <code>5</code>. Two different truth values are BOTH, <code>TRUE FALSE RECONCILE</code> is <code>BOTH</code>; any other two different values have nothing they agree on and project NIL(conflict), <code>'Tokyo' 'Osaka' RECONCILE NIL-REASON</code> is <code>'conflict'</code>. A conflict is not settled by a third source, so the Word is associative, commutative and idempotent, and a FOLD of it over many sources does not depend on their order. Like EQ it compares its operands whole: <code>[ 1 2 ] [ 1 3 ] RECONCILE</code> is a conflict, and a program that reconciles lane by lane ZIPs and MAPs.</p>
+<dl class="word-contract">
+<dt>Syntax</dt><dd><code>TRUE FALSE RECONCILE</code></dd>
+<dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ agreed ]</span></dd>
+<dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
+<dt>Operands</dt><dd><code>element</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
+<dt>NIL policy</dt><dd><code>consumeNil</code>; projection: <code>sourcesDisagree</code> → <code>conflict</code></dd>
+<dt>Partiality</dt><dd><code>projecting</code></dd>
+<dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
+<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
+<dt>Effects</dt><dd>none</dd>
+<dt>Clauses</dt><dd><code>LANG.VALUES.TRUTH</code>, <code>LANG.VALUES.DENOTATION</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+</dl>
+</div>
 <h3 id="family-comparison">Contracts: Comparison</h3>
 <div class="word-entry" id="word-EQ">
 <h4><code>EQ</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: <code>1 1/1 EQ</code> is <code>TRUE</code>, <code>2 SQRT 2 SQRT MUL 2 EQ</code> is <code>TRUE</code>, <code>100 0 DIV 1/0 EQ</code> is <code>TRUE</code>, <code>0/0 0/0 EQ</code> is <code>TRUE</code>, and <code>[ 1 2 ] [ 1 2 ] EQ</code> is <code>TRUE</code> — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): <code>-1 SQRT 1 EQ</code> is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so <code>[ NIL ] [ NIL ] EQ</code> is <code>TRUE</code>; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in <code>1 COLLECT</code> first.</p>
+<p>Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: <code>1 1/1 EQ</code> is <code>TRUE</code>, <code>2 SQRT 2 SQRT MUL 2 EQ</code> is <code>TRUE</code>, <code>100 0 DIV 1/0 EQ</code> is <code>TRUE</code>, <code>0/0 0/0 EQ</code> is <code>TRUE</code>, and <code>[ 1 2 ] [ 1 2 ] EQ</code> is <code>TRUE</code> — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): <code>-1 SQRT 1 EQ</code> is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so <code>[ NIL ] [ NIL ] EQ</code> is <code>TRUE</code>; that is the equality UNIQUE and RECONCILE use, and a program that wants two possibly absent values compared rather than passed through wraps each in <code>1 COLLECT</code> first.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>1 1 EQ</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ a ] [ b ] -&gt; [ TRUE | FALSE ]</span></dd>
@@ -2365,7 +2407,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">More structural Words: <code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>. <code>INDEX-OF</code> searches instead of indexing: <code>[ 10 20 30 ] 20 INDEX-OF</code> is <code>1/1</code>, and a value that is not found is <code>NIL</code>, not an error. To ask only whether a value is present, use <code>MEMBER?</code> (<code>[ 1 2 3 ] 2 MEMBER?</code> is <code>TRUE</code>); for an ascending Vector use <code>BSEARCH</code> (<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2/1 ]</code> — binary search: the iteration of halving an interval again and again is not something you can write yourself). <code>BSEARCH</code> raises an error when given a Vector that is not ascending.</p>
+                    <p class="ref-note">More structural Words: <code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>. To search instead of indexing, an ascending Vector uses <code>BSEARCH</code> (<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2/1 ]</code> — binary search: the iteration of halving an interval again and again is not something you can write yourself). <code>BSEARCH</code> raises an error when given a Vector that is not ascending.</p>
 
                     <h3 id="ordering">Ordering, counting and shape</h3>
                     <p>The operations that need to see a whole Vector at once are covered by seven Words. Each of them could be written out using only the rest of the vocabulary, but written out it costs asymptotically more. That alone is why they exist as Words.</p>
@@ -2425,7 +2467,7 @@ FILTER</code></td>
 <h3 id="family-collection">Contracts: Vectors</h3>
 <div class="word-entry" id="word-GET">
 <h4><code>GET</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>Read a container: the element of a Vector at an index, or the value of a Record under a key — <code>[ 10 20 30 ] 1 GET</code> is <code>20</code>, <code>R 'x' GET</code> is what R holds under <code>'x'</code>. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: <code>[ 10 20 30 ] [ 2 0 ] GET</code> is <code>[ 30 10 ]</code>, a permutation or a gather in one call. For the same reason a Record key that is itself a Vector, a Record or NIL is not addressed by GET: <code>R VALUES R KEYS k INDEX-OF GET</code> reads it, since INDEX-OF compares its needle whole. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and <code>[ 10 20 30 ] [ 0 9 ] GET</code> is <code>[ 10/1 NIL ]</code>. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (<code>nonContainer</code>); an index that is not an integer is <code>invalidInteger</code>.</p>
+<p>Read a container: the element of a Vector at an index, or the value of a Record under a key — <code>[ 10 20 30 ] 1 GET</code> is <code>20</code>, <code>R 'x' GET</code> is what R holds under <code>'x'</code>. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: <code>[ 10 20 30 ] [ 2 0 ] GET</code> is <code>[ 30 10 ]</code>, a permutation or a gather in one call. For the same reason a Record key that is itself a Vector, a Record or NIL is not addressed by GET: it is read through <code>KEYS</code> and <code>VALUES</code>, comparing each key whole with EQ. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and <code>[ 10 20 30 ] [ 0 9 ] GET</code> is <code>[ 10/1 NIL ]</code>. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (<code>nonContainer</code>); an index that is not an integer is <code>invalidInteger</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 10 20 30 ] 1 GET</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ container ] [ key ] -&gt; [ value ]</span></dd>
@@ -2726,43 +2768,9 @@ FILTER</code></td>
 <dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.COLLECTIONS.LIFT</code>, <code>LANG.FAILURE.PROJECT</code>, <code>LANG.MACHINE.LIMITS</code></dd>
 </dl>
 </div>
-<div class="word-entry" id="word-INDEX-OF">
-<h4><code>INDEX-OF</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>The index of the first element equal to the value: <code>[ 10 20 30 ] 20 INDEX-OF</code> is <code>1</code>. The value is an element, compared whole, so a Vector needle looks for an equal Vector. A value the Vector does not contain projects NIL(notFound); MEMBER? asks the same question as a truth value.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ 1 2 ] 2 INDEX-OF</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ vec ] [ x ] -&gt; [ idx ]</span></dd>
-<dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
-<dt>Operands</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthroughThenProject</code>; projection: <code>notFound</code> → <code>notFound</code></dd>
-<dt>Partiality</dt><dd><code>projecting</code></dd>
-<dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>ERROR conditions</dt><dd><code>nonVector</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code>, <code>LANG.FAILURE.PROJECT</code></dd>
-</dl>
-</div>
-<div class="word-entry" id="word-MEMBER_3f">
-<h4><code>MEMBER?</code> <span class="word-tier">Standard · namedPattern</span></h4>
-<p>Whether the value occurs in the vector: <code>[ 1 2 3 ] 2 MEMBER?</code> is <code>TRUE</code>. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts, nested vectors and NILs as well as numbers. The needle is one value, compared rather than read, so a Vector needle is looked for as an element: <code>[ [ 1 ] 2 ] [ 1 ] MEMBER?</code> is <code>TRUE</code>. It is <code>INDEX-OF NIL? NOT</code>.</p>
-<dl class="word-contract">
-<dt>Syntax</dt><dd><code>[ 1 2 3 ] 2 MEMBER?</code></dd>
-<dt>Stack effect</dt><dd><span class="notation">[ vec ] [ x ] -&gt; [ TRUE | FALSE ]</span></dd>
-<dt>Stack</dt><dd>2 input(s) → 1 output(s)</dd>
-<dt>Operands</dt><dd><code>data</code>, <code>element</code> (LANG.FAILURE.PASSTHROUGH)</dd>
-<dt>NIL policy</dt><dd><code>passthrough</code>; projection: none</dd>
-<dt>Partiality</dt><dd><code>total</code></dd>
-<dt>Field</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
-<dt>Purity / determinism</dt><dd><code>pure</code> / <code>deterministic</code></dd>
-<dt>Effects</dt><dd>none</dd>
-<dt>ERROR conditions</dt><dd><code>nonVector</code></dd>
-<dt>Clauses</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.MACHINE.LIMITS</code></dd>
-</dl>
-</div>
 <div class="word-entry" id="word-BSEARCH">
 <h4><code>BSEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>The index of each key in an ascending vector, found by halving: <code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2 ]</code>, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises <code>unsortedInput</code>, since a binary search over unordered data would answer something rather than nothing, and one holding <code>0/0</code>, which has no order, projects NIL(domainMiss), as does a key of <code>0/0</code> in its own lane (LANG.VALUES.EXACT). Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.</p>
+<p>The index of each key in an ascending vector, found by halving: <code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code> is <code>[ 2 ]</code>, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises <code>unsortedInput</code>, since a binary search over unordered data would answer something rather than nothing, and one holding <code>0/0</code>, which has no order, projects NIL(domainMiss), as does a key of <code>0/0</code> in its own lane (LANG.VALUES.EXACT). Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against a linear scan's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ sorted ] [ keys ] -&gt; [ indices ]</span></dd>
@@ -2940,7 +2948,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-GROUP">
 <h4><code>GROUP</code> <span class="word-tier">Standard · operational</span></h4>
-<p>Bundle values by the key at the same position, as a Record from key to the Vector of its values: <code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code> is <code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; <code>R 'a' GET</code> reads one group by name, with no <code>UNIQUE</code> or <code>INDEX-OF</code> to find it — a key that is a Scalar, String, Boolean or Symbol; a group keyed by a Vector, a Record or NIL is read through <code>KEYS</code> and <code>VALUES</code> instead. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.</p>
+<p>Bundle values by the key at the same position, as a Record from key to the Vector of its values: <code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code> is <code>[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD</code>, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; <code>R 'a' GET</code> reads one group by name, with no <code>UNIQUE</code> or search to find it — a key that is a Scalar, String, Boolean or Symbol; a group keyed by a Vector, a Record or NIL is read through <code>KEYS</code> and <code>VALUES</code> instead. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ keys ] [ values ] -&gt; [ record ]</span></dd>
@@ -3439,7 +3447,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SEARCH">
 <h4><code>SEARCH</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>The position, in characters, at which a text first occurs in another: <code>'hello world' 'world' SEARCH</code> is <code>6</code>, counted the way CHARS counts, and <code>'hello' 'z' SEARCH</code> is NIL(notFound). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.</p>
+<p>The position, in characters, at which a text first occurs in another: <code>'hello world' 'world' SEARCH</code> is <code>6</code>, counted the way CHARS counts, and <code>'hello' 'z' SEARCH</code> is NIL(notFound). An empty needle is found at 0. This is a first-match search for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>'hello world' 'world' SEARCH</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ text ] [ needle ] -&gt; [ index ]</span></dd>
@@ -3540,7 +3548,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-JSON-ENCODE">
 <h4><code>JSON-ENCODE</code> <span class="word-tier">Standard · algorithm</span></h4>
-<p>Write a value as JSON text, the inverse of <code>JSON-DECODE</code>: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean <code>true</code>/<code>false</code>, a NIL <code>null</code>. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — <code>1/4</code> is <code>0.25</code> — and every other number is written as its Ajisai lexeme inside a string, <code>1/3</code> as <code>&quot;1/3&quot;</code> and <code>1/0</code> as <code>&quot;1/0&quot;</code>, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects <code>domainMiss</code>. The round trip through <code>JSON-DECODE</code> is therefore not the identity for those numbers: JSON has no exact rational, so a number written as a lexeme comes back as that String, and <code>[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE</code> is <code>[ '1/3' 1/4 ]</code> — a String in the first lane, where the sender must apply <code>NUM</code> to recover the number. Every other value with a JSON image comes back as it was given.</p>
+<p>Write a value as JSON text, the inverse of <code>JSON-DECODE</code>: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean <code>true</code>/<code>false</code>, a NIL <code>null</code>. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — <code>1/4</code> is <code>0.25</code> — and every other number is written as its Ajisai lexeme inside a string, <code>1/3</code> as <code>&quot;1/3&quot;</code> and <code>1/0</code> as <code>&quot;1/0&quot;</code>, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, BOTH, an irrational, a Record with a non-String key — projects <code>domainMiss</code>. The round trip through <code>JSON-DECODE</code> is therefore not the identity for those numbers: JSON has no exact rational, so a number written as a lexeme comes back as that String, and <code>[ 1/3 1/4 ] JSON-ENCODE JSON-DECODE</code> is <code>[ '1/3' 1/4 ]</code> — a String in the first lane, where the sender must apply <code>NUM</code> to recover the number. Every other value with a JSON image comes back as it was given.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 'a' ] [ 1 ] RECORD JSON-ENCODE</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ value ] -&gt; [ text ]</span></dd>
@@ -3790,7 +3798,7 @@ SELECT</code></td>
                                 <tr>
                                     <td><code>[ 1 3 5 8 ] [ 2 DIV 'M' BIND M FLOOR M EQ ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">"Does at least one element satisfy the predicate?" <code>MAP</code> to a Vector of Booleans, then fold with logical OR starting from <code>FALSE</code>. To ask only whether a specific value is present, <code>[ 1 2 3 ] 2 MEMBER?</code> (<code>TRUE</code>) is simpler.</td>
+                                    <td class="notes">"Does at least one element satisfy the predicate?" <code>MAP</code> to a Vector of Booleans, then fold with logical OR starting from <code>FALSE</code>. To ask only whether a specific value is present, <code>[ 1 2 3 ] [ 2 EQ ] FILTER LENGTH 0 GT</code> (<code>TRUE</code>) is simpler.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -3887,7 +3895,7 @@ SELECT</code></td>
 </div>
 <div class="word-entry" id="word-FILTER">
 <h4><code>FILTER</code> <span class="word-tier">Standard · operational</span></h4>
-<p>The elements of a Vector for which a predicate block answers TRUE, in order: <code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code> is <code>[ 3 4 ]</code>. The block's answer is read as a truth value, and an UNKNOWN drops the element like FALSE does. A non-Vector is <code>nonVector</code>, a non-block <code>notExecutable</code>, a block that leaves other than exactly one value <code>blockContractViolation</code>, and an answer that is not a truth value <code>nonTruthValue</code>.</p>
+<p>The elements of a Vector for which a predicate block answers TRUE or BOTH, in order: <code>[ 1 2 3 4 ] [ 2 GT ] FILTER</code> is <code>[ 3 4 ]</code>. The block's answer is read as a truth value, BOTH keeps the element as TRUE does, since it was told true, and an UNKNOWN drops it like FALSE does. A non-Vector is <code>nonVector</code>, a non-block <code>notExecutable</code>, a block that leaves other than exactly one value <code>blockContractViolation</code>, and an answer that is not a truth value <code>nonTruthValue</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 1 2 3 ] [ 2 EQ ] FILTER</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ vec ] [ pred ] -&gt; [ kept ]</span></dd>
@@ -4295,7 +4303,7 @@ SELECT</code></td>
                         </div>
                     </div>
                     <h3>Ordering by key, ties included</h3>
-                    <p>Sorting the values and then looking up their original positions is the obvious way to get an ordering, but it gives the wrong answer exactly when it matters. With two equal distances, <code>SORT</code> followed by <code>INDEX-OF</code> finds the same position twice, so "the three nearest" can return two neighbours, or four. <code>ORDER</code> answers the question <code>SORT</code> throws away — <em>which position comes in which order</em> — and answers it stably, so equal keys keep the order they were written in.</p>
+                    <p>Sorting the values and then looking up their original positions is the obvious way to get an ordering, but it gives the wrong answer exactly when it matters. With two equal distances, <code>SORT</code> followed by a search for each value finds the same position twice, so "the three nearest" can return two neighbours, or four. <code>ORDER</code> answers the question <code>SORT</code> throws away — <em>which position comes in which order</em> — and answers it stably, so equal keys keep the order they were written in.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
