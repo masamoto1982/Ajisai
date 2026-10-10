@@ -9,7 +9,7 @@
 // in the summary without touching this script.
 //
 // The summary only reports. The gate is scripts/check-coverage-ratchet.mjs,
-// which fails CI when a QL-A file loses branch or line coverage against
+// which fails CI when a QL-A or QL-B file loses branch or line coverage against
 // docs/quality/coverage-baseline.json; every other figure here is evidence
 // for a reviewer, not a threshold.
 //
@@ -31,7 +31,7 @@ const cell = (metric) => `${pct(metric)} (${metric.count - metric.covered} misse
 
 const out = [];
 out.push('## Rust coverage (`cargo llvm-cov --branch`, pinned nightly)', '');
-out.push('QL-A files are gated: CI fails if one loses branch or line coverage against `docs/quality/coverage-baseline.json`. Every other figure is reported only.', '');
+out.push('QL-A and QL-B files are gated: CI fails if one loses branch or line coverage against `docs/quality/coverage-baseline.json`. Every other figure is reported only.', '');
 out.push('| Scope | Branches | Lines | Regions | Functions |', '|---|---|---|---|---|');
 out.push(
   `| **Workspace** | ${cell(total.branches)} | ${cell(total.lines)} | ${cell(total.regions)} | ${pct(total.functions)} |`,
