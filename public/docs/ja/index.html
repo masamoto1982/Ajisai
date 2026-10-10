@@ -119,7 +119,7 @@
                     <h4>1. 基本的な表示規則</h4>
                     <ul class="ref-list">
                         <li><strong>数値</strong>: <code>分子/分母</code>の形の厳密な分数として表示されます。整数の<code>3</code>は<code>3/1</code>と描画されます。</li>
-                        <li><strong>真偽値</strong>: <code>TRUE</code>または<code>FALSE</code>と表示されます。</li>
+                        <li><strong>真偽値</strong>: <code>TRUE</code>・<code>FALSE</code>・<code>BOTH</code>のいずれかで表示されます。</li>
                         <li><strong>値の不在</strong>: <code>NIL</code>と表示されます。</li>
                     </ul>
                     <p>これらはStack領域における標準的な描画形式であり、本書のExpected value列の記載内容と一致します。画面が<code>3/1</code>ではなく<code>3</code>と表示している場合、それは次に述べるLaTeX表示モードが有効になっているためです。この設定はブラウザに記憶され、再読み込みしても引き継がれるので、以前の閲覧で有効にしたまま忘れていることがあります。Expected value列と見比べるときは、チェックを外した状態を基準としてください。</p>
@@ -169,21 +169,18 @@
 <path d="M170,216 L198,216" class="arrow" marker-end="url(#lexer-arrow)"/>
 <rect x="200" y="196" width="460" height="40" rx="5" class="action"/><text x="214" y="221" class="label">次の空白までを1語として切り出す → 2へ</text>
 <text x="20" y="276" class="stage">2. 語の分類 — 語の全体で、左から順に判定</text>
-<rect x="20" y="290" width="120" height="44" rx="5"/><text x="80" y="317" text-anchor="middle" class="label">ちょうど [ か ]</text>
-<path d="M80,334 L80,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="80" y="370" text-anchor="middle" class="result">区切り記号</text>
-<rect x="150" y="290" width="120" height="44" rx="5"/><text x="210" y="317" text-anchor="middle" class="label">[ ] を含む</text>
-<path d="M210,334 L210,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="210" y="370" text-anchor="middle" class="result err">ソースエラー</text>
-<rect x="280" y="290" width="120" height="44" rx="5"/><text x="340" y="317" text-anchor="middle" class="label">分母が 0</text>
-<path d="M340,334 L340,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="340" y="370" text-anchor="middle" class="result err">ソースエラー</text>
-<rect x="410" y="290" width="120" height="44" rx="5"/><text x="470" y="317" text-anchor="middle" class="label">数の文法に一致</text>
-<path d="M470,334 L470,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="470" y="370" text-anchor="middle" class="result">数値リテラル</text>
-<rect x="540" y="290" width="120" height="44" rx="5"/><text x="600" y="317" text-anchor="middle" class="label">それ以外</text>
-<path d="M600,334 L600,352" class="arrow" marker-end="url(#lexer-arrow)"/>
-<text x="600" y="370" text-anchor="middle" class="result">名前</text>
+<rect x="20" y="290" width="151" height="44" rx="5"/><text x="95.5" y="317" text-anchor="middle" class="label">ちょうど [ か ]</text>
+<path d="M95.5,334 L95.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="95.5" y="370" text-anchor="middle" class="result">区切り記号</text>
+<rect x="183" y="290" width="151" height="44" rx="5"/><text x="258.5" y="317" text-anchor="middle" class="label">[ ] を含む</text>
+<path d="M258.5,334 L258.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="258.5" y="370" text-anchor="middle" class="result err">ソースエラー</text>
+<rect x="346" y="290" width="151" height="44" rx="5"/><text x="421.5" y="317" text-anchor="middle" class="label">数の文法に一致</text>
+<path d="M421.5,334 L421.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="421.5" y="370" text-anchor="middle" class="result">数値リテラル</text>
+<rect x="509" y="290" width="151" height="44" rx="5"/><text x="584.5" y="317" text-anchor="middle" class="label">それ以外</text>
+<path d="M584.5,334 L584.5,352" class="arrow" marker-end="url(#lexer-arrow)"/>
+<text x="584.5" y="370" text-anchor="middle" class="result">名前</text>
 <rect x="20" y="392" width="640" height="44" rx="5" class="action"/><text x="34" y="419" class="label">3. トークン列の [ ] の対応を検査 — 余る ] や閉じない [ はソースエラー</text>
 </svg></div>
 <ol class="ref-list">
@@ -196,7 +193,6 @@
 <ol class="ref-list">
 <li>ちょうど<code>[</code>か<code>]</code>なら区切り記号(ベクトルの開始・終了)。</li>
 <li>それ以外で<code>[</code>か<code>]</code>を含むならソースエラー(<code>bracketMustStandAlone</code>)。</li>
-<li>分母が0の分数の形(<code>1/0</code>)ならソースエラー(<code>zeroDenominator</code>)。</li>
 <li>全体が数の文法に一致すれば数値リテラル。</li>
 <li>残りはすべて名前。</li>
 </ol>
@@ -245,13 +241,12 @@
 </table>
 </div>
 <h3 id="source-errors">ソースエラー</h3>
-<p>字句解析で起こりうるエラーは次の5つだけで、分類はどれも<code>malformedSource</code>です。</p>
+<p>字句解析で起こりうるエラーは次の4つだけで、分類はどれも<code>malformedSource</code>です。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>条件</th><th>例</th><th>意味</th></tr></thead>
 <tbody>
 <tr><td><code>unclosedLiteral</code></td><td><code>'foo</code></td><td class="notes">文字列リテラルが、直後に空白のある閉じ引用符に出会わないまま入力の終わりに達した。</td></tr>
-<tr><td><code>zeroDenominator</code></td><td><code>1/0</code></td><td class="notes">分数リテラルの分母が0。</td></tr>
 <tr><td><code>bracketMustStandAlone</code></td><td><code>[1</code></td><td class="notes">語が<code>[</code>か<code>]</code>を含むが、その記号そのものではない。</td></tr>
 <tr><td><code>unexpectedCloseBracket</code></td><td><code>]</code></td><td class="notes">開いている<code>[</code>がないのに<code>]</code>が現れた。</td></tr>
 <tr><td><code>unclosedBracket</code></td><td><code>[</code></td><td class="notes"><code>[</code>が閉じられないまま入力が終わった。</td></tr>
@@ -268,7 +263,7 @@
 <p>プログラムは要素ごとに、左から右へ評価されます。要素の種類ごとに起こることは次のとおりです。</p>
 <ul class="ref-list">
 <li><strong>数値リテラル・文字列リテラル</strong>: その値をスタックに積む。</li>
-<li><strong>ベクトル</strong><code>[ ... ]</code>: 中身を評価せず、ベクトルのまま積む。中の名前は、<code>TRUE</code> <code>FALSE</code> <code>NIL</code>を除いてSymbolとして残る。</li>
+<li><strong>ベクトル</strong><code>[ ... ]</code>: 中身を評価せず、ベクトルのまま積む。中の名前は、<code>TRUE</code> <code>FALSE</code> <code>BOTH</code> <code>NIL</code>を除いてSymbolとして残る。</li>
 <li><strong>名前</strong>: 束縛されていればその値を積み、そうでなければ辞書のその名前のワードを呼び出す。どちらでもなければエラー(<em>Unknown word</em>)。</li>
 </ul>
 <h3 id="value-kinds">スタックに載る値</h3>
@@ -278,7 +273,7 @@
 <li><strong>文字列</strong>(<a href="#el-string">2.2 文字列</a>)</li>
 <li><strong>ベクトル</strong>: 値の並び。コードとしても読まれる(<a href="#el-vector">2.3 ベクトル</a>)</li>
 <li><strong>Symbol</strong>: データとして持たれた名前(<a href="#name-inside-brackets">2.4.1 束縛</a>)</li>
-<li><strong>真偽値</strong>: <code>TRUE</code>と<code>FALSE</code>(<a href="#comparison">2.4.2.1 論理・比較・算術</a>)</li>
+<li><strong>真偽値</strong>: <code>TRUE</code>・<code>FALSE</code>・<code>BOTH</code>(<a href="#comparison">2.4.2.1 論理・比較・算術</a>)</li>
 <li><strong>Record</strong>: キーと値の対応(<a href="#records">2.4.2.3 キーによる対応</a>)</li>
 <li><strong><code>NIL</code></strong>: 理由を持つ不在(<a href="#failure">1.2.1 評価の結末</a>)</li>
 </ul>
@@ -526,7 +521,7 @@
                     </div>
                     <h3>閉じた形はループに勝る</h3>
                     <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。Ajisaiは係数をまさにその有理数として返します。<code>R²</code>が<code>529/532</code>として返ってくるなら、それが厳密な答えです。</p>
-                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しないので、Ajisaiはそれらを扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
+                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しないので、Ajisaiはそれらを扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。ただし<code>0/0</code>に順序を問うと、順序を持たないので<code>NIL</code>(<code>domainMiss</code>)を答えます。</p>
 
                     <h3>もう一つのコスト: ホストの安全制御</h3>
                     <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときの結果は決まっていて、どの上限を超えても、その上限の名前を添えた<strong>エラー</strong>になり評価が停止します。上限はプログラムではなくホストのものなので、プログラムが分岐に使える値になることはありません。</p>
@@ -570,7 +565,6 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
                 
                 
                 </section>
@@ -735,7 +729,7 @@
                                 <tr>
                                     <td><code>2 SQRT 2 LT</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">\(\sqrt{2}\)のような無理数は遅延評価される連分数であり、それに対する比較は厳密に計算される。</td>
+                                    <td class="notes">\(\sqrt{2}\)のような無理数はその体の正規形として厳密に保持され、それに対する比較は厳密に計算される。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -748,7 +742,7 @@
                     <p>無理数の表示形式は1つです。値の正規形を空白なしの一つのトークンとして書きます。<code>2 SQRT</code>は<code>sqrt(2)</code>、<code>1 2 SQRT ADD</code>は<code>1/1+sqrt(2)</code>、<code>2 SQRT 3 SQRT SUB</code>は<code>sqrt(2)-sqrt(3)</code>、<code>8 SQRT</code>は<code>2/1*sqrt(2)</code>です(根号の中は平方因子を持たない形に正規化されます)。打ち切りも近似もなく、ベクトルの中でも一要素として読めます。CLIやMCPホストの<code>stackDisplay</code>も、Playgroundのスタック領域も、この同じトークンを表示します。CLIとMCPでは同じ項が<code>semantics.exactTerms</code>に構造化されて並びます。</p>
                     <p class="ref-note">これは表示専用の出力であり、ソースコードの構文ではありません。<code>sqrt(2)</code>をプログラムに書いても未知の名前です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
                     <h3 id="division-by-zero">ゼロで割る</h3>
-                    <p>すべての数は非負の分母を持つ既約な整数の組であり、<code>DIV</code>は全域的です。除算は逆数との積であり、すべての数は逆数を持ちます。ゼロで割ってもプログラムは止まらず、不在も生まれません。答えは被除数の符号を0の上に置いた数です。<code>n</code>と<code>0</code>の最大公約数は<code>|n|</code>なので、0の上のすべての組はちょうど3つの数、<code>1/0</code>、<code>-1/0</code>、<code>0/0</code>のいずれかに簡約されます。<code>100 0 DIV</code>が<code>1/0</code>なのは<code>4/2</code>が<code>2/1</code>なのと同じ理由であり、<code>1/0</code>は<code>1/2</code>と同じくリテラルです。この3つの点は、ほかのすべての数と同じ分数の公式で計算されます。<code>1/0 5 ADD</code>は<code>1/0</code>、<code>1 1/0 DIV</code>は<code>0</code>、<code>1/0 1/0 ADD</code>は<code>0/0</code>。<code>-1/0</code>はほかのすべての数より下に、<code>1/0</code>は上にあります。<code>0/0</code>は出会うすべてを吸収し、順序の中に場所を持たないので、その順序を問う比較は<code>NIL</code>(<code>domainMiss</code>)を投影し、「不明」と読まれます(<a href="#logic">三値論理</a>)。ベクトルでは、ゼロで割られた要素だけが0の上の点になり、隣の要素は普通の商のままです。</p>
+                    <p>すべての数は非負の分母を持つ既約な整数の組であり、<code>DIV</code>は全域的です。除算は逆数との積であり、すべての数は逆数を持ちます。ゼロで割ってもプログラムは止まらず、不在も生まれません。答えは被除数の符号を0の上に置いた数です。<code>n</code>と<code>0</code>の最大公約数は<code>|n|</code>なので、0の上のすべての組はちょうど3つの数、<code>1/0</code>、<code>-1/0</code>、<code>0/0</code>のいずれかに簡約されます。<code>100 0 DIV</code>が<code>1/0</code>なのは<code>4/2</code>が<code>2/1</code>なのと同じ理由であり、<code>1/0</code>は<code>1/2</code>と同じくリテラルです。この3つの点は、ほかのすべての数と同じ分数の公式で計算されます。<code>1/0 5 ADD</code>は<code>1/0</code>、<code>1 1/0 DIV</code>は<code>0</code>、<code>1/0 1/0 ADD</code>は<code>0/0</code>。<code>-1/0</code>はほかのすべての数より下に、<code>1/0</code>は上にあります。<code>0/0</code>は出会うすべてを吸収し、順序の中に場所を持たないので、その順序を問う比較は<code>NIL</code>(<code>domainMiss</code>)を投影し、「不明」と読まれます(<a href="#logic">四値論理</a>)。ベクトルでは、ゼロで割られた要素だけが0の上の点になり、隣の要素は普通の商のままです。</p>
                     <p class="ref-note">この3つの点でだけ、0に言及する体の法則が成り立たなくなります。<code>0 1/0 MUL</code>は<code>0</code>ではなく<code>0/0</code>、<code>1/0 1/0 SUB</code>も<code>0</code>ではなく<code>0/0</code>で、分配法則もそこでは破れます。機械はこれらを特別扱いで取り戻しません。点に到達してはならないプログラムは先に除数を調べ、到達したプログラムはそのまま計算を続けます。<code>EQ</code>は依然として決定し、<code>0/0 0/0 EQ</code>は<code>TRUE</code>です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -981,7 +975,7 @@ FILTER</code></td>
                     <p class="ref-note">これがAjisaiにおける部分適用のすべてです。そのための独立したワードはなく、必要もありません。ブロックとは、他のどんなベクトルとも同じように内容を計算できる値だからです。</p>
 
                     <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
-                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>ADD</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
+                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>ADD</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。下の表がすべての場合を挙げており、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -1007,7 +1001,7 @@ FILTER</code></td>
                 <section id="el-name" class="ref-page">
                     <h2><span class="secnum">2.4</span> 名前</h2>
 <p>名前は、数でも文字列でも角括弧でもない語のすべてです。空白と角括弧を除くどんな文字も名前の一部になれます。ただし語の先頭の<code>#</code>はコメントを、<code>'</code>は文字列を始めるので、名前はこの2文字では始まりません(<a href="#tokens">1.1 要素の区切り</a>)。</p>
-<p>名前を評価すると、その名前が束縛されていれば値が積まれ(<a href="#names">2.4.1 束縛</a>)、そうでなければ同じ名前のワードが呼び出されます(<a href="#words">2.4.2 ワード</a>)。どちらでもない名前はエラー(<em>Unknown word</em>)です。<code>[ ]</code>の中に書かれた名前は評価されず、<code>TRUE</code> <code>FALSE</code> <code>NIL</code>を除いてSymbolという値になります。</p>
+<p>名前を評価すると、その名前が束縛されていれば値が積まれ(<a href="#names">2.4.1 束縛</a>)、そうでなければ同じ名前のワードが呼び出されます(<a href="#words">2.4.2 ワード</a>)。どちらでもない名前はエラー(<em>Unknown word</em>)です。<code>[ ]</code>の中に書かれた名前は評価されず、<code>TRUE</code> <code>FALSE</code> <code>BOTH</code> <code>NIL</code>を除いてSymbolという値になります。</p>
 <h3>記号とトークン判定</h3>
                     <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ワードはどれも英語名1つだけで呼ばれ、記号の綴りを持つワードはありません。<code>+</code>や<code>&lt;</code>も通常の名前で、定義しなければ未定義ワードです。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>はただの名前としてパースされます。</p>
                     <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
@@ -1151,7 +1145,7 @@ FILTER</code></td>
                     <h2><span class="secnum">2.4.2</span> ワード(<code>DEF</code>)</h2>
 <p>ワードは辞書に登録された名前付きの操作です。名前で呼び出されると、スタックからオペランドを消費し、契約どおりの結果(あれば)を積みます。組み込みワードはその働きごとに<a href="#word-index">族</a>に分かれ、族ごとの頁の最後に各ワードの契約があります。個々のワードが、このリファレンスの最後の単位です。</p>
 <h3 id="all-words">操作はすべてワード</h3>
-<p>Ajisaiの字句が区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。算術も比較も、分岐・反復・定義・束縛も、値を1つ積む<code>TRUE</code> <code>FALSE</code> <code>NIL</code>でさえ、英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあり、名前で呼び出されます。</p>
+<p>Ajisaiの字句が区別するのは、数・文字列・名前と、<code>[</code> <code>]</code>の1組だけです。予約語はありません。算術も比較も、分岐・反復・定義・束縛も、値を1つ積む<code>TRUE</code> <code>FALSE</code> <code>BOTH</code> <code>NIL</code>でさえ、英語名を1つ持つ普通の<strong>ワード</strong>として辞書の中にあり、名前で呼び出されます。</p>
 <div class="ref-table-wrap word-table">
 <table class="ref-table">
 <thead><tr><th>役割</th><th>ワード</th></tr></thead>
@@ -1159,7 +1153,7 @@ FILTER</code></td>
 <tr><td class="notes">算術</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code></td></tr>
 <tr><td class="notes">比較</td><td><code>EQ</code> <code>LT</code> <code>GT</code></td></tr>
 <tr><td class="notes">論理</td><td><code>AND</code> <code>NOT</code></td></tr>
-<tr><td class="notes">真偽値と不在</td><td><code>TRUE</code> <code>FALSE</code> <code>NIL</code></td></tr>
+<tr><td class="notes">真偽値と不在</td><td><code>TRUE</code> <code>FALSE</code> <code>BOTH</code> <code>NIL</code></td></tr>
 <tr><td class="notes">選択</td><td><code>SELECT</code></td></tr>
 <tr><td class="notes">反復</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code></td></tr>
 <tr><td class="notes">定義と束縛</td><td><code>DEF</code> <code>BIND</code></td></tr>
@@ -1170,7 +1164,7 @@ FILTER</code></td>
 <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
                     <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は78個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この78個のワードは、<strong>48語のSemantic Kernel</strong>と<strong>30語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="#word-index">組み込みワード</a>の一覧と各頁の契約にあり、そのワードを調べたときにも表示されます。</p>
+                    <p>この78個のワードは、<strong>50語のSemantic Kernel</strong>と<strong>28語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="#word-index">組み込みワード</a>の一覧と各頁の契約にあり、そのワードを調べたときにも表示されます。</p>
                     <h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
                     <p>新しいワードは、コードブロックと名前から定義されます：<code>[ body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
                     <div class="sample">
@@ -1513,7 +1507,7 @@ FILTER</code></td>
                         <li><strong>符号操作</strong>: 符号反転は<code>x -1 MUL</code>、絶対値は<code>x 'X' BIND X X MUL SQRT</code>と書きます。</li>
                         <li><strong>極値</strong>: <code>MIN</code>(最小値)、<code>MAX</code>(最大値)</li>
                         <li><strong>平方根</strong>: <code>SQRT</code></li>
-                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)。切り上げは<code>x -1 MUL FLOOR -1 MUL</code>と書きます。</li>
+                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(最も近い整数へ。ちょうど半分は0から遠い側へ)。切り上げは<code>x -1 MUL FLOOR -1 MUL</code>と書きます。</li>
                         <li><strong>格子への丸め</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の倍数に丸めます。ループ処理や反復計算で分母の肥大化を止めるのに使います。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
                     </ul>
                     <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、不在も生まれません。該当する要素はその符号を0の上に置いた数になり、隣の要素は商のままです。除算の後に続くワードは、その点を同じ分数の公式で計算します。詳しくは<a href="#division-by-zero">ゼロで割る</a>を参照してください。</p>
@@ -1693,7 +1687,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3>厳密な比較</h3>
-                    <p class="ref-note">比較は、有理数も平方根も含め、ワードが組み立てられるすべての値にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
+                    <p class="ref-note">比較は、有理数も平方根も含め、ワードが組み立てられるすべての値にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。例外は1つだけで、<code>0/0</code>は順序の中に場所を持たないので、それに順序を問うと<code>NIL</code>(<code>domainMiss</code>)を答えます。</p>
 
                     <h3 id="logic">論理</h3>
                     <p>Ajisaiの真理値はベルナップの四値です。<code>TRUE</code>、<code>FALSE</code>、<code>BOTH</code>(真とも偽とも告げられた値)、UNKNOWN(真偽の位置で読まれた<code>NIL</code>)の4つを、<code>AND</code>と<code>NOT</code>という2つの論理ワードで合成します。どちらも、ほかのワードと同じく綴りのまま書きます。論理和はド・モルガンの法則どおり<code>a NOT b NOT AND NOT</code>と書きます。<code>NOT</code>は<code>TRUE</code>と<code>FALSE</code>を入れ替え、<code>BOTH</code>とUNKNOWNはそのままにします。<code>BOTH</code>とUNKNOWNの<code>AND</code>は<code>FALSE</code>です。</p>
@@ -2407,7 +2401,7 @@ FILTER</code></td>
                     <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。インデックス指定の代わりに検索するには、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
 
                     <h3 id="ordering">順序付け、計数、形状</h3>
-                    <p>ベクトル全体を一度に見る必要がある操作は、7つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
+                    <p>ベクトル全体を一度に見る必要がある操作は、6つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -2865,8 +2859,8 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3 id="record-lifting">算術と比較だけが値の側へ持ち上がる</h3>
-                    <p>Recordに対して働く既存のワードは<a href="#arithmetic">算術</a>と<a href="#comparison">比較</a>だけです。数やベクトルをRecordと組み合わせると、キーはそのままで、値のそれぞれに演算が及びます。2つのRecord同士は<strong>キー列が等しいときだけ</strong>値ごとに組み合わさり、違えば<code>shapeMismatch</code>のエラーです。それ以外のワード——<code>LENGTH</code>、<code>MAP</code>、<code>AND</code>、<code>CHARS</code>など——は、Recordを受け取るとそのワード自身のオペランドエラーを起こします。Recordをベクトルとして扱いたいなら<code>VALUES</code>で明示的に渡ってください。</p>
+                    <h3 id="record-lifting">要素ごとに働くワードが値の側へ持ち上がる</h3>
+                    <p>要素ごとに働くワード——<a href="#arithmetic">算術</a>、<a href="#comparison">比較</a>、論理、そして<code>NOT</code>・<code>UPPER</code>・<code>CHARS</code>のようなテキストのワード——は、Recordの値に対して働きます。数やベクトルをRecordと組み合わせると、キーはそのままで、値のそれぞれに演算が及びます。2つのRecord同士は<strong>キー列が等しいときだけ</strong>値ごとに組み合わさり、違えば<code>shapeMismatch</code>のエラーです。ベクトルを全体として読むワード——<code>LENGTH</code>、<code>MAP</code>、<code>FOLD</code>など——は、Recordを受け取るとそのワード自身のオペランドエラーを起こします。Recordをベクトルとして扱いたいなら<code>VALUES</code>で明示的に渡ってください。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3639,8 +3633,8 @@ SELECT</code></td>
                         </div>
                     </div>
                     <h3>どちらも選ばれないとき</h3>
-                    <p>真偽値の位置に<a href="#nil">不在(NIL)</a>が来たら、それは<strong>UNKNOWN</strong>です(<a href="#logic">三値論理</a>)。UNKNOWNはどちらの候補も選ばず、読み取ったその不在を<em>理由ごと</em>答えます。ですから<code>NIL-REASON</code>で「なぜ分岐できなかったのか」を後から尋ねられます。</p>
-                    <p class="ref-note">「どの節も当たらなかった」という状態はありません。候補は常に2つあり、真偽値はTRUE・FALSE・UNKNOWNのいずれかなので、<code>SELECT</code>は常に答えを持っています。else節を書き忘れて実行時に落ちる、ということが起こらないのはこのためです。</p>
+                    <p>真偽値の位置に<a href="#nil">不在(NIL)</a>が来たら、それは<strong>UNKNOWN</strong>です(<a href="#logic">四値論理</a>)。UNKNOWNはどちらの候補も選ばず、読み取ったその不在を<em>理由ごと</em>答えます。ですから<code>NIL-REASON</code>で「なぜ分岐できなかったのか」を後から尋ねられます。</p>
+                    <p class="ref-note">「どの節も当たらなかった」という状態はありません。候補は常に2つあり、真偽値はTRUE・FALSE・BOTH・UNKNOWNのいずれかなので、<code>SELECT</code>は常に答えを持っています。BOTHは両方の候補を選んで突き合わせた結果を答え、候補が異なれば<code>conflict</code>のNILになります。else節を書き忘れて実行時に落ちる、ということが起こらないのはこのためです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3784,7 +3778,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">空のベクトルは空のベクトルを答えます（レーンが0本なので答えも0本。種は返りません）。不在(<code>NIL</code>)のベクトルは、その不在を理由ごと答えます。ここは<code>FOLD</code>と違う点で、<code>FOLD</code>はどちらの場合も<em>種</em>を答えます——畳み込むものが何も無いなら答えは種だからです。答えの形が問いの形に従う、という同じ規則の裏表です。</p>
+                    <p class="ref-note">空のベクトルは空のベクトルを答えます（レーンが0本なので答えも0本。種は返りません）。不在(<code>NIL</code>)のベクトルは、その不在を理由ごと答えます。ここは<code>FOLD</code>と違う点で、<code>FOLD</code>は空のベクトルには<em>種</em>を答えます——畳み込むものが何も無いなら答えは種だからです。不在のベクトルは、どのワードとも同じく素通しします。答えの形が問いの形に従う、という同じ規則の裏表です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -4204,7 +4198,7 @@ SELECT</code></td>
                                 <tr>
                                     <td><code>42 PRINT</code></td>
                                     <td>—</td>
-                                    <td class="notes">既定モードはオペランドを消費する：スタックは空になり、値は出力領域にのみ現れる。</td>
+                                    <td class="notes"><code>PRINT</code>はオペランドを消費する：スタックは空になり、値は出力領域にのみ現れる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -4343,7 +4337,7 @@ SELECT</code></td>
                         </tbody>
                     </table>
                     </div>
-                    <p>比較ワードは最上位の層でのみ働きます。あらゆるAjisaiの値にわたって厳密かつ全域的であり、数学的な問いに答えます。それより下の層は値のモデルには関与しないので、表現や表示が比較の結果に影響することは決してありません。</p>
+                    <p>比較ワードは最上位の層でのみ働きます。あらゆるAjisaiの値にわたって厳密であり、数学的な問いに答えます。答えられない問いは<code>0/0</code>に順序を問うことだけで、これは<code>domainMiss</code>を投影します。それより下の層は値のモデルには関与しないので、表現や表示が比較の結果に影響することは決してありません。</p>
                 
                 
                 </section>
