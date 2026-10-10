@@ -1,0 +1,74 @@
+{
+  "_comment": [
+    "Per-file branch and line coverage floor for every Rust file the traceability",
+    "matrix names as the implementation of a QL-A requirement. CI fails when a",
+    "file's covered fraction drops below its entry (scripts/check-coverage-ratchet.mjs).",
+    "Measured with `cargo +<toolchain> llvm-cov --branch --workspace` and",
+    "PROPTEST_RNG_SEED fixed, as the Rust branch coverage step in",
+    ".github/workflows/test.yml runs it. Re-record, in the change that moves a",
+    "figure, with: node scripts/check-coverage-ratchet.mjs <coverage.json> --update"
+  ],
+  "toolchain": "nightly-2026-10-09",
+  "files": {
+    "rust/src/types/fraction.rs": {
+      "branches": {
+        "covered": 166,
+        "count": 178
+      },
+      "lines": {
+        "covered": 457,
+        "count": 470
+      }
+    },
+    "rust/src/types/fraction_arithmetic.rs": {
+      "branches": {
+        "covered": 132,
+        "count": 138
+      },
+      "lines": {
+        "covered": 304,
+        "count": 310
+      }
+    },
+    "rust/src/types/fraction_order.rs": {
+      "branches": {
+        "covered": 18,
+        "count": 20
+      },
+      "lines": {
+        "covered": 41,
+        "count": 41
+      }
+    },
+    "rust/src/types/small_divisor.rs": {
+      "branches": {
+        "covered": 19,
+        "count": 20
+      },
+      "lines": {
+        "covered": 74,
+        "count": 74
+      }
+    },
+    "rust/src/types/lehmer_gcd.rs": {
+      "branches": {
+        "covered": 32,
+        "count": 38
+      },
+      "lines": {
+        "covered": 131,
+        "count": 136
+      }
+    },
+    "rust/src/types/value_protocol.rs": {
+      "branches": {
+        "covered": 9,
+        "count": 10
+      },
+      "lines": {
+        "covered": 103,
+        "count": 108
+      }
+    }
+  }
+}

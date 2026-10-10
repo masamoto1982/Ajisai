@@ -38,7 +38,7 @@ jobs:
 
       - name: Rust branch coverage
         # --branch expands to `-Z coverage-options=branch`, which only a
-        # nightly rustc accepts, so this step selects nightly explicitly while
+        # nightly rustc accepts, so this step selects a nightly explicitly while
         # the rest of the job stays on stable. Under the old advisory gate the
         # step had been failing silently on stable since it was written; the
         # blocking gate surfaced that on its first run.
@@ -48,14 +48,22 @@ jobs:
         # summary below, LCOV and HTML as an artifact. No figure is a merge
         # threshold (docs/quality/VERIFICATION_PLAN.md) — the numbers are
         # evidence for a reviewer, not a gate.
+        #
+        # The QL-A ratchet below compares these counts with a recorded
+        # baseline, so they must be reproducible: the nightly is pinned to the
+        # one docs/quality/coverage-baseline.json names (scripts/
+        # check-coverage-ratchet.mjs refuses a mismatch), and proptest's seed
+        # is fixed so property tests take the same inputs on every run.
         working-directory: rust
+        env:
+          PROPTEST_RNG_SEED: '20261010'
         run: |
-          rustup toolchain install nightly --component llvm-tools-preview
-          cargo +nightly llvm-cov --branch --workspace --no-report
+          rustup toolchain install nightly-2026-10-09 --profile minimal --component llvm-tools-preview
+          cargo +nightly-2026-10-09 llvm-cov --branch --workspace --no-report
           mkdir -p target/coverage
-          cargo +nightly llvm-cov report --branch --json --summary-only --output-path target/coverage/coverage.json
-          cargo +nightly llvm-cov report --branch --lcov --output-path target/coverage/lcov.info
-          cargo +nightly llvm-cov report --branch --html --output-dir target/coverage
+          cargo +nightly-2026-10-09 llvm-cov report --branch --json --summary-only --output-path target/coverage/coverage.json
+          cargo +nightly-2026-10-09 llvm-cov report --branch --lcov --output-path target/coverage/lcov.info
+          cargo +nightly-2026-10-09 llvm-cov report --branch --html --output-dir target/coverage
 
       - name: Upload Rust coverage reports
         uses: actions/upload-artifact@v4
@@ -76,6 +84,13 @@ jobs:
         # Workspace totals and every Rust file the traceability matrix names as
         # a requirement's implementation, into the job summary.
         run: node scripts/coverage-summary.mjs rust/target/coverage/coverage.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: QL-A coverage ratchet
+        # Blocking: no Rust file implementing a QL-A requirement may lose
+        # branch or line coverage against docs/quality/coverage-baseline.json.
+        # A change that legitimately moves a figure re-records the baseline in
+        # the same diff — see scripts/check-coverage-ratchet.mjs.
+        run: npm run check:coverage-ratchet
 
       - name: Install dependencies
         # npm ci: reproducible install from the committed package-lock.json
