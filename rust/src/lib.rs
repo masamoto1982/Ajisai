@@ -70,6 +70,9 @@ mod identity_laws;
 mod field_closure_laws;
 
 #[cfg(test)]
+mod zero_shape_laws;
+
+#[cfg(test)]
 mod arithmetic_operation_tests;
 
 #[cfg(test)]
