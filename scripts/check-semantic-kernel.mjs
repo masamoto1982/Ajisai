@@ -49,7 +49,17 @@ const fail = report.fail;
 // anything runs where that can happen (`field`: `closed` < `leaving`). It is a
 // new fact about every Word and every body, not a reflow of an old clause, so
 // it takes the same four lines a new clause took above.
-const LINE_BUDGET = 412;
+//
+// Raised to 414 for LANG.VALUES.SHAPE: reading a number as whether its two
+// halves are nonzero turned out to grade the whole arithmetic by FOUR — the
+// product is the knowledge meet, the reciprocal is NOT, the numbers are a
+// Clifford monoid over the four shapes — and it fixes which laws survive the
+// three points: the additive wheel laws everywhere, the reciprocal's
+// involution everywhere but -1/0, with the trilemma that forbids a signed zero.
+// The correspondence paragraph moved out of LANG.VALUES.TRUTH into the new
+// clause, so the net cost is the heading, its separators and two paragraphs of
+// new fact, not a reflow.
+const LINE_BUDGET = 414;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
   fail(
