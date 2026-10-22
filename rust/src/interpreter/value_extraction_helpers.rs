@@ -5,6 +5,10 @@ use crate::types::{Value, ValueData};
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 
+/// The text a test reads off a value. The text Words read a String's own
+/// `as_text` instead: this widens every character to a `char` on the way, four
+/// bytes each, which on a long String was most of what a Word allocated.
+#[cfg(test)]
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {

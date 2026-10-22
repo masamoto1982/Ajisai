@@ -160,6 +160,21 @@ pub(crate) fn charge_walk_of(interp: &mut Interpreter, value: &Value) -> Result<
     charge(interp, units)
 }
 
+/// Charge for `bytes` of text a text Word is about to build (`JOIN`,
+/// `REPLACE`, `TRIM`, `UPPER`, `LOWER`, and the parts `CHARS` and `TOKENIZE`
+/// cut), at the unit per byte [`charge_walk_of`] renders text at.
+///
+/// A String is one leaf to `element_cost` however long it is, and these Words
+/// used to charge nothing at all, so text was the one thing a program could
+/// grow without any ceiling seeing it: `'ab'` joined to itself thirty times
+/// is 2 GiB, built in a hundred bytes of source and a hundred steps, and it
+/// ended in an out-of-memory trap rather than a refusal. Charging what is
+/// built, before it is built, bounds the text a run can allocate by the
+/// budget itself — the doublings that led up to a String paid for its halves.
+pub(crate) fn charge_text_built(interp: &mut Interpreter, bytes: usize) -> Result<()> {
+    charge(interp, bytes as u64)
+}
+
 /// The bytes of text `value` holds, through every container.
 fn text_bytes(value: &Value) -> u64 {
     match &value.data {

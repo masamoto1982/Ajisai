@@ -29,6 +29,8 @@ Specification: 1.0.0-beta.3.
 
 ### Fixed
 
+- **Text is charged for what it builds.** `JOIN`, `REPLACE`, `TRIM`, `UPPER` and `LOWER` charge `collectionWork` a unit per byte of the String they build, before building it, and `CHARS` and `TOKENIZE` charge for each part they cut and refuse more parts than `materializedElements` admits. They used to charge nothing, so `1 30 RANGE 'ab' [ 'E' BIND 'A' BIND A A 2 COLLECT JOIN ] FOLD` grew a 2 GiB String and held over a gigabyte per call until the wall-time limit killed it; it is now refused as `resourceLimitExceeded` (`collectionWork`) at about 16 MB, in a quarter of a second. A program building less text than the budget answers as before.
+
 - **A `shapeMismatch` across ranks names the lengths that met.** The message's axis counts the right-aligned axes, but the two lengths it reported were read from the left: `[ [ 1 2 3 ] [ 4 5 6 ] ] [ 1 2 3 4 ] ADD` said `axis 1 is 3 and 1` and now says `axis 1 is 3 and 4`. Operands of one rank, the quickstart's example among them, read as before; the category and `error.word` do not change.
 
 ### Added

@@ -461,7 +461,7 @@ fn check_binding_acyclic<S: AsRef<str>>(
 /// that many, and a one-element Vector is the single-name case, so `[ 'W' ]`
 /// and `'W'` mean the same thing.
 pub(crate) fn binding_names(value: &Value) -> Result<Vec<String>> {
-    // A String's name is its text (what `value_as_string` reads from one).
+    // A String's name is its text.
     if let crate::types::ValueData::Text(text) = &value.data {
         return Ok(vec![String::from(&**text)]);
     }
