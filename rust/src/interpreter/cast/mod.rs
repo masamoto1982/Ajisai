@@ -9,9 +9,25 @@ pub use cast_conversions::{op_num, op_str};
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::cast::cast_conversions::is_string_value;
-use crate::interpreter::value_extraction_helpers::{extract_operands, value_as_string};
+use crate::interpreter::ceiling_refusal::materialization_refused;
+use crate::interpreter::collection_meter::{charge_materialization, charge_text_built};
+use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
+
+/// Admit `count` parts holding `bytes` of text between them — what `CHARS`
+/// and `TOKENIZE` cut a String into — or refuse them before they are built
+/// (LANG.COLLECTIONS.BUDGET). Each part is a fresh element, so the count is
+/// held to `materializedElements` as `RANGE`'s is, and priced as `RANGE`
+/// prices one, plus the text the parts copy.
+fn admit_parts(interp: &mut Interpreter, count: usize, bytes: usize) -> Result<()> {
+    let limit = interp.runtime_limits.max_materialized_elements;
+    if count > limit {
+        return Err(materialization_refused(limit, Some(count as u128)));
+    }
+    charge_materialization(interp, count)?;
+    charge_text_built(interp, bytes)
+}
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
@@ -25,7 +41,14 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
         ));
     };
 
-    let chars: Vec<Value> = text
+    let (count, bytes) = (text.chars().count(), text.len());
+    if let Err(e) = admit_parts(interp, count, bytes) {
+        interp.stack.push(val);
+        return Err(e);
+    }
+    let chars: Vec<Value> = val
+        .as_text()
+        .unwrap_or_default()
         .chars()
         .map(|c| Value::from_string(&c.to_string()))
         .collect();
@@ -78,6 +101,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
+    if let Err(e) = charge_text_built(interp, bytes) {
+        interp.stack.push(val);
+        return Err(e);
+    }
     let mut result = String::with_capacity(bytes);
     for elem in children.iter() {
         result.push_str(elem.as_text().unwrap_or_default());
@@ -86,10 +113,12 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn pop_string(interp: &mut Interpreter) -> Result<String> {
+/// The String on top of the stack, taken off it, or the `nonText` every text
+/// Word declares with the operand left in place.
+fn pop_text(interp: &mut Interpreter) -> Result<Value> {
     let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     if is_string_value(&val) {
-        return Ok(value_as_string(&val).unwrap_or_default());
+        return Ok(val);
     }
     let got = val.domain_name();
     interp.stack.push(val);
@@ -100,8 +129,37 @@ fn pop_string(interp: &mut Interpreter) -> Result<String> {
 }
 
 pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
-    let s = pop_string(interp)?;
-    interp.stack.push(Value::from_string(s.trim()));
+    let val = pop_text(interp)?;
+    let bytes = val.as_text().unwrap_or_default().trim().len();
+    if let Err(e) = charge_text_built(interp, bytes) {
+        interp.stack.push(val);
+        return Err(e);
+    }
+    interp
+        .stack
+        .push(Value::from_string(val.as_text().unwrap_or_default().trim()));
+    Ok(())
+}
+
+/// Map every character of the String on top through `map`, charging the
+/// mapped text's exact length before building it: a case mapping can
+/// lengthen text (`'ΐ' UPPER` is three characters), so the input's length
+/// does not bound what is built.
+fn map_chars<I: Iterator<Item = char>>(interp: &mut Interpreter, map: fn(char) -> I) -> Result<()> {
+    let val = pop_text(interp)?;
+    let text = val.as_text().unwrap_or_default();
+    let bytes = text.chars().flat_map(map).map(char::len_utf8).sum();
+    if let Err(e) = charge_text_built(interp, bytes) {
+        interp.stack.push(val);
+        return Err(e);
+    }
+    let mapped: String = val
+        .as_text()
+        .unwrap_or_default()
+        .chars()
+        .flat_map(map)
+        .collect();
+    interp.stack.push(Value::from_string(&mapped));
     Ok(())
 }
 
@@ -110,10 +168,7 @@ pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
 /// definition over `CHARS` and `JOIN` could carry, so the Word is native.
 /// `'straße' UPPER` is `'STRASSE'`.
 pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
-    let s = pop_string(interp)?;
-    let mapped: String = s.chars().flat_map(char::to_uppercase).collect();
-    interp.stack.push(Value::from_string(&mapped));
-    Ok(())
+    map_chars(interp, char::to_uppercase)
 }
 
 /// `LOWER`: the default lower-case mapping, character by character. No
@@ -122,10 +177,7 @@ pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
 /// same text lowers the same way wherever it is run, and `CHARS LOWER` per
 /// character agrees with `LOWER` of the whole.
 pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
-    let s = pop_string(interp)?;
-    let mapped: String = s.chars().flat_map(char::to_lowercase).collect();
-    interp.stack.push(Value::from_string(&mapped));
-    Ok(())
+    map_chars(interp, char::to_lowercase)
 }
 
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
@@ -161,8 +213,20 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    let src = value_as_string(&src_val).unwrap_or_default();
-    let sep = value_as_string(&sep_val).unwrap_or_default();
+    let src = src_val.as_text().unwrap_or_default();
+    let sep = sep_val.as_text().unwrap_or_default();
+
+    // The parts hold the source less every separator cut out of it.
+    let (count, bytes) = if sep.is_empty() {
+        (src.chars().count(), src.len())
+    } else {
+        let cuts = src.matches(sep).count();
+        (cuts + 1, src.len() - cuts * sep.len())
+    };
+    if let Err(e) = admit_parts(interp, count, bytes) {
+        restore(interp, src_val, sep_val);
+        return Err(e);
+    }
 
     // The empty separator splits between every character, the same reading
     // SEARCH and REPLACE give the empty pattern (it matches everywhere). This
@@ -172,7 +236,7 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
             .map(|c| Value::from_string(&c.to_string()))
             .collect()
     } else {
-        src.split(sep.as_str()).map(Value::from_string).collect()
+        src.split(sep).map(Value::from_string).collect()
     };
     interp.stack.push(Value::from_vector(parts));
     Ok(())
@@ -183,14 +247,12 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
 // `INDEX-OF` and a substitution, for Text. Spelled over `CHARS` each is a
 // window compared at every position; the Word is the one pass
 // (docs/dev/ajisai-minimal-core-identity.md 付録 B).
-/// The texts the operands denote, or the `nonText` every text Word declares.
-fn texts(interp: &mut Interpreter, count: usize) -> Result<Vec<String>> {
+/// The String operands, taken off the stack, or the `nonText` every text Word
+/// declares with them left in place.
+fn texts(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     let operands = extract_operands(interp, count)?;
     if operands.iter().all(is_string_value) {
-        return Ok(operands
-            .iter()
-            .map(|operand| value_as_string(operand).unwrap_or_default())
-            .collect());
+        return Ok(operands);
     }
     let got = operands
         .iter()
@@ -207,9 +269,10 @@ fn texts(interp: &mut Interpreter, count: usize) -> Result<Vec<String>> {
 /// which `needle` first occurs, counted as `CHARS` counts; `notFound`
 /// when it does not occur. An empty needle is found at 0.
 pub fn op_search(interp: &mut Interpreter) -> Result<()> {
-    let texts = texts(interp, 2)?;
-    let (haystack, needle) = (&texts[0], &texts[1]);
-    match haystack.find(needle.as_str()) {
+    let operands = texts(interp, 2)?;
+    let text = |i: usize| operands[i].as_text().unwrap_or_default();
+    let (haystack, needle) = (text(0), text(1));
+    match haystack.find(needle) {
         Some(byte_offset) => {
             let position = haystack[..byte_offset].chars().count();
             interp.stack.push(Value::from_int(position as i64));
@@ -226,12 +289,26 @@ pub fn op_search(interp: &mut Interpreter) -> Result<()> {
 /// `from` matches nothing, so the text comes back unchanged rather than
 /// growing at every position.
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
-    let texts = texts(interp, 3)?;
-    let (text, from, to) = (&texts[0], &texts[1], &texts[2]);
-    let replaced = if from.is_empty() {
-        text.clone()
+    let operands = texts(interp, 3)?;
+    let text = |i: usize| operands[i].as_text().unwrap_or_default();
+    let (source, from, to) = (text(0), text(1), text(2));
+    // Every match trades `from`'s bytes for `to`'s, so the result's length is
+    // known before it is built; a short `from` and a long `to` multiply the
+    // text each time they run.
+    let matches = if from.is_empty() {
+        0
     } else {
-        text.replace(from.as_str(), to.as_str())
+        source.matches(from).count()
+    };
+    let bytes =
+        (source.len() - matches * from.len()).saturating_add(matches.saturating_mul(to.len()));
+    let replaced = match charge_text_built(interp, bytes) {
+        Err(e) => {
+            interp.stack.extend(operands);
+            return Err(e);
+        }
+        Ok(()) if matches == 0 => source.to_owned(),
+        Ok(()) => source.replace(from, to),
     };
     interp.stack.push(Value::from_string(&replaced));
     Ok(())

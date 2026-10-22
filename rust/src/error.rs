@@ -97,9 +97,10 @@ pub enum ResourceLimit {
     /// host publishes it as one more entry in the same limit table.
     ExecutionSteps,
     /// Materialized element count of one generated collection
-    /// (`max_materialized_elements`): what `RANGE`, `FILL`, `RESHAPE` and
-    /// `JSON-DECODE` measure before they build, and raise by this name when
-    /// the request will not fit (`interpreter::ceiling_refusal`).
+    /// (`max_materialized_elements`): what `RANGE`, `FILL`, `RESHAPE`,
+    /// `JSON-DECODE`, `CHARS` and `TOKENIZE` measure before they build, and
+    /// raise by this name when the request will not fit
+    /// (`interpreter::ceiling_refusal`).
     MaterializedElements,
 }
 

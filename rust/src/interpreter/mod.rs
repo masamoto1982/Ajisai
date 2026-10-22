@@ -172,6 +172,8 @@ mod nil_diagnostics_tests;
 mod nil_reason_tests;
 #[cfg(test)]
 mod reconcile_conformance_tests;
+#[cfg(test)]
+mod text_meter_tests;
 
 pub use interpreter_core::*;
 pub use runtime_limits::RuntimeLimits;
