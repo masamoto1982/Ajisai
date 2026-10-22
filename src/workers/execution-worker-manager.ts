@@ -139,26 +139,41 @@ export class WorkerManager {
                 break;
             case 'error':
                 task.reject(new Error(message.data));
+                // The interpreter answers a failing program with a result, so
+                // an exception out of it is a WebAssembly trap: memory ran
+                // out, or Rust panicked. A trap abandons the instance mid-call
+                // and Rust's state with it, and the next call into that
+                // instance is refused ("recursive use of an object") while the
+                // memory it grew to stays held, so the worker is never handed
+                // another task.
+                this.replaceWorker(instance);
                 break;
         }
         this.completeTask(instance);
     }
 
-    private resolveWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
-        console.error('[WorkerManager] Worker error:', error.message);
-        // Out of the pool before the queue is looked at: completing the task
-        // drains the queue, and a broken worker still in the pool was handed
-        // the next task, which then only answered at the wall-clock guard.
+    // Out of the pool, terminated, and a fresh worker in its place, so the
+    // pool size stays constant. Out of the pool before the queue is looked
+    // at: completing a task drains the queue, and a worker still in the pool
+    // would be handed the next task.
+    private replaceWorker(instance: WorkerInstance): void {
         const index = this.workers.indexOf(instance);
         if (index > -1) this.workers.splice(index, 1);
         instance.worker.terminate();
+        this.createWorker();
+    }
+
+    private resolveWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
+        console.error('[WorkerManager] Worker error:', error.message);
+        // Replaced before the task completes: a broken worker still in the
+        // pool was handed the next task, which then only answered at the
+        // wall-clock guard.
+        this.replaceWorker(instance);
         if (instance.currentTaskId) {
             const task = this.activeTasks.get(instance.currentTaskId);
             task?.reject(new Error(`Worker error: ${error.message}`));
         }
         this.completeTask(instance);
-        this.createWorker();
-        this.processQueue();
     }
 
     private completeTask(instance: WorkerInstance): void {
@@ -197,17 +212,12 @@ export class WorkerManager {
         }
 
         const instance = this.workers.find(w => w.currentTaskId === taskId);
-        if (instance) {
-            instance.worker.terminate();
-            const index = this.workers.indexOf(instance);
-            if (index > -1) this.workers.splice(index, 1);
-        }
+        if (instance) this.replaceWorker(instance);
+        else this.createWorker();
 
         this.activeTasks.delete(taskId);
 
         task.reject(error);
-
-        this.createWorker();
     }
 
     private processQueue(): void {
