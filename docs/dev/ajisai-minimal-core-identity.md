@@ -173,6 +173,11 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
    「語が何であるか」ではないため、第一信号には使わない。`core_tier` は
    `check-formalization-coverage.mjs` で必須化し、`word-manifest.json` へも伝播させた。
    結果: **Minimal Core（identity+flow）= 47 語**、material = 138、sugar = 28。
+   （2026-11-08 追記：規則の (2)(3) と observation の分岐は、対象の語とともに消えた。
+   `algebra.observation.digest` はプリミティブとして宣言されたことがなく、観測ダイジェストも
+   2026-10-13 にホストプロトコルから外れた。現行の規則は (1) Sugar→sugar、(2) host-command→material、
+   (3) 残りは `family_tiers`（observation は identity）で、外れる 3 エントリ（POW は 2026-11-08 に material へ移した）を `tier_exceptions`
+   に記録し、`check-formalization-coverage.mjs` が全エントリの tier を規則から計算し直して照合する。）
 2. **仕様提案 — ✅ 実装済み.** `SPECIFICATION.html` に §2.6 "Ajisai Minimal Core" を
    規範的に追記した。Minimal Core = `core_tier` の `identity`+`flow`（機械可読な
    `formalization-coverage.json` を tier 帰属の典拠とする）。**後方互換保証(規範)**——

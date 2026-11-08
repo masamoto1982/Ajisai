@@ -359,7 +359,7 @@
       "coverage_entry_id": "core.pow",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
-      "core_tier": "identity",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic"
       ],

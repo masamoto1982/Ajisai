@@ -257,6 +257,46 @@ if (coverage.core_tier_summary?.entry_counts) {
   }
 }
 
+// `core_tier_summary.derivation` states a rule; recompute every entry's tier
+// from it, so the rule cannot name a primitive no entry uses (as it once named
+// `algebra.observation.digest`) and stay green. `tier_exceptions` lists the
+// entries held at another tier, each with its note; an exception that agrees
+// with the rule is stale and fails too.
+if (coverage.core_tier_summary?.family_tiers) {
+  const familyTiers = coverage.core_tier_summary.family_tiers;
+  const exceptions = coverage.core_tier_summary.tier_exceptions ?? {};
+  const entryIds = new Set(coverage.entries.map((entry) => entry.id));
+  for (const id of Object.keys(exceptions)) {
+    if (!entryIds.has(id)) fail(`core_tier_summary.tier_exceptions names ${id}, which is no entry`);
+  }
+  for (const entry of coverage.entries) {
+    let ruled;
+    if (entry.semantic_role === 'Sugar') ruled = 'sugar';
+    else if (entry.kind === 'host-command') ruled = 'material';
+    else ruled = familyTiers[entry.algebraic_family];
+    if (!ruled) fail(`${entry.id}: core_tier_summary.family_tiers has no tier for ${entry.algebraic_family}`);
+    const excepted = Object.hasOwn(exceptions, entry.id);
+    if (entry.core_tier !== ruled && !excepted) {
+      fail(`${entry.id}: core_tier is ${entry.core_tier}, but the derivation rule gives ${ruled}; fix the tier or list it in tier_exceptions`);
+    }
+    if (entry.core_tier === ruled && excepted) {
+      fail(`${entry.id}: listed in tier_exceptions, but the derivation rule already gives ${ruled}`);
+    }
+  }
+}
+
+// `spec_sections` cites the specification by its stable clause IDs. The
+// specification numbers nothing (see check-spec-citations.mjs), so a
+// `SPECIFICATION.html §N.M` names nothing and is rejected here.
+const clauseIds = new Set(readText('spec/language-semantics.md').match(/\bLANG\.[A-Z]+\.[A-Z]+\b/g) ?? []);
+for (const entry of coverage.entries) {
+  for (const section of entry.spec_sections ?? []) {
+    const match = /^SPECIFICATION\.html (LANG\.[A-Z]+\.[A-Z]+)$/.exec(section);
+    if (!match) fail(`${entry.id}: spec_sections entry "${section}" must be "SPECIFICATION.html LANG.<AREA>.<NAME>"`);
+    if (!clauseIds.has(match[1])) fail(`${entry.id}: spec_sections cites ${match[1]}, which spec/language-semantics.md does not define`);
+  }
+}
+
 const conformanceHtml = readText('tests/conformance/index.html');
 const caseIds = new Set(
   [...conformanceHtml.matchAll(/<section\b[^>]*\bclass=["'][^"']*\bajisai-case\b[^"']*["'][^>]*\bid=["']([^"']+)["']/g)]
