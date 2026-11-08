@@ -1,7 +1,7 @@
 {
   "version": 1,
   "core_tier_summary": {
-    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) kind host-command -> material (a host protocol command, LANG.OBSERVATION.PROTOCOL, is not a Word of the language); (3) otherwise family_tiers of the entry home algebraic_family, so observation is identity. The entries in tier_exceptions carry another tier and are held as recorded. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys NIL pass-through), not what the word is. check-formalization-coverage.mjs recomputes every entry's tier from this rule. An earlier rule split observation to material when derived_from named algebra.observation.digest; that primitive was never declared here, and the observation digest it stood for left the host protocol on 2026-10-13 (envelope schemaVersion 5), so no entry derives from it. See docs/dev/ajisai-minimal-core-identity.md.",
+    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) kind host-command -> material (a host protocol command, LANG.OBSERVATION.PROTOCOL, is not a Word of the language); (3) otherwise family_tiers of the entry home algebraic_family, so observation is identity. The three entries in tier_exceptions carry another tier and are held as recorded. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys NIL pass-through), not what the word is. check-formalization-coverage.mjs recomputes every entry's tier from this rule. An earlier rule split observation to material when derived_from named algebra.observation.digest; that primitive was never declared here, and the observation digest it stood for left the host protocol on 2026-10-13 (envelope schemaVersion 5), so no entry derives from it. See docs/dev/ajisai-minimal-core-identity.md.",
     "family_tiers": {
       "absence": "identity",
       "boolean-truth": "identity",
@@ -16,7 +16,6 @@
       "syntax-sugar": "sugar"
     },
     "tier_exceptions": {
-      "core.pow": "identity, in the material exact-arithmetic family. Held as recorded; no reason is written down yet.",
       "core.digest": "identity, in the flow dictionary family: it observes a value's denotation (LANG.VALUES.DENOTATION) rather than resolving a name.",
       "core.json-decode": "material, in the identity record family: it parses text into Vectors and Records, so it rests on the material exact-scalar and structure-lift primitives.",
       "core.json-encode": "material, in the identity record family: it builds text from Vectors and Records, so it rests on the material exact-scalar and structure-lift primitives."
@@ -33,8 +32,8 @@
     ],
     "entry_counts": {
       "flow": 10,
-      "identity": 22,
-      "material": 52,
+      "identity": 21,
+      "material": 53,
       "sugar": 4
     }
   },
@@ -1069,7 +1068,7 @@
         "algebra.exact-real.bihomographic"
       ],
       "algebraic_family": "exact-arithmetic",
-      "core_tier": "identity"
+      "core_tier": "material"
     },
     {
       "id": "core.gcd",
