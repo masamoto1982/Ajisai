@@ -1,7 +1,26 @@
 {
   "version": 1,
   "core_tier_summary": {
-    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) otherwise the tier of the entry home algebraic_family, where observation splits to material iff derived_from includes algebra.observation.digest, else identity. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys NIL pass-through), not what the word is. See docs/dev/ajisai-minimal-core-identity.md.",
+    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) kind host-command -> material (a host protocol command, LANG.OBSERVATION.PROTOCOL, is not a Word of the language); (3) otherwise family_tiers of the entry home algebraic_family, so observation is identity. The entries in tier_exceptions carry another tier and are held as recorded. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys NIL pass-through), not what the word is. check-formalization-coverage.mjs recomputes every entry's tier from this rule. An earlier rule split observation to material when derived_from named algebra.observation.digest; that primitive was never declared here, and the observation digest it stood for left the host protocol on 2026-10-13 (envelope schemaVersion 5), so no entry derives from it. See docs/dev/ajisai-minimal-core-identity.md.",
+    "family_tiers": {
+      "absence": "identity",
+      "boolean-truth": "identity",
+      "observation": "identity",
+      "record": "identity",
+      "dictionary": "flow",
+      "state-transformer": "flow",
+      "exact-arithmetic": "material",
+      "exact-scalar": "material",
+      "hosted-effect": "material",
+      "structure-lift": "material",
+      "syntax-sugar": "sugar"
+    },
+    "tier_exceptions": {
+      "core.pow": "identity, in the material exact-arithmetic family. Held as recorded; no reason is written down yet.",
+      "core.digest": "identity, in the flow dictionary family: it observes a value's denotation (LANG.VALUES.DENOTATION) rather than resolving a name.",
+      "core.json-decode": "material, in the identity record family: it parses text into Vectors and Records, so it rests on the material exact-scalar and structure-lift primitives.",
+      "core.json-encode": "material, in the identity record family: it builds text from Vectors and Records, so it rests on the material exact-scalar and structure-lift primitives."
+    },
     "tiers": {
       "identity": "Value-space separation and the three propagation disciplines (NIL, Kleene K3 U, structured diagnostic). Part of Minimal Core.",
       "flow": "State-transformer monoid and dictionary resolution. Part of Minimal Core.",
@@ -453,8 +472,7 @@
       "surface": "TRUE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.5",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.TRUTH"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -479,8 +497,7 @@
       "surface": "FALSE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.5",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.TRUTH"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -505,9 +522,8 @@
       "surface": "NIL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.5",
-        "SPECIFICATION.html §7.12",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.NIL",
+        "SPECIFICATION.html LANG.FAILURE.RECOVERY"
       ],
       "law_tests": [
         "rust/tests/observation_laws.rs",
@@ -534,9 +550,8 @@
       "surface": "NIL?",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.5.0",
-        "SPECIFICATION.html §7.12",
-        "SPECIFICATION.html §7.15"
+        "SPECIFICATION.html LANG.VALUES.NIL",
+        "SPECIFICATION.html LANG.FAILURE.RECOVERY"
       ],
       "law_tests": [
         "rust/src/interpreter/nil_diagnostics_tests.rs"
@@ -562,8 +577,9 @@
       "surface": "NIL-REASON",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.5.0",
-        "SPECIFICATION.html §7.15"
+        "SPECIFICATION.html LANG.VALUES.NIL",
+        "SPECIFICATION.html LANG.FAILURE.RECOVERY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/src/interpreter/nil_diagnostics_tests.rs"
@@ -588,8 +604,10 @@
       "surface": "ABSENT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.5.0",
-        "SPECIFICATION.html §7.15"
+        "SPECIFICATION.html LANG.VALUES.NIL",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.RECOVERY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/src/interpreter/declared_nil_contract.rs"
@@ -615,7 +633,8 @@
       "surface": "AND",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.5"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -641,7 +660,8 @@
       "surface": "NOT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.5"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -666,8 +686,9 @@
       "surface": "ADD/SUB/MUL/DIV",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PASSTHROUGH"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -696,8 +717,10 @@
       "surface": "ADD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -723,8 +746,10 @@
       "surface": "SUB",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -752,8 +777,10 @@
       "surface": "MUL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -779,8 +806,11 @@
       "surface": "DIV",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.CONTRACT.FIELD"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -808,8 +838,10 @@
       "surface": "FLOOR",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -832,8 +864,10 @@
       "surface": "ROUND",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -860,7 +894,9 @@
       "surface": "EQ/LT/GT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.4"
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.ORDER",
+        "SPECIFICATION.html LANG.VALUES.TRUTH"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -889,8 +925,10 @@
       "surface": "EQ",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.4",
-        "SPECIFICATION.html §7.4.1"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.DENOTATION",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -920,8 +958,11 @@
       "surface": "LT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.4",
-        "SPECIFICATION.html §7.4.1"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -947,8 +988,11 @@
       "surface": "GT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.4",
-        "SPECIFICATION.html §7.4.1"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -974,8 +1018,11 @@
       "surface": "SQRT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2.3",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/src/types/exact/algebraic_tests.rs"
@@ -998,8 +1045,13 @@
       "surface": "POW",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.CONTRACT.FIELD",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/src/interpreter/power_words_tests.rs"
@@ -1025,8 +1077,11 @@
       "surface": "GCD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs",
@@ -1053,8 +1108,11 @@
       "surface": "RATIO",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs",
@@ -1082,7 +1140,8 @@
       "surface": "SELECT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.5"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
@@ -1111,7 +1170,10 @@
       "surface": "RECONCILE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.5"
+        "SPECIFICATION.html LANG.VALUES.SHAPE",
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.VALUES.DENOTATION",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/src/interpreter/reconcile_conformance_tests.rs"
@@ -1139,7 +1201,8 @@
       "surface": "EXEC",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.7"
+        "SPECIFICATION.html LANG.MACHINE.TRANSFORMERS",
+        "SPECIFICATION.html LANG.SOURCE.CODE"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
@@ -1161,7 +1224,8 @@
       "surface": "FAIL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §9.2"
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.ERROR"
       ],
       "law_tests": [
         "rust/src/interpreter/declared_nil_contract.rs"
@@ -1185,9 +1249,11 @@
       "surface": "CONTRACT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §9.2",
-        "SPECIFICATION.html §7.7"
+        "SPECIFICATION.html LANG.CONTRACT.REGISTRY",
+        "SPECIFICATION.html LANG.CONTRACT.CHECK",
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION",
+        "SPECIFICATION.html LANG.SOURCE.CODE",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/src/interpreter/reflection_words_tests.rs",
@@ -1219,7 +1285,7 @@
       "surface": "MAP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.7"
+        "SPECIFICATION.html LANG.COLLECTIONS.HIGHER"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
@@ -1245,7 +1311,7 @@
       "surface": "FILTER",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.7"
+        "SPECIFICATION.html LANG.COLLECTIONS.HIGHER"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
@@ -1275,7 +1341,7 @@
       "surface": "FOLD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.7"
+        "SPECIFICATION.html LANG.COLLECTIONS.HIGHER"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
@@ -1302,7 +1368,7 @@
       "surface": "SCAN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.7"
+        "SPECIFICATION.html LANG.COLLECTIONS.HIGHER"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
@@ -1333,8 +1399,8 @@
       "surface": "vector/tensor",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.2"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1362,8 +1428,11 @@
       "surface": "GET",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -1394,8 +1463,8 @@
       "surface": "LENGTH",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1419,8 +1488,10 @@
       "surface": "TAKE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -1446,8 +1517,10 @@
       "surface": "DROP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -1479,8 +1552,8 @@
       "surface": "CONCAT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1504,8 +1577,8 @@
       "surface": "REVERSE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -1531,8 +1604,9 @@
       "surface": "RANGE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1556,8 +1630,8 @@
       "surface": "COLLECT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1579,8 +1653,9 @@
       "surface": "FILL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.2"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -1608,8 +1683,8 @@
       "surface": "SHAPE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1637,8 +1712,9 @@
       "surface": "RESHAPE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.BUDGET",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1665,8 +1741,8 @@
       "surface": "FLATTEN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.DICTIONARY.ACYCLIC"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1692,8 +1768,8 @@
       "surface": "DEPTH",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.DICTIONARY.ACYCLIC"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1720,7 +1796,7 @@
       "surface": "record",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.4"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE"
       ],
       "law_tests": [],
       "conformance_cases": [],
@@ -1740,7 +1816,9 @@
       "surface": "string",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.VALUES.ORDER",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -1762,8 +1840,9 @@
       "surface": "CHARS",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -1785,8 +1864,9 @@
       "surface": "JOIN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PASSTHROUGH"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -1808,8 +1888,9 @@
       "surface": "TRIM",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs",
@@ -1835,7 +1916,9 @@
       "surface": "UPPER",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -1862,7 +1945,9 @@
       "surface": "LOWER",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -1889,8 +1974,9 @@
       "surface": "TOKENIZE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs",
@@ -1916,8 +2002,10 @@
       "surface": "SEARCH",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -1945,8 +2033,9 @@
       "surface": "REPLACE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -1975,8 +2064,12 @@
       "surface": "NUM",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.CONTRACT.FIELD",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -2000,8 +2093,10 @@
       "surface": "STR",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -2023,8 +2118,11 @@
       "surface": "FORMAT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.6"
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2053,8 +2151,12 @@
       "surface": "JSON-DECODE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.6"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2084,8 +2186,10 @@
       "surface": "JSON-ENCODE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.6"
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2116,10 +2220,9 @@
       "surface": "DEF / dictionary resolution",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.8",
-        "SPECIFICATION.html §7.10",
-        "SPECIFICATION.html §8",
-        "SPECIFICATION.html §9"
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION",
+        "SPECIFICATION.html LANG.DICTIONARY.MUTATION",
+        "SPECIFICATION.html LANG.DICTIONARY.ACYCLIC"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2144,8 +2247,8 @@
       "surface": "lookup (host command)",
       "classification": "Host",
       "spec_sections": [
-        "SPECIFICATION.html §8",
-        "SPECIFICATION.html §13"
+        "SPECIFICATION.html LANG.OBSERVATION.PROTOCOL",
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2168,9 +2271,8 @@
       "surface": "PRINT",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.html §5.2",
-        "SPECIFICATION.html §7.11",
-        "SPECIFICATION.html §11"
+        "SPECIFICATION.html LANG.EFFECTS.OUTPUT",
+        "SPECIFICATION.html LANG.MACHINE.ORDER"
       ],
       "law_tests": [
         "rust/src/interpreter/io.rs"
@@ -2195,8 +2297,8 @@
       "surface": "BIND",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §8.2",
-        "SPECIFICATION.html §9.2"
+        "SPECIFICATION.html LANG.SOURCE.FRAME",
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2222,8 +2324,9 @@
       "surface": "DEF",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §8.2",
-        "SPECIFICATION.html §9.2"
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION",
+        "SPECIFICATION.html LANG.DICTIONARY.MUTATION",
+        "SPECIFICATION.html LANG.DICTIONARY.ACYCLIC"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2248,8 +2351,8 @@
       "surface": "DEL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §8.3",
-        "SPECIFICATION.html §9.2"
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION",
+        "SPECIFICATION.html LANG.DICTIONARY.MUTATION"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2272,8 +2375,10 @@
       "surface": "DIGEST",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §8.2",
-        "SPECIFICATION.html §3.1"
+        "SPECIFICATION.html LANG.DICTIONARY.MUTATION",
+        "SPECIFICATION.html LANG.VALUES.DENOTATION",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.DICTIONARY.RESOLUTION"
       ],
       "law_tests": [
         "rust/src/interpreter/reflection_words_tests.rs"
@@ -2299,8 +2404,11 @@
       "surface": "SORT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §7.4.3",
-        "SPECIFICATION.html §9.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/src/interpreter/search_ops.rs",
@@ -2330,8 +2438,11 @@
       "surface": "ORDER",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2359,8 +2470,9 @@
       "surface": "UNIQUE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2386,8 +2498,10 @@
       "surface": "TALLY",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2414,8 +2528,8 @@
       "surface": "ZIP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2442,8 +2556,11 @@
       "surface": "PUT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs",
@@ -2471,8 +2588,10 @@
       "surface": "GROUP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2500,8 +2619,12 @@
       "surface": "BSEARCH",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.MACHINE.LIMITS",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2532,8 +2655,10 @@
       "surface": "RECORD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.VALUES.VECTOR",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/src/interpreter/record_words_tests.rs"
@@ -2559,8 +2684,8 @@
       "surface": "KEYS",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT"
       ],
       "law_tests": [
         "rust/src/interpreter/record_words_tests.rs"
@@ -2584,8 +2709,8 @@
       "surface": "VALUES",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT"
       ],
       "law_tests": [
         "rust/src/interpreter/record_words_tests.rs"
@@ -2610,8 +2735,10 @@
       "surface": "WITHOUT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/src/interpreter/record_words_tests.rs"
@@ -2636,8 +2763,9 @@
       "surface": "HAS?",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT"
       ],
       "law_tests": [
         "rust/src/interpreter/record_words_tests.rs"
@@ -2661,8 +2789,9 @@
       "surface": "MERGE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
+        "SPECIFICATION.html LANG.RECORDS.STRUCTURE",
+        "SPECIFICATION.html LANG.VALUES.DISJOINT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/src/interpreter/record_words_tests.rs"
@@ -2686,8 +2815,12 @@
       "surface": "MIN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
@@ -2716,8 +2849,12 @@
       "surface": "MAX",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
+        "SPECIFICATION.html LANG.VALUES.TRUTH",
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.COLLECTIONS.LIFT",
+        "SPECIFICATION.html LANG.FAILURE.TRICHOTOMY",
+        "SPECIFICATION.html LANG.FAILURE.PROJECT",
+        "SPECIFICATION.html LANG.VALUES.ORDER"
       ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
@@ -2745,7 +2882,9 @@
       "surface": "#",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.html §3.9"
+        "SPECIFICATION.html LANG.SOURCE.TEXT",
+        "SPECIFICATION.html LANG.SOURCE.DESUGAR",
+        "SPECIFICATION.html LANG.CONTRACT.CHECK"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -2767,7 +2906,9 @@
       "surface": "[",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.html §3.9"
+        "SPECIFICATION.html LANG.SOURCE.TEXT",
+        "SPECIFICATION.html LANG.SOURCE.DESUGAR",
+        "SPECIFICATION.html LANG.SOURCE.CODE"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -2789,7 +2930,9 @@
       "surface": "]",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.html §3.9"
+        "SPECIFICATION.html LANG.SOURCE.TEXT",
+        "SPECIFICATION.html LANG.SOURCE.DESUGAR",
+        "SPECIFICATION.html LANG.SOURCE.CODE"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -2811,7 +2954,8 @@
       "surface": "'",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.html §3.9"
+        "SPECIFICATION.html LANG.SOURCE.TEXT",
+        "SPECIFICATION.html LANG.SOURCE.DESUGAR"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",

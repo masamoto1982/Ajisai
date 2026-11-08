@@ -291,6 +291,7 @@
      ]
     },
     "purity": {
+     "description": "Whether running the Word changes anything (LANG.EFFECTS.OUTPUT): `pure` when, given the same stack and dictionary, it produces the same result and changes nothing else; `effectful` when it writes output or changes the dictionary (`PRINT`, `DEF`, `DEL`); `conditional` when it evaluates a code block it is given (`MAP`, `FILTER`, `FOLD`, `SCAN`, `EXEC`), so it has that block's effects and no others and is pure exactly when the block is.",
      "enum": [
       "pure",
       "conditional",
