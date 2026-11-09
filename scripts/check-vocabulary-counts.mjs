@@ -20,7 +20,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readJson, readText, repoRoot, reporter } from './lib/common.mjs';
-import { scanText, TEXT_FILE } from './lib/vocabulary-counts.mjs';
+import { scanText, SELF, TEXT_FILE } from './lib/vocabulary-counts.mjs';
 
 const counts = readJson('docs/word-manifest.json').counts;
 const RECORD = {
@@ -31,7 +31,7 @@ const RECORD = {
 
 const files = execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, encoding: 'utf8' })
   .split('\0')
-  .filter((path) => TEXT_FILE.test(path));
+  .filter((path) => TEXT_FILE.test(path) && !SELF.includes(path));
 
 const report = reporter('vocabulary-counts');
 let stated = 0;

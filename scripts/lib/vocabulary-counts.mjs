@@ -27,6 +27,9 @@
 /** Which tracked files are read at all. JSON and lockfiles are data, not prose. */
 export const TEXT_FILE = /\.(md|html|rs|ts|tsx|js|mjs|cjs|ya?ml|toml|lean|sh|txt)$/;
 
+/** The rule and its test quote stale counts on purpose, as fixtures and exemptions. */
+export const SELF = ['scripts/lib/vocabulary-counts.mjs', 'scripts/check-vocabulary-counts.test.mjs'];
+
 /** Files whose bare counts are read too: code and configuration, not prose. */
 export const CODE_FILE = /\.(rs|ts|tsx|js|mjs|cjs|ya?ml|toml|lean|sh)$/;
 
