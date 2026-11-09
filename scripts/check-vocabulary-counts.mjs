@@ -8,19 +8,19 @@
 // "77"s. Every other gate passed, because every other gate reads the registry
 // and none reads the prose.
 //
-// This gate reads the prose. Each pattern below is one way a reading surface
-// states a count, tied to the manifest count it restates; a number written
-// there that differs from the record fails the check. The sweep patterns then
-// catch a count stated in a phrasing no explicit pattern names yet, so a new
-// sentence cannot carry a stale number past the gate either.
+// This gate reads the prose — every tracked text file, not a list of surfaces,
+// because the first version read seven named files, while a CI workflow
+// comment's "65語" was stale long after the semantics table covered 76. The
+// rule (which phrasings, where a bare "N Words" counts, what is history) is in
+// scripts/lib/vocabulary-counts.mjs and its test.
 //
 // Generated surfaces (SKILL.md, docs/word-reference.md, the marked word index
-// in the Reference) take their counts from the manifest and are gated by their
-// own generators; the MCP compute description and quickstart are gated by
-// tools/mcp-server/tool-description.test.js. This gate covers the hand-written
-// rest.
+// in the Reference) are read too; their generators take the counts from the
+// manifest, so they agree whenever their own --check gates pass.
 
-import { readJson, readText, reporter } from './lib/common.mjs';
+import { execFileSync } from 'node:child_process';
+import { readJson, readText, repoRoot, reporter } from './lib/common.mjs';
+import { scanText, TEXT_FILE } from './lib/vocabulary-counts.mjs';
 
 const counts = readJson('docs/word-manifest.json').counts;
 const RECORD = {
@@ -29,64 +29,32 @@ const RECORD = {
   standard: counts.standardWords,
 };
 
-const SURFACES = [
-  'README.md',
-  'spec/language-semantics.md',
-  'spec/gui-semantics.md',
-  'public/docs/index.html',
-  'public/docs/en/index.html',
-  'public/docs/ja/index.html',
-  'tools/mcp-server/README.md',
-];
-
-// [pattern, which count it restates]. Each pattern's first group is the number.
-const STATED = [
-  // the Specification's count table and dictionary clause
-  [/<td>(\d+)<\/td><td>Canonical Words/g, 'canonical'],
-  [/<td>(\d+)<\/td><td>Semantic Kernel Words/g, 'kernel'],
-  [/<td>(\d+)<\/td><td>Standard Words/g, 'standard'],
-  [/Words, within the (\d+)/g, 'canonical'],
-  // the Reference, English
-  [/These (\d+) Words divide/g, 'canonical'],
-  [/(\d+)-Word Semantic Kernel/g, 'kernel'],
-  [/(\d+) Standard Words/g, 'standard'],
-  [/All (\d+) are ordinary Core Words/g, 'canonical'],
-  [/vocabulary is (\d+) Words/g, 'canonical'],
-  [/The (\d+) Words of the canonical vocabulary/g, 'canonical'],
-  // the Reference, Japanese
-  [/この(\d+)個のワード/g, 'canonical'],
-  [/(\d+)語のSemantic Kernel/g, 'kernel'],
-  [/(\d+)語のStandard/g, 'standard'],
-  [/(\d+)個すべて/g, 'canonical'],
-  [/語彙は(\d+)個のワード/g, 'canonical'],
-  // the sweep: any count of the whole vocabulary, however the sentence runs
-  [/(\d+) (?:canonical|Core) Words/g, 'canonical'],
-  [/(\d+)\s+(?:Semantic\s+)?Kernel\s+Words/g, 'kernel'],
-  [/(\d+)個のCoreワード/g, 'canonical'],
-];
+const files = execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, encoding: 'utf8' })
+  .split('\0')
+  .filter((path) => TEXT_FILE.test(path));
 
 const report = reporter('vocabulary-counts');
 let stated = 0;
 
-for (const path of SURFACES) {
-  const text = readText(path);
-  for (const [pattern, which] of STATED) {
-    for (const match of text.matchAll(pattern)) {
-      stated += 1;
-      const written = Number(match[1]);
-      if (written === RECORD[which]) continue;
-      const line = text.slice(0, match.index).split('\n').length;
-      report.fail(
-        `${path}:${line} states ${written} (${which}) in "${match[0]}", but docs/word-manifest.json records ${RECORD[which]}`,
-      );
-    }
+for (const path of files) {
+  const result = scanText(path, readText(path), RECORD);
+  stated += result.stated;
+  for (const { line, written, expected, which, phrase } of result.mismatches) {
+    const record = which === 'any'
+      ? `no count of record is ${written} (${expected.join(', ')})`
+      : `docs/word-manifest.json records ${expected}`;
+    report.fail(`${path}:${line} states ${written} (${which}) in "${phrase}", but ${record}`);
   }
 }
 
-if (stated === 0) report.fail('no count was found on any surface; the patterns have drifted from the prose');
+if (stated === 0) report.fail('no count was found in any file; the patterns have drifted from the prose');
 if (report.failed) {
-  console.error('[vocabulary-counts] Restate the count from docs/word-manifest.json (`counts`), the count of record.');
+  console.error(
+    '[vocabulary-counts] Restate the count from docs/word-manifest.json (`counts`), the count of record, or drop the number.'
+    + ' A count that was true in the past belongs on a line that says so ("当時", "once"); a number of Words that is not'
+    + ' about the vocabulary goes in EXEMPT in scripts/lib/vocabulary-counts.mjs with its reason.',
+  );
 }
 report.done(
-  `${stated} stated counts on ${SURFACES.length} surfaces agree with the manifest (${RECORD.canonical} Words: ${RECORD.kernel} Kernel, ${RECORD.standard} Standard).`,
+  `${stated} stated counts in ${files.length} tracked files agree with the manifest (${RECORD.canonical} Words: ${RECORD.kernel} Kernel, ${RECORD.standard} Standard).`,
 );

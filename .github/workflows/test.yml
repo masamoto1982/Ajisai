@@ -113,11 +113,12 @@ jobs:
         # blocklist, so deleting a Word is enough to keep prose honest about it.
         run: npm run check:reading-surfaces
 
-      - name: Reading surfaces restate the vocabulary counts of record (LANG.AUTHORITY.IDENTITY)
-        # Every count of Words a hand-written surface states (the Specification's
-        # count table, the Reference in both languages, the README) equals
-        # docs/word-manifest.json's. The Specification said 78 and 50 for a
-        # release after BOTH retired, because no gate read the prose.
+      - name: Stated counts of Words match the record (LANG.AUTHORITY.IDENTITY)
+        # Every count of Words stated in a tracked text file equals
+        # docs/word-manifest.json's: whole-vocabulary phrasings everywhere, and
+        # any "N Words" / "N語" in code and CI comments. The Specification said
+        # 78 and 50 for a release after BOTH retired, and a comment in this
+        # workflow said 65, because no gate read the prose and comments.
         run: npm run check:vocabulary-counts
 
       - name: Playground colours meet WCAG contrast
@@ -209,7 +210,7 @@ jobs:
         run: npm run outcome-registry:check
 
       - name: Exhaustive semantics table is in sync
-        # 65語 × 入力ドメイン組の全数表。契約（spec/words.json）と実装の乖離を
+        # COLLECT を除く全 Word × 入力ドメイン組の全数表。契約（spec/words.json）と実装の乖離を
         # 総当たりで検出し、同時に AI 向けの完全な意味論資産になる。
         run: npm run semantics:table:check
 
@@ -297,7 +298,7 @@ jobs:
           fi
           npm run check:spec-version -- --base "$SPEC_BASE"
 
-      - name: The specification version rule's own tests
+      - name: The specification version and vocabulary count rules' own tests
         run: npm run test:scripts
 
       - name: Cost axes say when they grow with an algebraic value
