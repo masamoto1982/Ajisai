@@ -44,5 +44,5 @@ test('only the listed exemption passes, and only in its file', () => {
 });
 
 test('the part of a larger number is not a count', () => {
-  assert.deepEqual(refused('rust/src/x.rs', '/// a chain of 2,000 one-token Words, see §9.3 Core Words'), []);
+  assert.deepEqual(refused('rust/src/x.rs', '/// a chain of 2,000 one-token Words, see 2.4.2 Words'), []);
 });

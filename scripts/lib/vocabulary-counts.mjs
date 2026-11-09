@@ -36,8 +36,8 @@ export const CODE_FILE = /\.(rs|ts|tsx|js|mjs|cjs|ya?ml|toml|lean|sh)$/;
 /** A count stated in the past tense is history, not a claim about the present. */
 export const HISTORICAL = /\b(?:once|formerly|previously|used to|was|were|had been)\b|当時|かつて|以前は|旧語彙/;
 
-// A number that is not the tail of a larger one ("2,000", "2.4.2", "§9.3").
-const N = String.raw`(?<![\d.,§])(\d+)`;
+// A number that is not the tail of a larger one ("2,000", "2.4.2").
+const N = String.raw`(?<![\d.,])(\d+)`;
 const re = (source) => new RegExp(source.replaceAll('N', N), 'g');
 
 /** [pattern, which count it restates]. Each pattern's first group is the number. */
