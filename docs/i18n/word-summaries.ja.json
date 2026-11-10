@@ -18,8 +18,8 @@
       "summary": "強Kleeneの真理値表による否定で、SQLの`NOT`と同じ(LANG.VALUES.TRUTH)。`TRUE NOT`は`FALSE`で、ベクトルには要素ごとに働き、`[ TRUE FALSE ] NOT`は`[ FALSE TRUE ]`になる。UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは`nonTruthValue`。"
     },
     "SELECT": {
-      "source": "2db00d1d9a109672",
-      "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
+      "source": "d4a06ca04c072d4a",
+      "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はFALSEと同じく2つ目の値をとる。SQLのCASE WHENが条件が真のときだけTHENをとるのと同じで、`'yes' 'no' NIL SELECT`は`'no'`である。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
     },
     "RECONCILE": {
       "source": "43f5fd308cea0f13",

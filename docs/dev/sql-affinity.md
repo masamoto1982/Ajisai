@@ -83,8 +83,7 @@ NULL の伝わり方、`FILTER` と WHERE、NOT IN の罠）は SQL と一致し
 - **集計は NIL を伝える。** SQL の SUM は NULL を飛ばすが、Ajisai の `FOLD` は NIL を伝える。
   「黙って捨てない」は核なので、ここは意図して SQL と違えたままにする。SQL の集計は、
   下の表のとおり `[ NIL? NOT ] FILTER` を前に置けば書ける。
-- **`SELECT` は UNKNOWN で NIL を答える。** CASE WHEN が UNKNOWN を ELSE に倒す動作は、
-  IS TRUE に当たる言い回しで書ける（下の表）。
+- ~~**`SELECT` は UNKNOWN で NIL を答える。**~~ 2026-11-11 に CASE WHEN に揃えた（下の「追補：SELECT を CASE WHEN に揃えた」）。
 - **`EQ` は値全体を比べ、要素ごとには持ち上がらない。** 列に対する `=` は `[ v EQ ] MAP`
   と書く。ベクトルの中の 2 つの NIL は、理由が同じときに限り等しい。
 - **OR・IN・不等号などの語は足さない。** 言い回しで書け、三値の答えも SQL と一致する。
@@ -105,7 +104,7 @@ NULL の伝わり方、`FILTER` と WHERE、NOT IN の罠）は SQL と一致し
 | `a OR b` | `A NOT B NOT AND NOT` | 三値の OR |
 | `p IS TRUE` | `'X' BIND X NIL? NOT X AND` | UNKNOWN が FALSE になる |
 | `p IS NOT FALSE` | `'X' BIND X NOT NIL? NOT X NOT AND NOT` | UNKNOWN が TRUE になる |
-| `CASE WHEN x > 2 THEN 'big' ELSE 'small' END` | `'big' 'small' X 2 GT [ 'P' BIND P NIL? NOT P AND ] MAP SELECT` | NULL の行は `'small'` |
+| `CASE WHEN x > 2 THEN 'big' ELSE 'small' END` | `'big' 'small' X 2 GT SELECT` | NULL の行は `'small'` |
 | `COALESCE(x, 0)` | `0 X X [ NIL? ] MAP SELECT` | `[ 1 NIL 3 ]` が `[ 1 0 3 ]` |
 | `1 IN (2, NULL)` | `[ 2 NIL ] [ 1 EQ ] MAP FALSE [ 'B' BIND 'A' BIND A NOT B NOT AND NOT ] FOLD` | UNKNOWN |
 | `1 NOT IN (2, NULL)` | `[ 2 NIL ] [ 1 EQ NOT ] MAP TRUE [ AND ] FOLD` | UNKNOWN |
@@ -151,3 +150,20 @@ NUMERIC(p, s) の列へ書き出すときは、スケール `s` を指定して 
 丸めは入れない。ゼロ除算の行を SQL のようにエラーとして扱いたいときは、
 `[ 0 FORMAT NIL? ] FILTER` で `1/0`・`0/0`・NIL の行を拾える
 （`[ 1 1/0 0/0 NIL ] [ 0 FORMAT NIL? ] FILTER` は `[ 1/0 0/0 NIL ]`）。
+
+## 追補：SELECT を CASE WHEN に揃えた（2026-11-11）
+
+作者の判断で、`SELECT` は真偽が UNKNOWN のとき 2 つ目の候補をとるようにした（仕様 1.0.0-beta.4、
+LANG.VALUES.TRUTH）。SQL の `CASE WHEN` が条件が真のときだけ THEN をとり、FALSE と UNKNOWN で
+ELSE をとるのと同じである。
+
+理由は姉妹言語 Arare にある。Arare は最初から分岐を SQL に合わせていた（Arare の WORK_ORDER.md
+D-07）。Ajisai もそろえると、二つの言語の違いは「丸めるか丸めないか」だけになり、Arare が Ajisai を
+オラクルとして比べるときに、意図的な相違として除けておく事例が一つ減る。
+
+上の「変えなかったもの」で SELECT を違えたままにした理由は「黙って捨てない」だった。この変更で、
+UNKNOWN の理由は SELECT の答えに残らなくなる。ただし捨てる場所は SQL と同じ明文の規則で決まって
+おり、`FILTER` が TRUE の要素だけを残すのと同じ読み方である。理由を残したいときは、従来どおり
+`NIL?` で先に分ければよい。`fallback S S NIL? SELECT` は真偽が NIL にならないので、答えは変わらない。
+
+この変更で CASE WHEN の行は `'big' 'small' X 2 GT SELECT` だけで書けるようになった。

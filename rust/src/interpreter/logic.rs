@@ -58,8 +58,9 @@ fn lifted_conjunction(a: &Value, b: &Value) -> Result<Value> {
     lift_lanes([a, b], |[x, y]| compute_conjunction(x, y))
 }
 
-/// `SELECT`'s scalar law: TRUE and FALSE choose one of the two values it was
-/// handed, and UNKNOWN chooses neither.
+/// `SELECT`'s scalar law: TRUE chooses the first of the two values it was
+/// handed, and FALSE and UNKNOWN the second — SQL's `CASE WHEN`, whose THEN
+/// is taken only when the condition is true (LANG.VALUES.TRUTH).
 ///
 /// Nothing is evaluated here. Both candidates are values the program already
 /// built, so the work that produced them happened before `SELECT` ran, once
@@ -72,10 +73,10 @@ pub(crate) fn compute_selection(
 ) -> Result<Value> {
     Ok(match operand_truth(mask)? {
         Truth::True => when_true.clone(),
-        Truth::False => when_false.clone(),
-        // UNKNOWN chooses neither: the answer is the absence the truth
-        // operand carried, reason intact, so `NIL-REASON` can still say why.
-        Truth::Unknown => mask.clone(),
+        // UNKNOWN takes the second candidate as FALSE does, as SQL's CASE
+        // takes its ELSE when the condition is UNKNOWN. The truth operand is
+        // still read, so a value that is not a truth value is an error first.
+        Truth::False | Truth::Unknown => when_false.clone(),
     })
 }
 

@@ -571,10 +571,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-select-conflict-chooses-neither" data-category="truthOrder">
-  <h3>A conflict in truth position chooses neither candidate and answers the conflict, reason kept</h3>
-  <pre class="ajisai-source">1 2 TRUE FALSE RECONCILE SELECT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">'conflict'</pre>
+<section class="ajisai-case" id="core-select-conflict-takes-else" data-category="truthOrder">
+  <h3>A conflict in truth position is UNKNOWN, so SELECT takes the second candidate, as SQL's CASE takes ELSE</h3>
+  <pre class="ajisai-source">1 2 TRUE FALSE RECONCILE SELECT</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1692,10 +1692,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-select-unknown-truth-chooses-neither" data-category="truthOrder">
-  <h3>An UNKNOWN truth chooses neither candidate and answers that same absence</h3>
-  <pre class="ajisai-source">[ 'big' ] [ 'small' ] NIL SELECT</pre>
-  <pre class="ajisai-expect-result">[ NIL ]</pre>
+<section class="ajisai-case" id="core-select-unknown-truth-takes-else" data-category="truthOrder">
+  <h3>An UNKNOWN truth takes the second candidate, as FALSE does: SQL's CASE WHEN takes THEN only on TRUE</h3>
+  <pre class="ajisai-source">[ 'big' 'big' 'big' ] [ 'small' 'small' 'small' ] [ TRUE NIL FALSE ] SELECT</pre>
+  <pre class="ajisai-expect-result">[ 'big' 'small' 'small' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

@@ -15,6 +15,10 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.4
+
+- **breaking** LANG.VALUES.TRUTH — `SELECT` takes its second candidate when its truth is UNKNOWN, as FALSE does, the way SQL's `CASE WHEN` takes ELSE when its condition is UNKNOWN. The sister language Arare branches the same way, so the two differ only in rounding. `'yes' 'no' NIL SELECT` was `NIL` and is `'no'`; `[ 'big' 'big' ] [ 'small' 'small' ] [ TRUE NIL ] SELECT` was `[ 'big' NIL ]` and is `[ 'big' 'small' ]`. The recovery phrase `fallback S S NIL? SELECT` is unchanged, since `NIL?` never answers UNKNOWN. (2026-11-11)
+
 ## 1.0.0-beta.3
 
 - **editorial** Presentation Profile — The Current GUI contract states that Run and Step format the Input surface before reading it, so a bracket glued to other text, `[1 2 3]`, runs in the Playground as `[ 1 2 3 ]` while `ajisai` answers the source error. The Playground already did this; the language does not change. (2026-11-08)

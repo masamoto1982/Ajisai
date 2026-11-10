@@ -1148,11 +1148,11 @@
       "conformance_cases": [
         "core-select-chooses-by-truth",
         "core-select-chooses-lane-by-lane",
-        "core-select-unknown-truth-chooses-neither",
-        "core-select-conflict-chooses-neither"
+        "core-select-unknown-truth-takes-else",
+        "core-select-conflict-takes-else"
       ],
       "status": "Formalized",
-      "notes": "Choice between two values under K3: UNKNOWN chooses neither and answers the absence it read. Nothing is evaluated, so the choice is an ordinary lifted operation rather than a control construct.",
+      "notes": "Choice between two values under K3: TRUE takes the first, FALSE and UNKNOWN the second, as SQL's CASE WHEN takes THEN only on TRUE. Nothing is evaluated, so the choice is an ordinary lifted operation rather than a control construct.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

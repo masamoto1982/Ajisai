@@ -106,11 +106,11 @@ async fn reconcile_is_a_semilattice() {
 }
 
 /// Two sources that disagree on a truth value are a conflict like any other
-/// disagreement, and the reason says so; an UNKNOWN chooses neither branch,
-/// and `FILTER` keeps only what its predicate calls TRUE, as SQL's `WHERE`
+/// disagreement, and the reason says so; an UNKNOWN takes the second
+/// candidate of `SELECT`, as SQL's CASE takes ELSE, and `FILTER` keeps only what its predicate calls TRUE, as SQL's `WHERE`
 /// does.
 #[tokio::test]
-async fn a_truth_disagreement_is_a_conflict_and_unknown_selects_nothing() {
+async fn a_truth_disagreement_is_a_conflict_and_unknown_takes_else() {
     for code in ["TRUE FALSE RECONCILE", "FALSE TRUE RECONCILE"] {
         assert_eq!(
             one(code).await.nil_reason(),
@@ -119,11 +119,11 @@ async fn a_truth_disagreement_is_a_conflict_and_unknown_selects_nothing() {
         );
     }
     assert_eq!(
-        one("TRUE FALSE RECONCILE 'M' BIND 1 2 M SELECT NIL-REASON")
+        one("TRUE FALSE RECONCILE 'M' BIND 1 2 M SELECT")
             .await
             .to_string(),
-        "'conflict'",
-        "the conflict reads as UNKNOWN in truth position, reason kept"
+        "2/1",
+        "the conflict reads as UNKNOWN in truth position, and UNKNOWN takes ELSE"
     );
     assert_eq!(
         one("[ 1 0/0 2 ] [ 0 GT ] FILTER").await.to_string(),

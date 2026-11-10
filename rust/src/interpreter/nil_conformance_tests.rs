@@ -41,9 +41,9 @@ enum NilClass {
     /// AND/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
     ThreeValNot,
-    /// SELECT: an UNKNOWN truth chooses neither candidate and answers that
-    /// same absence. Not a blanket collapse — an absent *candidate* is only
-    /// NIL in the result when the truth actually chose it.
+    /// SELECT: an UNKNOWN truth takes the second candidate, as FALSE does
+    /// (SQL's CASE WHEN). Not a blanket collapse — an absent *candidate* is
+    /// only NIL in the result when the truth actually chose it.
     ThreeValSelect,
 }
 

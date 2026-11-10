@@ -1889,7 +1889,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SELECT">
 <h4><code>SELECT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>すでに計算済みの2つの値から、真偽値で一方を選ぶ。<code>'yes' 'no' TRUE SELECT</code>は<code>'yes'</code>、<code>'yes' 'no' FALSE SELECT</code>は<code>'no'</code>。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。</p>
+<p>すでに計算済みの2つの値から、真偽値で一方を選ぶ。<code>'yes' 'no' TRUE SELECT</code>は<code>'yes'</code>、<code>'yes' 'no' FALSE SELECT</code>は<code>'no'</code>。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はFALSEと同じく2つ目の値をとる。SQLのCASE WHENが条件が真のときだけTHENをとるのと同じで、<code>'yes' 'no' NIL SELECT</code>は<code>'no'</code>である。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 'yes' ] [ 'no' ] TRUE SELECT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ whenTrue ] [ whenFalse ] [ mask ] -&gt; [ chosen ]</span></dd>
@@ -3700,8 +3700,8 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3>どちらも選ばれないとき</h3>
-                    <p>真偽値の位置に<a href="#nil">不在(NIL)</a>が来たら、それは<strong>UNKNOWN</strong>です(<a href="#logic">三値論理</a>)。UNKNOWNはどちらの候補も選ばず、読み取ったその不在を<em>理由ごと</em>答えます。ですから<code>NIL-REASON</code>で「なぜ分岐できなかったのか」を後から尋ねられます。</p>
+                    <h3>真偽値が UNKNOWN のとき</h3>
+                    <p>真偽値の位置に<a href="#nil">不在(NIL)</a>が来たら、それは<strong>UNKNOWN</strong>です(<a href="#logic">三値論理</a>)。UNKNOWNはFALSEと同じく2つ目の候補をとります。SQLのCASE WHENが、条件がUNKNOWNのときELSEをとるのと同じです。不在そのもので分岐したいときは、先に<code>NIL?</code>で尋ねてください。<code>NIL?</code>の答えはUNKNOWNになりません。</p>
                     <p class="ref-note">「どの節も当たらなかった」という状態はありません。候補は常に2つあり、真偽値はTRUE・FALSE・UNKNOWNのいずれかなので、<code>SELECT</code>は常に答えを持っています。else節を書き忘れて実行時に落ちる、ということが起こらないのはこのためです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -3712,8 +3712,8 @@ SELECT</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 'y' ] [ 'n' ] NIL SELECT</code></td>
-                                    <td><code>[ NIL ]</code></td>
-                                    <td class="notes">UNKNOWNはどちらも選ばず、その不在を答える。</td>
+                                    <td><code>[ 'n' ]</code></td>
+                                    <td class="notes">UNKNOWNはFALSEと同じく2つ目の候補をとる。</td>
                                 </tr>
                             </tbody>
                         </table>

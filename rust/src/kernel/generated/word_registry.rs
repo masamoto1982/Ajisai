@@ -7,7 +7,7 @@
 
 /// The specification version this registry was generated from
 /// (`spec/version-lock.json`), which every agent envelope names.
-pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.3";
+pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.4";
 
 /// Canonical identity of a Core Word, named by its executor key (unique across
 /// the registry).
@@ -701,7 +701,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &[],
         error_when: &["nonTruthValue", "shapeMismatch"],
         syntax: Some("[ 'yes' ] [ 'no' ] TRUE SELECT"),
-        summary: "Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
+        summary: "Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — takes the second value, as FALSE does: SQL's CASE WHEN takes THEN only when its condition is true, so `'yes' 'no' NIL SELECT` is `'no'`. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
         stack_effect: "[ whenTrue ] [ whenFalse ] [ mask ] -> [ chosen ]",
         hover_summary: "SELECT — choose between two values by truth",
         hover_syntax: "[ 'yes' ] [ 'no' ] TRUE SELECT",

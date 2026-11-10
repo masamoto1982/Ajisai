@@ -63,7 +63,7 @@ Negation under the strong Kleene table (LANG.VALUES.TRUTH), SQL's `NOT`: `TRUE N
 
 ## `SELECT`
 
-Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
+Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — takes the second value, as FALSE does: SQL's CASE WHEN takes THEN only when its condition is true, so `'yes' 'no' NIL SELECT` is `'no'`. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `truthOrder`
