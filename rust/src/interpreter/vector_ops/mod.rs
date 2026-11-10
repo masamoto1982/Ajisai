@@ -272,6 +272,48 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// `SUM` — the total of a Vector's present elements, as SQL's `SUM` skips
+/// NULL (LANG.VALUES.ORDER).
+///
+/// The NIL elements are set aside and the rest are added by `ADD` from the
+/// left, so every element is added exactly as `ADD` adds it: a point over
+/// zero like any number, a Vector element lane by lane, a non-number refused
+/// with ADD's own condition. With no element present there is nothing to
+/// add, and the answer is NIL(domainMiss), as SQL's SUM over no rows is NULL.
+/// A NIL operand never reaches here: the dispatcher passes a `data` operand's
+/// absence through.
+pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
+    let target = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    if !target.is_vector() {
+        let got = target.domain_name();
+        interp.stack.push(target);
+        return Err(AjisaiError::declared(
+            "nonVector",
+            format!("expected a Vector, got {got}"),
+        ));
+    }
+    let depth = interp.stack.len();
+    let mut present = extract_vector_elements(&target)
+        .into_iter()
+        .filter(|element| !element.is_nil());
+    let Some(first) = present.next() else {
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::DomainMiss));
+        return Ok(());
+    };
+    interp.stack.push(first);
+    for element in present {
+        interp.stack.push(element);
+        if let Err(error) = crate::interpreter::arithmetic::op_add(interp) {
+            interp.stack.truncate(depth);
+            interp.stack.push(target);
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     split_by_count(interp, Split::Take)
 }

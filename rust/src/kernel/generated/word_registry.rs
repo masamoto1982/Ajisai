@@ -7,7 +7,7 @@
 
 /// The specification version this registry was generated from
 /// (`spec/version-lock.json`), which every agent envelope names.
-pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.3";
+pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.4";
 
 /// Canonical identity of a Core Word, named by its executor key (unique across
 /// the registry).
@@ -30,6 +30,7 @@ pub enum WordId {
     Round,
     Min,
     Max,
+    Sum,
     Sqrt,
     Pow,
     Gcd,
@@ -701,7 +702,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &[],
         error_when: &["nonTruthValue", "shapeMismatch"],
         syntax: Some("[ 'yes' ] [ 'no' ] TRUE SELECT"),
-        summary: "Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
+        summary: "Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — takes the second value, as FALSE does: SQL's CASE WHEN takes THEN only when its condition is true, so `'yes' 'no' NIL SELECT` is `'no'`. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
         stack_effect: "[ whenTrue ] [ whenFalse ] [ mask ] -> [ chosen ]",
         hover_summary: "SELECT — choose between two values by truth",
         hover_syntax: "[ 'yes' ] [ 'no' ] TRUE SELECT",
@@ -1185,6 +1186,46 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_effect: "[ a ] [ b ] -> [ max ]",
         hover_summary: "MAX — larger of two values",
         hover_syntax: "1 2 MAX",
+    },
+    GeneratedWord {
+        id: WordId::Sum,
+        name: "SUM",
+        family: Family::Collection,
+        stack_inputs: Arity::Fixed(1),
+        stack_outputs: Arity::Fixed(1),
+        operand_roles: &[OperandRole::Data],
+        operand_domains: &[&[ValueDomain::Vector]],
+        result_domains: &[&[ValueDomain::Any]],
+        nil_policy: NilPolicy::PassthroughThenProject,
+        projection: &["noPresentElement"],
+        projection_reasons: &["domainMiss"],
+        partiality: Partiality::Projecting,
+        field: FieldClosure::Closed,
+        purity: Purity::Pure,
+        determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
+        effects: &[],
+        error_when: &["nonVector", "nonNumeric", "shapeMismatch"],
+        syntax: Some("[ 1 2 3 ] SUM"),
+        summary: "The total of a Vector's elements, skipping every NIL as SQL's SUM skips NULL: `[ 1 2 3 ] SUM` is `6` and `[ 1 NIL 2 ] SUM` is `3`. The elements that are present are added by `ADD` from the left, so `[ 1/3 1/6 ] SUM` is `1/2`, a point over zero is added like any number, and Vector elements add lane by lane. A Vector with no element present — empty, or every element absent — projects NIL(domainMiss), as SQL's SUM over no rows is NULL: `[ ] SUM` and `[ NIL NIL ] SUM` are both NIL. The sister language Arare's SUM answers the same values. A non-Vector is `nonVector`, and an element ADD cannot add is `nonNumeric` or `shapeMismatch`.",
+        stack_effect: "[ vec ] -> [ total ]",
+        hover_summary: "SUM — total, skipping NIL",
+        hover_syntax: "[ 1 2 3 ] SUM",
     },
     GeneratedWord {
         id: WordId::Sqrt,

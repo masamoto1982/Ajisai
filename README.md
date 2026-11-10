@@ -33,8 +33,8 @@ I began the work in June, in Japan's rainy season. Watching the rain, I pictured
 
 <table>
 <tr><td>Release stage</td><td>Beta</td></tr>
-<tr><td>Implementation version</td><td>1.0.0-beta.3</td></tr>
-<tr><td>Specification version</td><td>1.0.0-beta.3 — what changed in each version is in <a href="spec/CHANGELOG.md"><code>spec/CHANGELOG.md</code></a></td></tr>
+<tr><td>Implementation version</td><td>1.0.0-beta.4</td></tr>
+<tr><td>Specification version</td><td>1.0.0-beta.4 — what changed in each version is in <a href="spec/CHANGELOG.md"><code>spec/CHANGELOG.md</code></a></td></tr>
 <tr><td>Specification</td><td>Generated from the semantic sources in <code>spec/</code> — see <a href="spec/README.md"><code>spec/README.md</code></a></td></tr>
 <tr><td>Compatibility promise</td><td>From 1.0.0. Until then a breaking change raises the specification version, and <code>npm run check:spec-version</code> refuses one that does not</td></tr>
 </table>

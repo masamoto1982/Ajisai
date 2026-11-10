@@ -18,8 +18,8 @@
       "summary": "強Kleeneの真理値表による否定で、SQLの`NOT`と同じ(LANG.VALUES.TRUTH)。`TRUE NOT`は`FALSE`で、ベクトルには要素ごとに働き、`[ TRUE FALSE ] NOT`は`[ FALSE TRUE ]`になる。UNKNOWN(ここで読まれたNIL)は理由を保ったままUNKNOWNにとどまる。真偽値でもNILでもないオペランドは`nonTruthValue`。"
     },
     "SELECT": {
-      "source": "2db00d1d9a109672",
-      "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はどちらも選ばず、その不在をそのまま答えるので、理由は選択を越えて残る。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
+      "source": "d4a06ca04c072d4a",
+      "summary": "すでに計算済みの2つの値から、真偽値で一方を選ぶ。`'yes' 'no' TRUE SELECT`は`'yes'`、`'yes' 'no' FALSE SELECT`は`'no'`。選択は要素ごとに行われる(LANG.COLLECTIONS.LIFT)ので、真偽値のベクトルは2つのベクトルをレーンごとに編み合わせ、1レーンのオペランドは相手の長さに合わせて繰り返し使われる。UNKNOWNのレーン(真偽の位置で読まれたNIL。理由は問わない)はFALSEと同じく2つ目の値をとる。SQLのCASE WHENが条件が真のときだけTHENをとるのと同じで、`'yes' 'no' NIL SELECT`は`'no'`である。どちらのオペランドもプログラムがすでに組み立てた値であり、SELECTは何も評価しない。それらを計算したものはSELECTより前に、ちょうど1回実行されている。"
     },
     "RECONCILE": {
       "source": "43f5fd308cea0f13",
@@ -68,6 +68,10 @@
     "MAX": {
       "source": "9cbbd8f5ae158e0d",
       "summary": "2つの値の大きい方。`1 2 MAX`は`2`で、ベクトルにはブロードキャスト付きで要素ごとに働き、`[ -1 2 -3 ] 0 MAX`は`[ 0 2 0 ]`。順序はLANG.VALUES.ORDERのもの。数は厳密な定義域で(LANG.VALUES.EXACT)、`-1 5 MAX`は`5`。文字列はUnicodeスカラー値で、`'pear' 'apple' MAX`は`'pear'`。順序を持たない0の上の点(`1/0`または`0/0`)はGTと同じくNIL(domainMiss)を投影する。数と文字列の組を含め、それ以外の組は`nonNumeric`。"
+    },
+    "SUM": {
+      "source": "21de8a3dde3a2ede",
+      "summary": "ベクトルの要素の合計。NILの要素はSQLのSUMがNULLを飛ばすのと同じく飛ばす。`[ 1 2 3 ] SUM`は`6`、`[ 1 NIL 2 ] SUM`は`3`。存在する要素は左から`ADD`で足すので、`[ 1/3 1/6 ] SUM`は`1/2`、0の上の点はほかの数と同じく足され、ベクトルの要素はレーンごとに足される。存在する要素が1つもないベクトル(空か、すべての要素が不在)は、SQLの行のないSUMがNULLになるのと同じくNIL(domainMiss)を投影する。`[ ] SUM`も`[ NIL NIL ] SUM`もNILである。姉妹言語ArareのSUMも同じ値を答える。ベクトルでないものは`nonVector`、ADDが足せない要素は`nonNumeric`か`shapeMismatch`。"
     },
     "SQRT": {
       "source": "69d77b1f54080f2c",

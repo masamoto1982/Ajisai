@@ -225,6 +225,7 @@ impl Interpreter {
             WordId::Scan => self.in_block_frame(higher_order_fold::op_scan),
             WordId::Get => vector_ops::op_get(self),
             WordId::Length => vector_ops::op_length(self),
+            WordId::Sum => vector_ops::op_sum(self),
             WordId::Concat => vector_ops::op_concat(self),
             WordId::And => logic::op_and(self),
             WordId::Not => logic::op_not(self),

@@ -56,10 +56,23 @@ fn without_string_literals(source: &str) -> String {
     stripped
 }
 
+/// The names a witness binds itself, written `'NAME' BIND`: reading one is
+/// reading a value the witness made, not calling a Word.
+fn bound_names(source: &str) -> Vec<String> {
+    let tokens: Vec<&str> = source.split_whitespace().collect();
+    tokens
+        .windows(2)
+        .filter(|pair| pair[1].eq_ignore_ascii_case("BIND"))
+        .filter_map(|pair| pair[0].strip_prefix('\'')?.strip_suffix('\''))
+        .map(str::to_string)
+        .collect()
+}
+
 fn assert_kernel_only(source: &str) {
     let kernel = kernel_words();
+    let bound = bound_names(source);
     for token in without_string_literals(source).split_whitespace() {
-        if token.chars().any(char::is_alphabetic) {
+        if token.chars().any(char::is_alphabetic) && !bound.iter().any(|name| name == token) {
             let upper = token.to_ascii_uppercase();
             assert!(
                 kernel.contains(&upper),
@@ -138,6 +151,26 @@ async fn collection_standards_have_kernel_only_witnesses() {
         ),
     ] {
         equivalent(native, witness).await;
+    }
+}
+
+/// SUM folds ADD over the present elements. The accumulator starts absent, as
+/// `-1 SQRT` (NIL(domainMiss)) is: an absent element keeps the accumulator,
+/// an absent accumulator takes the element, and two present ones add, so no
+/// element present leaves the seed.
+#[tokio::test]
+async fn sum_has_a_kernel_only_witness() {
+    const FOLD: &str = "-1 SQRT [ 'E' BIND 'A' BIND A E A E ADD A NIL? SELECT E NIL? SELECT ] FOLD";
+    for (vector, tail) in [
+        ("[ 1 NIL 2 ]", ""),
+        ("[ 1/3 NIL 1/6 1/0 ]", ""),
+        ("[ [ 1 2 ] NIL [ 3 4 ] ]", ""),
+        ("[ ]", "NIL-REASON"),
+        ("[ NIL NIL ]", "NIL-REASON"),
+    ] {
+        let native = format!("{vector} SUM {tail}");
+        let witness = format!("{vector} {FOLD} {tail}");
+        equivalent(&native, &witness).await;
     }
 }
 

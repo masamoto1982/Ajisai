@@ -41,9 +41,9 @@ enum NilClass {
     /// AND/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
     ThreeValNot,
-    /// SELECT: an UNKNOWN truth chooses neither candidate and answers that
-    /// same absence. Not a blanket collapse — an absent *candidate* is only
-    /// NIL in the result when the truth actually chose it.
+    /// SELECT: an UNKNOWN truth takes the second candidate, as FALSE does
+    /// (SQL's CASE WHEN). Not a blanket collapse — an absent *candidate* is
+    /// only NIL in the result when the truth actually chose it.
     ThreeValSelect,
 }
 
@@ -150,14 +150,14 @@ async fn passthrough_blanket_collapses_to_nil() {
 // beside their own Words; `SHAPE` (a ragged operand) and `RESHAPE`
 // (the materialization ceiling) in `shape_words_tests`; `BSEARCH` and `SEARCH`
 // (an absent key or needle) in `search_words_tests`;
-// `ABSENT` (the reason a program states) in `declared_outcomes_tests`. `GET`/`TAKE`/`PUT` are probed together
+// `ABSENT` in `declared_outcomes_tests`; `SUM` in `vector_ops::tests`. `GET`/`TAKE`/`PUT` are probed together
 // in `index_projection_tests`: what they must agree on is one condition
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
     "ABSENT", "BSEARCH", "CONTRACT", "DROP", "FORMAT", "GCD", "GET", "GT",
     "JSON-DECODE", "JSON-ENCODE", "LT", "MAX", "MIN", "NIL-REASON", "NUM", "ORDER", "POW", "PUT",
-    "RATIO", "RECONCILE", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
+    "RATIO", "RECONCILE", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "SUM", "TAKE", "WITHOUT",
 ];
 
 /// The order Words project on a point over zero: `1/0` and `0/0` are numbers

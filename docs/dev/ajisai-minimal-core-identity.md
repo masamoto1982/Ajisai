@@ -18,8 +18,8 @@
 >
 > 注記（2026-10-15）: §1〜§8 の語数・エントリ数（表層語彙 215、core 97、module 88 など）と
 > 語名（`OR-NIL` `KEEP` `IMPORT` `MOD` など）は本書を書いた 2026-09 時点のもので、その後の
-> 最小 Core への削減でモジュール・別名とともに消えた。現在の語彙は 77 語（Kernel 49・
-> Standard 28）で、数の記録は `docs/word-manifest.json` の `counts`。付録 B は現在の
+> 最小 Core への削減でモジュール・別名とともに消えた。2026-10-15 当時の語彙は 77 語（当時は Kernel 49・
+> Standard 28、当時）で、数の記録は `docs/word-manifest.json` の `counts`。付録 B は現在の
 > 事実に合わせて改めた。
 
 ## 0. なぜ幹を定めるのか
@@ -224,8 +224,8 @@ B.1 は語を足すときの判断規則、B.2 はその規則の条件 2 が指
 
 **現在の事実（2026-10-15 時点。数と列はここではなくスクリプトが持つ）。**
 
-- 語彙は 77 語（Kernel 49・Standard 28）。数の記録は `docs/word-manifest.json` の
-  `counts`、検査は `scripts/check-minimal-core.mjs`（77・49・28 の一致）。
+- 語数は `docs/word-manifest.json` の `counts` が記録し、`scripts/check-minimal-core.mjs`
+  が Kernel・Standard・全体の数の一致を検査する（2026-11-11 に `SUM` を足して当時は 78 語）。
 - 語数の上限 100 を検査するのは `scripts/check-semantic-kernel.mjs` であって
   `check-minimal-core.mjs` ではない。
 - 退役候補の列は `scripts/check-minimal-core.mjs` の `RETIREMENT_QUEUE` が正本で、
@@ -250,6 +250,14 @@ B.1 は語を足すときの判断規則、B.2 はその規則の条件 2 が指
 >    語数は動かさない。
 
 `UPPER` `LOWER` は条件 2 で入った（`NEQ` と `PROBE` を退役させた）。
+
+> **改訂（2026-11-11、作者の判断）。** 語数の制約の本意は「仕様を単純に保つため 100 語以内に
+> 収め、将来の拡張のために数十語の予約枠を残す」ことであり、77 語に固定することではない。
+> そこで条件 2 は「予約枠が数十語を割りそうなとき」に限って適用する。予約枠があるうちは、
+> 理由の明らかな語は何も退役させずに足してよい。`check-minimal-core.mjs` の固定の数は、
+> 追加と退役を意図的な変更にするための目印として残す。最初の適用は `SUM` で、姉妹言語
+> Arare と同じ SQL の SUM（NIL を飛ばす）を両言語に持たせるために、何も退役させずに足した
+> （`sql-affinity.md` の追補）。
 
 **語数そのものを alpha の制約にしない理由。** 固定された語数は互換性の約束であり、
 約束は 1.0 のものである。alpha とは語の集合をまだ動かせる期間のことなので、そこで

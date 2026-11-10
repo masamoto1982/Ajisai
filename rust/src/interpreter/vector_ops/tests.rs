@@ -431,3 +431,52 @@ async fn test_floor_consumes_operand() {
     assert!(result.is_ok(), "FLOOR should succeed: {:?}", result);
     assert_eq!(interp.stack.len(), 1, "FLOOR leaves only its result");
 }
+
+async fn sum_display(code: &str) -> String {
+    let mut interp = Interpreter::new();
+    interp.execute(code).await.unwrap();
+    interp
+        .stack
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// SUM is SQL's SUM: the present elements added by ADD, every NIL skipped,
+/// and NIL(domainMiss) when nothing is present (LANG.VALUES.ORDER).
+#[tokio::test]
+async fn sum_adds_the_present_elements_and_skips_nil() {
+    for (code, expected) in [
+        ("[ 1 2 3 ] SUM", "6/1"),
+        ("[ 1 NIL 2 ] SUM", "3/1"),
+        ("[ 1/3 1/6 ] SUM", "1/2"),
+        ("[ 1 1/0 ] SUM", "1/0"),
+        ("[ [ 1 2 ] NIL [ 3 4 ] ] SUM", "[ 4/1 6/1 ]"),
+        ("1 10 RANGE SUM", "55/1"),
+        ("[ ] SUM NIL-REASON", "'domainMiss'"),
+        ("[ NIL NIL ] SUM NIL-REASON", "'domainMiss'"),
+        ("NIL SUM NIL-REASON", "'literal'"),
+    ] {
+        assert_eq!(sum_display(code).await, expected, "`{code}`");
+    }
+}
+
+/// A refused SUM puts its operand back, as every Word does on an error.
+#[tokio::test]
+async fn sum_refusals_restore_the_operand() {
+    for (code, category, left) in [
+        ("5 SUM", "nonVector", "5/1"),
+        ("[ 1 'a' ] SUM", "nonNumeric", "[ 1/1 'a' ]"),
+        ("9 [ 1 'a' ] SUM", "nonNumeric", "9/1 [ 1/1 'a' ]"),
+    ] {
+        let mut interp = Interpreter::new();
+        let error = interp.execute(code).await.unwrap_err();
+        assert!(
+            format!("{error:?}").contains(category),
+            "`{code}` raised {error:?}"
+        );
+        let stack: Vec<String> = interp.stack.iter().map(ToString::to_string).collect();
+        assert_eq!(stack.join(" "), left, "`{code}`");
+    }
+}
