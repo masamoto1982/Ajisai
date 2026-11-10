@@ -69,6 +69,10 @@
       "source": "9cbbd8f5ae158e0d",
       "summary": "2つの値の大きい方。`1 2 MAX`は`2`で、ベクトルにはブロードキャスト付きで要素ごとに働き、`[ -1 2 -3 ] 0 MAX`は`[ 0 2 0 ]`。順序はLANG.VALUES.ORDERのもの。数は厳密な定義域で(LANG.VALUES.EXACT)、`-1 5 MAX`は`5`。文字列はUnicodeスカラー値で、`'pear' 'apple' MAX`は`'pear'`。順序を持たない0の上の点(`1/0`または`0/0`)はGTと同じくNIL(domainMiss)を投影する。数と文字列の組を含め、それ以外の組は`nonNumeric`。"
     },
+    "SUM": {
+      "source": "21de8a3dde3a2ede",
+      "summary": "ベクトルの要素の合計。NILの要素はSQLのSUMがNULLを飛ばすのと同じく飛ばす。`[ 1 2 3 ] SUM`は`6`、`[ 1 NIL 2 ] SUM`は`3`。存在する要素は左から`ADD`で足すので、`[ 1/3 1/6 ] SUM`は`1/2`、0の上の点はほかの数と同じく足され、ベクトルの要素はレーンごとに足される。存在する要素が1つもないベクトル(空か、すべての要素が不在)は、SQLの行のないSUMがNULLになるのと同じくNIL(domainMiss)を投影する。`[ ] SUM`も`[ NIL NIL ] SUM`もNILである。姉妹言語ArareのSUMも同じ値を答える。ベクトルでないものは`nonVector`、ADDが足せない要素は`nonNumeric`か`shapeMismatch`。"
+    },
     "SQRT": {
       "source": "69d77b1f54080f2c",
       "summary": "非負の数の厳密な平方根。`4 SQRT`は`2`、`2 SQRT`は無理数そのもので、多重二次正規形で保持され丸めなしに比較される(LANG.VALUES.EXACT)ので、`2 SQRT 2 SQRT MUL`は`2`。根号の中は平方因子を含まない形に簡約されるので、1つの数は組み立て方によらず1つの形を持つ。`8 SQRT`は`2 SQRT 2 MUL`である。この簡約は根号の中を素因数分解し、実行の数値作業量に計上される。残りの作業量で分解できない根号の中身は`resourceLimitExceeded`。`1/0`と`0/0`はそれぞれ自分自身の平方根である。ベクトルには要素ごとに働き、負の数はNIL(domainMiss)を投影する。`[ 4 -1 ] SQRT`は`[ 2 NIL ]`で、2番目のレーンはその理由で不在になる。数でないものは`nonNumeric`。"

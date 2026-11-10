@@ -28573,6 +28573,90 @@
       "outcome": "value"
     },
     {
+      "word": "SUM",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "scalarNullity"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "SUM",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
       "word": "SQRT",
       "inputs": [
         "scalarOne"

@@ -8,7 +8,7 @@ GET LENGTH CONCAT COLLECT RANGE FOLD MAP SHAPE RESHAPE FLATTEN DEPTH
 RECORD KEYS VALUES WITHOUT HAS? MERGE PUT
 CHARS JOIN NUM STR
 SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DIGEST PRINT`.split(/\s+/));
-const STANDARD = new Set(`SUB ROUND MIN MAX GCD RATIO
+const STANDARD = new Set(`SUB ROUND MIN MAX SUM GCD RATIO
 TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP GROUP BSEARCH FILTER SCAN
 TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
 // The retired names live in spec/retired-words.json, the one representation
@@ -22,7 +22,7 @@ const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
-const DERIVABLE = new Set(`SUB ROUND MIN MAX
+const DERIVABLE = new Set(`SUB ROUND MIN MAX SUM
 TAKE DROP REVERSE TRIM TOKENIZE`.split(/\s+/));
 // `FORMAT` and the JSON pair are Phase 6 of the vocabulary-100 work order:
 // `FORMAT` is the one rounding boundary (a FLOOR-and-STR spelling would
@@ -35,9 +35,11 @@ const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP GROUP 
 
 // The order in which the vocabulary would give up Words, cheapest to lose first.
 //
-// The vocabulary is held at 77 (78 until BOTH retired with the three-valued
-// truth domain, 2026-10), so an addition has to take a slot from
-// something, and a candidate takes the head of this list. Every entry is a
+// The vocabulary stays within the ceiling scripts/check-semantic-kernel.mjs
+// holds, with a few tens of slots in reserve for later extension; that, not a fixed
+// count, is the owner's rule (2026-11-11). The count below is a tripwire, so
+// an addition or a retirement is a deliberate edit here, and this list is
+// where Words would come from if the reserve ran short. Every entry is a
 // derivable Standard, checked below: an operational Word cannot be written in
 // the language at all (LANG.AUTHORITY.FREEDOM's consequence for a total,
 // non-recursive language), so retiring one would cut capability rather than
@@ -53,7 +55,9 @@ const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP GROUP 
 // TRIM 10, TOKENIZE 12, MAX 13, MIN 14, TAKE 16, DROP 32, SUB 54 (written `-`).
 // `ROUND` is deliberately absent though it is derivable: its Kernel phrase
 // branches on the sign of its operand, which is the one of these a reader is
-// likely to write wrongly by hand.
+// likely to write wrongly by hand. `SUM` is absent too: it joined on
+// 2026-11-11 to be the same Word as the sister language Arare's SUM (SQL's
+// SUM, skipping NIL), and retiring it would part the two vocabularies again.
 const RETIREMENT_QUEUE = 'SUB REVERSE TRIM TOKENIZE MAX MIN TAKE DROP'.split(/\s+/);
 
 const words = wordsDocument().entries;
@@ -78,9 +82,9 @@ for (const name of setDifference(kernelWords, KERNEL)) fail(`${name}: unexpected
 for (const name of setDifference(STANDARD, standardWords)) fail(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) fail(`${name}: unexpected Standard classification`);
 if (kernelWords.size !== 49) fail(`Semantic Kernel has ${kernelWords.size} Words; expected 49`);
-if (standardWords.size !== 28) fail(`Standard vocabulary has ${standardWords.size} Words; expected 28`);
+if (standardWords.size !== 29) fail(`Standard vocabulary has ${standardWords.size} Words; expected 29`);
 
-if (words.length !== 77) fail(`canonical inventory has ${words.length} Words; expected 77`);
+if (words.length !== 78) fail(`canonical inventory has ${words.length} Words; expected 78`);
 for (const name of REMOVED) if (wordNames.has(name)) fail(`${name}: removed Word remains canonical`);
 if (REMOVED.size !== REMOVED_LIST.length) fail('spec/retired-words.json names the same Word twice');
 
@@ -147,7 +151,7 @@ if (operationalWords.size !== OPERATIONAL.size) {
 // Standard but `ROUND`, each one a spelling of a Kernel phrase rather than a
 // capability. A queue naming a Word that has already gone, or one whose
 // relation drifted to operational, would promise room it cannot give.
-for (const name of setDifference(DERIVABLE, new Set([...RETIREMENT_QUEUE, 'ROUND']))) {
+for (const name of setDifference(DERIVABLE, new Set([...RETIREMENT_QUEUE, 'ROUND', 'SUM']))) {
   fail(`${name}: derivable Standard missing from the retirement queue`);
 }
 if (new Set(RETIREMENT_QUEUE).size !== RETIREMENT_QUEUE.length) {

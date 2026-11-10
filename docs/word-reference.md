@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **77 Words**, of which **49** form the Semantic Kernel and **28** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **78 Words**, of which **49** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -253,6 +253,21 @@ The larger of two values: `1 2 MAX` is `2`, and element-wise over Vectors with b
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`, `LANG.VALUES.ORDER`
 - **Syntax:** `1 2 MAX`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+
+## `SUM`
+
+The total of a Vector's elements, skipping every NIL as SQL's SUM skips NULL: `[ 1 2 3 ] SUM` is `6` and `[ 1 NIL 2 ] SUM` is `3`. The elements that are present are added by `ADD` from the left, so `[ 1/3 1/6 ] SUM` is `1/2`, a point over zero is added like any number, and Vector elements add lane by lane. A Vector with no element present — empty, or every element absent — projects NIL(domainMiss), as SQL's SUM over no rows is NULL: `[ ] SUM` and `[ NIL NIL ] SUM` are both NIL. The sister language Arare's SUM answers the same values. A non-Vector is `nonVector`, and an element ADD cannot add is `nonNumeric` or `shapeMismatch`.
+
+- **Vocabulary tier:** Standard (`namedPattern`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s)
+- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **NIL policy:** `passthroughThenProject`; projection: noPresentElement → domainMiss
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.ORDER`, `LANG.VALUES.EXACT`, `LANG.VALUES.NIL`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `[ 1 2 3 ] SUM`
+- **ERROR conditions:** `nonVector`, `nonNumeric`, `shapeMismatch`
 
 ## `SQRT`
 

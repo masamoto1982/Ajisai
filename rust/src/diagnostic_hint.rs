@@ -80,7 +80,6 @@ pub(crate) const FOREIGN_IDIOMS: &[(&str, &str, &str)] = &[
         "iterate over a finite Vector with MAP, FILTER, FOLD or SCAN",
         "1 5 RANGE [ 2 MUL ] MAP",
     ),
-    ("SUM", "fold with ADD from 0", "[ 1 2 3 ] 0 [ ADD ] FOLD"),
     (
         "PRODUCT",
         "fold with MUL from 1",

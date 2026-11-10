@@ -19,7 +19,7 @@ NULL の伝わり方、`FILTER` と WHERE、NOT IN の罠）は SQL と一致し
 
 ## 何を変えたか
 
-新しい節 LANG.VALUES.ORDER に、順序とグループ化のキーをまとめて定めた。語は増やしていない（77 語のまま）。
+新しい節 LANG.VALUES.ORDER に、順序とグループ化のキーをまとめて定めた。語は増やしていない（当時は 77 語のまま）。
 
 1. **グループ化のキー。** `UNIQUE`・`TALLY`・`GROUP` は、すべての NIL を理由によらず、
    どの深さでも 1 つのキーとみなす。SQL の DISTINCT と GROUP BY が、すべての NULL を
@@ -80,9 +80,8 @@ NULL の伝わり方、`FILTER` と WHERE、NOT IN の罠）は SQL と一致し
 
 ## 変えなかったもの
 
-- **集計は NIL を伝える。** SQL の SUM は NULL を飛ばすが、Ajisai の `FOLD` は NIL を伝える。
-  「黙って捨てない」は核なので、ここは意図して SQL と違えたままにする。SQL の集計は、
-  下の表のとおり `[ NIL? NOT ] FILTER` を前に置けば書ける。
+- **`FOLD` は NIL を伝える。** SQL の SUM は NULL を飛ばすが、`FOLD` は NIL を伝える。
+  `FOLD` はこのままにし、2026-11-11 に NIL を飛ばす `SUM` を語として足した（下の追補）。
 - ~~**`SELECT` は UNKNOWN で NIL を答える。**~~ 2026-11-11 に CASE WHEN に揃えた（下の「追補：SELECT を CASE WHEN に揃えた」）。
 - **`EQ` は値全体を比べ、要素ごとには持ち上がらない。** 列に対する `=` は `[ v EQ ] MAP`
   と書く。ベクトルの中の 2 つの NIL は、理由が同じときに限り等しい。
@@ -108,16 +107,16 @@ NULL の伝わり方、`FILTER` と WHERE、NOT IN の罠）は SQL と一致し
 | `COALESCE(x, 0)` | `0 X X [ NIL? ] MAP SELECT` | `[ 1 NIL 3 ]` が `[ 1 0 3 ]` |
 | `1 IN (2, NULL)` | `[ 2 NIL ] [ 1 EQ ] MAP FALSE [ 'B' BIND 'A' BIND A NOT B NOT AND NOT ] FOLD` | UNKNOWN |
 | `1 NOT IN (2, NULL)` | `[ 2 NIL ] [ 1 EQ NOT ] MAP TRUE [ AND ] FOLD` | UNKNOWN |
-| `SUM(x)` | `[ NIL? NOT ] FILTER 0 [ ADD ] FOLD` | NULL を飛ばした和 |
+| `SUM(x)` | `X SUM` | NULL を飛ばした和。行がなければ NIL |
 | `COUNT(x)` / `COUNT(*)` | `[ NIL? NOT ] FILTER LENGTH` / `LENGTH` | |
-| `AVG(x)` | `[ NIL? NOT ] FILTER 'V' BIND V 0 [ ADD ] FOLD V LENGTH DIV` | 空なら `0/0` |
+| `AVG(x)` | `[ NIL? NOT ] FILTER 'V' BIND V SUM V LENGTH DIV` | 行がなければ NIL |
 | `MAX(x)` | `[ NIL? NOT ] FILTER SORT -1 GET` | 空なら `NIL(indexOutOfBounds)` |
 | `ORDER BY x` | `X SORT`、他の列は `C X ORDER GET` | NULLS LAST |
 | `ORDER BY x DESC` | `X SORT REVERSE` | NULLS FIRST |
 | `ORDER BY name`、`MIN(name)` | `NAMES SORT`、`'pear' 'apple' MIN` | バイナリ照合 |
 | `SELECT DISTINCT x` | `X UNIQUE` | NULL は 1 つ |
 | `COUNT(DISTINCT x)` | `X UNIQUE [ NIL? NOT ] FILTER LENGTH` | |
-| `GROUP BY k` で `SUM(v)` | `K V GROUP VALUES [ [ NIL? NOT ] FILTER 0 [ ADD ] FOLD ] MAP` | NULL のキーは 1 グループ |
+| `GROUP BY k` で `SUM(v)` | `K V GROUP VALUES [ SUM ] MAP` | NULL のキーは 1 グループ |
 | `x LIKE '%or%'` | `[ 'or' SEARCH NIL? NOT ] FILTER` | |
 | `'a' \|\| x` | `'a' X 2 COLLECT JOIN` | `X` が NULL なら NULL |
 | `ROUND(x, 2)` で NUMERIC へ | `2 FORMAT NUM` | 下の境界を参照 |
@@ -167,3 +166,18 @@ UNKNOWN の理由は SELECT の答えに残らなくなる。ただし捨てる�
 `NIL?` で先に分ければよい。`fallback S S NIL? SELECT` は真偽が NIL にならないので、答えは変わらない。
 
 この変更で CASE WHEN の行は `'big' 'small' X 2 GT SELECT` だけで書けるようになった。
+
+## 追補：NIL を飛ばす SUM を足した（2026-11-11）
+
+同じ理由で、SQL の SUM と同じ `SUM` を Standard の語として足した（仕様 1.0.0-beta.4、
+LANG.VALUES.ORDER）。存在する要素を `ADD` で左から足し、NIL の要素は飛ばし、存在する要素が
+一つもなければ（空のベクトルを含む）`domainMiss` の NIL を投影する。SQL の行のない SUM が NULL
+なのと同じで、Arare の `SUM`（AR-HLR-016）と値が一致する。`FOLD` は変えていない。
+
+語彙は 78 語になった。それまで語数は 77 に固定し、足すなら退役の列の先頭（`SUB`）と入れ替える
+規則だったが、作者の意図は「100 語以内に収め、数十語の予約枠を残す」ことだったので、固定の数は
+意図的な変更を求める目印として残し、`SUM` は何も退役させずに足した（`scripts/check-minimal-core.mjs`）。
+`SUM` は導出可能だが、Arare と共有する語なので退役の列には入れない。
+
+Phrasebook の `SUM` は Core の語と同じ名前になるので取り除き、`MEAN` は SQL の AVG に合わせて
+NIL を飛ばすように書き直した（存在する要素がなければ NIL）。

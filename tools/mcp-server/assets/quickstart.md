@@ -18,11 +18,11 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 77 Words are:
+reaching for it exactly where it would have helped. The 78 Words are:
 
 | you need | Words |
 |---|---|
-| arithmetic | `ADD` `SUB` `MUL` `DIV` `FLOOR` `ROUND` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` (negate with `-1 MUL`) |
+| arithmetic | `ADD` `SUB` `MUL` `DIV` `FLOOR` `ROUND` `MIN` `MAX` `SUM` `SQRT` `POW` `GCD` `RATIO` (negate with `-1 MUL`; `SUM` skips NIL, as SQL's does) |
 | comparison and logic | `EQ` `LT` `GT` (not-equal is `EQ NOT`, at-most is `GT NOT`) · `AND` `NOT` (or is `a NOT b NOT AND NOT`) `SELECT` `TRUE` `FALSE` — SQL's three-valued logic, a NIL read as UNKNOWN · `RECONCILE` (two sources joined: agreement stays, NIL yields, any mismatch, TRUE with FALSE included, is a `conflict` NIL) |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
 | collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
@@ -556,8 +556,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word index
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-77 canonical Words in one flat Core dictionary, of which
-49 form the Semantic Kernel and 28 are Standard Words. Both are
+78 canonical Words in one flat Core dictionary, of which
+49 form the Semantic Kernel and 29 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import. For a phrase you would otherwise
@@ -574,7 +574,7 @@ common ones at work.
 |---|---|
 | truthOrder | `TRUE` `FALSE` `AND` `NOT` `SELECT` `EQ` `LT` `GT` `MIN` `MAX` |
 | knowledgeOrder | `RECONCILE` `ADD` `SUB` `MUL` `DIV` `FLOOR` `ROUND` `SQRT` `POW` `GCD` `RATIO` |
-| collection | `GET` `LENGTH` `TAKE` `DROP` `CONCAT` `REVERSE` `COLLECT` `RANGE` `FILL` `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` `SORT` `ORDER` `UNIQUE` `ZIP` `PUT` `BSEARCH` |
+| collection | `SUM` `GET` `LENGTH` `TAKE` `DROP` `CONCAT` `REVERSE` `COLLECT` `RANGE` `FILL` `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` `SORT` `ORDER` `UNIQUE` `ZIP` `PUT` `BSEARCH` |
 | record | `TALLY` `GROUP` `RECORD` `KEYS` `VALUES` `WITHOUT` `HAS?` `MERGE` |
 | higherOrder | `MAP` `FILTER` `FOLD` `SCAN` |
 | text | `CHARS` `JOIN` `TRIM` `UPPER` `LOWER` `TOKENIZE` `SEARCH` `REPLACE` `NUM` `STR` `FORMAT` `JSON-DECODE` `JSON-ENCODE` |
