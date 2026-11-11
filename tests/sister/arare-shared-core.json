@@ -9,7 +9,7 @@
     "the two languages share: record it in spec/CHANGELOG.md and run this script again."
   ],
   "arare": {
-    "commit": "5932271f703c33e58e670d203c247c047e1e2565",
+    "commit": "cadbc4817df6ca5d4c14c1a3e79978929dfe20e8",
     "generatedPrograms": 2000
   },
   "prelude": [
