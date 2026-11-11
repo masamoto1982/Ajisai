@@ -29,6 +29,10 @@ The arithmetic is not new: it is Carlström's *wheel of fractions* over the inte
 
 I began the work in June, in Japan's rainy season. Watching the rain, I pictured fractions poured into a vessel called a Vector: one substance inside, never rounded, and rich ripples on its surface. The hydrangea — *ajisai* in Japanese — takes its scientific name, *Hydrangea*, from the Greek for "water vessel".
 
+## Sister language
+
+[Arare](https://github.com/masamoto1982/Arare) is Ajisai's counterpart, an antithesis of equal standing. Ajisai fixes the value — it never rounds — and counts what that costs, stopping a run at the ceiling of its work meter. Arare fixes the cost — every value is one machine word of a width known before it runs — and counts what that loses, as an error budget checked before anything runs. The two share their syntax, their three-valued truth, their total division and every Word they both have, with one name and one meaning that neither changes alone; each checks the other on the programs they share (`tests/sister/`).
+
 ## Status
 
 <table>
