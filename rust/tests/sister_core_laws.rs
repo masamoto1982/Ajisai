@@ -1,14 +1,16 @@
 //! The shared core with the sister language Arare.
 //!
-//! Arare computes in fixed point and checks every answer it gives against
-//! Ajisai's exact one; the two languages are meant to differ only in rounding
-//! (spec/CHANGELOG.md, 1.0.0-beta.4). `tests/sister/arare-shared-core.json`
-//! holds the programs Arare compares — its oracle corpus and the first of its
-//! seeded, generated programs — with the prelude that gives Arare's QUANTIZE,
-//! RESCALE, NARROW and NEG their exact meanings, and Ajisai's answer to each.
-//! This suite holds Ajisai to those answers, so that a change to what the two
-//! languages share fails here when it is made, not first when Arare next pins
-//! its oracle. A deliberate change is recorded in spec/CHANGELOG.md and the
+//! Arare is Ajisai's counterpart (Arare's ADR-0015): it fixes the cost of a
+//! value where Ajisai fixes the value, and on the Words they share the two are
+//! meant to differ only in rounding (spec/CHANGELOG.md, 1.0.0-beta.4). Each
+//! checks the other: Arare compares its answers with Ajisai's exact ones, and
+//! this suite holds Ajisai to the programs Arare compares.
+//!
+//! `tests/sister/arare-shared-core.json` holds those programs — Arare's
+//! corpus and the first of its seeded, generated programs — with the prelude
+//! that gives Arare's QUANTIZE, RESCALE, NARROW and NEG their exact meanings,
+//! and Ajisai's answer to each. A change to what the two languages share
+//! fails here when it is made, not first when Arare next pins Ajisai. A deliberate change is recorded in spec/CHANGELOG.md and the
 //! answers are recorded again with `node scripts/sync-sister-core.mjs`.
 
 use ajisai_core::agent::api::{compute, ComputeOptions};
