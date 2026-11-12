@@ -412,6 +412,11 @@ mod tests {
                 "[ [ TRUE TRUE ] [ FALSE TRUE ] ] [ TRUE FALSE ] AND",
                 "[ [ TRUE FALSE ] [ FALSE FALSE ] ]",
             ),
+            // An empty inner axis keeps its rows, with or without a NIL lane:
+            // the shapes [0] and [1, 1] broadcast to [1, 0].
+            ("[ ] [ [ 1 ] ] ADD", "[ [ ] ]"),
+            ("[ ] [ [ NIL ] ] ADD", "[ [ ] ]"),
+            ("[ [ NIL ] [ 1 ] ] [ ] MUL", "[ [ ] [ ] ]"),
             (
                 "[ [ 1 2 ] [ 3 4 ] ] [ 8 9 ] FALSE SELECT",
                 "[ [ 8/1 9/1 ] [ 8/1 9/1 ] ]",

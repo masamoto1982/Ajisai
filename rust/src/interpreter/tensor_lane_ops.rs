@@ -232,10 +232,10 @@ fn nest_children(mut values: Vec<Value>, shape: &[usize]) -> Vec<Value> {
         return values;
     }
     let inner_shape = &shape[1..];
+    // An empty inner axis still leaves `shape[0]` empty rows: the shapes
+    // `[0]` and `[1, 1]` broadcast to `[1, 0]`, which is `[ [ ] ]`, as the
+    // flat route answers it.
     let inner_size: usize = inner_shape.iter().product();
-    if inner_size == 0 {
-        return Vec::new();
-    }
     let mut outer: Vec<Value> = Vec::with_capacity(shape[0]);
     for _ in 0..shape[0] {
         let tail = values.split_off(inner_size.min(values.len()));
