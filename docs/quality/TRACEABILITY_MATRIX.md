@@ -76,7 +76,9 @@ proved never to undercharge by those in
 ceiling allows its limit and refuses one past it. The alignment the lift and
 the truth-column connectives share (`common_extent` and `vector_extent` in
 `rust/src/interpreter/lane_lift.rs`) is proved by
-`rust/src/interpreter/lane_lift_proofs.rs`, and the truth column's packing rule
+`rust/src/interpreter/lane_lift_proofs.rs`; when two or more of a lifted
+Word's operands are vectors, `aligned_ranks` meets their shapes through the
+same `broadcast_shape` the Tensor harnesses prove, and the truth column's packing rule
 (`LANG.VALUES.TRUTH`, `rust/src/types/truth_column.rs`) by
 `rust/src/types/truth_column_proofs.rs`.
 

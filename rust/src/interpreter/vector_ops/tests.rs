@@ -453,6 +453,9 @@ async fn sum_adds_the_present_elements_and_skips_nil() {
         ("[ 1/3 1/6 ] SUM", "1/2"),
         ("[ 1 1/0 ] SUM", "1/0"),
         ("[ [ 1 2 ] NIL [ 3 4 ] ] SUM", "[ 4/1 6/1 ]"),
+        ("[ 5 ] SUM", "5/1"),
+        ("[ NIL 1/0 ] SUM", "1/0"),
+        ("[ [ 1 2 ] ] SUM", "[ 1/1 2/1 ]"),
         ("1 10 RANGE SUM", "55/1"),
         ("[ ] SUM NIL-REASON", "'domainMiss'"),
         ("[ NIL NIL ] SUM NIL-REASON", "'domainMiss'"),
@@ -469,6 +472,11 @@ async fn sum_refusals_restore_the_operand() {
         ("5 SUM", "nonVector", "5/1"),
         ("[ 1 'a' ] SUM", "nonNumeric", "[ 1/1 'a' ]"),
         ("9 [ 1 'a' ] SUM", "nonNumeric", "9/1 [ 1/1 'a' ]"),
+        // A lone present element is added too, so it is held to ADD's
+        // operands like any other: it used to come back unread.
+        ("[ TRUE ] SUM", "nonNumeric", "[ TRUE ]"),
+        ("[ 'a' NIL ] SUM", "nonNumeric", "[ 'a' NIL ]"),
+        ("[ NIL TRUE NIL ] SUM", "nonNumeric", "[ NIL TRUE NIL ]"),
     ] {
         let mut interp = Interpreter::new();
         let error = interp.execute(code).await.unwrap_err();

@@ -211,6 +211,114 @@ pub(crate) fn lift_lanes_dyn(
         ));
     }
 
+    // Two or more Vectors pair by shape, aligned at the innermost axis; a
+    // single Vector meets only leaves, which combine with every element
+    // however it nests, a ragged one included.
+    let vectors = operands
+        .iter()
+        .zip(lifted)
+        .filter(|(v, l)| **l && v.as_vector_view().is_some())
+        .count();
+    if vectors >= 2 {
+        let ranks = aligned_ranks(operands, lifted)?;
+        return walk_aligned(operands, &ranks, scalar);
+    }
+    walk_lanes(operands, lifted, scalar)
+}
+
+/// The rank of each operand that pairs by shape (0 for a leaf or an operand
+/// not lifted), once every Vector among them is known to be rectangular and
+/// their shapes to broadcast: aligned at the innermost axis, an axis of
+/// length 1 reused across the other's length (LANG.COLLECTIONS.LIFT).
+fn aligned_ranks(operands: &[&Value], lifted: &[bool]) -> Result<Vec<usize>> {
+    let mut joined: Vec<usize> = Vec::new();
+    let mut ranks = Vec::with_capacity(operands.len());
+    for (value, l) in operands.iter().zip(lifted) {
+        if !*l || value.as_vector_view().is_none() {
+            ranks.push(0);
+            continue;
+        }
+        let Some(shape) = lift_shape(value) else {
+            return Err(AjisaiError::declared(
+                "shapeMismatch",
+                "expected two Vectors with a shape, got a ragged one",
+            ));
+        };
+        joined = crate::interpreter::tensor_ops::broadcast_shape(&joined, &shape)?;
+        ranks.push(shape.len());
+    }
+    Ok(ranks)
+}
+
+/// The shape of a rectangular nesting, every non-Vector a leaf, or `None`
+/// for a ragged one.
+fn lift_shape(value: &Value) -> Option<Vec<usize>> {
+    let Some(items) = value.as_vector_view() else {
+        return Some(Vec::new());
+    };
+    let Some(first) = items.first() else {
+        return Some(vec![0]);
+    };
+    let inner = lift_shape(first)?;
+    for item in items.iter().skip(1) {
+        if lift_shape(item)? != inner {
+            return None;
+        }
+    }
+    let mut shape = Vec::with_capacity(inner.len() + 1);
+    shape.push(items.len());
+    shape.extend(inner);
+    Some(shape)
+}
+
+/// The walk for operands whose shapes broadcast: the operands of the highest
+/// rank are entered axis by axis while the others are held whole, which is
+/// what aligning at the innermost axis means; once the ranks meet, the axes
+/// pair as [`walk_lanes`] pairs them.
+fn walk_aligned(
+    operands: &[&Value],
+    ranks: &[usize],
+    scalar: &mut dyn FnMut(&[&Value]) -> Result<Value>,
+) -> Result<Value> {
+    let top = ranks.iter().copied().max().unwrap_or(0);
+    if top == 0 {
+        return scalar(operands);
+    }
+    let lanes: Vec<Lanes> = operands
+        .iter()
+        .zip(ranks)
+        .map(|(v, r)| {
+            if *r == top {
+                Lanes::of(v)
+            } else {
+                Lanes::Scalar(v)
+            }
+        })
+        .collect();
+    let next_ranks: Vec<usize> = ranks
+        .iter()
+        .map(|r| if *r == top { r - 1 } else { *r })
+        .collect();
+    let extent = common_extent(lanes.iter().map(Lanes::extent))
+        .map_err(|(width, len)| AjisaiError::shape_mismatch(&[width], &[len], 0))?;
+    let width = extent.unwrap_or(1);
+    let mut result = Vec::with_capacity(width);
+    let mut next: Vec<&Value> = Vec::with_capacity(lanes.len());
+    for index in 0..width {
+        next.clear();
+        next.extend(lanes.iter().map(|lane| lane.lane(index)));
+        result.push(walk_aligned(&next, &next_ranks, scalar)?);
+    }
+    Ok(Value::from_vector(result))
+}
+
+/// The walk where at most one operand is a Vector: it is entered lane by
+/// lane, every other operand held whole.
+fn walk_lanes(
+    operands: &[&Value],
+    lifted: &[bool],
+    scalar: &mut dyn FnMut(&[&Value]) -> Result<Value>,
+) -> Result<Value> {
     let lanes: Vec<Lanes> = operands
         .iter()
         .zip(lifted)
@@ -269,6 +377,77 @@ fn is_container(value: &Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    async fn shown(code: &str) -> std::result::Result<String, String> {
+        let mut interp = crate::interpreter::Interpreter::new();
+        interp.execute(code).await.map_err(|e| format!("{e:?}"))?;
+        Ok(interp
+            .stack
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" "))
+    }
+
+    /// The comparisons, the connectives and SELECT pair two Vectors at the
+    /// innermost axis, as arithmetic does (LANG.COLLECTIONS.LIFT): they used
+    /// to pair them at the outermost, so `[ [ 1 2 ] [ 3 4 ] ] [ 2 3 ] LT`
+    /// compared 3 with 2 where `SUB` subtracted 3 from 3.
+    #[tokio::test]
+    async fn every_word_aligns_two_vectors_at_the_innermost_axis() {
+        for (code, expected) in [
+            (
+                "[ [ 1 2 ] [ 3 4 ] ] [ 2 3 ] SUB",
+                "[ [ -1/1 -1/1 ] [ 1/1 1/1 ] ]",
+            ),
+            (
+                "[ [ 1 2 ] [ 3 4 ] ] [ 2 3 ] LT",
+                "[ [ TRUE TRUE ] [ FALSE FALSE ] ]",
+            ),
+            (
+                "[ [ 1 2 ] [ 3 4 ] ] [ 2 3 ] GT",
+                "[ [ FALSE FALSE ] [ TRUE TRUE ] ]",
+            ),
+            (
+                "[ [ TRUE TRUE ] [ FALSE TRUE ] ] [ TRUE FALSE ] AND",
+                "[ [ TRUE FALSE ] [ FALSE FALSE ] ]",
+            ),
+            // An empty inner axis keeps its rows, with or without a NIL lane:
+            // the shapes [0] and [1, 1] broadcast to [1, 0].
+            ("[ ] [ [ 1 ] ] ADD", "[ [ ] ]"),
+            ("[ ] [ [ NIL ] ] ADD", "[ [ ] ]"),
+            ("[ [ NIL ] [ 1 ] ] [ ] MUL", "[ [ ] [ ] ]"),
+            (
+                "[ [ 1 2 ] [ 3 4 ] ] [ 8 9 ] FALSE SELECT",
+                "[ [ 8/1 9/1 ] [ 8/1 9/1 ] ]",
+            ),
+            (
+                "[ [ 1 2 ] [ 3 4 ] ] 0 [ TRUE FALSE ] SELECT",
+                "[ [ 1/1 0/1 ] [ 3/1 0/1 ] ]",
+            ),
+            ("[ 1 2 ] 0 NIL SELECT", "[ 0/1 0/1 ]"),
+            ("[ 1 2 3 ] [ 2 ] GT", "[ FALSE FALSE TRUE ]"),
+            ("[ [ 1 ] ] [ [ 2 ] [ 3 ] ] LT", "[ [ TRUE ] [ TRUE ] ]"),
+            ("[ [ 1 2 ] [ 3 ] ] 0 TRUE SELECT", "[ [ 1/1 2/1 ] [ 3/1 ] ]"),
+            ("[ TRUE [ FALSE ] ] NOT", "[ FALSE [ TRUE ] ]"),
+        ] {
+            assert_eq!(shown(code).await.as_deref(), Ok(expected), "`{code}`");
+        }
+    }
+
+    /// A ragged Vector meets a leaf, never another Vector, in every Word.
+    #[tokio::test]
+    async fn a_ragged_vector_pairs_with_no_vector() {
+        for code in [
+            "[ [ 1 2 ] [ 3 ] ] [ 7 8 ] TRUE SELECT",
+            "[ [ 1 2 ] [ 3 ] ] [ 0 ] TRUE SELECT",
+            "[ [ 1 2 ] [ 3 ] ] [ 1 ] LT",
+            "[ [ TRUE ] FALSE ] [ TRUE ] AND",
+        ] {
+            let error = shown(code).await.expect_err(code);
+            assert!(error.contains("shapeMismatch"), "`{code}` raised {error}");
+        }
+    }
 
     /// The flat loop answers exactly what the general walk answers, error
     /// included, wherever it answers at all.

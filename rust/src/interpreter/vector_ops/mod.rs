@@ -302,8 +302,15 @@ pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
             .push(Value::nil_with_reason(NilReason::DomainMiss));
         return Ok(());
     };
+    let mut addends: Vec<Value> = present.collect();
+    // A lone element is still added, to 0: SUM takes the elements ADD takes,
+    // so `[ TRUE ] SUM` is the nonNumeric ERROR `[ TRUE TRUE ] SUM` is, not
+    // TRUE handed back unread.
+    if addends.is_empty() {
+        addends.push(Value::from_int(0));
+    }
     interp.stack.push(first);
-    for element in present {
+    for element in addends {
         interp.stack.push(element);
         if let Err(error) = crate::interpreter::arithmetic::op_add(interp) {
             interp.stack.truncate(depth);
