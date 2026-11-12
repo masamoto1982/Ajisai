@@ -2555,6 +2555,28 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-lift-comparison-innermost-axis" data-category="truthOrder">
+  <h3>Two vectors of different rank align at the innermost axis, as arithmetic does</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] [ 2 3 ] LT</pre>
+  <pre class="ajisai-expect-result">[ [ TRUE TRUE ] [ FALSE FALSE ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-select-innermost-axis" data-category="truthOrder">
+  <h3>SELECT lifts all three operands: one truth chooses lane by lane over aligned branches</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] [ 8 9 ] FALSE SELECT</pre>
+  <pre class="ajisai-expect-result">[ [ 8/1 9/1 ] [ 8/1 9/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-ragged-pairs-with-no-vector" data-category="collection">
+  <h3>A ragged vector pairs with no other vector</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 ] ] [ 1 2 ] LT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">got a ragged one</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-equality-stays-structural" data-category="language">
   <h3>EQ does not lift: equality is one structural relation between whole values</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 1 2 ] EQ</pre>
@@ -3323,6 +3345,7 @@ W</pre>
 <section class="ajisai-case" id="standard-max" data-category="truthOrder"><h3>MAX</h3><pre class="ajisai-source">1 2 MAX</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-sum" data-category="collection"><h3>SUM</h3><pre class="ajisai-source">[ 1 2 3 ] SUM</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-sum-skips-nil" data-category="collection"><h3>SUM skips every NIL, as SQL's SUM skips NULL</h3><pre class="ajisai-source">[ 1 NIL 2 ] SUM</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-sum-lone-non-number" data-category="collection"><h3>SUM checks a lone present element as ADD would: a truth is not summed</h3><pre class="ajisai-source">[ TRUE ] SUM</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">expected a Scalar or a Vector</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-sum-nothing-present" data-category="collection"><h3>SUM with no element present projects domainMiss, as SQL's SUM over no rows is NULL</h3><pre class="ajisai-source">[ NIL NIL ] SUM NIL-REASON</pre><pre class="ajisai-expect-result">'domainMiss'</pre><div class="ajisai-expect-effects"></div></section>
 
 <!-- The ERRORs a program can reach that no case above reached. Every NIL
