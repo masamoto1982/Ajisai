@@ -250,6 +250,17 @@ pub(super) fn build_definitions_interpreter(
 }
 
 pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
+    check_contract_decls_knowing(source, &std::collections::HashMap::new())
+}
+
+/// [`check_contract_decls`] in a session whose dictionary already holds the
+/// typed Words `known`: a body may call one of them as it may call a Word the
+/// source itself declares a signature for (LANG.CONTRACT.TYPES). The source's
+/// own declarations win.
+pub(crate) fn check_contract_decls_knowing(
+    source: &str,
+    known: &std::collections::HashMap<String, Signature>,
+) -> ContractDeclCheck {
     let (decls, parse_errors) = parse_contract_directives(source);
     let mut findings: Vec<DeclFinding> = parse_errors
         .into_iter()
@@ -259,10 +270,12 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         })
         .collect();
     let (interp, _, unsettled) = build_definitions_interpreter(source);
-    let signatures: std::collections::HashMap<String, Signature> = decls
-        .iter()
-        .filter_map(|decl| Some((decl.name.clone(), decl.signature.clone()?)))
-        .collect();
+    let mut signatures = known.clone();
+    signatures.extend(
+        decls
+            .iter()
+            .filter_map(|decl| Some((decl.name.clone(), decl.signature.clone()?))),
+    );
     let mut decl_outcomes = Vec::with_capacity(decls.len());
     for decl in &decls {
         let before = findings.len();
@@ -416,6 +429,19 @@ pub(crate) fn declared_contract_check(source: &str) -> Option<ContractDeclCheck>
         .lines()
         .any(|line| line.trim_start().starts_with("#:contract"));
     declares.then(|| check_contract_decls(source))
+}
+
+/// [`declared_contract_check`] for a run in `session`, whose typed Words a
+/// declared body may call. The playground's runs are such runs.
+#[cfg_attr(not(feature = "wasm"), allow(dead_code))]
+pub(crate) fn declared_contract_check_in(
+    source: &str,
+    session: &Interpreter,
+) -> Option<ContractDeclCheck> {
+    let declares = source
+        .lines()
+        .any(|line| line.trim_start().starts_with("#:contract"));
+    declares.then(|| check_contract_decls_knowing(source, &session.declared_signatures()))
 }
 
 /// The error report for a violated declaration: the one shape every other

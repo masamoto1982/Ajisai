@@ -142,6 +142,8 @@ export interface GUIElements {
     readonly stackDisplay: HTMLElement;
     readonly coreWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
+    readonly userSheetDisplay: HTMLElement;
+    readonly userViewToggleBtn: HTMLButtonElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
     readonly dictionarySheetSelect: HTMLSelectElement;

@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 mod wasm_interpreter_state;
+mod wasm_sheet;
 
 /// Install console_error_panic_hook so any panic on the WASM side
 /// surfaces in the browser console with a JS-friendly stack trace
@@ -113,7 +114,7 @@ impl AjisaiInterpreter {
 
         // LANG.CONTRACT.CHECK: a program whose `#:contract` declaration is
         // violated is not executed, here as in every other host.
-        if let Some(check) = contract::declared_contract_check(code) {
+        if let Some(check) = contract::declared_contract_check_in(code, &self.interpreter) {
             if check.violated {
                 let (message, word) = contract::violation_message(&check);
                 let info = ErrorInfo::of(ErrorCategory::ContractViolation, word);

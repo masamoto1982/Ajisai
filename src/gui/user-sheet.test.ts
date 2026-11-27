@@ -1,0 +1,58 @@
+// The Sheet view of the User dictionary, against the real interpreter: a
+// cell's value is read apart from the session, and an edit is a DEF.
+
+import { readFileSync } from 'node:fs';
+import { expect, it } from 'vitest';
+import * as wasm from '../wasm/generated/ajisai_core.js';
+import type { AjisaiInterpreter } from '../wasm-interpreter-types';
+import { isSheetName, runSheetEdit, sheetDefinitionSource } from './user-sheet';
+
+wasm.initSync({ module: readFileSync(new URL('../wasm/generated/ajisai_core_bg.wasm', import.meta.url)) });
+
+const createInterpreter = (): AjisaiInterpreter => new wasm.AjisaiInterpreter() as unknown as AjisaiInterpreter;
+
+it('writes a sheet edit as the DEF it is, with its #:contract line', () => {
+    expect(sheetDefinitionSource('PRICE', ' [ 120 80 ] ', null)).toBe("[ [ 120 80 ] ] 'PRICE' DEF");
+    expect(sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))
+        .toBe("#:contract TOTAL -> [int]\n[ PRICE 3 MUL ] 'TOTAL' DEF");
+    expect(isSheetName('TOTAL')).toBe(true);
+    expect(isSheetName("IT'S")).toBe(false);
+    expect(isSheetName('TWO WORDS')).toBe(false);
+});
+
+it('reads a cell apart from the session, and an edited cell is read again', async () => {
+    const interpreter = createInterpreter();
+    await interpreter.execute('7');
+    const stackBefore = interpreter.collect_stack();
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 120 80 300 ]', null))).status).toBe('OK');
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', null))).status).toBe('OK');
+
+    const total = interpreter.describe_sheet_cell('TOTAL');
+    expect(total).toMatchObject({ formula: 'PRICE 3 MUL', inputs: 0, outputs: 1, signature: null });
+    expect(await interpreter.evaluate_sheet_cell('TOTAL'))
+        .toEqual({ value: '[ 360/1 240/1 900/1 ]', suggestedType: '[int]' });
+
+    // The cell TOTAL reads is edited in place, and TOTAL's identity follows.
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 100 ]', null))).status).toBe('OK');
+    expect(interpreter.describe_sheet_cell('TOTAL')?.identity).not.toBe(total?.identity);
+    expect((await interpreter.evaluate_sheet_cell('TOTAL')).value).toBe('[ 300/1 ]');
+
+    // Accepting the suggested type declares it. A typed body may call only
+    // typed Words, so TOTAL is typed once PRICE is.
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))).errorInfo?.category)
+        .toBe('contractViolation');
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 100 ]', '-> [int]'))).status).toBe('OK');
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))).status).toBe('OK');
+    expect(interpreter.describe_sheet_cell('TOTAL')?.signature).toBe('-> [int]');
+
+    expect(interpreter.collect_stack()).toEqual(stackBefore);
+});
+
+it('leaves the stack as it was when a sheet edit is refused', async () => {
+    const interpreter = createInterpreter();
+    await interpreter.execute("[ 1 ] 'A' DEF [ A ] 'B' DEF 5");
+    const stackBefore = interpreter.collect_stack();
+    const result = await runSheetEdit(interpreter, sheetDefinitionSource('A', '1 2', null));
+    expect(result.errorInfo?.category).toBe('definitionConflict');
+    expect(interpreter.collect_stack()).toEqual(stackBefore);
+});

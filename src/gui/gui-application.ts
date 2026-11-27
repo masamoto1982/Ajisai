@@ -1,6 +1,7 @@
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 import { createDisplay, type Display } from './output-display-renderer';
 import { createVocabularyManager, type VocabularyManager } from './vocabulary-state-controller';
+import { createUserSheet, type UserSheet } from './user-sheet';
 import { createEditor, createEditorHistory, type Editor } from './code-input-editor';
 import { createPersistence, type Persistence } from './interpreter-state-persistence';
 import { createExecutionController, type ExecutionController } from './execution-controller';
@@ -60,6 +61,8 @@ const cacheElements = (): GUIElements => ({
     stackDisplay: requireElement('#stack-display', HTMLElement),
     coreWordsDisplay: requireElement('#core-words-display', HTMLElement),
     userWordsDisplay: requireElement('#user-words-display', HTMLElement),
+    userSheetDisplay: requireElement('#user-sheet-display', HTMLElement),
+    userViewToggleBtn: requireElement('#user-view-toggle-btn', HTMLButtonElement),
     dictionarySearch: requireElement('#dictionary-search', HTMLInputElement),
     dictionarySearchClearBtn: requireElement('#dictionary-search-clear-btn', HTMLButtonElement),
     dictionarySheetSelect: requireElement('#dictionary-sheet-select', HTMLSelectElement),
@@ -445,13 +448,22 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         // drawn from the interpreter; a run passes the view it has already
         // read back and what it changed, so only the changed panel is rebuilt
         // and the stack is not collected a second time for the drawing.
+        // The User sheet shows the same Words as a list of buttons or as a
+        // sheet of named cells (`showUserView`); which one is a view, not
+        // dictionary state.
+        let sheetShown = false;
+        let sheet: UserSheet | null = null;
         const updateAllDisplays = (after?: ExecutionStateView, changes?: ExecutionSurfaceChanges): void => {
             const redrawStack = changes?.stackChanged ?? true;
             const redrawDictionary = changes?.dictionaryChanged ?? true;
             if (redrawDictionary) autocompleteWordsCache = null;
             try {
                 if (redrawStack) display.renderStack(after?.stack ?? interpreter.collect_stack());
-                if (redrawDictionary) vocabulary.updateUserWords(interpreter.collect_user_words_info());
+                if (redrawDictionary) {
+                    const words = interpreter.collect_user_words_info();
+                    vocabulary.updateUserWords(words);
+                    if (sheetShown) sheet?.render(words);
+                }
             } catch (error) {
                 console.error('Failed to update display:', error);
                 display.renderError(new Error('Failed to update display.'));
@@ -484,6 +496,29 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             showError,
             runExclusive: (task) => executionController.runExclusive(task)
         });
+
+        sheet = createUserSheet(interpreter, elements.userSheetDisplay, {
+            onWordClick: (word) => editor.insertWord(word),
+            onDictionaryChanged: async () => {
+                updateAllDisplays();
+                await persistence.saveCurrentState();
+            },
+            showInfo,
+            showError,
+            runExclusive: (task) => executionController.runExclusive(task)
+        });
+        const showUserView = (asSheet: boolean): void => {
+            sheetShown = asSheet;
+            elements.userWordsDisplay.hidden = asSheet;
+            elements.userSheetDisplay.hidden = !asSheet;
+            elements.userViewToggleBtn.textContent = asSheet ? 'List' : 'Sheet';
+            elements.userViewToggleBtn.setAttribute('aria-pressed', String(asSheet));
+            elements.userViewToggleBtn.title = asSheet
+                ? 'Show the User Words as a list of buttons'
+                : 'Show the User Words as a sheet of named cells';
+            if (asSheet) sheet?.render(interpreter.collect_user_words_info());
+        };
+        elements.userViewToggleBtn.addEventListener('click', () => showUserView(!sheetShown));
 
         // Shown only once a run has taken long enough to be noticed, so the
         // everyday run that answers at once does not flash a line over the

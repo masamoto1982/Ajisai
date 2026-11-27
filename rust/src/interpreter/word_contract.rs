@@ -68,6 +68,13 @@ impl WordContract {
 /// How many values a Word takes and leaves.
 pub(crate) type StackEffect = (u16, u16);
 
+fn effect_of(flow: &ContractFlow) -> Option<StackEffect> {
+    match flow {
+        ContractFlow::Fixed { consumes, produces } => Some((*consumes, *produces)),
+        ContractFlow::Dynamic => None,
+    }
+}
+
 /// The contracts already inferred during one inference, so a dependency
 /// called from many places is walked once.
 type Memo = HashMap<Arc<str>, Arc<WordContract>>;
@@ -168,23 +175,17 @@ impl Interpreter {
         Some(self.contract_of(&resolved, &def, &mut Memo::new()))
     }
 
-    /// The stack effect of the User Word `name` now and of `body` in its
-    /// place, each `None` where the inference cannot fix it: a referenced
-    /// Word may be redefined only when the two are one fixed effect
-    /// (LANG.DICTIONARY.MUTATION).
-    pub(crate) fn stack_effects_of_redefinition(
-        &self,
-        name: &str,
-        body: &[Token],
-    ) -> (Option<StackEffect>, Option<StackEffect>) {
-        let effect = |flow: &ContractFlow| match flow {
-            ContractFlow::Fixed { consumes, produces } => Some((*consumes, *produces)),
-            ContractFlow::Dynamic => None,
-        };
-        let old = self
-            .infer_word_contract(name)
-            .and_then(|contract| effect(&contract.flow));
-        (old, effect(&self.infer_contract_for_block(body).flow))
+    /// How many values the Word `name` takes and leaves, where inference
+    /// fixes both.
+    pub(crate) fn stack_effect_of_word(&self, name: &str) -> Option<StackEffect> {
+        effect_of(&self.infer_word_contract(name)?.flow)
+    }
+
+    /// How many values `body` takes and leaves, where inference fixes both.
+    /// A referenced Word may be redefined only when this is its own stack
+    /// effect (LANG.DICTIONARY.MUTATION).
+    pub(crate) fn stack_effect_of_body(&self, body: &[Token]) -> Option<StackEffect> {
+        effect_of(&self.infer_contract_for_block(body).flow)
     }
 
     /// The contract of a block, as `CONTRACT` reads it: never run.

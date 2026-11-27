@@ -244,7 +244,8 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             interp.collect_external_dependents(&upper_name)
         };
         if !dependents.is_empty() {
-            let (old, new) = interp.stack_effects_of_redefinition(&upper_name, tokens);
+            let old = interp.stack_effect_of_word(&upper_name);
+            let new = interp.stack_effect_of_body(tokens);
             if old.is_none() || old != new {
                 return Err(AjisaiError::declared(
                     "definitionConflict",

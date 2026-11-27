@@ -84,9 +84,9 @@ mod ordering_ops_tests;
 mod power_words_tests;
 mod record_ops;
 #[cfg(test)]
-mod redefinition_tests;
-#[cfg(test)]
 mod record_words_tests;
+#[cfg(test)]
+mod redefinition_tests;
 mod reflection_ops;
 #[cfg(test)]
 mod reflection_words_tests;
@@ -96,6 +96,9 @@ mod session_lifecycle;
 mod shape_words;
 #[cfg(test)]
 mod shape_words_tests;
+pub mod sheet_cell;
+#[cfg(test)]
+mod sheet_cell_tests;
 pub mod sort;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
