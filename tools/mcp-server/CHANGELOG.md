@@ -13,7 +13,7 @@ program and its answer before and after.
 
 ## Unreleased
 
-Specification: 1.0.0-beta.3.
+Specification: 1.0.0-beta.5.
 
 ### Changed
 

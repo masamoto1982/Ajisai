@@ -15,6 +15,16 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.5
+
+- **breaking** LANG.VALUES.TRUTH — `SELECT` answers NIL again when its truth is UNKNOWN, as it did in 1.0.0-beta.3: 1.0.0-beta.4's alignment with the sister language Arare is withdrawn. `'yes' 'no' NIL SELECT` was `'no'` and is `NIL`; `[ 'big' 'big' ] [ 'small' 'small' ] [ TRUE NIL ] SELECT` was `[ 'big' 'small' ]` and is `[ 'big' NIL ]`. (2026-11-27)
+- **breaking** LANG.VALUES.ORDER — `SUM` is no longer a Standard Word; the vocabulary returns to its 1.0.0-beta.3 size. `[ 1 NIL 2 ] SUM` was `3` and is `error:unknownWord`, and a program may define its own `SUM` with `DEF` again. (2026-11-27)
+
+## 1.0.0-beta.4
+
+- **breaking** LANG.VALUES.TRUTH — `SELECT` takes its second candidate when its truth is UNKNOWN, as FALSE does, the way SQL's `CASE WHEN` takes ELSE when its condition is UNKNOWN. The sister language Arare branches the same way, so the two differ only in rounding. `'yes' 'no' NIL SELECT` was `NIL` and is `'no'`; `[ 'big' 'big' ] [ 'small' 'small' ] [ TRUE NIL ] SELECT` was `[ 'big' NIL ]` and is `[ 'big' 'small' ]`. The recovery phrase `fallback S S NIL? SELECT` is unchanged, since `NIL?` never answers UNKNOWN. (2026-11-11)
+- **breaking** LANG.VALUES.ORDER — `SUM` is a Standard Word: SQL's SUM, the present elements of a Vector added by `ADD`, every NIL skipped, and NIL(domainMiss) when no element is present. It is the sister language Arare's SUM. `[ 1 NIL 2 ] SUM` was `error:unknownWord` and is `3`; a program that defined its own `SUM` with `DEF`, as the phrasebook did, is now refused as `error:protectedWord`. The vocabulary is 78 Words. (2026-11-11)
+
 ## 1.0.0-beta.3
 
 - **editorial** Presentation Profile — The Current GUI contract states that Run and Step format the Input surface before reading it, so a bracket glued to other text, `[1 2 3]`, runs in the Playground as `[ 1 2 3 ]` while `ajisai` answers the source error. The Playground already did this; the language does not change. (2026-11-08)

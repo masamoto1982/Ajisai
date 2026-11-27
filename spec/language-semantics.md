@@ -4,7 +4,7 @@
 <h1 id="ajisai-language-semantics">Ajisai Language Semantics</h1>
 
 <p>Status: <strong>Canonical</strong><br>
-Specification version: <strong>1.0.0-beta.3</strong><br>
+Specification version: <strong>1.0.0-beta.5</strong><br>
 Release stage: <strong>Beta</strong>. A breaking change to the vocabulary, to program meaning, or to the host protocol raises the specification version and is named in <code>spec/CHANGELOG.md</code> and in the release that ships it; a compatibility guarantee begins at 1.0.0.</p>
 
 <p>
