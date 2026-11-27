@@ -323,7 +323,13 @@ impl Interpreter {
         def: &crate::types::WordDefinition,
     ) -> std::sync::Arc<super::engine::Code> {
         def.code
-            .get_or_init(|| std::sync::Arc::new(super::engine::compile(&def.body, self)))
+            .get_or_init(|| {
+                let mut code = super::engine::compile(&def.body, self);
+                if def.signature.is_some() {
+                    code.ops = super::typed_chain::chain_walks(std::mem::take(&mut code.ops));
+                }
+                std::sync::Arc::new(code)
+            })
             .clone()
     }
 

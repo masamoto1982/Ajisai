@@ -18,6 +18,7 @@ specification to each other (scripts/lib/spec-version.mjs states the rule).
 ## 1.0.0-beta.6
 
 - **breaking** LANG.CONTRACT.TYPES — A `#:contract` line may write a signature after the Word's name, and a Word with one is typed: `#:contract SUMSQ [int] -> int`. A type promises a range, never a precision, so erasing every signature answers the same values unless the typed program stopped. A value outside a typed Word's input or output type is `error:typeViolation`, a new error category; a body the type rules cannot fit is `error:contractViolation` before anything runs. A line such as `#:contract ID int -> int` was malformed (`error:contractViolation`) and now declares a type: with `[ 0 ADD ] 'ID' DEF`, `5 ID` was `error:contractViolation` and is `5`, and `1/2 ID` is `error:typeViolation`. Programs without a signature are unchanged. (2026-11-28)
+- **editorial** LANG.CONTRACT.TYPES — The clause states what a signature lets an implementation do: run a typed body on machine words, a `MAP` feeding a `FOLD` or `SCAN` as one walk, answering and charging as the written Words do. A value that outgrows a machine word inside the body is still checked only where the Word returns. No program's answer changes. (2026-11-28)
 
 ## 1.0.0-beta.5
 

@@ -180,6 +180,14 @@ pub fn first_misfit(value: &Value, ty: &DeclaredType) -> Option<String> {
                     _ => return Some(format!("{value} nests deeper than {ty}")),
                 }
             }
+            // A dense column holds machine-word pairs in lowest terms, so
+            // every lane is a `rat`, and one with no denominator but 1 is an
+            // `int` throughout: the common case is answered without a walk.
+            match element {
+                DeclaredType::Rat => return None,
+                DeclaredType::Int if data.is_pure_integer => return None,
+                _ => {}
+            }
             let fits = |index: usize| {
                 matches!(
                     (element, data.fraction_at(index).extract_i64_pair()),

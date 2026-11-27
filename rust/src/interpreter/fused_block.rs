@@ -225,7 +225,7 @@ impl FusedBlock {
         Some(block)
     }
 
-    fn has_lanes(&self) -> bool {
+    pub(crate) fn has_lanes(&self) -> bool {
         self.lane_consts.contains(&true)
     }
 

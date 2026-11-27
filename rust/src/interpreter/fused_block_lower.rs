@@ -153,7 +153,7 @@ impl Lowering<'_> {
                         }
                     }
                 }
-                CodeOp::Raise(_) => return None,
+                CodeOp::Raise(_) | CodeOp::Chain(_) => return None,
             }
             i += 1;
         }
@@ -165,7 +165,9 @@ impl Lowering<'_> {
             return None;
         }
         let def = self.interp.user_words.get(name)?.clone();
-        if def.body.is_empty() {
+        // A typed Word checks its operands and results at its boundary
+        // (LANG.CONTRACT.TYPES), which an inlined body would skip.
+        if def.body.is_empty() || def.signature.is_some() {
             return None;
         }
         let code = self.interp.body_code(&def);
