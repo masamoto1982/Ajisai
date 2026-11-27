@@ -31,6 +31,7 @@ pub fn register_builtins<S: std::hash::BuildHasher>(
                 body: std::sync::Arc::from([]),
                 is_builtin: true,
                 description: Some(word.hover_summary.to_string()),
+                signature: None,
                 dependencies: HashSet::new(),
                 text_references: HashSet::new(),
                 registration_order: 0,

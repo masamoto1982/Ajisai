@@ -52,6 +52,7 @@ listed here for the same reason:
 | A breaking change raises the specification version (`LANG.AUTHORITY.SOURCES`, `spec/README.md`) | `scripts/check-spec-version.mjs` against the pull request's base, with the rule's own tests in `scripts/check-spec-version.test.mjs` |
 | A cost axis says when its charge grows with an algebraic value (`LANG.MACHINE.LIMITS`) | `scripts/check-value-dependent-cost.mjs`, which measures every Word that can take a number |
 | The corpus reaches every outcome a program can reach (`LANG.CONFORMANCE.CORPUS`) | `scripts/check-conformance-coverage.mjs`, which runs every case and exempts two error categories with their reasons |
+| Erasing a signature never changes an answer, a typed body is held to its signature before anything runs, and a value outside a declared range is `typeViolation` (`LANG.CONTRACT.TYPES`) | `rust/src/agent/type_check_tests.rs` (static check: `rust/src/agent/type_check.rs`; boundary check: `rust/src/interpreter/word_types.rs`) |
 
 The strong Kleene lane tables behind `AND` and `NOT` (`LANG.VALUES.TRUTH`)
 are proved over all three lane codes by the Kani harnesses in

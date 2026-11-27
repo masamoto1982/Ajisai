@@ -123,6 +123,12 @@
       "source": "#:contract DOUBLE inputs=2 outputs=1\n[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE",
       "expect": "error:contractViolation",
       "rationale": "The exhaustive table never writes a `#:contract` directive, and the category is raised by the pre-execution check rather than by any Word. A declaration whose `inputs` the body contradicts is the simplest witness: `compute` refuses to run it, as `check` refuses to pass it."
+    },
+    {
+      "id": "typeViolation",
+      "source": "#:contract ID int -> int\n[ 0 ADD ] 'ID' DEF 1/2 ID",
+      "expect": "error:typeViolation",
+      "rationale": "The exhaustive table never writes a `#:contract` signature, and the category is raised at a typed Word's boundary rather than by any Core Word. A typed Word called with a value outside its input type is the simplest witness: the check passes the body, and the run stops where the Word is entered."
     }
   ]
 }

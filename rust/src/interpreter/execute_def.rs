@@ -48,11 +48,20 @@ pub(crate) fn set_word_description(
     let Some(arc_def) = interp.user_words.get_mut(&upper_name) else {
         return;
     };
+    // A malformed signature declares nothing here: the pre-execution check
+    // (`agent::contract`) is what reports it, and refuses the program.
+    let signature = description
+        .as_deref()
+        .and_then(|detail| crate::interpreter::word_types::split_signature(detail).ok())
+        .and_then(|(signature, _)| signature)
+        .map(Arc::new);
     if let Some(def) = Arc::get_mut(arc_def) {
         def.description = description;
+        def.signature = signature;
     } else {
         let mut cloned = (**arc_def).clone();
         cloned.description = description;
+        cloned.signature = signature;
         *arc_def = Arc::new(cloned);
     }
 }
@@ -338,6 +347,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         body,
         is_builtin: false,
         description: None,
+        signature: None,
         dependencies: new_dependencies,
         text_references: new_text_references,
         registration_order: interp.next_registration_order(),

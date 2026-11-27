@@ -394,6 +394,10 @@ pub struct WordDefinition {
     pub body: Arc<[Token]>,
     pub is_builtin: bool,
     pub description: Option<String>,
+    /// The signature the Word's `#:contract` line declares, read from
+    /// `description` when that is set (LANG.CONTRACT.TYPES). `None` for an
+    /// untyped Word, which is every Word that does not opt in.
+    pub signature: Option<Arc<crate::interpreter::word_types::Signature>>,
     pub dependencies: HashSet<String>,
     /// Every uppercased Symbol name written anywhere in the body — including
     /// one that does not currently resolve to anything, unlike
