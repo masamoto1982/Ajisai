@@ -296,7 +296,9 @@ fn restore_user_words_names_what_it_could_not_restore() {
     );
 
     let again = js_sys::Array::new();
-    again.push(&saved_word("DBL", "3 MUL"));
+    // A body that leaves two values where DBL leaves one: its callers would
+    // break, so the redefinition is refused (LANG.DICTIONARY.MUTATION).
+    again.push(&saved_word("DBL", "3 MUL 4"));
     let skipped = interp
         .restore_user_words(again.into())
         .expect("a well-formed list restores");
