@@ -84,6 +84,8 @@ mod ordering_ops_tests;
 mod power_words_tests;
 mod record_ops;
 #[cfg(test)]
+mod redefinition_tests;
+#[cfg(test)]
 mod record_words_tests;
 mod reflection_ops;
 #[cfg(test)]

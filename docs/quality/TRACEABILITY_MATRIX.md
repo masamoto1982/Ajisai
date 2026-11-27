@@ -54,6 +54,7 @@ listed here for the same reason:
 | The corpus reaches every outcome a program can reach (`LANG.CONFORMANCE.CORPUS`) | `scripts/check-conformance-coverage.mjs`, which runs every case and exempts two error categories with their reasons |
 | Erasing a signature never changes an answer, a typed body is held to its signature before anything runs, and a value outside a declared range is `typeViolation` (`LANG.CONTRACT.TYPES`) | `rust/src/agent/type_check_tests.rs` (static check: `rust/src/agent/type_check.rs`; boundary check: `rust/src/interpreter/word_types.rs`) |
 | A typed body's `MAP` feeding a `FOLD` or `SCAN` runs as one walk that answers and charges as the written Words, declining to them part way; a typed Word called inside a walked block keeps its boundary check (`LANG.CONTRACT.TYPES`, `LANG.AUTHORITY.FREEDOM`) | `rust/src/interpreter/typed_chain_tests.rs` (`rust/src/interpreter/typed_chain.rs`, `run_chain` in `rust/src/interpreter/fused_block_columns.rs`) |
+| A Word other Words call may be redefined to a body of the same fixed stack effect, its callers then calling the new body; any other such redefinition is `definitionConflict` (`LANG.DICTIONARY.MUTATION`) | `rust/src/interpreter/redefinition_tests.rs`, `tests/conformance/index.html` (`core-def-referenced-word-*`) (`rust/src/interpreter/execute_def.rs`, `stack_effects_of_redefinition` in `rust/src/interpreter/word_contract.rs`) |
 
 The strong Kleene lane tables behind `AND` and `NOT` (`LANG.VALUES.TRUTH`)
 are proved over all three lane codes by the Kani harnesses in

@@ -188,13 +188,9 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
     // A Word is reached by writing its name as one token, so a name that
-    // cannot be written is not a name: `DEF` took one anyway, and the entry it
-    // made could be listed, hovered and exported but never called. That splits
-    // exactly what LANG.DICTIONARY.RESOLUTION joins — "the host's lookup,
-    // hover, the Reference, and execution must identify the same canonical
-    // entry" — so refuse it at the one moment the name is chosen. `BIND`
-    // already refuses the same names, and says a binding is named like a Word;
-    // this is the Word half of that sentence.
+    // cannot be written would make an entry listed, hovered and exported but
+    // never called, splitting what LANG.DICTIONARY.RESOLUTION joins. It is
+    // refused where the name is chosen, as `BIND` refuses the same names.
     //
     // `DEL` deliberately keeps no such check: a name saved before this rule, or
     // before a lexical rule changed under it, must stay removable.
@@ -229,17 +225,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         )));
     }
 
-    // A referenced word is not redefinable. There is no force modifier: the
-    // vocabulary has no Word that overrides this, so the refusal is final and
-    // the caller's only route is to delete the dependents first. A word's own
+    // A referenced word is redefinable only to a body of the same fixed
+    // stack effect, the one its callers were written against. A word's own
     // self-reference does not lock it: see `collect_external_dependents`.
     if interp.user_words.contains_key(&upper_name) {
         let dependents = if interp.defer_identity_recompute {
-            // In a bulk restore the reverse index is rebuilt once at the end
-            // (`rebuild_dependencies`) rather than kept current per word, so
-            // the bodies' own references are the ground truth here. Same
-            // answer as the index gives outside a restore: a word that names
-            // this one has the edge the moment both exist.
+            // A bulk restore rebuilds the reverse index once at the end
+            // (`rebuild_dependencies`), so the bodies' references answer here.
             interp
                 .user_words
                 .iter()
@@ -252,14 +244,19 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             interp.collect_external_dependents(&upper_name)
         };
         if !dependents.is_empty() {
-            return Err(AjisaiError::declared(
-                "definitionConflict",
-                format!(
-                    "Cannot redefine '{}': referenced by {}. Delete those words first.",
-                    upper_name,
-                    sorted_names(&dependents)
-                ),
-            ));
+            let (old, new) = interp.stack_effects_of_redefinition(&upper_name, tokens);
+            if old.is_none() || old != new {
+                return Err(AjisaiError::declared(
+                    "definitionConflict",
+                    format!(
+                        "Cannot redefine '{}': referenced by {}, and the new body has {} where the old one has {}. Keep the stack effect, or delete those words first.",
+                        upper_name,
+                        sorted_names(&dependents),
+                        shown_effect(new),
+                        shown_effect(old)
+                    ),
+                ));
+            }
         }
     }
 
@@ -405,6 +402,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 }
 
 /// A refusal names the words that lock a definition in one order every time.
+fn shown_effect(effect: Option<(u16, u16)>) -> String {
+    match effect {
+        Some((i, o)) => format!("inputs={i} outputs={o}"),
+        None => "a variable stack effect".to_string(),
+    }
+}
+
 pub(crate) fn sorted_names(names: &HashSet<String>) -> String {
     let mut names: Vec<&str> = names.iter().map(String::as_str).collect();
     names.sort_unstable();

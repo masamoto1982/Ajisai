@@ -1403,7 +1403,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DEF">
 <h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義は、他がまだそれを呼んでいなければそれを置き換える(<code>definitionConflict</code>)。Coreワードの名前は<code>protectedWord</code>、束縛が持つ名前は<code>nameConflict</code>、1つのトークンとして書けない名前は<code>invalidName</code>。</p>
+<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義はそれを置き換え、呼び出し元はそれ以降新しい本体を呼ぶ。他がまだ呼んでいるワードは、<code>CONTRACT</code>が推論する入力と出力の数がどちらも固定で同じ本体にだけ再定義できる(<code>definitionConflict</code>)。<code>[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL</code>は<code>450</code>。Coreワードの名前は<code>protectedWord</code>、束縛が持つ名前は<code>nameConflict</code>、1つのトークンとして書けない名前は<code>invalidName</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>

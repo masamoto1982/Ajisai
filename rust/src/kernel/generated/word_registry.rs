@@ -7,7 +7,7 @@
 
 /// The specification version this registry was generated from
 /// (`spec/version-lock.json`), which every agent envelope names.
-pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.6";
+pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.7";
 
 /// Canonical identity of a Core Word, named by its executor key (unique across
 /// the registry).
@@ -3461,7 +3461,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &["dictionaryWrite"],
         error_when: &["invalidName", "protectedWord", "nameConflict", "definitionConflict", "selfReferentialDefinition", "nonText", "invalidDefinitionBody"],
         syntax: Some("[ 2 MUL ] 'DOUBLE' DEF"),
-        summary: "A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (`definitionConflict`); a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.",
+        summary: "A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it, and its callers call the new body from then on; a Word others still call may be redefined only to a body of the same stack effect, the inputs and outputs `CONTRACT` infers, both fixed (`definitionConflict`): `[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL` is `450`; a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.",
         stack_effect: "[ body ] [ name ] -> [ ]",
         hover_summary: "DEF — define user word",
         hover_syntax: "[ 2 MUL ] 'DOUBLE' DEF",

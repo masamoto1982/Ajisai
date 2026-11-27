@@ -65,6 +65,9 @@ impl WordContract {
     }
 }
 
+/// How many values a Word takes and leaves.
+pub(crate) type StackEffect = (u16, u16);
+
 /// The contracts already inferred during one inference, so a dependency
 /// called from many places is walked once.
 type Memo = HashMap<Arc<str>, Arc<WordContract>>;
@@ -163,6 +166,25 @@ impl Interpreter {
     pub fn infer_word_contract(&self, name: &str) -> Option<Arc<WordContract>> {
         let (resolved, def) = self.resolve_word_entry(name)?;
         Some(self.contract_of(&resolved, &def, &mut Memo::new()))
+    }
+
+    /// The stack effect of the User Word `name` now and of `body` in its
+    /// place, each `None` where the inference cannot fix it: a referenced
+    /// Word may be redefined only when the two are one fixed effect
+    /// (LANG.DICTIONARY.MUTATION).
+    pub(crate) fn stack_effects_of_redefinition(
+        &self,
+        name: &str,
+        body: &[Token],
+    ) -> (Option<StackEffect>, Option<StackEffect>) {
+        let effect = |flow: &ContractFlow| match flow {
+            ContractFlow::Fixed { consumes, produces } => Some((*consumes, *produces)),
+            ContractFlow::Dynamic => None,
+        };
+        let old = self
+            .infer_word_contract(name)
+            .and_then(|contract| effect(&contract.flow));
+        (old, effect(&self.infer_contract_for_block(body).flow))
     }
 
     /// The contract of a block, as `CONTRACT` reads it: never run.

@@ -208,7 +208,7 @@ async fn a_refusal_names_the_dependents_in_sorted_order() {
         .to_string();
     assert!(message.contains("referenced by A, B, M, Q"), "{message}");
     let message = interp
-        .execute("[ 2 ] 'W' DEF")
+        .execute("[ 2 3 ] 'W' DEF")
         .await
         .expect_err("W is locked")
         .to_string();

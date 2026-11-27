@@ -1406,7 +1406,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DEF">
 <h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>A User Word defined from a body and a name: <code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code> is <code>10</code>. The body may call Core and User Words but never, directly or through others, the Word being defined (<code>selfReferentialDefinition</code>, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (<code>definitionConflict</code>); a Core Word's name is <code>protectedWord</code>, a name held by a binding is <code>nameConflict</code>, and a name that cannot be written as one token is <code>invalidName</code>.</p>
+<p>A User Word defined from a body and a name: <code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code> is <code>10</code>. The body may call Core and User Words but never, directly or through others, the Word being defined (<code>selfReferentialDefinition</code>, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it, and its callers call the new body from then on; a Word others still call may be redefined only to a body of the same stack effect, the inputs and outputs <code>CONTRACT</code> infers, both fixed (<code>definitionConflict</code>): <code>[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL</code> is <code>450</code>; a Core Word's name is <code>protectedWord</code>, a name held by a binding is <code>nameConflict</code>, and a name that cannot be written as one token is <code>invalidName</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>

@@ -69,7 +69,7 @@
       "id": "definitionConflict",
       "kind": "declared",
       "repair": "program",
-      "documentation": "DEF or DEL asked for a dictionary change the words that call the named word refuse: DEF redefined, or DEL deleted, a User Word that other User Words still reference. Those words have to go first; there is no override."
+      "documentation": "DEF or DEL asked for a dictionary change the words that call the named word refuse: DEF redefined a User Word that other User Words still reference to a body whose stack effect differs from the old one's or cannot be fixed by inference, or DEL deleted such a Word. Keep the stack effect, or delete those words first; there is no override."
     },
     {
       "id": "duplicateKey",

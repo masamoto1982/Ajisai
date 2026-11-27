@@ -545,7 +545,7 @@ async fn another_word_still_locks_a_referenced_word() {
     interp.execute("[ W ] 'CALLER' DEF").await.unwrap();
 
     let err = interp
-        .execute("[ 2 ADD ] 'W' DEF")
+        .execute("[ 2 ADD 3 ] 'W' DEF")
         .await
         .unwrap_err()
         .to_string();
