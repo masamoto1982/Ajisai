@@ -56,6 +56,9 @@ mod quickened_tests;
 mod route_observation;
 mod truth_columns;
 mod truth_ops;
+mod typed_chain;
+#[cfg(test)]
+mod typed_chain_tests;
 // The host-side Word lookup lives in `host.rs`; the module path it used to
 // have is kept for the hosts (`wasm_interpreter_bindings`, `rust/tests`) that
 // import it by that name.

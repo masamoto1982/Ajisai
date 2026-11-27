@@ -36,6 +36,10 @@ use crate::interpreter::Interpreter;
 use crate::types::small_rational::{self, add_total, div_total, mul_total, order_total, Pair};
 use crate::types::{Value, ValueData};
 
+mod accumulate;
+pub(crate) use accumulate::run_chain;
+use accumulate::Accumulator;
+
 /// How many elements a chunk holds.
 const CHUNK: usize = 256;
 
@@ -363,8 +367,6 @@ fn accumulating_walk(
     walk: FusedWalk,
 ) -> Option<Value> {
     let (consts, out_ty, single) = (&prepared.consts[..], prepared.out_ty, prepared.single);
-    let reads_acc = &prepared.reads_acc;
-    let per_run = &reads_acc[2..];
     let n = columns.nums.len();
     let scan = walk == FusedWalk::Scan;
     // `[ ADD ]` on integers — the commonest fold, and often over a short row —
@@ -391,68 +393,11 @@ fn accumulating_walk(
             return Some(Value::from_vector(visited));
         }
     }
-    // Registers for the instructions that run a column at a time; none when
-    // every one reads the accumulator, as in `[ ADD ]`.
-    let column_wise = per_run.iter().any(|p| !p);
-    let mut regs: Vec<Out> = if column_wise {
-        (0..block.instrs.len()).map(|_| Out::default()).collect()
-    } else {
-        Vec::new()
-    };
-    let mut scalars: smallvec::SmallVec<[Pair; 16]> = smallvec::SmallVec::new();
-    let mut acc = seed;
-    let mut visited: Vec<Value> = Vec::with_capacity(if scan { n } else { 0 });
+    let mut accumulator = Accumulator::new(block, prepared, seed, scan, n);
     for (start, end) in chunks(n) {
-        let len = end - start;
-        let inputs = [Lanes::Splat(0, 1), columns.chunk(start, end)];
-        if column_wise {
-            run_chunk(block, consts, &inputs, &mut regs, per_run, len)?;
-        }
-        if let Some((schema, flipped, x)) = single {
-            let x = lanes_of(x, &inputs, &regs, consts);
-            if acc.1 == 1 && x.integer() {
-                acc.0 = if scan {
-                    let each = |a| visited.push(plain(out_ty, (a, 1)).into_value());
-                    fold_op(schema, flipped, acc.0, x, len, each)?
-                } else {
-                    fold_op(schema, flipped, acc.0, x, len, |_| {})?
-                };
-                continue;
-            }
-        }
-        if scalars.is_empty() {
-            scalars.resize(2 + block.instrs.len(), (0, 1));
-        }
-        for i in 0..len {
-            scalars[0] = acc;
-            for (j, ins) in block.instrs.iter().enumerate() {
-                if !per_run[j] {
-                    continue;
-                }
-                let value = |s: Src| match s {
-                    Src::Reg(r) if reads_acc[r] => scalars[r],
-                    s => lanes_of(s, &inputs, &regs, consts).at(i),
-                };
-                let arity = ins.op.arity();
-                let a = value(ins.a);
-                let b = if arity > 1 { value(ins.b) } else { a };
-                let c = if arity > 2 { value(ins.c) } else { a };
-                scalars[2 + j] = apply_pair(ins.op, a, b, c)?;
-            }
-            acc = match block.out {
-                Src::Reg(r) if reads_acc[r] => scalars[r],
-                s => lanes_of(s, &inputs, &regs, consts).at(i),
-            };
-            if scan {
-                visited.push(plain(out_ty, acc).into_value());
-            }
-        }
+        accumulator.feed(columns.chunk(start, end), end - start)?;
     }
-    Some(if scan {
-        Value::from_vector(visited)
-    } else {
-        plain(out_ty, acc).into_value()
-    })
+    Some(accumulator.finish())
 }
 
 #[cfg(test)]

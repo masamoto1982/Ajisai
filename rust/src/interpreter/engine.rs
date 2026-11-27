@@ -54,6 +54,10 @@ pub(crate) enum Op {
     /// A literal that denotes nothing — a malformed number, a literal past the
     /// nesting ceiling — refused when it is reached, as it always was.
     Raise(AjisaiError),
+    /// `[ f ] MAP seed [ g ] FOLD` (or `SCAN`) in a typed Word's body, run
+    /// as one walk when it can be and as its five ops otherwise
+    /// (`typed_chain`).
+    Chain(Box<super::typed_chain::Chain>),
 }
 
 #[derive(Debug, Default)]
@@ -440,6 +444,13 @@ impl Interpreter {
                 Ok(())
             }
             Op::Raise(error) => Err(error.clone()),
+            Op::Chain(chain) => {
+                if self.chain_in_place(chain) {
+                    Ok(())
+                } else {
+                    chain.ops.iter().try_for_each(|op| self.run_op(op))
+                }
+            }
         }
     }
 

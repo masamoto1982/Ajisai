@@ -37,8 +37,8 @@ pub(crate) fn extract_pending_word_descriptions(source: &str) -> HashMap<String,
 /// consumes a pending `#:contract` line for the Word it just defined, and
 /// when a restored Word (`restore_user_words`) carries a saved description
 /// alongside its body. The Word was just inserted with a fresh `Arc` in
-/// every caller, so `Arc::get_mut` succeeds; the clone-and-replace fallback
-/// only guards a future caller that might not hold sole ownership.
+/// every caller, so `Arc::make_mut` clones nothing. The compiled body is
+/// dropped, since a typed body compiles to other ops (`typed_chain`).
 pub(crate) fn set_word_description(
     interp: &mut Interpreter,
     name: &str,
@@ -55,15 +55,10 @@ pub(crate) fn set_word_description(
         .and_then(|detail| crate::interpreter::word_types::split_signature(detail).ok())
         .and_then(|(signature, _)| signature)
         .map(Arc::new);
-    if let Some(def) = Arc::get_mut(arc_def) {
-        def.description = description;
-        def.signature = signature;
-    } else {
-        let mut cloned = (**arc_def).clone();
-        cloned.description = description;
-        cloned.signature = signature;
-        *arc_def = Arc::new(cloned);
-    }
+    let def = Arc::make_mut(arc_def);
+    def.description = description;
+    def.signature = signature;
+    def.code = Default::default();
 }
 
 /// DEF is strictly two positional arguments: `[ body ] 'NAME' DEF`.
