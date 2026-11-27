@@ -15,6 +15,10 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.6
+
+- **breaking** LANG.CONTRACT.TYPES — A `#:contract` line may write a signature after the Word's name, and a Word with one is typed: `#:contract SUMSQ [int] -> int`. A type promises a range, never a precision, so erasing every signature answers the same values unless the typed program stopped. A value outside a typed Word's input or output type is `error:typeViolation`, a new error category; a body the type rules cannot fit is `error:contractViolation` before anything runs. A line such as `#:contract ID int -> int` was malformed (`error:contractViolation`) and now declares a type: with `[ 0 ADD ] 'ID' DEF`, `5 ID` was `error:contractViolation` and is `5`, and `1/2 ID` is `error:typeViolation`. Programs without a signature are unchanged. (2026-11-28)
+
 ## 1.0.0-beta.5
 
 - **breaking** LANG.VALUES.TRUTH — `SELECT` answers NIL again when its truth is UNKNOWN, as it did in 1.0.0-beta.3: 1.0.0-beta.4's alignment with the sister language Arare is withdrawn. `'yes' 'no' NIL SELECT` was `'no'` and is `NIL`; `[ 'big' 'big' ] [ 'small' 'small' ] [ TRUE NIL ] SELECT` was `[ 'big' 'small' ]` and is `[ 'big' NIL ]`. (2026-11-27)

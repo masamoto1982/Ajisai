@@ -106,6 +106,7 @@ mod word_contract_tests;
 mod word_identity;
 #[cfg(test)]
 mod word_identity_tests;
+pub mod word_types;
 #[cfg(test)]
 mod work_meter_calibration_tests;
 

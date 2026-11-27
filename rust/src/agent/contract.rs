@@ -14,6 +14,7 @@ use super::report::{ErrorInfo, Report};
 use crate::coreword_registry::FieldClosure;
 use crate::error::ErrorCategory;
 use crate::interpreter::word_contract::{ContractFlow, WordContract};
+use crate::interpreter::word_types::{split_signature, Signature};
 use crate::interpreter::Interpreter;
 use crate::types::Token;
 use std::collections::HashSet;
@@ -24,6 +25,7 @@ struct ContractDecl {
     pub inputs: Option<u16>,
     pub outputs: Option<u16>,
     pub field: Option<FieldClosure>,
+    pub signature: Option<Signature>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,11 +100,23 @@ fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec<String>) {
             errors.push("empty `#:contract` directive (expected a word name)".to_string());
             continue;
         };
+        let detail = terms.collect::<Vec<_>>().join(" ");
         let mut decl = ContractDecl {
             name: name.to_uppercase(),
             ..ContractDecl::default()
         };
-        match terms.try_for_each(|term| parse_term(term, &mut decl)) {
+        let parsed = split_signature(&detail).and_then(|(signature, rest)| {
+            decl.signature = signature;
+            rest.split_whitespace()
+                .try_for_each(|term| parse_term(term, &mut decl))?;
+            if decl.signature.is_some() && (decl.inputs.is_some() || decl.outputs.is_some()) {
+                return Err("a signature decides `inputs` and `outputs`, so neither is \
+                            written beside it"
+                    .to_string());
+            }
+            Ok(())
+        });
+        match parsed {
             Ok(()) => decls.push(decl),
             Err(e) => errors.push(format!("`#:contract {name}`: {e}")),
         }
@@ -245,6 +259,10 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         })
         .collect();
     let (interp, _, unsettled) = build_definitions_interpreter(source);
+    let signatures: std::collections::HashMap<String, Signature> = decls
+        .iter()
+        .filter_map(|decl| Some((decl.name.clone(), decl.signature.clone()?)))
+        .collect();
     let mut decl_outcomes = Vec::with_capacity(decls.len());
     for decl in &decls {
         let before = findings.len();
@@ -260,6 +278,7 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
             });
         } else {
             check_one(&interp, decl, &mut findings);
+            check_types(&interp, decl, &signatures, &mut findings);
         }
         let new = &findings[before..];
         let outcome = if new.iter().any(|f| f.severity == Severity::Error) {
@@ -304,9 +323,16 @@ fn check_one(interp: &Interpreter, decl: &ContractDecl, findings: &mut Vec<DeclF
         ContractFlow::Fixed { consumes, produces } => Some((consumes, produces)),
         ContractFlow::Dynamic => None,
     };
+    let sig_count = |side: fn(&Signature) -> usize| {
+        decl.signature
+            .as_ref()
+            .map(|sig| u16::try_from(side(sig)).unwrap_or(u16::MAX))
+    };
+    let declared_inputs = decl.inputs.or(sig_count(|sig| sig.inputs.len()));
+    let declared_outputs = decl.outputs.or(sig_count(|sig| sig.outputs.len()));
     for (key, declared, inferred) in [
-        ("inputs", decl.inputs, counts.map(|c| c.0)),
-        ("outputs", decl.outputs, counts.map(|c| c.1)),
+        ("inputs", declared_inputs, counts.map(|c| c.0)),
+        ("outputs", declared_outputs, counts.map(|c| c.1)),
     ] {
         match (declared, inferred) {
             (Some(d), Some(i)) if d != i => {
@@ -322,6 +348,24 @@ fn check_one(interp: &Interpreter, decl: &ContractDecl, findings: &mut Vec<DeclF
             exits => format!("field=leaving` at `{}", exits.join("`, `")),
         };
         differs("field=closed".to_string(), inferred, !contract.field_unread);
+    }
+}
+
+/// A typed declaration's body against its signature (LANG.CONTRACT.TYPES).
+fn check_types(
+    interp: &Interpreter,
+    decl: &ContractDecl,
+    signatures: &std::collections::HashMap<String, Signature>,
+    findings: &mut Vec<DeclFinding>,
+) {
+    let (Some(sig), Some(def)) = (&decl.signature, interp.user_words.get(&decl.name)) else {
+        return;
+    };
+    if let Err(why) = super::type_check::check_body(&def.body, sig, signatures) {
+        findings.push(DeclFinding {
+            severity: Severity::Error,
+            message: format!("`#:contract {} {sig}`: {why}.", decl.name),
+        });
     }
 }
 

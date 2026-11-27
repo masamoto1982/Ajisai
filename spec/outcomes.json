@@ -53,6 +53,13 @@
       "documentation": "A `#:contract` declaration the inferred contract contradicts (LANG.CONTRACT.CHECK): the program says its own Word takes two inputs and the body takes one. Decided before anything runs, by `check` and by `compute`, which refuses to execute a program that is wrong about itself; the findings are in `contractDecls`."
     },
     {
+      "id": "typeViolation",
+      "kind": "structural",
+      "attribution": "machine",
+      "repair": "program",
+      "documentation": "A value outside the range a typed User Word's signature declares (LANG.CONTRACT.TYPES), met where the Word is entered — the caller's broken promise — or where it returns — the Word's own. The message names the Word, the input or output, the lane and the type. Raised by no Core Word: only a `#:contract` signature makes a Word typed."
+    },
+    {
       "id": "declaredFailure",
       "kind": "declared",
       "repair": "program",

@@ -97,6 +97,17 @@ impl Interpreter {
         self.check_call_depth()?;
         self.call_depth += 1;
 
+        // A typed Word checks its operands as it is entered and its results as
+        // it returns (LANG.CONTRACT.TYPES). An untyped Word pays this one test.
+        let typed = def.signature.clone();
+        let depth_before = self.stack.len();
+        if let Some(sig) = &typed {
+            if let Err(err) = self.check_typed_inputs(name.as_str(), sig) {
+                self.call_depth -= 1;
+                return Err(err);
+            }
+        }
+
         let code = self.body_code(&def);
 
         // A Word call is a barrier frame: its body names its own locals and
@@ -104,9 +115,13 @@ impl Interpreter {
         // operands and its dictionary and nothing else.
         self.open_frame(true, &code.slots);
 
-        let result = self.run_code(&code);
+        let mut result = self.run_code(&code);
 
         self.close_binding_scope();
+
+        if let (Ok(()), Some(sig)) = (&result, &typed) {
+            result = self.check_typed_outputs(name.as_str(), sig, depth_before);
+        }
 
         self.call_depth -= 1;
 

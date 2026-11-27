@@ -166,6 +166,9 @@ pub enum ErrorCategory {
     /// declaration about itself is false — so it has no `AjisaiError`
     /// behind it: no Word ever raises it.
     ContractViolation,
+    /// A value outside the range a typed Word's signature declares, met where
+    /// the Word is entered or where it returns (LANG.CONTRACT.TYPES).
+    TypeViolation,
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
     /// asked `word_contract` for the Word gets back the same vocabulary the
@@ -182,6 +185,7 @@ impl ErrorCategory {
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::ContractViolation => "contractViolation",
+            ErrorCategory::TypeViolation => "typeViolation",
             ErrorCategory::Declared(condition) => condition,
         }
     }
@@ -195,6 +199,7 @@ impl ErrorCategory {
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::DeclaredCondition { condition, .. } => ErrorCategory::Declared(condition),
+            AjisaiError::TypeViolation { .. } => ErrorCategory::TypeViolation,
         })
     }
 }
@@ -293,6 +298,13 @@ pub enum AjisaiError {
         /// forget, misspell, or borrow another Word's name.
         word: Option<&'static str>,
     },
+    /// A value outside the range a typed User Word declares
+    /// (LANG.CONTRACT.TYPES): `word` is the typed Word, and the message says
+    /// which input or output, which lane, and which type.
+    TypeViolation {
+        word: String,
+        message: String,
+    },
 }
 
 impl AjisaiError {
@@ -387,6 +399,7 @@ impl fmt::Display for AjisaiError {
                 write_hint(f, unknown_word_hint(name))
             }
             AjisaiError::MalformedSource(msg) => write!(f, "{}", msg),
+            AjisaiError::TypeViolation { word, message } => write!(f, "{}: {}", word, message),
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
             }

@@ -3359,6 +3359,23 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-typed-word-same-answer" data-category="language">
+  <h3>A typed Word answers what the same Word answers untyped (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract SUMSQ [int] -> int
+[ [ 'X' BIND X X MUL ] MAP 0 [ ADD ] FOLD ] 'SUMSQ' DEF [ 1 2 3 ] SUMSQ</pre>
+  <pre class="ajisai-expect-result">14/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-typed-word-input-out-of-range" data-category="language">
+  <h3>A value outside a typed Word's input type is typeViolation (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract ID int -> int
+[ 0 ADD ] 'ID' DEF 1/2 ID</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">ID: input 1 of `int -> int` was given a value outside int: 1/2 is not int</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-def-empty-body" data-category="dictionary">
   <h3>DEF refuses an empty body (invalidDefinitionBody)</h3>
   <pre class="ajisai-source">[ ] 'W' DEF</pre>

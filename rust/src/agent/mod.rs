@@ -23,6 +23,9 @@ mod profile_liveness_tests;
 pub(crate) mod report;
 #[cfg(test)]
 mod resource_usage_tests;
+mod type_check;
+#[cfg(test)]
+mod type_check_tests;
 // The playground's stack view: read only through the WASM boundary.
 #[cfg(any(feature = "wasm", test))]
 pub(crate) mod stack_view;
