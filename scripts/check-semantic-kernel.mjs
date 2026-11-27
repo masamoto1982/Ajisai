@@ -66,7 +66,13 @@ const fail = report.fail;
 // one group. One clause now fixes all three: the order of numbers and of
 // Strings, where a NIL sorts, and the key a grouping Word bundles by. Net new
 // content, at the four lines a clause costs.
-const LINE_BUDGET = 418;
+// Raised to 421 for LANG.CONTRACT.TYPES (2026-11-28): a #:contract line may
+// now declare a Word's types, and the clause fixes what no other clause can
+// say — a type promises a range and never a precision, so erasing every
+// signature leaves the same answers, and a value outside a declared range is
+// typeViolation rather than a NIL or a point over zero. Net new content, at
+// the lines a clause costs, its four statements kept to one paragraph.
+const LINE_BUDGET = 421;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
   fail(
