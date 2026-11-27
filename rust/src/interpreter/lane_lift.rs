@@ -425,7 +425,7 @@ mod tests {
                 "[ [ 1 2 ] [ 3 4 ] ] 0 [ TRUE FALSE ] SELECT",
                 "[ [ 1/1 0/1 ] [ 3/1 0/1 ] ]",
             ),
-            ("[ 1 2 ] 0 NIL SELECT", "[ 0/1 0/1 ]"),
+            ("[ 1 2 ] 0 NIL SELECT", "[ NIL NIL ]"),
             ("[ 1 2 3 ] [ 2 ] GT", "[ FALSE FALSE TRUE ]"),
             ("[ [ 1 ] ] [ [ 2 ] [ 3 ] ] LT", "[ [ TRUE ] [ TRUE ] ]"),
             ("[ [ 1 2 ] [ 3 ] ] 0 TRUE SELECT", "[ [ 1/1 2/1 ] [ 3/1 ] ]"),

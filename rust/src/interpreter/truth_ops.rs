@@ -11,6 +11,7 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use crate::interpreter::lane_lift::{common_extent, vector_extent};
+use crate::interpreter::logic::compute_selection;
 use crate::types::truth_column::{FALSE, TRUE, UNKNOWN};
 use crate::types::{TruthColumn, Value, ValueData};
 
@@ -162,7 +163,7 @@ impl<'a> Candidate<'a> {
 
 /// `SELECT` when the mask reads as codes and is longer than one lane, and the
 /// candidates are leaves or flat: each lane is the candidate its code chooses,
-/// the second for FALSE and UNKNOWN alike.
+/// the mask's NIL for UNKNOWN.
 pub(crate) fn select(when_true: &Value, when_false: &Value, mask: &Value) -> Option<Value> {
     if !matches!(mask.data, ValueData::Truths(_) | ValueData::Vector(_)) {
         return None;
@@ -186,22 +187,28 @@ pub(crate) fn select(when_true: &Value, when_false: &Value, mask: &Value) -> Opt
         .enumerate()
         .map(|(i, &code)| match code {
             TRUE => t.lane(i).into_owned(),
-            _ => f.lane(i).into_owned(),
+            FALSE => f.lane(i).into_owned(),
+            _ => compute_selection(&t.lane(i), &f.lane(i), &column.lane(i))
+                .expect("an UNKNOWN lane is a truth value"),
         })
         .collect();
     Some(Value::from_vector(lanes))
 }
 
-/// `SELECT` between two machine-word numbers: every lane is one of the two
-/// pairs — an UNKNOWN lane the second, as a FALSE one — so the answer is
-/// written straight into a dense Tensor's columns, the Vector of those
-/// numbers, held as `Value::from_vector_promoted` would hold it.
+/// `SELECT` between two machine-word numbers under a mask of TRUE and FALSE
+/// alone: every lane is one of the two pairs, so the answer is written
+/// straight into a dense Tensor's columns — the Vector of those numbers, held
+/// as `Value::from_vector_promoted` would hold it. An UNKNOWN lane answers a
+/// NIL, which no column holds.
 fn select_numbers(t: &Candidate, f: &Candidate, codes: &[u8]) -> Option<Value> {
     let pair = |c: &Candidate| match c {
         Candidate::Leaf(value) => value.as_scalar()?.extract_i64_pair(),
         _ => None,
     };
     let ((tn, td), (fn_, fd)) = (pair(t)?, pair(f)?);
+    if codes.iter().any(|&code| code > TRUE) {
+        return None;
+    }
     let (mut nums, mut dens) = (
         Vec::with_capacity(codes.len()),
         Vec::with_capacity(codes.len()),
