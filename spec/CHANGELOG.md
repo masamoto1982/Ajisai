@@ -15,6 +15,11 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.8
+
+- **breaking** LANG.CONTRACT.TYPES — A signature may write a Record type, `{name:T …}`: a Record whose keys are exactly the Strings named, in that order, each holding a value of its type. A table is a Record of Vector columns. The type rules now cover `RECORD`, `PUT`, `KEYS`, `VALUES`, `HAS?`, `WITHOUT` and `MERGE`, and `GET`, `PUT`, `HAS?` and `WITHOUT` on a typed Record take their key written right there, so the field is known before anything runs; arithmetic reaches each field. `#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]` over `[ 'T' BIND T 'price' GET T 'qty' GET MUL ]` was `error:contractViolation` (a malformed signature) and is verified, and `[ 'price' 'qty' ] [ [ 120 80 ] [ 2 1 ] ] RECORD SUBTOTALS` is `[ 240 80 ]`; with the keys in another order it is `error:typeViolation`. Programs without a Record type are unchanged. (2026-11-28)
+- **compatible** Presentation Profile — A sheet cell whose value is a table (a Record of Vector columns of one length) shows its columns and row count, and the formula bar lays it out as a table; a Record with String keys is offered its Record type. No program's answer changes. (2026-11-28)
+
 ## 1.0.0-beta.7
 
 - **breaking** LANG.DICTIONARY.MUTATION — `DEF` of a User Word that other User Words still call replaces it when the new body has the same stack effect as the old one, the inputs and outputs `CONTRACT` infers, both fixed; its callers call the new body from then on, so a value other definitions read can be edited in place, as a cell is in a spreadsheet. A redefinition that changes the stack effect, or whose effect cannot be inferred, is still `error:definitionConflict`. `[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL` was `error:definitionConflict` and is `450`; `[ 2 3 ] 'PRICE' DEF` in its place is still refused. The new body is held to LANG.DICTIONARY.ACYCLIC, so `[ TOTAL ] 'PRICE' DEF` is `error:selfReferentialDefinition`. (2026-11-28)

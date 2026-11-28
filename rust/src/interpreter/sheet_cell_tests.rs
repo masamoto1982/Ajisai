@@ -2,7 +2,7 @@
 //! value, read without disturbing the session.
 
 use crate::agent::block_on;
-use crate::interpreter::sheet_cell::{suggest_type, CellValue};
+use crate::interpreter::sheet_cell::{suggest_type, CellValue, SheetTable};
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
@@ -35,6 +35,7 @@ fn evaluating_a_cell_leaves_the_session_as_it_was() {
         CellValue::Value {
             display: "[ 360/1 240/1 900/1 ]".to_string(),
             suggested_type: Some("[int]".to_string()),
+            table: None,
         }
     );
     assert_eq!(interp.resource_usage(), usage);
@@ -59,6 +60,7 @@ fn a_cell_that_fails_shows_its_error_and_a_typed_one_suggests_nothing() {
         CellValue::Value {
             display: "1/2".to_string(),
             suggested_type: None,
+            table: None,
         }
     );
 }
@@ -92,4 +94,31 @@ fn a_typed_body_may_call_a_typed_word_the_session_already_holds() {
     );
     let in_session = crate::agent::contract::declared_contract_check_in(source, &interp).unwrap();
     assert!(!in_session.violated, "{}", in_session.to_json());
+}
+
+#[test]
+fn a_record_of_columns_is_a_table_and_suggests_a_record_type() {
+    let interp = session(
+        "[ [ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120 1/2 ] ] RECORD ] 'MENU' DEF \
+         [ [ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD ] 'RAGGED' DEF",
+    );
+    assert_eq!(
+        block_on(interp.evaluate_sheet_cell("MENU")),
+        CellValue::Value {
+            display: "[ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120/1 1/2 ] ] RECORD".to_string(),
+            suggested_type: Some("{item:[str] price:[rat]}".to_string()),
+            table: Some(SheetTable {
+                columns: vec!["item".into(), "price".into()],
+                cells: vec![
+                    vec!["'tea'".into(), "120/1".into()],
+                    vec!["'cake'".into(), "1/2".into()],
+                ],
+                rows: 2,
+            }),
+        }
+    );
+    let CellValue::Value { table, .. } = block_on(interp.evaluate_sheet_cell("RAGGED")) else {
+        panic!("RAGGED answers a value");
+    };
+    assert_eq!(table, None);
 }

@@ -1336,6 +1336,52 @@ footer {
     color: var(--color-text-light);
 }
 
+/* A table value (a Record of columns) laid out under the formula bar. */
+.sheet-table-slot {
+    grid-column: 1 / -1;
+
+    &:empty {
+        display: none;
+    }
+}
+
+.sheet-table-view {
+    max-height: 11rem;
+    overflow: auto;
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    background: var(--color-white);
+
+    & table {
+        border-collapse: collapse;
+        min-width: 100%;
+    }
+
+    & th,
+    & td {
+        padding: 0.1rem 0.5rem;
+        border-bottom: 1px solid var(--color-medium);
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    & th {
+        position: sticky;
+        top: 0;
+        background: var(--color-light);
+        color: var(--color-text-light);
+        font-weight: bold;
+        text-align: right;
+    }
+}
+
+.sheet-table-more {
+    margin: 0;
+    padding: 0.1rem 0.5rem;
+    color: var(--color-text-light);
+    font-size: 0.75rem;
+}
+
 .sheet-detail-value {
     overflow-wrap: anywhere;
 }

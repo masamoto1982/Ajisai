@@ -3391,6 +3391,23 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-typed-record-table" data-category="language">
+  <h3>A typed Word over a Record of columns answers what it answers untyped (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]
+[ 'T' BIND T 'price' GET T 'qty' GET MUL ] 'SUBTOTALS' DEF [ 'price' 'qty' ] [ [ 120 80 ] [ 2 1 ] ] RECORD SUBTOTALS</pre>
+  <pre class="ajisai-expect-result">[ 240/1 80/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-typed-record-keys-out-of-order" data-category="language">
+  <h3>A Record whose keys stand in another order is outside its Record type (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]
+[ 'T' BIND T 'price' GET T 'qty' GET MUL ] 'SUBTOTALS' DEF [ 'qty' 'price' ] [ [ 2 1 ] [ 120 80 ] ] RECORD SUBTOTALS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">a Record with keys [ 'qty' 'price' ] is not {price:[int] qty:[int]}</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-def-empty-body" data-category="dictionary">
   <h3>DEF refuses an empty body (invalidDefinitionBody)</h3>
   <pre class="ajisai-source">[ ] 'W' DEF</pre>

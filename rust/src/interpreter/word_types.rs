@@ -31,6 +31,10 @@ pub enum DeclaredType {
     Bool,
     Str,
     Vector(Box<DeclaredType>),
+    /// A Record whose keys are exactly these Strings, in this order, each
+    /// holding a value of its type (LANG.RECORDS.STRUCTURE). A table is one
+    /// whose fields are Vectors: its columns.
+    Record(Vec<(String, DeclaredType)>),
 }
 
 impl fmt::Display for DeclaredType {
@@ -41,6 +45,13 @@ impl fmt::Display for DeclaredType {
             DeclaredType::Bool => f.write_str("bool"),
             DeclaredType::Str => f.write_str("str"),
             DeclaredType::Vector(element) => write!(f, "[{element}]"),
+            DeclaredType::Record(fields) => {
+                let fields: Vec<String> = fields
+                    .iter()
+                    .map(|(name, ty)| format!("{name}:{ty}"))
+                    .collect();
+                write!(f, "{{{}}}", fields.join(" "))
+            }
         }
     }
 }
@@ -103,7 +114,10 @@ fn parse_signature(text: &str) -> std::result::Result<Signature, String> {
     let spaced = text
         .replace("->", " -> ")
         .replace('[', " [ ")
-        .replace(']', " ] ");
+        .replace(']', " ] ")
+        .replace('{', " { ")
+        .replace('}', " } ")
+        .replace(':', " : ");
     let lexemes: Vec<&str> = spaced.split_whitespace().collect();
     let arrow = lexemes
         .iter()
@@ -142,10 +156,38 @@ fn parse_type(lexemes: &[&str], at: usize) -> std::result::Result<(DeclaredType,
                 _ => Err("a Vector type is one element type in `[ ]`".to_string()),
             }
         }
+        Some("{") => parse_record(lexemes, at + 1),
         Some(other) => Err(format!(
-            "unknown type `{other}` (expected `int`, `rat`, `bool`, `str` or `[T]`)"
+            "unknown type `{other}` (expected `int`, `rat`, `bool`, `str`, `[T]` or `{{name:T …}}`)"
         )),
         None => Err("a `[` with no element type".to_string()),
+    }
+}
+
+/// The fields of a Record type after its `{`, up to and past its `}`.
+fn parse_record(
+    lexemes: &[&str],
+    mut at: usize,
+) -> std::result::Result<(DeclaredType, usize), String> {
+    let mut fields: Vec<(String, DeclaredType)> = Vec::new();
+    loop {
+        match (lexemes.get(at).copied(), lexemes.get(at + 1).copied()) {
+            (Some("}"), _) => return Ok((DeclaredType::Record(fields), at + 1)),
+            (Some(name), Some(":")) if !matches!(name, "{" | "[" | "]" | ":") => {
+                if fields.iter().any(|(known, _)| known == name) {
+                    return Err(format!("a Record type names the field `{name}` twice"));
+                }
+                let (ty, next) = parse_type(lexemes, at + 2)?;
+                fields.push((name.to_string(), ty));
+                at = next;
+            }
+            (None, _) => return Err("a `{` with no `}`".to_string()),
+            (Some(other), _) => {
+                return Err(format!(
+                    "a Record type is `{{name:T …}}`, and `{other}` is not `name:`"
+                ))
+            }
+        }
     }
 }
 
@@ -197,6 +239,27 @@ pub fn first_misfit(value: &Value, ty: &DeclaredType) -> Option<String> {
             (0..data.len())
                 .find(|index| !fits(*index))
                 .map(|index| format!("lane {index}: {} is not {element}", data.fraction_at(index)))
+        }
+        (ValueData::Record(record), DeclaredType::Record(fields)) => {
+            let same_keys = record.len() == fields.len()
+                && record
+                    .keys()
+                    .iter()
+                    .zip(fields)
+                    .all(|(key, (name, _))| key.as_text() == Some(name.as_str()));
+            if !same_keys {
+                let keys: Vec<String> = record.keys().iter().map(ToString::to_string).collect();
+                return Some(format!(
+                    "a Record with keys [ {} ] is not {ty}",
+                    keys.join(" ")
+                ));
+            }
+            fields
+                .iter()
+                .zip(record.values())
+                .find_map(|((name, field), item)| {
+                    first_misfit(item, field).map(|why| format!("field {name}: {why}"))
+                })
         }
         _ => Some(format!("{value} is not {ty}")),
     }

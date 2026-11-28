@@ -42,7 +42,8 @@ export class AjisaiInterpreter {
     describe_sheet_cell(name: string): any;
     /**
      * What the User Word `name` leaves on an empty stack, run apart from the
-     * session: `{ value, suggestedType }` or `{ error }`.
+     * session: `{ value, suggestedType, table? }` or `{ error }`, `table`
+     * being `{ columns, cells, rows }` when the value is a Record of columns.
      */
     evaluate_sheet_cell(name: string): Promise<any>;
     execute(code: string): Promise<any>;

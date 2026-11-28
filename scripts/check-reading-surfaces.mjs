@@ -58,7 +58,7 @@ const EXAMPLE_NAMES = new Set([
   // identity and doubling words of the worked examples
   'ID', 'DOUBLE',
   // the typed Word of the Declared types clause (LANG.CONTRACT.TYPES)
-  'SUMSQ', 'PRICE', 'TOTAL', 'NAME',
+  'SUMSQ', 'PRICE', 'TOTAL', 'NAME', 'SUBTOTALS',
   // the doubling word of the MAP and FOLD examples. It only became visible to
   // this check when those examples stopped spelling their code operand as the
   // String 'DBL' — a String is no longer a code operand (LANG.SOURCE.CODE,

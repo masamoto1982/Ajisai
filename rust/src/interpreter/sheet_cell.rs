@@ -10,7 +10,7 @@
 
 use super::word_types::{first_misfit, DeclaredType};
 use super::Interpreter;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 
 /// What the sheet shows for one User Word without running it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,15 +34,81 @@ pub enum CellValue {
         /// The narrowest declared type the value fits, offered when the
         /// Word declares none.
         suggested_type: Option<String>,
+        /// The value laid out as a table, when it is one.
+        table: Option<SheetTable>,
     },
     Error(String),
 }
 
+/// A table as the sheet lays it out: a Record whose values are Vectors of
+/// one length, its keys the columns (LANG.RECORDS.STRUCTURE). Only the first
+/// [`TABLE_ROWS`] rows are written out; `rows` counts them all.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SheetTable {
+    pub columns: Vec<String>,
+    pub cells: Vec<Vec<String>>,
+    pub rows: usize,
+}
+
+pub const TABLE_ROWS: usize = 100;
+
+/// `value` as a table, when it is a Record of columns of one length.
+pub fn table_of(value: &Value) -> Option<SheetTable> {
+    let record = value.as_record()?;
+    let mut rows = None;
+    for column in record.values() {
+        let is_column = matches!(
+            column.data,
+            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Truths(_)
+        );
+        if !is_column || *rows.get_or_insert(column.len()) != column.len() {
+            return None;
+        }
+    }
+    let rows = rows?;
+    let columns = record
+        .keys()
+        .iter()
+        .map(|key| {
+            key.as_text()
+                .map_or_else(|| key.to_string(), str::to_string)
+        })
+        .collect();
+    let cells = (0..rows.min(TABLE_ROWS))
+        .map(|row| {
+            record
+                .values()
+                .iter()
+                .map(|column| {
+                    column
+                        .child(row)
+                        .map_or_else(String::new, |v| v.to_string())
+                })
+                .collect()
+        })
+        .collect();
+    Some(SheetTable {
+        columns,
+        cells,
+        rows,
+    })
+}
+
 /// The narrowest declared type `value` fits: a NIL alone fits every type and
-/// so suggests none.
+/// so suggests none. A Record with String keys suggests a Record type, field
+/// by field.
 pub fn suggest_type(value: &Value) -> Option<DeclaredType> {
     if value.is_nil() {
         return None;
+    }
+    if let Some(record) = value.as_record() {
+        return record
+            .keys()
+            .iter()
+            .zip(record.values())
+            .map(|(key, field)| Some((key.as_text()?.to_string(), suggest_type(field)?)))
+            .collect::<Option<Vec<_>>>()
+            .map(DeclaredType::Record);
     }
     let scalars = [
         DeclaredType::Int,
@@ -111,6 +177,10 @@ impl Interpreter {
             _ => None,
         };
         CellValue::Value {
+            table: match stack {
+                [value] => table_of(value),
+                _ => None,
+            },
             display: stack
                 .iter()
                 .map(Value::to_string)
