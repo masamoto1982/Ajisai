@@ -2,6 +2,7 @@ import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 import type { InterpreterStateSnapshot } from '../platform';
 import { getPlatform } from '../platform';
 import { collectUserWords, toError } from './interpreter-execution-utils';
+import { readSavedLayout, type SheetLayout } from './user-sheet-layout';
 
 // These four words exist for one demonstration: a Word button's colour shows
 // that another Word calls it, and that is only visible once one seeded word
@@ -56,8 +57,15 @@ const STATE_FORMAT_VERSION = 5;
 export const checkHasSavedDictionary = (state: Pick<InterpreterStateSnapshot, 'userWords'>): boolean =>
     Array.isArray(state.userWords);
 
+/** How the User sheet is shown: a view, saved with the session. */
+export interface UserSheetView {
+    readonly userView: 'list' | 'sheet';
+    readonly sheetLayout: SheetLayout;
+}
+
 interface RestoredSelection {
     readonly activeDictionarySheet?: string;
+    readonly sheetView?: UserSheetView;
 }
 
 export interface PersistenceCallbacks {
@@ -66,6 +74,8 @@ export interface PersistenceCallbacks {
     readonly showInfo?: (text: string, append: boolean) => void;
     /** The dictionary sheet currently selected, saved with the session. */
     readonly readActiveDictionarySheet?: () => string;
+    /** The User sheet's view, saved with the session. */
+    readonly readSheetView?: () => UserSheetView;
     // Takes an import in turn with runs, so a run in flight cannot undo it.
     readonly runExclusive?: <T>(task: () => Promise<T>) => Promise<T>;
 }
@@ -81,7 +91,8 @@ export interface Persistence {
 
 const collectCurrentState = (
     interpreter: AjisaiInterpreter,
-    activeDictionarySheet: string | undefined
+    activeDictionarySheet: string | undefined,
+    sheetView: UserSheetView | undefined
 ): InterpreterStateSnapshot => ({
     stateVersion: STATE_FORMAT_VERSION,
     // The lossless snapshot is what restore reads. The observation-format
@@ -89,7 +100,8 @@ const collectCurrentState = (
     // it back: a 200,000-element stack was serialized twice on every save.
     stackSnapshot: interpreter.snapshot_stack(),
     userWords: collectUserWords(interpreter),
-    activeDictionarySheet
+    activeDictionarySheet,
+    ...sheetView
 });
 
 // Identity-keyed export/import (LANG.AUTHORITY.FREEDOM). The export document
@@ -272,7 +284,7 @@ export const createPersistence = (
     interpreter: AjisaiInterpreter,
     callbacks: PersistenceCallbacks = {}
 ): Persistence => {
-    const { showError, updateDisplays, showInfo, readActiveDictionarySheet } = callbacks;
+    const { showError, updateDisplays, showInfo, readActiveDictionarySheet, readSheetView } = callbacks;
     const runExclusive = callbacks.runExclusive ?? (<T>(task: () => Promise<T>) => task());
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
@@ -312,7 +324,7 @@ export const createPersistence = (
         if (!dbInitialized) return;
 
         try {
-            const state = collectCurrentState(interpreter, readActiveDictionarySheet?.());
+            const state = collectCurrentState(interpreter, readActiveDictionarySheet?.(), readSheetView?.());
             await getPlatform().persistence.saveInterpreterState(state);
         } catch (error) {
             console.error('Failed to auto-save state:', error);
@@ -421,7 +433,11 @@ export const createPersistence = (
                 }
 
                 return {
-                    activeDictionarySheet: state.activeDictionarySheet
+                    activeDictionarySheet: state.activeDictionarySheet,
+                    sheetView: {
+                        userView: state.userView === 'sheet' ? 'sheet' : 'list',
+                        sheetLayout: readSavedLayout(state.sheetLayout)
+                    }
                 };
             } else {
                 await loadExampleWords();

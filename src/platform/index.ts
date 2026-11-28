@@ -20,6 +20,10 @@ export interface InterpreterStateSnapshot {
     readonly stackSnapshot: string;
     readonly userWords: UserWord[];
     readonly activeDictionarySheet?: string;
+    // How the User sheet is shown, and where the Sheet puts each Word: a
+    // view of the dictionary, kept with the session (spec/gui-semantics.md, Sheet).
+    readonly userView?: string;
+    readonly sheetLayout?: Readonly<Record<string, string>>;
 }
 
 // The record as a store holds it: the snapshot under its key, dated. Read
@@ -32,6 +36,8 @@ export interface StoredInterpreterState {
     readonly stackSnapshot?: unknown;
     readonly userWords: unknown;
     readonly activeDictionarySheet?: string;
+    readonly userView?: unknown;
+    readonly sheetLayout?: unknown;
     readonly updatedAt: string;
 }
 

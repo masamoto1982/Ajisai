@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import * as wasm from '../wasm/generated/ajisai_core.js';
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
-import { isSheetName, runSheetEdit, sheetDefinitionSource } from './user-sheet';
+import { isSheetName, renameSheetWord, runSheetEdit, sheetDefinitionSource } from './user-sheet';
 
 wasm.initSync({ module: readFileSync(new URL('../wasm/generated/ajisai_core_bg.wasm', import.meta.url)) });
 
@@ -54,5 +54,22 @@ it('leaves the stack as it was when a sheet edit is refused', async () => {
     const stackBefore = interpreter.collect_stack();
     const result = await runSheetEdit(interpreter, sheetDefinitionSource('A', '1 2', null));
     expect(result.errorInfo?.category).toBe('definitionConflict');
+    expect(interpreter.collect_stack()).toEqual(stackBefore);
+});
+
+it('renames a cell as DEF then DEL, and leaves a called one as it was', async () => {
+    const interpreter = createInterpreter();
+    await interpreter.execute("#:contract A1 -> int\n[ 120 ] 'A1' DEF 5");
+    const stackBefore = interpreter.collect_stack();
+    const contract = interpreter.lookup_word_description('A1');
+    expect((await renameSheetWord(interpreter, 'A1', 'PRICE', '120', contract)).status).toBe('OK');
+    expect(interpreter.describe_sheet_cell('A1')).toBeNull();
+    expect(interpreter.describe_sheet_cell('PRICE')).toMatchObject({ formula: '120', signature: '-> int' });
+
+    await interpreter.execute("[ PRICE 3 MUL ] 'TOTAL' DEF");
+    const refused = await renameSheetWord(interpreter, 'PRICE', 'COST', '120', '-> int');
+    expect(refused.errorInfo?.category).toBe('definitionConflict');
+    expect(interpreter.describe_sheet_cell('COST')).toBeNull();
+    expect(interpreter.describe_sheet_cell('PRICE')).not.toBeNull();
     expect(interpreter.collect_stack()).toEqual(stackBefore);
 });
