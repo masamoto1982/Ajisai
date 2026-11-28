@@ -27,7 +27,10 @@ export const readInterpreterStateSnapshot = (
         stateVersion: Number(result.stateVersion),
         stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
         userWords: result.userWords as InterpreterStateSnapshot['userWords'],
-        activeDictionarySheet: result.activeDictionarySheet
+        activeDictionarySheet: result.activeDictionarySheet,
+        // Passed on as stored; the GUI checks both where it reads them.
+        userView: result.userView as InterpreterStateSnapshot['userView'],
+        sheetLayout: result.sheetLayout as InterpreterStateSnapshot['sheetLayout']
     };
 };
 

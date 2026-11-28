@@ -1,15 +1,28 @@
-// The Sheet view of the User dictionary (spec/gui-semantics.md, Sheet): each
-// User Word is a row — its name, its body as the formula, and, for a Word that
-// takes nothing and leaves one value, that value — like the named cells of a
-// spreadsheet. The sheet keeps no state of its own: a row is the dictionary's
-// Word, editing a formula runs `DEF`, and a new row is a new `DEF`.
+// The Sheet view of the User dictionary (spec/gui-semantics.md, Sheet): a grid
+// of cells, A1 to whatever is used, where each User Word stands in a cell —
+// its value if it takes nothing and leaves one, its stack effect otherwise —
+// and the formula bar above the grid shows the selected cell's name, its
+// body as the formula and its type. The sheet keeps no dictionary of its own:
+// a cell is the dictionary's Word, editing a formula runs `DEF`, an empty cell
+// filled in is a new `DEF`, renaming is `DEF` then `DEL`. Where each Word
+// stands is the one thing the sheet holds, and it is a view (user-sheet-layout).
 
-import type { AjisaiInterpreter, ExecuteResult, SheetCellValue, UserWordInfo } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, ExecuteResult, SheetCellInfo, SheetCellValue, UserWordInfo } from '../wasm-interpreter-types';
 import { isFailure, toError } from './interpreter-execution-utils';
+import {
+    formatAddress,
+    gridExtent,
+    parseAddress,
+    placeWords,
+    type SheetLayout
+} from './user-sheet-layout';
+import { deleteUserWord } from './vocabulary-state-controller';
 
 export interface UserSheetCallbacks {
     readonly onWordClick: (word: string) => void;
     readonly onDictionaryChanged: () => Promise<void>;
+    /** A cell moved: the layout is saved with the session. */
+    readonly onLayoutChanged: () => void;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error) => void;
     // Every call into the interpreter takes its turn with runs.
@@ -18,6 +31,8 @@ export interface UserSheetCallbacks {
 
 export interface UserSheet {
     readonly render: (words: UserWordInfo[]) => void;
+    readonly layout: () => SheetLayout;
+    readonly restoreLayout: (layout: SheetLayout) => void;
 }
 
 /** The source a sheet edit runs: the Word's `#:contract` line, then its DEF. */
@@ -30,7 +45,7 @@ export const sheetDefinitionSource = (
     return contract ? `#:contract ${name} ${contract}\n${definition}` : definition;
 };
 
-/** A name a sheet row may take: one token, which a quoted String can hold. */
+/** A name a sheet cell may take: one token, which a quoted String can hold. */
 export const isSheetName = (name: string): boolean => /^[^\s'[\]#]+$/.test(name);
 
 // Run a sheet edit on the session interpreter. A refused DEF puts its operands
@@ -46,22 +61,24 @@ export const runSheetEdit = async (
     return result;
 };
 
-const cell = (tag: 'td' | 'th', className: string, text = ''): HTMLTableCellElement => {
-    const element = document.createElement(tag);
-    element.className = className;
-    element.textContent = text;
-    return element;
-};
-
-const formulaInput = (value: string, label: string): HTMLInputElement => {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'sheet-formula';
-    input.value = value;
-    input.spellcheck = false;
-    input.autocomplete = 'off';
-    input.setAttribute('aria-label', label);
-    return input;
+/**
+ * Rename a Word: define the new name with the same body and declaration,
+ * then delete the old one. A Word other Words call cannot be deleted, so it
+ * cannot be renamed either; the new name is taken back and the refusal is
+ * the answer, with the stack and dictionary as they were.
+ */
+export const renameSheetWord = async (
+    interpreter: AjisaiInterpreter,
+    from: string,
+    to: string,
+    formula: string,
+    contract: string | null
+): Promise<ExecuteResult> => {
+    const defined = await runSheetEdit(interpreter, sheetDefinitionSource(to, formula, contract));
+    if (isFailure(defined)) return defined;
+    const deleted = await deleteUserWord(interpreter, from);
+    if (isFailure(deleted)) await deleteUserWord(interpreter, to);
+    return deleted;
 };
 
 const describeEffect = (inputs: number | null, outputs: number | null): string =>
@@ -69,187 +86,395 @@ const describeEffect = (inputs: number | null, outputs: number | null): string =
         ? 'variable stack effect'
         : `takes ${inputs}, leaves ${outputs}`;
 
+const textInput = (className: string, label: string): HTMLInputElement => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = className;
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+    input.setAttribute('aria-label', label);
+    return input;
+};
+
+const element = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    className: string,
+    text = ''
+): HTMLElementTagNameMap[K] => {
+    const node = document.createElement(tag);
+    node.className = className;
+    node.textContent = text;
+    return node;
+};
+
+const MOVES: Readonly<Record<string, readonly [number, number]>> = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1]
+};
+
 export const createUserSheet = (
     interpreter: AjisaiInterpreter,
     container: HTMLElement,
     callbacks: UserSheetCallbacks
 ): UserSheet => {
-    const { onWordClick, onDictionaryChanged, showInfo, showError, runExclusive } = callbacks;
+    const { onWordClick, onDictionaryChanged, onLayoutChanged, showInfo, showError, runExclusive } = callbacks;
     // A cell's value under its content identity, which changes whenever the
     // Word or anything it calls is redefined: an unchanged cell is not run
     // again when the sheet is redrawn.
     let values = new Map<string, Promise<SheetCellValue>>();
     let generation = 0;
+    let layout: Record<string, string> = {};
+    let words: UserWordInfo[] = [];
+    let selected = 'A1';
+    // The Word in each cell, by address, as the last render placed them.
+    let byAddress = new Map<string, string>();
+    let extent = { columns: 6, rows: 12 };
 
-    const define = async (name: string, formula: string, contract: string | null): Promise<boolean> => {
-        if (!isSheetName(name)) {
-            showInfo(`'${name}' cannot name a cell: a name is one word with no quote, bracket or #.`, false);
-            return false;
-        }
-        if (!formula.trim()) {
-            showInfo(`The formula of '${name}' is empty.`, false);
-            return false;
-        }
+    // The formula bar: the name box, the formula, and what the cell holds.
+    const bar = element('div', 'sheet-bar');
+    const nameInput = textInput('sheet-name-box', 'Cell name');
+    const formulaInput = textInput('sheet-formula', 'Formula');
+    const details = element('div', 'sheet-details');
+    bar.append(nameInput, formulaInput, details);
+    const gridHolder = element('div', 'sheet-grid-holder');
+    container.replaceChildren(bar, gridHolder);
+
+    const wordAt = (address: string): string | undefined => byAddress.get(address);
+    const infoOf = (name: string | undefined): SheetCellInfo | null =>
+        name === undefined ? null : interpreter.describe_sheet_cell(name);
+
+    const report = (result: ExecuteResult, fallback: string): boolean => {
+        if (!isFailure(result)) return true;
+        showInfo(result.message || fallback, false);
+        return false;
+    };
+
+    const edit = async (task: () => Promise<ExecuteResult>, fallback: string): Promise<boolean> => {
         try {
-            const result = await runExclusive(() =>
-                runSheetEdit(interpreter, sheetDefinitionSource(name, formula, contract))
-            );
-            if (isFailure(result)) {
-                showInfo(result.message || `Could not define '${name}'.`, false);
-                return false;
-            }
-            await onDictionaryChanged();
-            return true;
+            const ok = report(await runExclusive(task), fallback);
+            if (ok) await onDictionaryChanged();
+            return ok;
         } catch (error) {
             showError(toError(error));
             return false;
         }
     };
 
-    const valueOf = (name: string, identity: string | null): Promise<SheetCellValue> => {
-        const key = identity ?? `name:${name}`;
+    const checkName = (name: string): boolean => {
+        if (isSheetName(name)) return true;
+        showInfo(`'${name}' cannot name a cell: a name is one word with no quote, bracket or #.`, false);
+        return false;
+    };
+
+    const define = (name: string, formula: string, contract: string | null): Promise<boolean> => {
+        if (!checkName(name)) return Promise.resolve(false);
+        if (!formula.trim()) {
+            showInfo(`The formula of '${name}' is empty.`, false);
+            return Promise.resolve(false);
+        }
+        return edit(
+            () => runSheetEdit(interpreter, sheetDefinitionSource(name, formula, contract)),
+            `Could not define '${name}'.`
+        );
+    };
+
+    const place = (name: string, address: string): void => {
+        layout = { ...layout, [name]: address };
+        onLayoutChanged();
+    };
+
+    // Whether the cell now holds what the formula bar says.
+    const commitFormula = async (): Promise<boolean> => {
+        const address = selected;
+        const name = wordAt(address);
+        const formula = formulaInput.value;
+        if (name !== undefined) {
+            const info = infoOf(name);
+            if (!info || formula.trim() === info.formula.trim()) return true;
+            const ok = await define(name, formula, interpreter.lookup_word_description(name));
+            if (!ok) formulaInput.value = info.formula;
+            return ok;
+        }
+        if (!formula.trim()) return true;
+        const wanted = (nameInput.value.trim() || address).toUpperCase();
+        const elsewhere = layout[wanted];
+        if (infoOf(wanted) && elsewhere !== undefined && elsewhere !== address) {
+            showInfo(`'${wanted}' is already the cell at ${elsewhere}; edit it there or name this cell otherwise.`, false);
+            return false;
+        }
+        // Placed first, so the redraw the DEF causes draws it here.
+        const before = layout;
+        layout = { ...layout, [wanted]: address };
+        const ok = await define(wanted, formula, null);
+        if (ok) onLayoutChanged();
+        else layout = before;
+        return ok;
+    };
+
+    const commitName = async (): Promise<void> => {
+        const address = selected;
+        const from = wordAt(address);
+        const to = nameInput.value.trim().toUpperCase();
+        if (from === undefined) {
+            if (formulaInput.value.trim()) await commitFormula();
+            return;
+        }
+        if (!to || to === from) {
+            nameInput.value = from;
+            return;
+        }
+        const info = infoOf(from);
+        if (!info || !checkName(to)) return refreshBar();
+        if (infoOf(to)) {
+            showInfo(`'${to}' already names a Word.`, false);
+            return refreshBar();
+        }
+        const contract = interpreter.lookup_word_description(from);
+        const before = layout;
+        const rest = { ...layout };
+        delete rest[from];
+        layout = { ...rest, [to]: address };
+        const ok = await edit(
+            () => renameSheetWord(interpreter, from, to, info.formula, contract),
+            `Could not rename '${from}'.`
+        );
+        if (ok) onLayoutChanged();
+        else {
+            layout = before;
+            refreshBar();
+        }
+    };
+
+    const deleteSelected = async (): Promise<void> => {
+        const name = wordAt(selected);
+        if (name === undefined) return;
+        if (await edit(() => deleteUserWord(interpreter, name), `Could not delete '${name}'.`)) {
+            showInfo(`Word '${name}' deleted`, true);
+        }
+    };
+
+    const showValue = (target: HTMLElement, name: string, info: SheetCellInfo, onValue?: (value: SheetCellValue) => void): void => {
+        if (!(info.inputs === 0 && info.outputs === 1)) {
+            target.textContent = describeEffect(info.inputs, info.outputs);
+            target.classList.add('is-muted');
+            return;
+        }
+        target.textContent = '…';
+        const key = info.identity ?? `name:${name}`;
         let pending = values.get(key);
         if (!pending) {
             pending = runExclusive(() => interpreter.evaluate_sheet_cell(name));
             values.set(key, pending);
         }
-        return pending;
+        const current = generation;
+        void pending.then((result) => {
+            if (current !== generation) return;
+            target.classList.toggle('is-error', result.error !== undefined);
+            target.textContent = result.error ?? result.value;
+            onValue?.(result);
+        });
     };
 
-    const wordRow = (name: string, kept: Map<string, Promise<SheetCellValue>>, current: number): HTMLTableRowElement | null => {
-        const info = interpreter.describe_sheet_cell(name);
-        if (!info) return null;
-        const row = document.createElement('tr');
-
-        const nameCell = cell('th', 'sheet-name');
-        nameCell.scope = 'row';
-        const nameButton = document.createElement('button');
-        nameButton.type = 'button';
-        nameButton.className = 'sheet-name-button';
-        nameButton.textContent = name;
-        nameButton.title = 'Write this word into the Input';
-        nameButton.addEventListener('click', () => onWordClick(name));
-        nameCell.appendChild(nameButton);
-
-        const formulaCell = cell('td', 'sheet-formula-cell');
-        const input = formulaInput(info.formula, `Formula of ${name}`);
-        const commit = (): void => {
-            if (input.value.trim() === info.formula.trim()) return;
-            const contract = interpreter.lookup_word_description(name);
-            void define(name, input.value, contract).then((ok) => {
-                if (!ok) input.value = info.formula;
+    // The formula bar for the selected cell. A field being typed into is
+    // left alone, so a redraw does not take the text from under the cursor.
+    const refreshBar = (): void => {
+        const name = wordAt(selected);
+        const info = infoOf(name);
+        const typing = document.activeElement;
+        nameInput.placeholder = selected;
+        if (typing !== nameInput) nameInput.value = name ?? '';
+        if (typing !== formulaInput) formulaInput.value = info?.formula ?? '';
+        formulaInput.placeholder = name === undefined
+            ? 'formula, e.g. [ 120 80 300 ] or PRICE 3 MUL'
+            : '';
+        details.replaceChildren();
+        if (name === undefined || !info) {
+            details.append(element('span', 'sheet-address', selected));
+            return;
+        }
+        const insert = element('button', 'sheet-insert', `${name} → Input`);
+        insert.type = 'button';
+        insert.title = 'Write this word into the Input';
+        insert.addEventListener('click', () => onWordClick(name));
+        const value = element('span', 'sheet-detail-value');
+        const type = element('span', 'sheet-type', info.signature ?? '');
+        details.append(element('span', 'sheet-address', selected), value, type, insert);
+        showValue(value, name, info, (result) => {
+            if (result.error !== undefined || !result.suggestedType || info.signature) return;
+            const suggest = element('button', 'sheet-type-suggestion', `${result.suggestedType}?`);
+            suggest.type = 'button';
+            suggest.title = `Declare ${name} as -> ${result.suggestedType} (adds a #:contract line)`;
+            suggest.addEventListener('click', () => {
+                void define(name, info.formula, `-> ${result.suggestedType}`);
             });
-        };
-        input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
+            type.replaceChildren(suggest);
+        });
+    };
+
+    const cellElement = (address: string): HTMLElement | null =>
+        gridHolder.querySelector<HTMLElement>(`[data-address="${address}"]`);
+
+    const select = (address: string, focus = true): void => {
+        cellElement(selected)?.classList.remove('is-selected');
+        cellElement(selected)?.setAttribute('tabindex', '-1');
+        selected = address;
+        const target = cellElement(address);
+        target?.classList.add('is-selected');
+        target?.setAttribute('tabindex', '0');
+        if (focus) target?.focus();
+        refreshBar();
+    };
+
+    const move = (dx: number, dy: number): void => {
+        const at = parseAddress(selected) ?? { column: 0, row: 0 };
+        const column = Math.min(Math.max(at.column + dx, 0), extent.columns - 1);
+        const row = Math.min(Math.max(at.row + dy, 0), extent.rows - 1);
+        select(formatAddress({ column, row }));
+    };
+
+    const onCellKey = (event: KeyboardEvent): void => {
+        const step = MOVES[event.key];
+        if (step) {
+            event.preventDefault();
+            move(step[0], step[1]);
+        } else if (event.key === 'Enter' || event.key === 'F2') {
+            event.preventDefault();
+            formulaInput.focus();
+        } else if (event.key === 'Delete') {
+            event.preventDefault();
+            void deleteSelected();
+        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            // Typing into a selected cell starts its formula, as a spreadsheet does.
+            event.preventDefault();
+            formulaInput.value = event.key;
+            formulaInput.focus();
+        }
+    };
+
+    const gridCell = (address: string): HTMLTableCellElement => {
+        const td = element('td', 'sheet-cell');
+        td.dataset.address = address;
+        td.tabIndex = address === selected ? 0 : -1;
+        td.classList.toggle('is-selected', address === selected);
+        const name = wordAt(address);
+        const info = infoOf(name);
+        // While a formula is being written, a click on a cell writes that
+        // cell's name into it, and the formula keeps the focus.
+        td.addEventListener('mousedown', (event) => {
+            const other = wordAt(address);
+            if (document.activeElement === formulaInput && other !== undefined && address !== selected) {
                 event.preventDefault();
-                commit();
-            } else if (event.key === 'Escape') {
-                input.value = info.formula;
-                input.blur();
+                const at = formulaInput.selectionStart ?? formulaInput.value.length;
+                const end = formulaInput.selectionEnd ?? at;
+                const before = formulaInput.value.slice(0, at);
+                const pad = before === '' || before.endsWith(' ') ? '' : ' ';
+                formulaInput.setRangeText(`${pad}${other} `, at, end, 'end');
             }
         });
-        input.addEventListener('change', commit);
-        formulaCell.appendChild(input);
-
-        const valueCell = cell('td', 'sheet-value');
-        const typeCell = cell('td', 'sheet-type', info.signature ?? '');
-
-        if (info.inputs === 0 && info.outputs === 1) {
-            valueCell.textContent = '…';
-            const key = info.identity ?? `name:${name}`;
-            const pending = valueOf(name, info.identity);
-            kept.set(key, pending);
-            void pending.then((result) => {
-                if (current !== generation) return;
-                if (result.error !== undefined) {
-                    valueCell.textContent = result.error;
-                    valueCell.classList.add('is-error');
-                    return;
-                }
-                valueCell.textContent = result.value;
-                if (result.suggestedType && !info.signature) {
-                    const suggest = document.createElement('button');
-                    suggest.type = 'button';
-                    suggest.className = 'sheet-type-suggestion';
-                    suggest.textContent = `${result.suggestedType}?`;
-                    suggest.title = `Declare ${name} as -> ${result.suggestedType} (adds a #:contract line)`;
-                    suggest.addEventListener('click', () => {
-                        void define(name, info.formula, `-> ${result.suggestedType}`);
-                    });
-                    typeCell.replaceChildren(suggest);
-                }
-            });
-        } else {
-            valueCell.textContent = describeEffect(info.inputs, info.outputs);
-            valueCell.classList.add('is-muted');
-        }
-
-        row.append(nameCell, formulaCell, valueCell, typeCell);
-        return row;
+        td.addEventListener('click', () => { if (document.activeElement !== formulaInput) select(address); });
+        td.addEventListener('dblclick', () => formulaInput.focus());
+        td.addEventListener('keydown', onCellKey);
+        td.addEventListener('dragover', (event) => {
+            if (wordAt(address) === undefined) event.preventDefault();
+        });
+        td.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const moved = event.dataTransfer?.getData('text/plain');
+            if (!moved || layout[moved] === undefined || wordAt(address) !== undefined) return;
+            place(moved, address);
+            selected = address;
+            render(words);
+        });
+        if (name === undefined || !info) return td;
+        td.classList.add('is-filled');
+        td.draggable = true;
+        td.addEventListener('dragstart', (event) => event.dataTransfer?.setData('text/plain', name));
+        td.title = `${name}: ${info.formula}`;
+        if (name !== address) td.append(element('span', 'sheet-cell-name', name));
+        const value = element('span', 'sheet-cell-value');
+        td.append(value);
+        showValue(value, name, info);
+        return td;
     };
 
-    const newRow = (): HTMLTableRowElement => {
-        const row = document.createElement('tr');
-        row.className = 'sheet-new-row';
-        const nameCell = cell('th', 'sheet-name');
-        nameCell.scope = 'row';
-        const nameInput = formulaInput('', 'New cell name');
-        nameInput.classList.add('sheet-new-name');
-        nameInput.placeholder = 'NAME';
-        nameCell.appendChild(nameInput);
-        const formulaCell = cell('td', 'sheet-formula-cell');
-        const input = formulaInput('', 'New cell formula');
-        input.placeholder = 'formula, e.g. [ 120 80 300 ] or PRICE 3 MUL';
-        formulaCell.appendChild(input);
-        const add = (): void => {
-            const name = nameInput.value.trim();
-            if (!name || !input.value.trim()) return;
-            void define(name, input.value, null);
-        };
-        for (const field of [nameInput, input]) {
-            field.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    add();
-                }
-            });
-        }
-        const actionCell = cell('td', 'sheet-value');
-        const addButton = document.createElement('button');
-        addButton.type = 'button';
-        addButton.className = 'btn';
-        addButton.textContent = 'Add';
-        addButton.addEventListener('click', add);
-        actionCell.appendChild(addButton);
-        row.append(nameCell, formulaCell, actionCell, cell('td', 'sheet-type'));
-        return row;
-    };
-
-    const render = (words: UserWordInfo[]): void => {
+    const render = (next: UserWordInfo[]): void => {
+        words = next;
         generation += 1;
-        const current = generation;
-        const kept = new Map<string, Promise<SheetCellValue>>();
-        const table = document.createElement('table');
-        table.className = 'sheet-table';
+        const kept = values;
+        layout = placeWords(next.map(([name]) => name), layout);
+        byAddress = new Map(Object.entries(layout).map(([name, address]) => [address, name]));
+        extent = gridExtent(layout);
+        if (!parseAddress(selected)) selected = 'A1';
+
+        const table = element('table', 'sheet-grid');
         const head = document.createElement('tr');
-        for (const title of ['Name', 'Formula', 'Value', 'Type']) {
-            const th = cell('th', title === 'Name' ? 'sheet-heading sheet-name' : 'sheet-heading', title);
+        head.append(element('th', 'sheet-corner'));
+        for (let column = 0; column < extent.columns; column += 1) {
+            const th = element('th', 'sheet-column', formatAddress({ column, row: 0 }).replace(/\d+$/, ''));
             th.scope = 'col';
-            head.appendChild(th);
+            head.append(th);
         }
         const thead = document.createElement('thead');
-        thead.appendChild(head);
+        thead.append(head);
         const tbody = document.createElement('tbody');
-        for (const [name] of words) {
-            const row = wordRow(name, kept, current);
-            if (row) tbody.appendChild(row);
+        for (let row = 0; row < extent.rows; row += 1) {
+            const tr = document.createElement('tr');
+            const th = element('th', 'sheet-row', String(row + 1));
+            th.scope = 'row';
+            tr.append(th);
+            for (let column = 0; column < extent.columns; column += 1) {
+                tr.append(gridCell(formatAddress({ column, row })));
+            }
+            tbody.append(tr);
         }
-        tbody.appendChild(newRow());
         table.append(thead, tbody);
-        container.replaceChildren(table);
-        values = kept;
+        // A redraw under a selected cell keeps the keyboard on the grid.
+        const hadFocus = gridHolder.contains(document.activeElement);
+        gridHolder.replaceChildren(table);
+        if (hadFocus) cellElement(selected)?.focus();
+        // Only values a cell still asks for are kept.
+        const used = new Set(next.map(([name]) => infoOf(name)?.identity ?? `name:${name}`));
+        values = new Map([...kept].filter(([key]) => used.has(key)));
+        refreshBar();
     };
 
-    return { render };
+    // Escape puts back what the cell holds and returns to the grid; the text
+    // is put back first, so leaving the field commits nothing.
+    const refreshBarFrom = (field: HTMLInputElement): void => {
+        const name = wordAt(selected);
+        nameInput.value = name ?? '';
+        formulaInput.value = infoOf(name)?.formula ?? '';
+        field.blur();
+        refreshBar();
+        cellElement(selected)?.focus();
+    };
+
+    nameInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            void commitName();
+        } else if (event.key === 'Escape') {
+            refreshBarFrom(nameInput);
+        }
+    });
+    nameInput.addEventListener('change', () => { void commitName(); });
+    formulaInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            void commitFormula().then((ok) => { if (ok) cellElement(selected)?.focus(); });
+        } else if (event.key === 'Escape') {
+            refreshBarFrom(formulaInput);
+        }
+    });
+    formulaInput.addEventListener('change', () => { void commitFormula(); });
+
+    return {
+        render,
+        layout: () => layout,
+        restoreLayout: (saved) => {
+            layout = { ...saved };
+        }
+    };
 };

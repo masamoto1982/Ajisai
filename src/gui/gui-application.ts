@@ -449,8 +449,8 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         // read back and what it changed, so only the changed panel is rebuilt
         // and the stack is not collected a second time for the drawing.
         // The User sheet shows the same Words as a list of buttons or as a
-        // sheet of named cells (`showUserView`); which one is a view, not
-        // dictionary state.
+        // grid of cells (`showUserView`); which one, and where each cell
+        // stands, is a view saved with the session, not dictionary state.
         let sheetShown = false;
         let sheet: UserSheet | null = null;
         const updateAllDisplays = (after?: ExecutionStateView, changes?: ExecutionSurfaceChanges): void => {
@@ -475,6 +475,10 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             updateDisplays: updateAllDisplays,
             showInfo,
             readActiveDictionarySheet: () => sheetSelect.value,
+            readSheetView: () => ({
+                userView: sheetShown ? 'sheet' : 'list',
+                sheetLayout: sheet?.layout() ?? {}
+            }),
             runExclusive: (task) => executionController.runExclusive(task)
         });
         await persistence.init();
@@ -503,6 +507,7 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
                 updateAllDisplays();
                 await persistence.saveCurrentState();
             },
+            onLayoutChanged: () => { void persistence.saveCurrentState(); },
             showInfo,
             showError,
             runExclusive: (task) => executionController.runExclusive(task)
@@ -515,10 +520,13 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
             elements.userViewToggleBtn.setAttribute('aria-pressed', String(asSheet));
             elements.userViewToggleBtn.title = asSheet
                 ? 'Show the User Words as a list of buttons'
-                : 'Show the User Words as a sheet of named cells';
+                : 'Show the User Words as a sheet of cells';
             if (asSheet) sheet?.render(interpreter.collect_user_words_info());
         };
-        elements.userViewToggleBtn.addEventListener('click', () => showUserView(!sheetShown));
+        elements.userViewToggleBtn.addEventListener('click', () => {
+            showUserView(!sheetShown);
+            void persistence.saveCurrentState();
+        });
 
         // Shown only once a run has taken long enough to be noticed, so the
         // everyday run that answers at once does not flash a line over the
@@ -602,6 +610,10 @@ export const createGUI = (interpreter: AjisaiInterpreter): GUI => {
         // A saved id that names no sheet leaves the current one showing.
         if (isDictionarySheetId(restored.activeDictionarySheet)) {
             showDictionarySheet(restored.activeDictionarySheet);
+        }
+        if (restored.sheetView) {
+            sheet.restoreLayout(restored.sheetView.sheetLayout);
+            showUserView(restored.sheetView.userView === 'sheet');
         }
 
         // Appended, not written over: restoring the session above may already
