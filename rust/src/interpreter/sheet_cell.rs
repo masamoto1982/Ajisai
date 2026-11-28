@@ -95,12 +95,30 @@ pub fn table_of(value: &Value) -> Option<SheetTable> {
 }
 
 /// The narrowest declared type `value` fits: a NIL alone fits every type and
-/// so suggests none. A Record with String keys suggests a Record type, field
-/// by field.
+/// so suggests none. A table suggests a table type, column by column, and
+/// any other Record with String keys a Record type, field by field.
 pub fn suggest_type(value: &Value) -> Option<DeclaredType> {
     if value.is_nil() {
         return None;
     }
+    if table_of(value).is_some() {
+        if let Some(DeclaredType::Record(fields)) = suggest_record(value) {
+            let elements = fields
+                .into_iter()
+                .map(|(name, ty)| match ty {
+                    DeclaredType::Vector(element) => Some((name, *element)),
+                    _ => None,
+                })
+                .collect::<Option<Vec<_>>>();
+            if let Some(elements) = elements {
+                return Some(DeclaredType::Table(elements));
+            }
+        }
+    }
+    suggest_record(value).or_else(|| suggest_scalar(value))
+}
+
+fn suggest_record(value: &Value) -> Option<DeclaredType> {
     if let Some(record) = value.as_record() {
         return record
             .keys()
@@ -110,6 +128,10 @@ pub fn suggest_type(value: &Value) -> Option<DeclaredType> {
             .collect::<Option<Vec<_>>>()
             .map(DeclaredType::Record);
     }
+    None
+}
+
+fn suggest_scalar(value: &Value) -> Option<DeclaredType> {
     let scalars = [
         DeclaredType::Int,
         DeclaredType::Rat,

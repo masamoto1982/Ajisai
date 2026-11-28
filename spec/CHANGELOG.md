@@ -15,6 +15,20 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.10
+
+- **breaking** LANG.COLLECTIONS.LIFT — Two Records combine key by key when they hold the same keys in any order, the answer in the left Record's order. `[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 10 20 ] RECORD ADD` was `error:shapeMismatch` and is `[ 'x' 'y' ] [ 21 12 ] RECORD`; Records with different keys are still `shapeMismatch`. (2026-11-28)
+- **breaking** LANG.RECORDS.STRUCTURE — `MAP` takes a Record, runs its block on each value and keeps the keys, so a table's rows are read through its columns. `[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP` was `error:nonVector` and is `[ 'a' 'b' ] [ 10 20 ] RECORD`. (2026-11-28)
+- **breaking** LANG.CONTRACT.TYPES — A Record type is a set of keys: a Record holding them in another order fits it. With `#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]`, `[ 'qty' 'price' ] [ [ 2 ] [ 120 ] ] RECORD SUBTOTALS` was `error:typeViolation` and is `[ 240 ]`. (2026-11-28)
+- **compatible** LANG.CONTRACT.TYPES — A signature may write a table type, `table{price:int qty:int}`: a Record of exactly those keys, each a Vector of its type, every Vector of one length, checked where the Word is entered and returns. `MAP` over a typed Record types its block per field, so `[ IDX GET ] MAP` of a table is its row. The User sheet offers a table type for a table. (2026-11-28)
+
+## 1.0.0-beta.9
+
+- **breaking** LANG.DICTIONARY.RESOLUTION — A name is a Word or a binding across the whole dictionary, not only in the running frame: `DEF` refuses a name some User Word's body binds with `BIND`, and a body that binds the name of a User Word. `[ 'K' BIND K 1 ADD ] 'F' DEF [ 5 ] 'K' DEF` was accepted, after which `3 F` stopped with `error:nameConflict` and `K` could not be deleted; it is now `error:nameConflict` at the second `DEF`. (2026-11-28)
+- **breaking** LANG.RECORDS.STRUCTURE — `SHAPE` of a Record answers the shape of each value under the same keys. `[ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD SHAPE` was `[ ]` and is `[ 'a' 'b' ] [ [ 2 ] [ 1 ] ] RECORD`. (2026-11-28)
+- **breaking** LANG.CONTRACT.REGISTRY — The inferred contract of `n COLLECT` with the count written right before it is fixed: `[ 2 COLLECT ] CONTRACT 'inputs' GET` was `'variable'` and is `2`. A count computed by the body stays `'variable'`. (2026-11-28)
+- **compatible** LANG.CONTRACT.TYPES — A typed body may call an untyped User Word, whose body is walked with the types it is given; `COLLECT` after a count written right before it keeps each value's type, so `[ 'p' 'q' ] P Q 2 COLLECT RECORD` types each field; and the type rules now cover `ORDER`, `GET` at an `[int]` of positions, `FLATTEN`, `DEPTH`, `UPPER`, `LOWER`, `TRIM`, `STR`, `FORMAT`, `CHARS`, `JOIN`, `TOKENIZE`, `SEARCH`, `REPLACE` and `NIL?`. A body that was refused for calling these may now be verified; no program's answer changes. (2026-11-28)
+
 ## 1.0.0-beta.8
 
 - **breaking** LANG.CONTRACT.TYPES — A signature may write a Record type, `{name:T …}`: a Record whose keys are exactly the Strings named, in that order, each holding a value of its type. A table is a Record of Vector columns. The type rules now cover `RECORD`, `PUT`, `KEYS`, `VALUES`, `HAS?`, `WITHOUT` and `MERGE`, and `GET`, `PUT`, `HAS?` and `WITHOUT` on a typed Record take their key written right there, so the field is known before anything runs; arithmetic reaches each field. `#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]` over `[ 'T' BIND T 'price' GET T 'qty' GET MUL ]` was `error:contractViolation` (a malformed signature) and is verified, and `[ 'price' 'qty' ] [ [ 120 80 ] [ 2 1 ] ] RECORD SUBTOTALS` is `[ 240 80 ]`; with the keys in another order it is `error:typeViolation`. Programs without a Record type are unchanged. (2026-11-28)

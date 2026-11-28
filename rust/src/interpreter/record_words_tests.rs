@@ -171,8 +171,13 @@ async fn arithmetic_and_comparison_lift_over_values() {
         top(&format!("{R} 0 DIV")).await,
         "[ 'x' 'y' ] [ 1/0 1/0 ] RECORD"
     );
+    // Two Records pair key by key, in the left one's order.
     assert_eq!(
-        error_of(&format!("{R} [ 'y' 'x' ] [ 1 2 ] RECORD ADD")).await,
+        top(&format!("{R} [ 'y' 'x' ] [ 10 20 ] RECORD ADD")).await,
+        "[ 'x' 'y' ] [ 21/1 12/1 ] RECORD"
+    );
+    assert_eq!(
+        error_of(&format!("{R} [ 'y' 'z' ] [ 1 2 ] RECORD ADD")).await,
         "shapeMismatch"
     );
     assert_eq!(
@@ -185,7 +190,10 @@ async fn arithmetic_and_comparison_lift_over_values() {
 #[tokio::test]
 async fn no_other_family_accepts_a_record() {
     assert_eq!(error_of(&format!("{R} LENGTH")).await, "nonVector");
-    assert_eq!(error_of(&format!("{R} [ 1 ADD ] MAP")).await, "nonVector");
+    assert_eq!(
+        error_of(&format!("{R} [ 1 ADD ] FILTER")).await,
+        "nonVector"
+    );
     assert_eq!(error_of(&format!("{R} TRUE AND")).await, "nonTruthValue");
     assert_eq!(error_of(&format!("{R} CHARS")).await, "nonText");
 }

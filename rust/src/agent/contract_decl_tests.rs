@@ -44,7 +44,7 @@ fn a_wrong_declaration_is_violated() {
 #[test]
 fn what_the_inference_cannot_decide_is_a_note() {
     for source in [
-        "[ 2 COLLECT ] 'W' DEF\n#:contract W inputs=2",
+        "[ COLLECT ] 'W' DEF\n#:contract W inputs=2",
         "[ MAP ] 'W' DEF\n#:contract W field=closed",
         "[ 1 ] 'W' DEF [ 2 ] 'W' DEF\n#:contract W outputs=1",
         "[ 1 ] 'W' 'X' BIND X DEF\n#:contract W outputs=1",
@@ -72,7 +72,7 @@ fn a_malformed_or_dangling_directive_is_an_error() {
 
 #[test]
 fn the_worst_declaration_decides_the_outcome() {
-    let source = "[ 1 ] 'A' DEF [ 2 COLLECT ] 'B' DEF\n\
+    let source = "[ 1 ] 'A' DEF [ COLLECT ] 'B' DEF\n\
                   #:contract A outputs=1\n#:contract B inputs=2";
     assert_eq!(contract_decls(source)["outcome"], "nil");
     let source = format!("{source}\n#:contract A outputs=3");

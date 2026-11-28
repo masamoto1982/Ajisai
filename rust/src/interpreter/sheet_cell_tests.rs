@@ -97,7 +97,7 @@ fn a_typed_body_may_call_a_typed_word_the_session_already_holds() {
 }
 
 #[test]
-fn a_record_of_columns_is_a_table_and_suggests_a_record_type() {
+fn a_record_of_columns_is_a_table_and_suggests_a_table_type() {
     let interp = session(
         "[ [ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120 1/2 ] ] RECORD ] 'MENU' DEF \
          [ [ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD ] 'RAGGED' DEF",
@@ -106,7 +106,7 @@ fn a_record_of_columns_is_a_table_and_suggests_a_record_type() {
         block_on(interp.evaluate_sheet_cell("MENU")),
         CellValue::Value {
             display: "[ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120/1 1/2 ] ] RECORD".to_string(),
-            suggested_type: Some("{item:[str] price:[rat]}".to_string()),
+            suggested_type: Some("table{item:str price:rat}".to_string()),
             table: Some(SheetTable {
                 columns: vec!["item".into(), "price".into()],
                 cells: vec![

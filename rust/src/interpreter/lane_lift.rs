@@ -187,21 +187,21 @@ pub(crate) fn lift_lanes_dyn(
         })
         .collect();
     if let Some((_, first)) = records.first() {
-        if let Some((_, other)) = records.iter().find(|(_, r)| !r.same_keys(first)) {
-            return Err(AjisaiError::declared(
-                "shapeMismatch",
-                format!(
-                    "expected Records with the same keys, got {} keys against {} keys that do not line up",
-                    first.len(),
-                    other.len()
-                ),
-            ));
-        }
+        let aligned = records
+            .iter()
+            .map(|(i, record)| {
+                let values = first.aligned(record).ok_or_else(|| AjisaiError::declared(
+                    "shapeMismatch",
+                    format!("expected Records with the same keys, got {} keys against {} keys that do not line up", first.len(), record.len()),
+                ))?;
+                Ok((*i, values))
+            })
+            .collect::<Result<Vec<_>>>()?;
         let mut values = Vec::with_capacity(first.len());
         for k in 0..first.len() {
             let mut next: Vec<&Value> = operands.to_vec();
-            for (i, record) in &records {
-                next[*i] = &record.values()[k];
+            for (i, record) in &aligned {
+                next[*i] = record[k];
             }
             values.push(lift_lanes_dyn(&next, lifted, scalar)?);
         }

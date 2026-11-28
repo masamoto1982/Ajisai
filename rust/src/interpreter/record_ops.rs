@@ -241,21 +241,21 @@ fn run_lift(
 fn combine(interp: &mut Interpreter, a: &Value, b: &Value, op: WordOp) -> Result<Value> {
     match (a.as_record(), b.as_record()) {
         (Some(left), Some(right)) => {
-            if !left.same_keys(right) {
+            let Some(right_values) = left.aligned(right) else {
                 return Err(AjisaiError::declared(
                     "shapeMismatch",
                     format!(
-                        "two Records combine only when their key sequences are equal; \
+                        "two Records combine only when they hold the same keys; \
                          got {} keys against {} keys that do not line up",
                         left.len(),
                         right.len()
                     ),
                 ));
-            }
+            };
             let values = left
                 .values()
                 .iter()
-                .zip(right.values())
+                .zip(right_values)
                 .map(|(x, y)| combine(interp, x, y, op))
                 .collect::<Result<Vec<_>>>()?;
             Ok(Value::from_record(

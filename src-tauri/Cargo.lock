@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ajisai-tauri"
-version = "1.0.0-beta.8"
+version = "1.0.0-beta.10"
 dependencies = [
  "serde",
  "serde_json",

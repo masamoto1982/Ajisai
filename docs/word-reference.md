@@ -450,7 +450,7 @@ A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 
 
 ## `SHAPE`
 
-The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.
+The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. A Record answers the shape of each value under the same keys: `[ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD SHAPE` is `[ 'a' 'b' ] [ [ 2 ] [ 1 ] ] RECORD`, so a table's column lengths can be read without unpacking it. LENGTH answers the outermost axis alone.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -459,7 +459,7 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 - **NIL policy:** `passthroughThenProject`; projection: raggedNesting → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.RECORDS.STRUCTURE`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] SHAPE`
 
 ## `RESHAPE`
@@ -718,7 +718,7 @@ The union of two Records, the right one winning: `[ 'x' 'y' ] [ 1 2 ] RECORD [ '
 
 ## `MAP`
 
-A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.
+A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. A Record maps value by value and keeps its keys: `[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP` is `[ 'a' 'b' ] [ 10 20 ] RECORD`, so `[ IDX GET ] MAP` of a table of columns is its row at `IDX`. An absent Vector answers that absence. Any other non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
@@ -727,7 +727,7 @@ A block applied to each element of a Vector, in order, answering a Vector of the
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.RECORDS.STRUCTURE`
 - **Syntax:** `[ 1 2 3 ] [ 2 MUL ] MAP`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `nestedDataBlock`, `blockContractViolation`
 
@@ -986,7 +986,7 @@ A block run where it stands, its results left on the stack: `[ 1 2 ADD ] EXEC` i
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record keyed `inputs` `outputs` `field`: `'SQRT' CONTRACT 'inputs' GET` is `1`. `inputs` and `outputs` are counts, or `'variable'` where the arity is decided by the data; `field` names `'closed'` or `'leaving'` (LANG.CONTRACT.FIELD), so `[ 0 DIV ] CONTRACT 'field' GET` is `'leaving'`: whether code can answer a point over zero from operands holding none is read before it runs. A Word is named the way DEF, BIND and DEL name one, by a String, or by a Symbol (`[ SQRT ] 0 GET`); both read the same entry. For a name of a Core Word it is the registered contract of `spec/words.json` (LANG.CONTRACT.REGISTRY); for a name of a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check` runs from outside the language — in the same keys and the same vocabulary, so the two compare directly. Reading a contract calls nothing, so a String here names a Word without ever becoming a call (LANG.SOURCE.CODE). A block is never evaluated, so `[ 42 PRINT ] CONTRACT` prints nothing. A name of no Word projects `notFound`; an operand that is neither a name nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record keyed `inputs` `outputs` `field`: `'SQRT' CONTRACT 'inputs' GET` is `1`. `inputs` and `outputs` are counts, or `'variable'` where the arity is decided by the data — `[ COLLECT ] CONTRACT 'inputs' GET` is `'variable'`, while a count written right before it fixes the arity, so `[ 2 COLLECT ] CONTRACT 'inputs' GET` is `2`; `field` names `'closed'` or `'leaving'` (LANG.CONTRACT.FIELD), so `[ 0 DIV ] CONTRACT 'field' GET` is `'leaving'`: whether code can answer a point over zero from operands holding none is read before it runs. A Word is named the way DEF, BIND and DEL name one, by a String, or by a Symbol (`[ SQRT ] 0 GET`); both read the same entry. For a name of a Core Word it is the registered contract of `spec/words.json` (LANG.CONTRACT.REGISTRY); for a name of a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check` runs from outside the language — in the same keys and the same vocabulary, so the two compare directly. Reading a contract calls nothing, so a String here names a Word without ever becoming a call (LANG.SOURCE.CODE). A block is never evaluated, so `[ 42 PRINT ] CONTRACT` prints nothing. A name of no Word projects `notFound`; an operand that is neither a name nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
@@ -1087,7 +1087,7 @@ Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10
 
 ## `DEF`
 
-A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it, and its callers call the new body from then on; a Word others still call may be redefined only to a body of the same stack effect, the inputs and outputs `CONTRACT` infers, both fixed (`definitionConflict`): `[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL` is `450`; a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.
+A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it, and its callers call the new body from then on; a Word others still call may be redefined only to a body of the same stack effect, the inputs and outputs `CONTRACT` infers, both fixed (`definitionConflict`): `[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL` is `450`; a Core Word's name is `protectedWord`, a name held by a live binding or bound in a User Word's body is `nameConflict`, as is a body that binds a User Word's name (`[ 'K' BIND K ] 'F' DEF [ 5 ] 'K' DEF` is refused), and a name that cannot be written as one token is `invalidName`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

@@ -17,6 +17,12 @@ use std::sync::Arc;
 #[path = "type_check_records.rs"]
 mod records;
 use records::{record_rule, zip_fields};
+#[path = "type_check_words.rs"]
+mod words;
+use words::{arith, closing, lift1, lift2, numeric, show_token, word_rule};
+
+/// Where the walk finds the body of an untyped User Word a typed body calls.
+pub(crate) type Bodies<'a> = &'a dyn Fn(&str) -> Option<Arc<[Token]>>;
 
 /// A type on the abstract stack. `Block` is a bracketed literal not yet read
 /// as code or as data; `Empty` is the element of an empty Vector or a NIL,
@@ -30,6 +36,9 @@ enum Ty {
     Vec(Box<Ty>),
     /// A Record of exactly these String keys, in this order.
     Rec(Vec<(String, Ty)>),
+    /// The Vector `COLLECT` gathers, each position's type kept apart until
+    /// it is read as data, so `RECORD` can give each field its own.
+    Tuple(Vec<Ty>),
     Empty,
     Block(Arc<[Token]>),
 }
@@ -42,6 +51,7 @@ impl Ty {
             DeclaredType::Bool => Ty::Bool,
             DeclaredType::Str => Ty::Str(None),
             DeclaredType::Vector(element) => Ty::Vec(Box::new(Ty::of(element))),
+            DeclaredType::Table(fields) => Ty::of(&DeclaredType::columns(fields)),
             DeclaredType::Record(fields) => Ty::Rec(
                 fields
                     .iter()
@@ -64,6 +74,10 @@ impl Ty {
                     .map(|(name, ty)| format!("{name}:{}", ty.show()))
                     .collect();
                 format!("{{{}}}", fields.join(" "))
+            }
+            Ty::Tuple(items) => {
+                let items: Vec<String> = items.iter().map(Ty::show).collect();
+                format!("[{}]", items.join(" "))
             }
             Ty::Empty => "nil".into(),
             Ty::Block(_) => "a block".into(),
@@ -101,7 +115,7 @@ fn join(a: &Ty, b: &Ty) -> Option<Ty> {
 }
 
 fn fits(actual: &Ty, expected: &Ty) -> bool {
-    join(actual, expected).as_ref() == Some(expected)
+    join(expected, actual).as_ref() == Some(expected)
         || matches!((actual, expected), (Ty::Str(_), Ty::Str(_)))
 }
 
@@ -109,6 +123,7 @@ type Outcome<T> = std::result::Result<T, String>;
 
 struct Walk<'a> {
     signatures: &'a HashMap<String, Signature>,
+    bodies: Bodies<'a>,
     locals: HashMap<String, Ty>,
 }
 
@@ -117,9 +132,11 @@ pub(crate) fn check_body(
     body: &[Token],
     sig: &Signature,
     signatures: &HashMap<String, Signature>,
+    bodies: Bodies<'_>,
 ) -> Outcome<()> {
     let mut walk = Walk {
         signatures,
+        bodies,
         locals: HashMap::new(),
     };
     let start: Vec<Ty> = sig.inputs.iter().map(Ty::of).collect();
@@ -148,8 +165,15 @@ pub(crate) fn check_body(
 
 /// A bracketed literal read as data: the Vector type its elements give.
 fn data(ty: &Ty) -> Outcome<Ty> {
-    let Ty::Block(tokens) = ty else {
-        return Ok(ty.clone());
+    let tokens = match ty {
+        Ty::Block(tokens) => tokens,
+        Ty::Tuple(items) => {
+            let element = items.iter().try_fold(Ty::Empty, |a, b| join(&a, b));
+            return element.map(|e| Ty::Vec(Box::new(e))).ok_or_else(|| {
+                format!("COLLECT gathers {}, which do not join into one Vector type; give them to RECORD", ty.show())
+            });
+        }
+        _ => return Ok(ty.clone()),
     };
     let mut element = Ty::Empty;
     let mut at = 0;
@@ -185,79 +209,27 @@ fn number(literal: &crate::types::NumberLiteral) -> Ty {
     }
 }
 
-fn closing(tokens: &[Token], open: usize) -> Outcome<usize> {
-    let mut depth = 0usize;
-    for (index, token) in tokens.iter().enumerate().skip(open) {
-        match token {
-            Token::VectorStart => depth += 1,
-            Token::VectorEnd => {
-                depth -= 1;
-                if depth == 0 {
-                    return Ok(index);
-                }
-            }
-            _ => {}
-        }
-    }
-    Err("an unclosed `[`".to_string())
-}
-
-fn show_token(token: &Token) -> String {
-    match token {
-        Token::Number(literal) => literal.lexeme().to_string(),
-        Token::String(text) => format!("'{text}'"),
-        Token::Symbol(name) => name.as_str().to_string(),
-        Token::VectorStart => "[".into(),
-        Token::VectorEnd => "]".into(),
-        Token::Value(_) => "a value".into(),
-    }
-}
-
-/// An element-wise Word over operands of any depth (LANG.COLLECTIONS.LIFT):
-/// a Record lifts first, field by field, then a Vector element by element,
-/// so the deeper operand decides the result's shape.
-fn lift2(a: &Ty, b: &Ty, word: &str, scalar: impl Fn(&Ty, &Ty) -> Option<Ty>) -> Outcome<Ty> {
-    lifted2(a, b, &scalar)
-        .ok_or_else(|| format!("{word} has no rule for {} and {}", a.show(), b.show()))
-}
-
-fn lifted2(a: &Ty, b: &Ty, scalar: &dyn Fn(&Ty, &Ty) -> Option<Ty>) -> Option<Ty> {
-    let each = |fields: &[(String, Ty)], f: &dyn Fn(&Ty) -> Option<Ty>| {
-        fields
-            .iter()
-            .map(|(name, ty)| f(ty).map(|t| (name.clone(), t)))
-            .collect::<Option<Vec<_>>>()
-            .map(Ty::Rec)
-    };
-    match (a, b) {
-        (Ty::Rec(f), Ty::Rec(g)) => zip_fields(f, g, |x, y| lifted2(x, y, scalar)).map(Ty::Rec),
-        (Ty::Rec(f), other) => each(f, &|x| lifted2(x, other, scalar)),
-        (other, Ty::Rec(g)) => each(g, &|y| lifted2(other, y, scalar)),
-        (Ty::Vec(x), Ty::Vec(y)) => lifted2(x, y, scalar).map(|t| Ty::Vec(Box::new(t))),
-        (Ty::Vec(x), other) => lifted2(x, other, scalar).map(|t| Ty::Vec(Box::new(t))),
-        (other, Ty::Vec(y)) => lifted2(other, y, scalar).map(|t| Ty::Vec(Box::new(t))),
-        _ => scalar(a, b),
-    }
-}
-
-fn lift1(a: &Ty, word: &str, scalar: impl Fn(&Ty) -> Option<Ty>) -> Outcome<Ty> {
-    lift2(a, &Ty::Empty, word, |x, _| scalar(x))
-        .map_err(|_| format!("{word} has no rule for {}", a.show()))
-}
-
-fn numeric(t: &Ty) -> bool {
-    matches!(t, Ty::Int | Ty::Rat | Ty::Empty)
-}
-
-fn arith(a: &Ty, b: &Ty) -> Option<Ty> {
-    (numeric(a) && numeric(b)).then(|| join(a, b).unwrap_or(Ty::Rat))
-}
-
 impl Walk<'_> {
     fn run(&mut self, body: &[Token], mut stack: Vec<Ty>) -> Outcome<Vec<Ty>> {
         let mut at = 0;
         while at < body.len() {
             match &body[at] {
+                Token::Number(literal) if Self::collects(body, at) => {
+                    let count = literal.value().and_then(|f| f.extract_i64_pair());
+                    let Some((n, 1)) = count.filter(|&(n, _)| n >= 0) else {
+                        return Err("COLLECT takes a count that is a whole number".into());
+                    };
+                    let base = stack
+                        .len()
+                        .checked_sub(usize::try_from(n).unwrap_or(usize::MAX))
+                        .ok_or("COLLECT would find too few values on the stack")?;
+                    let items = stack
+                        .drain(base..)
+                        .map(|t| data(&t))
+                        .collect::<Outcome<_>>()?;
+                    stack.push(Ty::Tuple(items));
+                    at += 1;
+                }
                 Token::Number(literal) => stack.push(number(literal)),
                 Token::String(text) => stack.push(Ty::Str(Some(text.to_string()))),
                 Token::VectorStart => {
@@ -272,6 +244,13 @@ impl Walk<'_> {
             at += 1;
         }
         Ok(stack)
+    }
+
+    /// A count written right before `COLLECT`, the one count a typed body's
+    /// `COLLECT` takes: the walk must know how many values it gathers.
+    fn collects(body: &[Token], at: usize) -> bool {
+        matches!(body.get(at + 1), Some(Token::Symbol(name))
+            if canonical_word_name(name.as_str()) == "COLLECT")
     }
 
     fn pop(stack: &mut Vec<Ty>, word: &str) -> Outcome<Ty> {
@@ -371,12 +350,18 @@ impl Walk<'_> {
                 if record_rule(w, stack)? => {}
             "GET" | "TAKE" | "DROP" => {
                 let index = Self::pop_data(stack, w)?;
-                if !matches!(index, Ty::Int) {
+                let many = w == "GET" && matches!(&index, Ty::Vec(i) if numeric(i));
+                if !(matches!(index, Ty::Int) || many) {
                     return Err(format!("{w} takes an int position, not {}", index.show()));
                 }
                 let vector = Self::pop_data(stack, w)?;
                 let element = Self::element_of(&vector, w)?;
-                stack.push(if w == "GET" { element } else { vector });
+                stack.push(if w == "GET" && !many { element } else { vector });
+            }
+            "COLLECT" => {
+                return Err(
+                    "COLLECT in a typed Word takes its count written right before it".into(),
+                )
             }
             "REVERSE" | "SORT" | "UNIQUE" => {
                 let vector = Self::pop_data(stack, w)?;
@@ -403,6 +388,14 @@ impl Walk<'_> {
             "MAP" | "FILTER" => {
                 let block = Self::pop_block(stack, w)?;
                 let vector = Self::pop_data(stack, w)?;
+                if let (Ty::Rec(fields), "MAP") = (&vector, w) {
+                    let mut mapped = Vec::with_capacity(fields.len());
+                    for (name, ty) in fields {
+                        mapped.push((name.clone(), self.block(&block, vec![ty.clone()], w)?));
+                    }
+                    stack.push(Ty::Rec(mapped));
+                    return Ok(());
+                }
                 let element = Self::element_of(&vector, w)?;
                 let result = self.block(&block, vec![element], w)?;
                 if w == "MAP" {
@@ -444,7 +437,10 @@ impl Walk<'_> {
             }
             "BIND" => {
                 let names = Self::pop(stack, w)?;
-                let value = Self::pop_data(stack, w)?;
+                let value = match Self::pop(stack, w)? {
+                    tuple @ Ty::Tuple(_) => tuple,
+                    other => data(&other)?,
+                };
                 match names {
                     Ty::Str(Some(name)) => {
                         self.locals.insert(name.to_uppercase(), value);
@@ -463,11 +459,10 @@ impl Walk<'_> {
                     _ => return Err("BIND in a typed Word takes a name written right there".into()),
                 }
             }
+            _ if word_rule(w, stack)? => {}
             _ => {
                 let Some(sig) = self.signatures.get(w) else {
-                    return Err(format!(
-                        "{w} has no type rule yet; call it from an untyped Word instead"
-                    ));
+                    return self.untyped_call(w, stack);
                 };
                 let base = stack
                     .len()

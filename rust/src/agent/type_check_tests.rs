@@ -56,8 +56,8 @@ fn a_body_that_does_not_fit_is_violated_before_running() {
         ),
         ("#:contract C [int] -> int\n[ 1 2 ] 'C' DEF", "inputs=1"),
         (
-            "#:contract U int -> int\n[ OTHER ] 'U' DEF [ 1 ADD ] 'OTHER' DEF",
-            "OTHER has no type rule",
+            "#:contract U int -> int\n[ OTHER ] 'U' DEF [ SQRT ] 'OTHER' DEF",
+            "OTHER, walked with the types it is given: SQRT has no type rule",
         ),
     ] {
         let decls = contract_decls(source);

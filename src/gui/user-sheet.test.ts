@@ -37,12 +37,13 @@ it('reads a cell apart from the session, and an edited cell is read again', asyn
     expect(interpreter.describe_sheet_cell('TOTAL')?.identity).not.toBe(total?.identity);
     expect((await interpreter.evaluate_sheet_cell('TOTAL')).value).toBe('[ 300/1 ]');
 
-    // Accepting the suggested type declares it. A typed body may call only
-    // typed Words, so TOTAL is typed once PRICE is.
-    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))).errorInfo?.category)
+    // Accepting the suggested type declares it. A typed body may call an
+    // untyped Word, whose body is walked with the types it is given, so
+    // TOTAL is typed before PRICE is; one that does not fit is refused.
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [str]'))).errorInfo?.category)
         .toBe('contractViolation');
-    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 100 ]', '-> [int]'))).status).toBe('OK');
     expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))).status).toBe('OK');
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 100 ]', '-> [int]'))).status).toBe('OK');
     expect(interpreter.describe_sheet_cell('TOTAL')?.signature).toBe('-> [int]');
 
     expect(interpreter.collect_stack()).toEqual(stackBefore);
@@ -78,11 +79,11 @@ it('lays a Record of columns out as a table and suggests its Record type', async
     const interpreter = createInterpreter();
     await interpreter.execute("[ [ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120 80 ] ] RECORD ] 'MENU' DEF");
     const menu = await interpreter.evaluate_sheet_cell('MENU');
-    expect(menu.suggestedType).toBe('{item:[str] price:[int]}');
+    expect(menu.suggestedType).toBe('table{item:str price:int}');
     expect(menu.table).toEqual({ columns: ['item', 'price'], cells: [["'tea'", '120/1'], ["'cake'", '80/1']], rows: 2 });
     expect(describeTable(menu.table!)).toBe('item, price · 2 rows');
     expect((await runSheetEdit(interpreter, sheetDefinitionSource(
-        'MENU', "[ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120 80 ] ] RECORD", '-> {item:[str] price:[int]}'
+        'MENU', "[ 'item' 'price' ] [ [ 'tea' 'cake' ] [ 120 80 ] ] RECORD", '-> table{item:str price:int}'
     ))).status).toBe('OK');
-    expect(interpreter.describe_sheet_cell('MENU')?.signature).toBe('-> {item:[str] price:[int]}');
+    expect(interpreter.describe_sheet_cell('MENU')?.signature).toBe('-> table{item:str price:int}');
 });
