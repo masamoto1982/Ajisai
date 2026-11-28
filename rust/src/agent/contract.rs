@@ -250,16 +250,16 @@ pub(super) fn build_definitions_interpreter(
 }
 
 pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
-    check_contract_decls_knowing(source, &std::collections::HashMap::new())
+    check_contract_decls_knowing(source, None)
 }
 
-/// [`check_contract_decls`] in a session whose dictionary already holds the
-/// typed Words `known`: a body may call one of them as it may call a Word the
-/// source itself declares a signature for (LANG.CONTRACT.TYPES). The source's
-/// own declarations win.
+/// [`check_contract_decls`] in a session whose dictionary already holds
+/// Words: a body may call a typed one as it may call a Word the source itself
+/// declares a signature for, and an untyped one is walked with the types it
+/// is given (LANG.CONTRACT.TYPES). The source's own definitions win.
 pub(crate) fn check_contract_decls_knowing(
     source: &str,
-    known: &std::collections::HashMap<String, Signature>,
+    session: Option<&Interpreter>,
 ) -> ContractDeclCheck {
     let (decls, parse_errors) = parse_contract_directives(source);
     let mut findings: Vec<DeclFinding> = parse_errors
@@ -270,7 +270,9 @@ pub(crate) fn check_contract_decls_knowing(
         })
         .collect();
     let (interp, _, unsettled) = build_definitions_interpreter(source);
-    let mut signatures = known.clone();
+    let mut signatures = session
+        .map(Interpreter::declared_signatures)
+        .unwrap_or_default();
     signatures.extend(
         decls
             .iter()
@@ -291,7 +293,16 @@ pub(crate) fn check_contract_decls_knowing(
             });
         } else {
             check_one(&interp, decl, &mut findings);
-            check_types(&interp, decl, &signatures, &mut findings);
+            let bodies = |name: &str| {
+                let own = interp
+                    .user_words
+                    .get(name)
+                    .filter(|_| !unsettled.contains(name));
+                own.or_else(|| session?.user_words.get(name))
+                    .filter(|def| def.signature.is_none())
+                    .map(|def| def.body.clone())
+            };
+            check_types(&interp, decl, &signatures, &bodies, &mut findings);
         }
         let new = &findings[before..];
         let outcome = if new.iter().any(|f| f.severity == Severity::Error) {
@@ -369,12 +380,13 @@ fn check_types(
     interp: &Interpreter,
     decl: &ContractDecl,
     signatures: &std::collections::HashMap<String, Signature>,
+    bodies: super::type_check::Bodies<'_>,
     findings: &mut Vec<DeclFinding>,
 ) {
     let (Some(sig), Some(def)) = (&decl.signature, interp.user_words.get(&decl.name)) else {
         return;
     };
-    if let Err(why) = super::type_check::check_body(&def.body, sig, signatures) {
+    if let Err(why) = super::type_check::check_body(&def.body, sig, signatures, bodies) {
         findings.push(DeclFinding {
             severity: Severity::Error,
             message: format!("`#:contract {} {sig}`: {why}.", decl.name),
@@ -441,7 +453,7 @@ pub(crate) fn declared_contract_check_in(
     let declares = source
         .lines()
         .any(|line| line.trim_start().starts_with("#:contract"));
-    declares.then(|| check_contract_decls_knowing(source, &session.declared_signatures()))
+    declares.then(|| check_contract_decls_knowing(source, Some(session)))
 }
 
 /// The error report for a violated declaration: the one shape every other

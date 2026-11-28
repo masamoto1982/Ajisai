@@ -28,6 +28,8 @@ mod resource_usage_tests;
 mod type_check;
 #[cfg(test)]
 mod type_check_tests;
+#[cfg(test)]
+mod type_rule_tests;
 // The playground's stack view: read only through the WASM boundary.
 #[cfg(any(feature = "wasm", test))]
 pub(crate) mod stack_view;

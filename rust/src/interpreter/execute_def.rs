@@ -218,11 +218,8 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // to know which of the two a name resolved through. Every live frame
     // counts, not only the one `DEF` runs in: a binding in a caller past a
     // User Word's barrier is in scope again the moment the call returns.
-    if interp.binding_exists_beyond_barrier(&upper_name) {
-        return Err(AjisaiError::declared("nameConflict", format!(
-            "Cannot define '{}': the name is bound in a live frame. A binding and a Word may not share a name.",
-            upper_name
-        )));
+    if let Some(conflict) = interp.binding_conflict(&upper_name, tokens) {
+        return Err(AjisaiError::declared("nameConflict", conflict));
     }
 
     // A referenced word is redefinable only to a body of the same fixed

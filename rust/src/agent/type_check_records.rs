@@ -108,6 +108,7 @@ fn build_record(stack: &mut Vec<Ty>) -> Outcome<()> {
         .collect::<Outcome<_>>()?;
     let types: Vec<Ty> = match &values {
         Ty::Block(tokens) => items(tokens)?,
+        Ty::Tuple(types) => types.clone(),
         other => match data(other)? {
             Ty::Vec(element) => vec![*element; names.len()],
             other => {

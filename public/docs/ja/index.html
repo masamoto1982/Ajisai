@@ -1369,7 +1369,7 @@ FILTER</code></td>
 <h3 id="family-dictionary">契約: 辞書と名前</h3>
 <div class="word-entry" id="word-CONTRACT">
 <h4><code>CONTRACT</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ワードまたはブロックの契約を、キー <code>inputs</code> <code>outputs</code> <code>field</code> のRecordで答える。<code>'SQRT' CONTRACT 'inputs' GET</code>は<code>1</code>。<code>inputs</code>と<code>outputs</code>は個数、データで決まる引数なら<code>'variable'</code>。<code>field</code>は<code>'closed'</code>か<code>'leaving'</code>を名指す（LANG.CONTRACT.FIELD）ので、<code>[ 0 DIV ] CONTRACT 'field' GET</code>は<code>'leaving'</code>：零の上の点を零の上の点を含まない被演算子から答えうるかを実行前に読む。ワードは、DEF・BIND・DELと同じくStringで、またはSymbol（<code>[ SQRT ] 0 GET</code>）で名指し、どちらも同じ項目を読む。Coreワードの名前なら<code>spec/words.json</code>の登録された契約（LANG.CONTRACT.REGISTRY）、Userワードの名前やコードのブロックなら何も実行せずに推論した契約——外から<code>ajisai check</code>が行うのと同じ推論——を、同じキーと同じ語彙で答えるので、両者は直接比べられる。契約を読むことは何も呼ばないので、ここでのStringはワードを名指すだけで、呼び出しにはならない（LANG.SOURCE.CODE）。ブロックは評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は何も印字しない。どのワードも名指さない名前は<code>notFound</code>を射影し、名前でもブロックでもないオペランドはERROR（<code>notASymbol</code>）。</p>
+<p>ワードまたはブロックの契約を、キー <code>inputs</code> <code>outputs</code> <code>field</code> のRecordで答える。<code>'SQRT' CONTRACT 'inputs' GET</code>は<code>1</code>。<code>inputs</code>と<code>outputs</code>は個数、データで決まる引数なら<code>'variable'</code>(<code>[ COLLECT ] CONTRACT 'inputs' GET</code>は<code>'variable'</code>だが、直前に書いた数が引数を固定するので<code>[ 2 COLLECT ] CONTRACT 'inputs' GET</code>は<code>2</code>)。<code>field</code>は<code>'closed'</code>か<code>'leaving'</code>を名指す（LANG.CONTRACT.FIELD）ので、<code>[ 0 DIV ] CONTRACT 'field' GET</code>は<code>'leaving'</code>：零の上の点を零の上の点を含まない被演算子から答えうるかを実行前に読む。ワードは、DEF・BIND・DELと同じくStringで、またはSymbol（<code>[ SQRT ] 0 GET</code>）で名指し、どちらも同じ項目を読む。Coreワードの名前なら<code>spec/words.json</code>の登録された契約（LANG.CONTRACT.REGISTRY）、Userワードの名前やコードのブロックなら何も実行せずに推論した契約——外から<code>ajisai check</code>が行うのと同じ推論——を、同じキーと同じ語彙で答えるので、両者は直接比べられる。契約を読むことは何も呼ばないので、ここでのStringはワードを名指すだけで、呼び出しにはならない（LANG.SOURCE.CODE）。ブロックは評価されないので、<code>[ 42 PRINT ] CONTRACT</code>は何も印字しない。どのワードも名指さない名前は<code>notFound</code>を射影し、名前でもブロックでもないオペランドはERROR（<code>notASymbol</code>）。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>'ADD' CONTRACT</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ name | code ] -&gt; [ record ]</span></dd>
@@ -1403,7 +1403,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-DEF">
 <h4><code>DEF</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義はそれを置き換え、呼び出し元はそれ以降新しい本体を呼ぶ。他がまだ呼んでいるワードは、<code>CONTRACT</code>が推論する入力と出力の数がどちらも固定で同じ本体にだけ再定義できる(<code>definitionConflict</code>)。<code>[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL</code>は<code>450</code>。Coreワードの名前は<code>protectedWord</code>、束縛が持つ名前は<code>nameConflict</code>、1つのトークンとして書けない名前は<code>invalidName</code>。</p>
+<p>本体と名前からUserワードを定義する。<code>[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE</code>は<code>10</code>。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(<code>selfReferentialDefinition</code>、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義はそれを置き換え、呼び出し元はそれ以降新しい本体を呼ぶ。他がまだ呼んでいるワードは、<code>CONTRACT</code>が推論する入力と出力の数がどちらも固定で同じ本体にだけ再定義できる(<code>definitionConflict</code>)。<code>[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL</code>は<code>450</code>。Coreワードの名前は<code>protectedWord</code>、生きている束縛が持つ名前やUserワードの本体が束縛する名前は<code>nameConflict</code>で、Userワードの名前を束縛する本体も同じく拒まれる(<code>[ 'K' BIND K ] 'F' DEF [ 5 ] 'K' DEF</code>)。1つのトークンとして書けない名前は<code>invalidName</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 2 MUL ] 'DOUBLE' DEF</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ body ] [ name ] -&gt; [ ]</span></dd>
@@ -2634,7 +2634,7 @@ FILTER</code></td>
 </div>
 <div class="word-entry" id="word-SHAPE">
 <h4><code>SHAPE</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>矩形のベクトルの各軸の長さ(外側から順に)。<code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code>は<code>[ 2 2 ]</code>、<code>[ 1 2 3 ] SHAPE</code>は<code>[ 3 ]</code>。ベクトルでない値は空の形を持つ。<code>5 DEPTH</code>が0であるのと同じく、<code>5 SHAPE</code>は<code>[ ]</code>(ランク0)。これはLANG.COLLECTIONS.LIFTがすでにオペランドを揃えるのに使っている形を、観測できるようにしたものである。不揃いなベクトルには形がないのでNIL(domainMiss)を投影する。<code>[ [ 1 2 ] [ 3 ] ] SHAPE</code>はエラーではなく理由付きの不在である。そのベクトルは問いが当てはまらない整ったデータだからである。最も外側の軸だけならLENGTHが答える。</p>
+<p>矩形のベクトルの各軸の長さ(外側から順に)。<code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code>は<code>[ 2 2 ]</code>、<code>[ 1 2 3 ] SHAPE</code>は<code>[ 3 ]</code>。ベクトルでない値は空の形を持つ。<code>5 DEPTH</code>が0であるのと同じく、<code>5 SHAPE</code>は<code>[ ]</code>(ランク0)。これはLANG.COLLECTIONS.LIFTがすでにオペランドを揃えるのに使っている形を、観測できるようにしたものである。不揃いなベクトルには形がないのでNIL(domainMiss)を投影する。<code>[ [ 1 2 ] [ 3 ] ] SHAPE</code>はエラーではなく理由付きの不在である。そのベクトルは問いが当てはまらない整ったデータだからである。レコードは同じキーの下に各値の形を答える。<code>[ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD SHAPE</code>は<code>[ 'a' 'b' ] [ [ 2 ] [ 1 ] ] RECORD</code>なので、表を開かずに列の長さを読める。最も外側の軸だけならLENGTHが答える。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ x ] -&gt; [ shape ]</span></dd>
@@ -2645,7 +2645,7 @@ FILTER</code></td>
 <dt>体</dt><dd><code>closed</code> (LANG.CONTRACT.FIELD)</dd>
 <dt>純粋性 / 決定性</dt><dd><code>pure</code> / <code>deterministic</code></dd>
 <dt>作用</dt><dd>なし</dd>
-<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.FAILURE.PROJECT</code></dd>
+<dt>条項</dt><dd><code>LANG.VALUES.VECTOR</code>, <code>LANG.RECORDS.STRUCTURE</code>, <code>LANG.FAILURE.PROJECT</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-RESHAPE">

@@ -113,7 +113,7 @@
       "id": "nameConflict",
       "kind": "declared",
       "repair": "program",
-      "documentation": "A binding and a Word were asked to share a name: BIND to a name a Word holds, or DEF to a name a live binding holds. The two name spaces are disjoint by rule (LANG.DICTIONARY.RESOLUTION), so this is one condition from either side."
+      "documentation": "A binding and a Word were asked to share a name: BIND to a name a Word holds, DEF to a name a live binding holds or a User Word's body binds, or DEF of a body that binds the name of a User Word. The two name spaces are disjoint by rule (LANG.DICTIONARY.RESOLUTION), so this is one condition from either side."
     },
     {
       "id": "nestedDataBlock",

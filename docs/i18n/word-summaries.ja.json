@@ -122,8 +122,8 @@
       "summary": "与えた形の、すべての葉が1つの値であるベクトル。`[ 2 3 ] 0 FILL`は`[ [ 0 0 0 ] [ 0 0 0 ] ]`、`[ 2 ] 'a' FILL`は`[ 'a' 'a' ]`。RESHAPEと同じく形が先に来る。形はSHAPEが答えるもの、つまり非負の整数のベクトルで、`[ 0 ] 0 FILL`は`[ ]`、空の形`[ ]`は値そのもの(ランク0)を答える。それ以外は`invalidShape`。値はどの領域の葉でもよく、値のベクトルはそれぞれ1つの埋められたベクトルへ持ち上がる。具体化するには大きすぎる形(要素が多すぎる`materializedElements`、または軸が入れ子の上限`nestingDepth`を超える)は、何かを組み立てる前に、上限の名前を添えたERROR(`resourceLimitExceeded`)として拒否される(LANG.MACHINE.LIMITS)。"
     },
     "SHAPE": {
-      "source": "3cdc1d8faba3cdf5",
-      "summary": "矩形のベクトルの各軸の長さ(外側から順に)。`[ [ 1 2 ] [ 3 4 ] ] SHAPE`は`[ 2 2 ]`、`[ 1 2 3 ] SHAPE`は`[ 3 ]`。ベクトルでない値は空の形を持つ。`5 DEPTH`が0であるのと同じく、`5 SHAPE`は`[ ]`(ランク0)。これはLANG.COLLECTIONS.LIFTがすでにオペランドを揃えるのに使っている形を、観測できるようにしたものである。不揃いなベクトルには形がないのでNIL(domainMiss)を投影する。`[ [ 1 2 ] [ 3 ] ] SHAPE`はエラーではなく理由付きの不在である。そのベクトルは問いが当てはまらない整ったデータだからである。最も外側の軸だけならLENGTHが答える。"
+      "source": "9433c78b6bccaf1f",
+      "summary": "矩形のベクトルの各軸の長さ(外側から順に)。`[ [ 1 2 ] [ 3 4 ] ] SHAPE`は`[ 2 2 ]`、`[ 1 2 3 ] SHAPE`は`[ 3 ]`。ベクトルでない値は空の形を持つ。`5 DEPTH`が0であるのと同じく、`5 SHAPE`は`[ ]`(ランク0)。これはLANG.COLLECTIONS.LIFTがすでにオペランドを揃えるのに使っている形を、観測できるようにしたものである。不揃いなベクトルには形がないのでNIL(domainMiss)を投影する。`[ [ 1 2 ] [ 3 ] ] SHAPE`はエラーではなく理由付きの不在である。そのベクトルは問いが当てはまらない整ったデータだからである。レコードは同じキーの下に各値の形を答える。`[ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD SHAPE`は`[ 'a' 'b' ] [ [ 2 ] [ 1 ] ] RECORD`なので、表を開かずに列の長さを読める。最も外側の軸だけならLENGTHが答える。"
     },
     "RESHAPE": {
       "source": "1c79c39db873726e",
@@ -266,8 +266,8 @@
       "summary": "ブロックをその場で実行し、結果をスタックに残す。`[ 1 2 ADD ] EXEC`は`3`。他のコードと同じくスタックを読み書きするので、`2 [ 3 MUL ] EXEC`は`6`。ブロックでないものは`notExecutable`、データから組み立てたブロックを、同じくデータから組み立てた別のブロックの実行中に走らせると`nestedDataBlock`(LANG.SOURCE.CODE)。ブロックは中に書かれたブロックを走らせられるが、自分の複製は走らせられない。"
     },
     "CONTRACT": {
-      "source": "03ed8144975d1268",
-      "summary": "ワードまたはブロックの契約を、キー `inputs` `outputs` `field` のRecordで答える。`'SQRT' CONTRACT 'inputs' GET`は`1`。`inputs`と`outputs`は個数、データで決まる引数なら`'variable'`。`field`は`'closed'`か`'leaving'`を名指す（LANG.CONTRACT.FIELD）ので、`[ 0 DIV ] CONTRACT 'field' GET`は`'leaving'`：零の上の点を零の上の点を含まない被演算子から答えうるかを実行前に読む。ワードは、DEF・BIND・DELと同じくStringで、またはSymbol（`[ SQRT ] 0 GET`）で名指し、どちらも同じ項目を読む。Coreワードの名前なら`spec/words.json`の登録された契約（LANG.CONTRACT.REGISTRY）、Userワードの名前やコードのブロックなら何も実行せずに推論した契約——外から`ajisai check`が行うのと同じ推論——を、同じキーと同じ語彙で答えるので、両者は直接比べられる。契約を読むことは何も呼ばないので、ここでのStringはワードを名指すだけで、呼び出しにはならない（LANG.SOURCE.CODE）。ブロックは評価されないので、`[ 42 PRINT ] CONTRACT`は何も印字しない。どのワードも名指さない名前は`notFound`を射影し、名前でもブロックでもないオペランドはERROR（`notASymbol`）。"
+      "source": "36babfb673f842ac",
+      "summary": "ワードまたはブロックの契約を、キー `inputs` `outputs` `field` のRecordで答える。`'SQRT' CONTRACT 'inputs' GET`は`1`。`inputs`と`outputs`は個数、データで決まる引数なら`'variable'`(`[ COLLECT ] CONTRACT 'inputs' GET`は`'variable'`だが、直前に書いた数が引数を固定するので`[ 2 COLLECT ] CONTRACT 'inputs' GET`は`2`)。`field`は`'closed'`か`'leaving'`を名指す（LANG.CONTRACT.FIELD）ので、`[ 0 DIV ] CONTRACT 'field' GET`は`'leaving'`：零の上の点を零の上の点を含まない被演算子から答えうるかを実行前に読む。ワードは、DEF・BIND・DELと同じくStringで、またはSymbol（`[ SQRT ] 0 GET`）で名指し、どちらも同じ項目を読む。Coreワードの名前なら`spec/words.json`の登録された契約（LANG.CONTRACT.REGISTRY）、Userワードの名前やコードのブロックなら何も実行せずに推論した契約——外から`ajisai check`が行うのと同じ推論——を、同じキーと同じ語彙で答えるので、両者は直接比べられる。契約を読むことは何も呼ばないので、ここでのStringはワードを名指すだけで、呼び出しにはならない（LANG.SOURCE.CODE）。ブロックは評価されないので、`[ 42 PRINT ] CONTRACT`は何も印字しない。どのワードも名指さない名前は`notFound`を射影し、名前でもブロックでもないオペランドはERROR（`notASymbol`）。"
     },
     "FAIL": {
       "source": "a5802c10ab833aaf",
@@ -294,8 +294,8 @@
       "summary": "値に名前を付け、それを作ったフレームの残りで使えるようにする。`5 'N' BIND N N ADD`は`10`、`[ 1 2 ] [ 'A' 'B' ] BIND B A SUB`は`1`。名前が1つなら値全体を受け取り、複数なら同じ長さのベクトルを位置ごとに分解する。両オペランドとも消費され、その後名前を書くたびに、何回でもその値が積まれる。束縛はそのフレームの中に書かれたブロックには届き、そこから呼ばれたワードには決して届かず、フレームが終わると終わる。CoreワードかUserワードがすでに持つ名前は拒否されるので、名前はワードか束縛のどちらかであって、両方にはならない。直接または他の束縛を通して自分自身の束縛を名指す値は、DEFと同じ規則で`selfReferentialDefinition`として拒否される(LANG.DICTIONARY.ACYCLIC)。"
     },
     "DEF": {
-      "source": "0f4487b900678fdc",
-      "summary": "本体と名前からUserワードを定義する。`[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE`は`10`。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(`selfReferentialDefinition`、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義はそれを置き換え、呼び出し元はそれ以降新しい本体を呼ぶ。他がまだ呼んでいるワードは、`CONTRACT`が推論する入力と出力の数がどちらも固定で同じ本体にだけ再定義できる(`definitionConflict`)。`[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL`は`450`。Coreワードの名前は`protectedWord`、束縛が持つ名前は`nameConflict`、1つのトークンとして書けない名前は`invalidName`。"
+      "source": "74160e4a0eb75948",
+      "summary": "本体と名前からUserワードを定義する。`[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE`は`10`。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(`selfReferentialDefinition`、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義はそれを置き換え、呼び出し元はそれ以降新しい本体を呼ぶ。他がまだ呼んでいるワードは、`CONTRACT`が推論する入力と出力の数がどちらも固定で同じ本体にだけ再定義できる(`definitionConflict`)。`[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL`は`450`。Coreワードの名前は`protectedWord`、生きている束縛が持つ名前やUserワードの本体が束縛する名前は`nameConflict`で、Userワードの名前を束縛する本体も同じく拒まれる(`[ 'K' BIND K ] 'F' DEF [ 5 ] 'K' DEF`)。1つのトークンとして書けない名前は`invalidName`。"
     },
     "DEL": {
       "source": "ab8326cdc65fedd6",

@@ -116,13 +116,24 @@ pub(super) fn shape_observed_size(shape_val: &Value) -> Option<u128> {
 /// outermost first; a ragged Vector has no shape and projects `domainMiss`.
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     let value = take_operand(interp)?;
+    interp.stack.push(shape_of(&value));
+    Ok(())
+}
+
+/// The shape of one value. A Record answers the shape of each value under
+/// the same keys, as a Record lifts first (LANG.COLLECTIONS.LIFT): a table's
+/// columns show their lengths side by side.
+fn shape_of(value: &Value) -> Value {
+    if let Some(record) = value.as_record() {
+        let shapes = record.map_values(|field| Ok::<_, ()>(shape_of(field)));
+        return Value::from_record(shapes.expect("shape_of never fails"));
+    }
     // A value that is not a Vector has no axes: its shape is the empty one,
     // rank 0, the shape `DEPTH` already reports as depth 0.
     if !value.is_vector() {
-        interp.stack.push(Value::from_vector(Vec::new()));
-        return Ok(());
+        return Value::from_vector(Vec::new());
     }
-    let answer = match rectangular_shape(&value) {
+    match rectangular_shape(value) {
         Some(shape) => Value::from_vector_promoted(
             shape
                 .into_iter()
@@ -132,9 +143,7 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
         // A ragged Vector is well-formed data that the question does not fit:
         // the trichotomy's middle case, not a malformed program.
         None => Value::nil_with_reason(NilReason::DomainMiss),
-    };
-    interp.stack.push(answer);
-    Ok(())
+    }
 }
 
 /// `DEPTH ( [ x ] -> [ n ] )`: how deeply a value nests. Total over every

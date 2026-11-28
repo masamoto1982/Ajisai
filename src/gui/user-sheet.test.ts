@@ -37,12 +37,13 @@ it('reads a cell apart from the session, and an edited cell is read again', asyn
     expect(interpreter.describe_sheet_cell('TOTAL')?.identity).not.toBe(total?.identity);
     expect((await interpreter.evaluate_sheet_cell('TOTAL')).value).toBe('[ 300/1 ]');
 
-    // Accepting the suggested type declares it. A typed body may call only
-    // typed Words, so TOTAL is typed once PRICE is.
-    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))).errorInfo?.category)
+    // Accepting the suggested type declares it. A typed body may call an
+    // untyped Word, whose body is walked with the types it is given, so
+    // TOTAL is typed before PRICE is; one that does not fit is refused.
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [str]'))).errorInfo?.category)
         .toBe('contractViolation');
-    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 100 ]', '-> [int]'))).status).toBe('OK');
     expect((await runSheetEdit(interpreter, sheetDefinitionSource('TOTAL', 'PRICE 3 MUL', '-> [int]'))).status).toBe('OK');
+    expect((await runSheetEdit(interpreter, sheetDefinitionSource('PRICE', '[ 100 ]', '-> [int]'))).status).toBe('OK');
     expect(interpreter.describe_sheet_cell('TOTAL')?.signature).toBe('-> [int]');
 
     expect(interpreter.collect_stack()).toEqual(stackBefore);

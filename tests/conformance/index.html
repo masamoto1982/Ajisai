@@ -3408,6 +3408,46 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-typed-collect-row" data-category="language">
+  <h3>A typed Word gathers a row with COLLECT after a count written right before it (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract ROW int str -> {p:int q:str}
+[ 'Q' BIND 'P' BIND [ 'p' 'q' ] P Q 2 COLLECT RECORD ] 'ROW' DEF 7 'x' ROW</pre>
+  <pre class="ajisai-expect-result">[ 'p' 'q' ] [ 7/1 'x' ] RECORD</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-typed-calls-untyped" data-category="language">
+  <h3>A typed Word calls an untyped one, walked with the types it is given (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">[ 2 MUL ] 'TWICE' DEF
+#:contract QUAD int -> int
+[ TWICE TWICE ] 'QUAD' DEF 5 QUAD</pre>
+  <pre class="ajisai-expect-result">20/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-shape-of-record" data-category="language">
+  <h3>SHAPE of a Record is the shape of each value under the same keys (LANG.RECORDS.STRUCTURE)</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD SHAPE</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' ] [ [ 2/1 ] [ 1/1 ] ] RECORD</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-def-name-a-word-binds" data-category="dictionary">
+  <h3>DEF refuses a name another User Word binds (nameConflict)</h3>
+  <pre class="ajisai-source">[ 'K' BIND K 1 ADD ] 'F' DEF [ 5 ] 'K' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">F binds it as a local name</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-def-body-binds-a-word" data-category="dictionary">
+  <h3>DEF refuses a body that binds the name of a User Word (nameConflict)</h3>
+  <pre class="ajisai-source">[ 5 ] 'K' DEF [ 'K' BIND K 1 ADD ] 'F' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">its body binds 'K', which is a User Word</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-def-empty-body" data-category="dictionary">
   <h3>DEF refuses an empty body (invalidDefinitionBody)</h3>
   <pre class="ajisai-source">[ ] 'W' DEF</pre>

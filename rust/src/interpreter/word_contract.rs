@@ -260,7 +260,7 @@ impl Interpreter {
             };
             let callee = self.contract_of(&name, &def, memo);
             if top_level {
-                flow.feed_word(&callee.flow);
+                flow.feed_word(&collect_flow(&name, prev).unwrap_or_else(|| callee.flow.clone()));
             }
             if callee.field == FieldClosure::Leaving && !literal_keeps_field(&name, prev) {
                 if callee.field_unread {
@@ -282,4 +282,19 @@ impl Interpreter {
             field_exits: exits,
         }
     }
+}
+
+/// `n COLLECT` with the count written right before it gathers a known number
+/// of values: the count and `n` beneath it in, one Vector out.
+fn collect_flow(name: &str, prev: Option<&Token>) -> Option<ContractFlow> {
+    let Some(Token::Number(literal)) = prev.filter(|_| name == "COLLECT") else {
+        return None;
+    };
+    let (n, 1) = literal.value()?.extract_i64_pair()? else {
+        return None;
+    };
+    Some(ContractFlow::Fixed {
+        consumes: u16::try_from(n).ok()?.checked_add(1)?,
+        produces: 1,
+    })
 }

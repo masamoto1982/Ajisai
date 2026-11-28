@@ -54,8 +54,10 @@ async fn an_arity_the_walk_cannot_state_is_variable() {
     let body = vec!["1"; 65_537].join(" ");
     let past_u16 = contract_for(&format!("[ {body} ] 'W' DEF"), "W").await;
     assert_eq!(past_u16.flow, ContractFlow::Dynamic);
-    let variable = contract_for("[ 2 COLLECT ] 'W' DEF", "W").await;
+    let variable = contract_for("[ COLLECT ] 'W' DEF", "W").await;
     assert_eq!(variable.flow, ContractFlow::Dynamic);
+    let counted = contract_for("[ 2 COLLECT ] 'W' DEF", "W").await;
+    assert_eq!(counted.flow, fixed(2, 1));
 }
 
 /// Code a higher-order Word runs is read when it is the literal written right
@@ -106,7 +108,7 @@ async fn contract_answers_one_record_shape_for_core_user_and_block() {
             "[ 'inputs' 'outputs' 'field' ] [ 1/1 1/1 'closed' ] RECORD",
         ),
         (
-            "[ 2 COLLECT ] CONTRACT",
+            "[ COLLECT ] CONTRACT",
             "[ 'inputs' 'outputs' 'field' ] [ 'variable' 'variable' 'closed' ] RECORD",
         ),
         ("[ NOPE ] 0 GET CONTRACT NIL-REASON", "'notFound'"),
