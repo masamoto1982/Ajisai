@@ -3940,7 +3940,7 @@ SELECT</code></td>
 <h3 id="family-higherOrder">Contracts: Iteration</h3>
 <div class="word-entry" id="word-MAP">
 <h4><code>MAP</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>A block applied to each element of a Vector, in order, answering a Vector of the results: <code>[ 1 2 3 ] [ 2 MUL ] MAP</code> is <code>[ 2 4 6 ]</code>. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): <code>[ 1 2 ] [ 1 COLLECT ] MAP</code> is <code>[ [ 1 ] [ 2 ] ]</code>. An absent Vector answers that absence. A non-Vector is <code>nonVector</code>, a non-block <code>notExecutable</code>, and a block that leaves other than exactly one value — nothing, or a surplus such as <code>[ 2 MUL 7 ]</code> — <code>blockContractViolation</code>.</p>
+<p>A block applied to each element of a Vector, in order, answering a Vector of the results: <code>[ 1 2 3 ] [ 2 MUL ] MAP</code> is <code>[ 2 4 6 ]</code>. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): <code>[ 1 2 ] [ 1 COLLECT ] MAP</code> is <code>[ [ 1 ] [ 2 ] ]</code>. A Record maps value by value and keeps its keys: <code>[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP</code> is <code>[ 'a' 'b' ] [ 10 20 ] RECORD</code>, so <code>[ IDX GET ] MAP</code> of a table of columns is its row at <code>IDX</code>. An absent Vector answers that absence. Any other non-Vector is <code>nonVector</code>, a non-block <code>notExecutable</code>, and a block that leaves other than exactly one value — nothing, or a surplus such as <code>[ 2 MUL 7 ]</code> — <code>blockContractViolation</code>.</p>
 <dl class="word-contract">
 <dt>Syntax</dt><dd><code>[ 1 2 3 ] [ 2 MUL ] MAP</code></dd>
 <dt>Stack effect</dt><dd><span class="notation">[ vec ] [ body ] -&gt; [ mapped ]</span></dd>
@@ -3952,7 +3952,7 @@ SELECT</code></td>
 <dt>Purity / determinism</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>Effects</dt><dd>none</dd>
 <dt>ERROR conditions</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>nestedDataBlock</code>, <code>blockContractViolation</code></dd>
-<dt>Clauses</dt><dd><code>LANG.COLLECTIONS.HIGHER</code></dd>
+<dt>Clauses</dt><dd><code>LANG.COLLECTIONS.HIGHER</code>, <code>LANG.RECORDS.STRUCTURE</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FILTER">

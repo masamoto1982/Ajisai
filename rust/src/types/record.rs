@@ -178,16 +178,23 @@ impl RecordData {
         })
     }
 
-    /// Whether `other` has the same key sequence, key for key as the index
-    /// compares them, so that the two pair position by position
+    /// `other`'s values in this Record's key order, when the two hold the
+    /// same set of keys, as the index compares them; `None` otherwise. Two
+    /// Records pair key by key, whatever order each holds its keys in
     /// (LANG.COLLECTIONS.LIFT over Records).
-    pub fn same_keys(&self, other: &Self) -> bool {
-        self.keys.len() == other.keys.len()
-            && self
-                .keys
-                .iter()
-                .zip(&other.keys)
-                .all(|(a, b)| canonical_key(a) == canonical_key(b))
+    pub fn aligned<'a>(&self, other: &'a Self) -> Option<Vec<&'a Value>> {
+        if self.keys.len() != other.keys.len() {
+            return None;
+        }
+        let in_order = self
+            .keys
+            .iter()
+            .zip(&other.keys)
+            .all(|(a, b)| canonical_key(a) == canonical_key(b));
+        if in_order {
+            return Some(other.values.iter().collect());
+        }
+        self.keys.iter().map(|key| other.get(key)).collect()
     }
 }
 

@@ -51,6 +51,7 @@ impl Ty {
             DeclaredType::Bool => Ty::Bool,
             DeclaredType::Str => Ty::Str(None),
             DeclaredType::Vector(element) => Ty::Vec(Box::new(Ty::of(element))),
+            DeclaredType::Table(fields) => Ty::of(&DeclaredType::columns(fields)),
             DeclaredType::Record(fields) => Ty::Rec(
                 fields
                     .iter()
@@ -114,7 +115,7 @@ fn join(a: &Ty, b: &Ty) -> Option<Ty> {
 }
 
 fn fits(actual: &Ty, expected: &Ty) -> bool {
-    join(actual, expected).as_ref() == Some(expected)
+    join(expected, actual).as_ref() == Some(expected)
         || matches!((actual, expected), (Ty::Str(_), Ty::Str(_)))
 }
 
@@ -293,22 +294,6 @@ impl Walk<'_> {
         }
     }
 
-    /// An untyped User Word called from a typed body, walked with the types
-    /// it is given in a frame of its own. The dictionary is acyclic
-    /// (LANG.DICTIONARY.ACYCLIC), so the walk ends.
-    fn untyped_call(&mut self, w: &str, stack: &mut Vec<Ty>) -> Outcome<()> {
-        let Some(body) = (self.bodies)(w) else {
-            return Err(format!(
-                "{w} has no type rule yet; call it from an untyped Word instead"
-            ));
-        };
-        let saved = std::mem::take(&mut self.locals);
-        let left = self.run(&body, std::mem::take(stack));
-        self.locals = saved;
-        *stack = left.map_err(|why| format!("{w}, walked with the types it is given: {why}"))?;
-        Ok(())
-    }
-
     fn word(&mut self, name: &str, stack: &mut Vec<Ty>) -> Outcome<()> {
         let word = canonical_word_name(name);
         if let Some(ty) = self.locals.get(word.as_ref()) {
@@ -403,6 +388,14 @@ impl Walk<'_> {
             "MAP" | "FILTER" => {
                 let block = Self::pop_block(stack, w)?;
                 let vector = Self::pop_data(stack, w)?;
+                if let (Ty::Rec(fields), "MAP") = (&vector, w) {
+                    let mut mapped = Vec::with_capacity(fields.len());
+                    for (name, ty) in fields {
+                        mapped.push((name.clone(), self.block(&block, vec![ty.clone()], w)?));
+                    }
+                    stack.push(Ty::Rec(mapped));
+                    return Ok(());
+                }
                 let element = Self::element_of(&vector, w)?;
                 let result = self.block(&block, vec![element], w)?;
                 if w == "MAP" {

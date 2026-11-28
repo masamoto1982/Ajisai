@@ -110,11 +110,14 @@ async fn a_record_outside_its_type_is_named_by_key_and_field() {
         "{SUBTOTALS}[ 'qty' 'price' ] [ [ 2 ] [ 120 ] ] RECORD SUBTOTALS"
     ))
     .await;
-    assert_eq!(
-        reordered["error"]["category"], "typeViolation",
-        "{reordered}"
-    );
-    let message = reordered["message"].as_str().unwrap_or_default();
+    assert_eq!(reordered["stackDisplay"][0], "[ 240/1 ]", "{reordered}");
+
+    let missing = run(&format!(
+        "{SUBTOTALS}[ 'price' 'cost' ] [ [ 2 ] [ 120 ] ] RECORD SUBTOTALS"
+    ))
+    .await;
+    assert_eq!(missing["error"]["category"], "typeViolation", "{missing}");
+    let message = missing["message"].as_str().unwrap_or_default();
     assert!(message.contains("keys"), "{message}");
 
     let fraction = run(&format!(
@@ -129,4 +132,38 @@ async fn a_record_outside_its_type_is_named_by_key_and_field() {
     ))
     .await;
     assert_eq!(nil["status"], "ok", "{nil}");
+}
+
+#[test]
+fn a_table_type_and_rows_by_map_verify() {
+    for source in [
+        "#:contract FIRST3 table{item:str price:int} -> table{item:str price:int}\n\
+         [ [ 3 TAKE ] MAP ] 'FIRST3' DEF",
+        "#:contract ROW table{item:str price:int} int -> {item:str price:int}\n\
+         [ 'IDX' BIND [ IDX GET ] MAP ] 'ROW' DEF",
+        "#:contract SWAPPED {a:int b:str} -> {b:str a:int}\n[ 'b' 'x' PUT 'b' WITHOUT 'b' 'y' PUT ] 'SWAPPED' DEF",
+        "#:contract BY-KEY {a:int b:int} {b:int a:int} -> {a:int b:int}\n[ ADD ] 'BY-KEY' DEF",
+    ] {
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "value", "{source}: {decls}");
+    }
+    let (sig, _) = split_signature("table{ item:str price:int } -> [int]").unwrap();
+    assert_eq!(
+        sig.unwrap().to_string(),
+        "table{item:str price:int} -> [int]"
+    );
+    let wrong = contract_decls(
+        "#:contract ROW table{item:str price:int} int -> {item:int price:int}\n\
+         [ 'IDX' BIND [ IDX GET ] MAP ] 'ROW' DEF",
+    );
+    assert_eq!(wrong["outcome"], "error", "{wrong}");
+}
+
+#[tokio::test]
+async fn a_table_with_columns_of_two_lengths_is_outside_its_type() {
+    let table = "#:contract N table{a:int b:int} -> int\n[ 'a' GET LENGTH ] 'N' DEF\n";
+    let even = run(&format!("{table}[ 'b' 'a' ] [ [ 1 2 ] [ 3 4 ] ] RECORD N")).await;
+    assert_eq!(even["stackDisplay"][0], "2/1", "{even}");
+    let uneven = run(&format!("{table}[ 'a' 'b' ] [ [ 1 2 ] [ 3 ] ] RECORD N")).await;
+    assert_eq!(uneven["error"]["category"], "typeViolation", "{uneven}");
 }

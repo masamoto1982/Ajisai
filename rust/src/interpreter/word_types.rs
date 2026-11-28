@@ -31,10 +31,24 @@ pub enum DeclaredType {
     Bool,
     Str,
     Vector(Box<DeclaredType>),
-    /// A Record whose keys are exactly these Strings, in this order, each
-    /// holding a value of its type (LANG.RECORDS.STRUCTURE). A table is one
-    /// whose fields are Vectors: its columns.
+    /// A Record whose keys are exactly these Strings, in any order, each
+    /// holding a value of its type (LANG.RECORDS.STRUCTURE).
     Record(Vec<(String, DeclaredType)>),
+    /// A table: a Record whose keys are exactly these Strings, each holding
+    /// a Vector of its type, every Vector of one length.
+    Table(Vec<(String, DeclaredType)>),
+}
+
+impl DeclaredType {
+    /// A table's type as the Record of columns it is.
+    pub fn columns(fields: &[(String, DeclaredType)]) -> DeclaredType {
+        DeclaredType::Record(
+            fields
+                .iter()
+                .map(|(name, ty)| (name.clone(), DeclaredType::Vector(Box::new(ty.clone()))))
+                .collect(),
+        )
+    }
 }
 
 impl fmt::Display for DeclaredType {
@@ -45,12 +59,17 @@ impl fmt::Display for DeclaredType {
             DeclaredType::Bool => f.write_str("bool"),
             DeclaredType::Str => f.write_str("str"),
             DeclaredType::Vector(element) => write!(f, "[{element}]"),
-            DeclaredType::Record(fields) => {
+            DeclaredType::Record(fields) | DeclaredType::Table(fields) => {
                 let fields: Vec<String> = fields
                     .iter()
                     .map(|(name, ty)| format!("{name}:{ty}"))
                     .collect();
-                write!(f, "{{{}}}", fields.join(" "))
+                let table = if matches!(self, DeclaredType::Table(_)) {
+                    "table"
+                } else {
+                    ""
+                };
+                write!(f, "{table}{{{}}}", fields.join(" "))
             }
         }
     }
@@ -157,8 +176,15 @@ fn parse_type(lexemes: &[&str], at: usize) -> std::result::Result<(DeclaredType,
             }
         }
         Some("{") => parse_record(lexemes, at + 1),
+        Some("table") if lexemes.get(at + 1) == Some(&"{") => {
+            let (record, next) = parse_record(lexemes, at + 2)?;
+            let DeclaredType::Record(fields) = record else {
+                unreachable!("parse_record answers a Record type");
+            };
+            Ok((DeclaredType::Table(fields), next))
+        }
         Some(other) => Err(format!(
-            "unknown type `{other}` (expected `int`, `rat`, `bool`, `str`, `[T]` or `{{name:T …}}`)"
+            "unknown type `{other}` (expected `int`, `rat`, `bool`, `str`, `[T]`, `{{name:T …}}` or `table{{name:T …}}`)"
         )),
         None => Err("a `[` with no element type".to_string()),
     }
@@ -241,24 +267,44 @@ pub fn first_misfit(value: &Value, ty: &DeclaredType) -> Option<String> {
                 .map(|index| format!("lane {index}: {} is not {element}", data.fraction_at(index)))
         }
         (ValueData::Record(record), DeclaredType::Record(fields)) => {
-            let same_keys = record.len() == fields.len()
-                && record
-                    .keys()
-                    .iter()
-                    .zip(fields)
-                    .all(|(key, (name, _))| key.as_text() == Some(name.as_str()));
-            if !same_keys {
+            // The keys are a set: each named once, in any order.
+            let items: Option<Vec<&Value>> = (record.len() == fields.len())
+                .then(|| {
+                    fields
+                        .iter()
+                        .map(|(name, _)| record.get(&Value::from_string(name)))
+                        .collect()
+                })
+                .flatten();
+            let Some(items) = items else {
                 let keys: Vec<String> = record.keys().iter().map(ToString::to_string).collect();
                 return Some(format!(
                     "a Record with keys [ {} ] is not {ty}",
                     keys.join(" ")
                 ));
+            };
+            fields.iter().zip(items).find_map(|((name, field), item)| {
+                first_misfit(item, field).map(|why| format!("field {name}: {why}"))
+            })
+        }
+        (ValueData::Record(record), DeclaredType::Table(fields)) => {
+            if let Some(why) = first_misfit(value, &DeclaredType::columns(fields)) {
+                return Some(why);
             }
-            fields
+            let mut lengths = record
+                .keys()
                 .iter()
                 .zip(record.values())
-                .find_map(|((name, field), item)| {
-                    first_misfit(item, field).map(|why| format!("field {name}: {why}"))
+                .filter(|(_, column)| !column.is_nil());
+            let (first_key, first) = lengths.next()?;
+            lengths
+                .find(|(_, column)| column.len() != first.len())
+                .map(|(key, column)| {
+                    format!(
+                        "column {key} is {} long where column {first_key} is {}",
+                        column.len(),
+                        first.len()
+                    )
                 })
         }
         _ => Some(format!("{value} is not {ty}")),

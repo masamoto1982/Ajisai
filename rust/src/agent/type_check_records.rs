@@ -153,8 +153,10 @@ fn items(tokens: &[Token]) -> Outcome<Vec<Ty>> {
     Ok(types)
 }
 
-/// Two field lists with the same names in the same order, combined field by
-/// field; `None` when the names differ or a field does not combine.
+/// Two field lists with the same names, in any order, combined field by
+/// field in the order of `f`; `None` when the names differ or a field does
+/// not combine. A Record type is a set of keys, as a Record pairs with
+/// another key by key (LANG.COLLECTIONS.LIFT).
 pub(super) fn zip_fields(
     f: &[(String, Ty)],
     g: &[(String, Ty)],
@@ -164,12 +166,9 @@ pub(super) fn zip_fields(
         return None;
     }
     f.iter()
-        .zip(g)
-        .map(|((a, x), (b, y))| {
-            (a == b)
-                .then(|| combine(x, y))
-                .flatten()
-                .map(|t| (a.clone(), t))
+        .map(|(name, x)| {
+            let (_, y) = g.iter().find(|(other, _)| other == name)?;
+            combine(x, y).map(|t| (name.clone(), t))
         })
         .collect()
 }

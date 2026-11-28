@@ -15,6 +15,13 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.10
+
+- **breaking** LANG.COLLECTIONS.LIFT — Two Records combine key by key when they hold the same keys in any order, the answer in the left Record's order. `[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 10 20 ] RECORD ADD` was `error:shapeMismatch` and is `[ 'x' 'y' ] [ 21 12 ] RECORD`; Records with different keys are still `shapeMismatch`. (2026-11-28)
+- **breaking** LANG.RECORDS.STRUCTURE — `MAP` takes a Record, runs its block on each value and keeps the keys, so a table's rows are read through its columns. `[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP` was `error:nonVector` and is `[ 'a' 'b' ] [ 10 20 ] RECORD`. (2026-11-28)
+- **breaking** LANG.CONTRACT.TYPES — A Record type is a set of keys: a Record holding them in another order fits it. With `#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]`, `[ 'qty' 'price' ] [ [ 2 ] [ 120 ] ] RECORD SUBTOTALS` was `error:typeViolation` and is `[ 240 ]`. (2026-11-28)
+- **compatible** LANG.CONTRACT.TYPES — A signature may write a table type, `table{price:int qty:int}`: a Record of exactly those keys, each a Vector of its type, every Vector of one length, checked where the Word is entered and returns. `MAP` over a typed Record types its block per field, so `[ IDX GET ] MAP` of a table is its row. The User sheet offers a table type for a table. (2026-11-28)
+
 ## 1.0.0-beta.9
 
 - **breaking** LANG.DICTIONARY.RESOLUTION — A name is a Word or a binding across the whole dictionary, not only in the running frame: `DEF` refuses a name some User Word's body binds with `BIND`, and a body that binds the name of a User Word. `[ 'K' BIND K 1 ADD ] 'F' DEF [ 5 ] 'K' DEF` was accepted, after which `3 F` stopped with `error:nameConflict` and `K` could not be deleted; it is now `error:nameConflict` at the second `DEF`. (2026-11-28)

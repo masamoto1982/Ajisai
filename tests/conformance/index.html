@@ -3400,11 +3400,42 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-typed-record-keys-out-of-order" data-category="language">
-  <h3>A Record whose keys stand in another order is outside its Record type (LANG.CONTRACT.TYPES)</h3>
+  <h3>A Record type is a set of keys: a Record holding them in another order fits it (LANG.CONTRACT.TYPES)</h3>
   <pre class="ajisai-source">#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]
 [ 'T' BIND T 'price' GET T 'qty' GET MUL ] 'SUBTOTALS' DEF [ 'qty' 'price' ] [ [ 2 1 ] [ 120 80 ] ] RECORD SUBTOTALS</pre>
+  <pre class="ajisai-expect-result">[ 240/1 80/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-typed-record-missing-key" data-category="language">
+  <h3>A Record missing a key of its Record type is outside it (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract SUBTOTALS {price:[int] qty:[int]} -> [int]
+[ 'T' BIND T 'price' GET T 'qty' GET MUL ] 'SUBTOTALS' DEF [ 'price' 'cost' ] [ [ 2 1 ] [ 120 80 ] ] RECORD SUBTOTALS</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">a Record with keys [ 'qty' 'price' ] is not {price:[int] qty:[int]}</pre>
+  <pre class="ajisai-expect-error">a Record with keys [ 'price' 'cost' ] is not {price:[int] qty:[int]}</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-typed-table-unequal-columns" data-category="language">
+  <h3>A table type holds columns of one length (LANG.CONTRACT.TYPES)</h3>
+  <pre class="ajisai-source">#:contract SUBTOTALS table{price:int qty:int} -> [int]
+[ 'T' BIND T 'price' GET T 'qty' GET MUL ] 'SUBTOTALS' DEF [ 'price' 'qty' ] [ [ 120 80 ] [ 2 ] ] RECORD SUBTOTALS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">column 'qty' is 1 long where column 'price' is 2</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-record-lift-by-key" data-category="language">
+  <h3>Two Records pair key by key, in the left one's order (LANG.COLLECTIONS.LIFT)</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 10 20 ] RECORD ADD</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' ] [ 21/1 12/1 ] RECORD</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-map-over-record" data-category="language">
+  <h3>MAP over a Record applies the block to each value and keeps the keys (LANG.RECORDS.STRUCTURE)</h3>
+  <pre class="ajisai-source">[ 'price' 'qty' ] [ [ 120 80 300 ] [ 2 1 4 ] ] RECORD [ 2 TAKE ] MAP</pre>
+  <pre class="ajisai-expect-result">[ 'price' 'qty' ] [ [ 120/1 80/1 ] [ 2/1 1/1 ] ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

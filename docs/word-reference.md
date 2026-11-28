@@ -718,7 +718,7 @@ The union of two Records, the right one winning: `[ 'x' 'y' ] [ 1 2 ] RECORD [ '
 
 ## `MAP`
 
-A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.
+A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. A Record maps value by value and keeps its keys: `[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP` is `[ 'a' 'b' ] [ 10 20 ] RECORD`, so `[ IDX GET ] MAP` of a table of columns is its row at `IDX`. An absent Vector answers that absence. Any other non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
@@ -727,7 +727,7 @@ A block applied to each element of a Vector, in order, answering a Vector of the
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.RECORDS.STRUCTURE`
 - **Syntax:** `[ 1 2 3 ] [ 2 MUL ] MAP`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `nestedDataBlock`, `blockContractViolation`
 

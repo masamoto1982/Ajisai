@@ -7,7 +7,7 @@
 
 /// The specification version this registry was generated from
 /// (`spec/version-lock.json`), which every agent envelope names.
-pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.9";
+pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.10";
 
 /// Canonical identity of a Core Word, named by its executor key (unique across
 /// the registry).
@@ -2433,8 +2433,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
         operand_roles: &[OperandRole::Data, OperandRole::Control],
-        operand_domains: &[&[ValueDomain::Vector], &[ValueDomain::Vector]],
-        result_domains: &[&[ValueDomain::Vector]],
+        operand_domains: &[&[ValueDomain::Vector, ValueDomain::Record], &[ValueDomain::Vector]],
+        result_domains: &[&[ValueDomain::Vector, ValueDomain::Record]],
         nil_policy: NilPolicy::Passthrough,
         projection: &[],
         projection_reasons: &[],
@@ -2461,7 +2461,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &[],
         error_when: &["nonVector", "notExecutable", "nestedDataBlock", "blockContractViolation"],
         syntax: Some("[ 1 2 3 ] [ 2 MUL ] MAP"),
-        summary: "A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.",
+        summary: "A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is the one value it leaves, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. A Record maps value by value and keeps its keys: `[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP` is `[ 'a' 'b' ] [ 10 20 ] RECORD`, so `[ IDX GET ] MAP` of a table of columns is its row at `IDX`. An absent Vector answers that absence. Any other non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves other than exactly one value — nothing, or a surplus such as `[ 2 MUL 7 ]` — `blockContractViolation`.",
         stack_effect: "[ vec ] [ body ] -> [ mapped ]",
         hover_summary: "MAP — apply block to each element",
         hover_syntax: "[ 1 2 3 ] [ 2 MUL ] MAP",

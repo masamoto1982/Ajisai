@@ -2,7 +2,7 @@
 //! (LANG.CONTRACT.TYPES): each one the Word's own domain read at the level of
 //! types, lifted over Vectors where the Word itself lifts.
 
-use super::{data, join, zip_fields, Outcome, Ty};
+use super::{data, join, zip_fields, Outcome, Ty, Walk};
 use crate::types::Token;
 
 fn str_like(t: &Ty) -> bool {
@@ -165,5 +165,23 @@ pub(super) fn show_token(token: &Token) -> String {
         Token::VectorStart => "[".into(),
         Token::VectorEnd => "]".into(),
         Token::Value(_) => "a value".into(),
+    }
+}
+
+impl Walk<'_> {
+    /// An untyped User Word called from a typed body, walked with the types
+    /// it is given in a frame of its own. The dictionary is acyclic
+    /// (LANG.DICTIONARY.ACYCLIC), so the walk ends.
+    pub(super) fn untyped_call(&mut self, w: &str, stack: &mut Vec<Ty>) -> Outcome<()> {
+        let Some(body) = (self.bodies)(w) else {
+            return Err(format!(
+                "{w} has no type rule yet; call it from an untyped Word instead"
+            ));
+        };
+        let saved = std::mem::take(&mut self.locals);
+        let left = self.run(&body, std::mem::take(stack));
+        self.locals = saved;
+        *stack = left.map_err(|why| format!("{w}, walked with the types it is given: {why}"))?;
+        Ok(())
     }
 }

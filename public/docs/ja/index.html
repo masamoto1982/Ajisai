@@ -3937,7 +3937,7 @@ SELECT</code></td>
 <h3 id="family-higherOrder">契約: 反復</h3>
 <div class="word-entry" id="word-MAP">
 <h4><code>MAP</code> <span class="word-tier">Semantic Kernel</span></h4>
-<p>ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。<code>[ 1 2 3 ] [ 2 MUL ] MAP</code>は<code>[ 2 4 6 ]</code>。ブロックの結果は、ベクトルを含め、ブロックが残したちょうど1つの値(LANG.COLLECTIONS.HIGHER)。<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1 ] [ 2 ] ]</code>。不在のベクトルはその不在を答える。ベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロック——何も残さない、または<code>[ 2 MUL 7 ]</code>のように余分に残す——は<code>blockContractViolation</code>。</p>
+<p>ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。<code>[ 1 2 3 ] [ 2 MUL ] MAP</code>は<code>[ 2 4 6 ]</code>。ブロックの結果は、ベクトルを含め、ブロックが残したちょうど1つの値(LANG.COLLECTIONS.HIGHER)。<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1 ] [ 2 ] ]</code>。Recordは値ごとに写してキーを保つ。<code>[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP</code>は<code>[ 'a' 'b' ] [ 10 20 ] RECORD</code>なので、列の表に対する<code>[ IDX GET ] MAP</code>は<code>IDX</code>番目の行になる。不在のベクトルはその不在を答える。それ以外のベクトルでないものは<code>nonVector</code>、ブロックでないものは<code>notExecutable</code>、ちょうど1つ以外の値を残すブロック——何も残さない、または<code>[ 2 MUL 7 ]</code>のように余分に残す——は<code>blockContractViolation</code>。</p>
 <dl class="word-contract">
 <dt>構文</dt><dd><code>[ 1 2 3 ] [ 2 MUL ] MAP</code></dd>
 <dt>スタック効果</dt><dd><span class="notation">[ vec ] [ body ] -&gt; [ mapped ]</span></dd>
@@ -3949,7 +3949,7 @@ SELECT</code></td>
 <dt>純粋性 / 決定性</dt><dd><code>conditional</code> / <code>stateRelative</code></dd>
 <dt>作用</dt><dd>なし</dd>
 <dt>ERROR条件</dt><dd><code>nonVector</code>, <code>notExecutable</code>, <code>nestedDataBlock</code>, <code>blockContractViolation</code></dd>
-<dt>条項</dt><dd><code>LANG.COLLECTIONS.HIGHER</code></dd>
+<dt>条項</dt><dd><code>LANG.COLLECTIONS.HIGHER</code>, <code>LANG.RECORDS.STRUCTURE</code></dd>
 </dl>
 </div>
 <div class="word-entry" id="word-FILTER">

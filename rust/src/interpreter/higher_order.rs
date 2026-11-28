@@ -202,11 +202,45 @@ pub(super) fn block_arity_message(expected: &str, left: usize) -> String {
 }
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
-    run_element_walk::<MapWalk>(
-        interp,
-        "MAP",
-        crate::interpreter::fused_block::FusedWalk::Map,
-    )
+    let map = |interp: &mut Interpreter| {
+        run_element_walk::<MapWalk>(
+            interp,
+            "MAP",
+            crate::interpreter::fused_block::FusedWalk::Map,
+        )
+    };
+    let record = interp
+        .stack
+        .len()
+        .checked_sub(2)
+        .and_then(|at| interp.stack[at].as_record().cloned());
+    let Some(record) = record else {
+        return map(interp);
+    };
+    // A Record maps value by value and keeps its keys (LANG.RECORDS.STRUCTURE):
+    // its values walk as the Vector they are, so a block runs over them as
+    // it runs over any Vector, and the answers are put back under the keys.
+    let code = interp.stack.pop().expect("two operands");
+    let target = interp.stack.pop().expect("two operands");
+    interp
+        .stack
+        .push(Value::from_vector(record.values().to_vec()));
+    interp.stack.push(code.clone());
+    if let Err(e) = map(interp) {
+        interp.stack.truncate(interp.stack.len().saturating_sub(2));
+        interp.stack.push(target);
+        interp.stack.push(code);
+        return Err(e);
+    }
+    let answers = interp.stack.pop().expect("MAP answers one value");
+    let values = (0..record.len())
+        .map(|i| answers.child(i).expect("one answer per value"))
+        .collect();
+    interp.stack.push(Value::from_record(
+        crate::types::RecordData::new(record.keys().to_vec(), values)
+            .expect("the keys are the Record's own, so distinct and aligned"),
+    ));
+    Ok(())
 }
 
 /// What one element-wise walk does with each element's answer, and what it

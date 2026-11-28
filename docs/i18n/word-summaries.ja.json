@@ -194,8 +194,8 @@
       "summary": "2つのRecordの合併で、右が勝つ。`[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE VALUES`は`[ 1 9 3 ]`。左のRecordのキーは順序を保ち、両方が持つキーでは右の値を取る。右だけが持つキーは右の順序で末尾に足される。既定値に上書きを重ねるのがこのワードの用途である。左を勝たせたいならオペランドを入れ替える。どちらかがRecordでなければERROR。キーはUNIQUEが要素を照合するのと同じように照合するので、NILのキーは理由によらずNILのキーと一致し、左のRecordの綴りを保つ(LANG.VALUES.ORDER)。"
     },
     "MAP": {
-      "source": "d16e96492e86d8da",
-      "summary": "ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。`[ 1 2 3 ] [ 2 MUL ] MAP`は`[ 2 4 6 ]`。ブロックの結果は、ベクトルを含め、ブロックが残したちょうど1つの値(LANG.COLLECTIONS.HIGHER)。`[ 1 2 ] [ 1 COLLECT ] MAP`は`[ [ 1 ] [ 2 ] ]`。不在のベクトルはその不在を答える。ベクトルでないものは`nonVector`、ブロックでないものは`notExecutable`、ちょうど1つ以外の値を残すブロック——何も残さない、または`[ 2 MUL 7 ]`のように余分に残す——は`blockContractViolation`。"
+      "source": "8bf378739878ec77",
+      "summary": "ブロックをベクトルの各要素に順に適用し、結果のベクトルを答える。`[ 1 2 3 ] [ 2 MUL ] MAP`は`[ 2 4 6 ]`。ブロックの結果は、ベクトルを含め、ブロックが残したちょうど1つの値(LANG.COLLECTIONS.HIGHER)。`[ 1 2 ] [ 1 COLLECT ] MAP`は`[ [ 1 ] [ 2 ] ]`。Recordは値ごとに写してキーを保つ。`[ 'a' 'b' ] [ 1 2 ] RECORD [ 10 MUL ] MAP`は`[ 'a' 'b' ] [ 10 20 ] RECORD`なので、列の表に対する`[ IDX GET ] MAP`は`IDX`番目の行になる。不在のベクトルはその不在を答える。それ以外のベクトルでないものは`nonVector`、ブロックでないものは`notExecutable`、ちょうど1つ以外の値を残すブロック——何も残さない、または`[ 2 MUL 7 ]`のように余分に残す——は`blockContractViolation`。"
     },
     "FILTER": {
       "source": "3962435555f3682d",
