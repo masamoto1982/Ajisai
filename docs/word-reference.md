@@ -1087,7 +1087,7 @@ Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10
 
 ## `DEF`
 
-A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (`definitionConflict`); a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.
+A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it, and its callers call the new body from then on; a Word others still call may be redefined only to a body of the same stack effect, the inputs and outputs `CONTRACT` infers, both fixed (`definitionConflict`): `[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL` is `450`; a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

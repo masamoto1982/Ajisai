@@ -39,9 +39,9 @@
     },
     {
       "id": "definitionConflict",
-      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n[ 2 ] 'A' DEF",
+      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n[ 2 3 ] 'A' DEF",
       "expect": "error:definitionConflict",
-      "rationale": "Requires three statements: define A, define B referencing A, then try to redefine A while B still depends on it. Multi-statement dependency state is outside the one-Word-one-tuple table by construction (Phase 4 pitfall A’s own example)."
+      "rationale": "Requires three statements: define A, define B referencing A, then try to redefine A to a body of another stack effect while B still depends on it. Multi-statement dependency state is outside the one-Word-one-tuple table by construction (Phase 4 pitfall A’s own example)."
     },
     {
       "id": "selfReferentialDefinition",

@@ -34,6 +34,17 @@ export class AjisaiInterpreter {
      * shared word groups by content rather than by name.
      */
     collect_word_identities(): any;
+    /**
+     * `{ formula, inputs, outputs, signature, identity }` for the User Word
+     * `name`, `inputs` and `outputs` being `null` where inference cannot
+     * fix them; `null` when no User Word holds the name.
+     */
+    describe_sheet_cell(name: string): any;
+    /**
+     * What the User Word `name` leaves on an empty stack, run apart from the
+     * session: `{ value, suggestedType }` or `{ error }`.
+     */
+    evaluate_sheet_cell(name: string): Promise<any>;
     execute(code: string): Promise<any>;
     /**
      * The resource ceilings this interpreter is actually running under, as

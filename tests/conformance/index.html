@@ -2379,6 +2379,21 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-def-referenced-word-same-effect" data-category="dictionary">
+  <h3>DEF of a referenced word keeping its stack effect replaces it for its callers (LANG.DICTIONARY.MUTATION)</h3>
+  <pre class="ajisai-source">[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL</pre>
+  <pre class="ajisai-expect-result">450/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-def-referenced-word-other-effect-error" data-category="dictionary">
+  <h3>DEF of a referenced word changing its stack effect is definitionConflict (LANG.DICTIONARY.MUTATION)</h3>
+  <pre class="ajisai-source">[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 1 ] 'PRICE' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Cannot redefine 'PRICE': referenced by TOTAL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-user-word-composition" data-category="dictionary">
   <h3>A user word calling another user word resolves through the dictionary</h3>
   <pre class="ajisai-source">[ 2 MUL ] 'A2' DEF [ A2 4 ADD ] 'B2' DEF 5 B2</pre>

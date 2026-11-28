@@ -15,6 +15,12 @@ it applies a program with its answer before and after. `npm run
 check:spec-version` holds this file, `spec/version-lock.json` and the
 specification to each other (scripts/lib/spec-version.mjs states the rule).
 
+## 1.0.0-beta.7
+
+- **breaking** LANG.DICTIONARY.MUTATION — `DEF` of a User Word that other User Words still call replaces it when the new body has the same stack effect as the old one, the inputs and outputs `CONTRACT` infers, both fixed; its callers call the new body from then on, so a value other definitions read can be edited in place, as a cell is in a spreadsheet. A redefinition that changes the stack effect, or whose effect cannot be inferred, is still `error:definitionConflict`. `[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL` was `error:definitionConflict` and is `450`; `[ 2 3 ] 'PRICE' DEF` in its place is still refused. The new body is held to LANG.DICTIONARY.ACYCLIC, so `[ TOTAL ] 'PRICE' DEF` is `error:selfReferentialDefinition`. (2026-11-28)
+- **compatible** Presentation Profile — The Dictionary surface's User sheet can show its Words as a sheet of named cells: name, formula (the body), the value a Word that takes nothing leaves, and its type, with the narrowest type the value fits offered as a `#:contract` line. Editing a cell is a `DEF`. No program's answer changes. (2026-11-28)
+- **compatible** LANG.CONTRACT.TYPES — In a session that keeps its dictionary from run to run, a typed body may call a typed Word the dictionary already holds, as it may call one its own source declares: with `#:contract PRICE -> [int]` defined in an earlier run, `#:contract TOTAL -> [int]` over `[ PRICE 3 MUL ]` is verified where it was `error:contractViolation`. (2026-11-28)
+
 ## 1.0.0-beta.6
 
 - **breaking** LANG.CONTRACT.TYPES — A `#:contract` line may write a signature after the Word's name, and a Word with one is typed: `#:contract SUMSQ [int] -> int`. A type promises a range, never a precision, so erasing every signature answers the same values unless the typed program stopped. A value outside a typed Word's input or output type is `error:typeViolation`, a new error category; a body the type rules cannot fit is `error:contractViolation` before anything runs. A line such as `#:contract ID int -> int` was malformed (`error:contractViolation`) and now declares a type: with `[ 0 ADD ] 'ID' DEF`, `5 ID` was `error:contractViolation` and is `5`, and `1/2 ID` is `error:typeViolation`. Programs without a signature are unchanged. (2026-11-28)

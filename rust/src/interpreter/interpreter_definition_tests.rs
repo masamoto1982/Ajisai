@@ -117,7 +117,7 @@ async fn test_def_with_dependents_is_refused() {
         .await
         .unwrap();
 
-    let result = interp.execute("[ [ 3 ] MUL ] 'DOUBLE' DEF").await;
+    let result = interp.execute("[ [ 3 ] MUL [ 3 ] ] 'DOUBLE' DEF").await;
     let message = result
         .expect_err("redefining a referenced word is refused")
         .to_string();

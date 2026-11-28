@@ -10,8 +10,9 @@ import { collectUserWords, toError } from './interpreter-execution-utils';
 export const EXAMPLE_USER_WORDS: UserWord[] = [
     // Hello-World family: teaches how words depend on other words. GREET is
     // built purely by chaining the three SAY words, so while GREET exists
-    // none of them can be redefined or deleted (definitionConflict): the
-    // three are coloured as words something depends on.
+    // none of them can be deleted, nor redefined to another stack effect
+    // (definitionConflict): the three are coloured as words something
+    // depends on.
     {
         name: 'SAY-HELLO',
         definition: "'Hello' PRINT",

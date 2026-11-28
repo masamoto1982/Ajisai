@@ -16,6 +16,25 @@ export type UserWordInfo = [name: string, hasDependents: boolean];
  */
 export type CoreWordInfo = [name: string, hoverSummary: string, hoverSyntax: string];
 
+/**
+ * A User Word as a sheet cell: its body as the formula, how many values it
+ * takes and leaves (`null` where inference cannot fix them), its declared
+ * signature, and its content identity, which changes when it or anything it
+ * calls does.
+ */
+export interface SheetCellInfo {
+    formula: string;
+    inputs: number | null;
+    outputs: number | null;
+    signature: string | null;
+    identity: string | null;
+}
+
+/** A cell's value, with the narrowest type it fits when none is declared. */
+export type SheetCellValue =
+    | { value: string; suggestedType: string | null; error?: undefined }
+    | { error: string; value?: undefined; suggestedType?: undefined };
+
 /** One term c·√r of an irrational's exact normal form (LANG.VALUES.EXACT). */
 export interface ExactTerm {
     readonly numerator: string;
@@ -95,6 +114,12 @@ export interface AjisaiInterpreter {
     // side ignores non-positive values and falls back to its own
     // `DEFAULT_MAX_EXECUTION_STEPS`.
     set_max_execution_steps(steps: number): void;
+    // The sheet view of the User dictionary (spec/gui-semantics.md, Sheet).
+    // `null` when no User Word holds the name.
+    describe_sheet_cell(name: string): SheetCellInfo | null;
+    // What the Word leaves on an empty stack, run apart from the session: no
+    // stack, output, meter or dictionary of the session changes.
+    evaluate_sheet_cell(name: string): Promise<SheetCellValue>;
 
 }
 

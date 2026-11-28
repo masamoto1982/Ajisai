@@ -294,8 +294,8 @@
       "summary": "値に名前を付け、それを作ったフレームの残りで使えるようにする。`5 'N' BIND N N ADD`は`10`、`[ 1 2 ] [ 'A' 'B' ] BIND B A SUB`は`1`。名前が1つなら値全体を受け取り、複数なら同じ長さのベクトルを位置ごとに分解する。両オペランドとも消費され、その後名前を書くたびに、何回でもその値が積まれる。束縛はそのフレームの中に書かれたブロックには届き、そこから呼ばれたワードには決して届かず、フレームが終わると終わる。CoreワードかUserワードがすでに持つ名前は拒否されるので、名前はワードか束縛のどちらかであって、両方にはならない。直接または他の束縛を通して自分自身の束縛を名指す値は、DEFと同じ規則で`selfReferentialDefinition`として拒否される(LANG.DICTIONARY.ACYCLIC)。"
     },
     "DEF": {
-      "source": "db0c20cc55403688",
-      "summary": "本体と名前からUserワードを定義する。`[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE`は`10`。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(`selfReferentialDefinition`、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義は、他がまだそれを呼んでいなければそれを置き換える(`definitionConflict`)。Coreワードの名前は`protectedWord`、束縛が持つ名前は`nameConflict`、1つのトークンとして書けない名前は`invalidName`。"
+      "source": "0f4487b900678fdc",
+      "summary": "本体と名前からUserワードを定義する。`[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE`は`10`。本体はCoreワードとUserワードを呼べるが、直接にも他を通しても、定義しようとしているワード自身は決して呼べない(`selfReferentialDefinition`、LANG.DICTIONARY.ACYCLIC)。Userワードの再定義はそれを置き換え、呼び出し元はそれ以降新しい本体を呼ぶ。他がまだ呼んでいるワードは、`CONTRACT`が推論する入力と出力の数がどちらも固定で同じ本体にだけ再定義できる(`definitionConflict`)。`[ 120 ] 'PRICE' DEF [ PRICE 3 MUL ] 'TOTAL' DEF [ 150 ] 'PRICE' DEF TOTAL`は`450`。Coreワードの名前は`protectedWord`、束縛が持つ名前は`nameConflict`、1つのトークンとして書けない名前は`invalidName`。"
     },
     "DEL": {
       "source": "ab8326cdc65fedd6",

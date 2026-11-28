@@ -78,6 +78,31 @@ class AjisaiInterpreter {
         return ret;
     }
     /**
+     * `{ formula, inputs, outputs, signature, identity }` for the User Word
+     * `name`, `inputs` and `outputs` being `null` where inference cannot
+     * fix them; `null` when no User Word holds the name.
+     * @param {string} name
+     * @returns {any}
+     */
+    describe_sheet_cell(name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ajisaiinterpreter_describe_sheet_cell(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * What the User Word `name` leaves on an empty stack, run apart from the
+     * session: `{ value, suggestedType }` or `{ error }`.
+     * @param {string} name
+     * @returns {Promise<any>}
+     */
+    evaluate_sheet_cell(name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ajisaiinterpreter_evaluate_sheet_cell(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
      * @param {string} code
      * @returns {Promise<any>}
      */
@@ -599,7 +624,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 219, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 224, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_413a9fa07f7179f1___convert__closures_____invoke___wasm_bindgen_413a9fa07f7179f1___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_413a9fa07f7179f1___JsError___true_);
             return ret;
         },
