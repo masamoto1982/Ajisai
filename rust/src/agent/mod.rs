@@ -20,6 +20,8 @@ mod error_stack;
 mod error_stack_tests;
 #[cfg(test)]
 mod profile_liveness_tests;
+#[cfg(test)]
+mod record_type_tests;
 pub(crate) mod report;
 #[cfg(test)]
 mod resource_usage_tests;

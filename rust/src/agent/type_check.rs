@@ -14,6 +14,10 @@ use crate::word_name::canonical_word_name;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[path = "type_check_records.rs"]
+mod records;
+use records::{record_rule, zip_fields};
+
 /// A type on the abstract stack. `Block` is a bracketed literal not yet read
 /// as code or as data; `Empty` is the element of an empty Vector or a NIL,
 /// which fits every type.
@@ -24,6 +28,8 @@ enum Ty {
     Bool,
     Str(Option<String>),
     Vec(Box<Ty>),
+    /// A Record of exactly these String keys, in this order.
+    Rec(Vec<(String, Ty)>),
     Empty,
     Block(Arc<[Token]>),
 }
@@ -36,6 +42,12 @@ impl Ty {
             DeclaredType::Bool => Ty::Bool,
             DeclaredType::Str => Ty::Str(None),
             DeclaredType::Vector(element) => Ty::Vec(Box::new(Ty::of(element))),
+            DeclaredType::Record(fields) => Ty::Rec(
+                fields
+                    .iter()
+                    .map(|(name, ty)| (name.clone(), Ty::of(ty)))
+                    .collect(),
+            ),
         }
     }
 
@@ -46,6 +58,13 @@ impl Ty {
             Ty::Bool => "bool".into(),
             Ty::Str(_) => "str".into(),
             Ty::Vec(element) => format!("[{}]", element.show()),
+            Ty::Rec(fields) => {
+                let fields: Vec<String> = fields
+                    .iter()
+                    .map(|(name, ty)| format!("{name}:{}", ty.show()))
+                    .collect();
+                format!("{{{}}}", fields.join(" "))
+            }
             Ty::Empty => "nil".into(),
             Ty::Block(_) => "a block".into(),
         }
@@ -76,6 +95,7 @@ fn join(a: &Ty, b: &Ty) -> Option<Ty> {
         (Ty::Bool, Ty::Bool) => Ty::Bool,
         (Ty::Str(_), Ty::Str(_)) => Ty::Str(None),
         (Ty::Vec(x), Ty::Vec(y)) => Ty::Vec(Box::new(join(x, y)?)),
+        (Ty::Rec(f), Ty::Rec(g)) => Ty::Rec(zip_fields(f, g, join)?),
         _ => return None,
     })
 }
@@ -194,18 +214,35 @@ fn show_token(token: &Token) -> String {
 }
 
 /// An element-wise Word over operands of any depth (LANG.COLLECTIONS.LIFT):
-/// the deeper operand decides the result's depth.
+/// a Record lifts first, field by field, then a Vector element by element,
+/// so the deeper operand decides the result's shape.
 fn lift2(a: &Ty, b: &Ty, word: &str, scalar: impl Fn(&Ty, &Ty) -> Option<Ty>) -> Outcome<Ty> {
-    let ((sa, da), (sb, db)) = (a.split(), b.split());
-    let result = scalar(sa, sb)
-        .ok_or_else(|| format!("{word} has no rule for {} and {}", a.show(), b.show()))?;
-    Ok(Ty::wrap(result, da.max(db)))
+    lifted2(a, b, &scalar)
+        .ok_or_else(|| format!("{word} has no rule for {} and {}", a.show(), b.show()))
+}
+
+fn lifted2(a: &Ty, b: &Ty, scalar: &dyn Fn(&Ty, &Ty) -> Option<Ty>) -> Option<Ty> {
+    let each = |fields: &[(String, Ty)], f: &dyn Fn(&Ty) -> Option<Ty>| {
+        fields
+            .iter()
+            .map(|(name, ty)| f(ty).map(|t| (name.clone(), t)))
+            .collect::<Option<Vec<_>>>()
+            .map(Ty::Rec)
+    };
+    match (a, b) {
+        (Ty::Rec(f), Ty::Rec(g)) => zip_fields(f, g, |x, y| lifted2(x, y, scalar)).map(Ty::Rec),
+        (Ty::Rec(f), other) => each(f, &|x| lifted2(x, other, scalar)),
+        (other, Ty::Rec(g)) => each(g, &|y| lifted2(other, y, scalar)),
+        (Ty::Vec(x), Ty::Vec(y)) => lifted2(x, y, scalar).map(|t| Ty::Vec(Box::new(t))),
+        (Ty::Vec(x), other) => lifted2(x, other, scalar).map(|t| Ty::Vec(Box::new(t))),
+        (other, Ty::Vec(y)) => lifted2(other, y, scalar).map(|t| Ty::Vec(Box::new(t))),
+        _ => scalar(a, b),
+    }
 }
 
 fn lift1(a: &Ty, word: &str, scalar: impl Fn(&Ty) -> Option<Ty>) -> Outcome<Ty> {
-    let (s, depth) = a.split();
-    let result = scalar(s).ok_or_else(|| format!("{word} has no rule for {}", a.show()))?;
-    Ok(Ty::wrap(result, depth))
+    lift2(a, &Ty::Empty, word, |x, _| scalar(x))
+        .map_err(|_| format!("{word} has no rule for {}", a.show()))
 }
 
 fn numeric(t: &Ty) -> bool {
@@ -330,6 +367,8 @@ impl Walk<'_> {
                 Ty::Vec(_) | Ty::Str(_) => stack.push(Ty::Int),
                 other => return Err(format!("LENGTH takes a Vector, not {}", other.show())),
             },
+            "GET" | "PUT" | "HAS?" | "WITHOUT" | "KEYS" | "VALUES" | "MERGE" | "RECORD"
+                if record_rule(w, stack)? => {}
             "GET" | "TAKE" | "DROP" => {
                 let index = Self::pop_data(stack, w)?;
                 if !matches!(index, Ty::Int) {

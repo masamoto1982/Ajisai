@@ -7,7 +7,7 @@
 
 /// The specification version this registry was generated from
 /// (`spec/version-lock.json`), which every agent envelope names.
-pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.7";
+pub const SPECIFICATION_VERSION: &str = "1.0.0-beta.8";
 
 /// Canonical identity of a Core Word, named by its executor key (unique across
 /// the registry).

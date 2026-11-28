@@ -31,9 +31,17 @@ export interface SheetCellInfo {
 }
 
 /** A cell's value, with the narrowest type it fits when none is declared. */
+/** A value laid out as a table: a Record of columns of one length. */
+export interface SheetTable {
+    readonly columns: string[];
+    /** The first rows, each a cell per column; `rows` counts them all. */
+    readonly cells: string[][];
+    readonly rows: number;
+}
+
 export type SheetCellValue =
-    | { value: string; suggestedType: string | null; error?: undefined }
-    | { error: string; value?: undefined; suggestedType?: undefined };
+    | { value: string; suggestedType: string | null; table?: SheetTable; error?: undefined }
+    | { error: string; value?: undefined; suggestedType?: undefined; table?: undefined };
 
 /** One term c·√r of an irrational's exact normal form (LANG.VALUES.EXACT). */
 export interface ExactTerm {

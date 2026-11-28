@@ -7,7 +7,7 @@
 // filled in is a new `DEF`, renaming is `DEF` then `DEL`. Where each Word
 // stands is the one thing the sheet holds, and it is a view (user-sheet-layout).
 
-import type { AjisaiInterpreter, ExecuteResult, SheetCellInfo, SheetCellValue, UserWordInfo } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, ExecuteResult, SheetCellInfo, SheetCellValue, SheetTable, UserWordInfo } from '../wasm-interpreter-types';
 import { isFailure, toError } from './interpreter-execution-utils';
 import {
     formatAddress,
@@ -86,6 +86,44 @@ const describeEffect = (inputs: number | null, outputs: number | null): string =
         ? 'variable stack effect'
         : `takes ${inputs}, leaves ${outputs}`;
 
+/** A table's shape in a few words, for a cell too narrow to hold it. */
+export const describeTable = (table: SheetTable): string =>
+    `${table.columns.join(', ')} · ${table.rows} row${table.rows === 1 ? '' : 's'}`;
+
+const tableElement = (table: SheetTable): HTMLElement => {
+    const holder = document.createElement('div');
+    holder.className = 'sheet-table-view';
+    const grid = document.createElement('table');
+    const head = document.createElement('tr');
+    for (const column of table.columns) {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = column;
+        head.append(th);
+    }
+    const thead = document.createElement('thead');
+    thead.append(head);
+    const tbody = document.createElement('tbody');
+    for (const row of table.cells) {
+        const tr = document.createElement('tr');
+        for (const text of row) {
+            const td = document.createElement('td');
+            td.textContent = text;
+            tr.append(td);
+        }
+        tbody.append(tr);
+    }
+    grid.append(thead, tbody);
+    holder.append(grid);
+    if (table.cells.length < table.rows) {
+        const more = document.createElement('p');
+        more.className = 'sheet-table-more';
+        more.textContent = `${table.cells.length} of ${table.rows} rows shown`;
+        holder.append(more);
+    }
+    return holder;
+};
+
 const textInput = (className: string, label: string): HTMLInputElement => {
     const input = document.createElement('input');
     input.type = 'text';
@@ -137,7 +175,9 @@ export const createUserSheet = (
     const nameInput = textInput('sheet-name-box', 'Cell name');
     const formulaInput = textInput('sheet-formula', 'Formula');
     const details = element('div', 'sheet-details');
-    bar.append(nameInput, formulaInput, details);
+    // The selected cell's value laid out as a table, when it is one.
+    const tableView = element('div', 'sheet-table-slot');
+    bar.append(nameInput, formulaInput, details, tableView);
     const gridHolder = element('div', 'sheet-grid-holder');
     container.replaceChildren(bar, gridHolder);
 
@@ -255,7 +295,13 @@ export const createUserSheet = (
         }
     };
 
-    const showValue = (target: HTMLElement, name: string, info: SheetCellInfo, onValue?: (value: SheetCellValue) => void): void => {
+    const showValue = (
+        target: HTMLElement,
+        name: string,
+        info: SheetCellInfo,
+        onValue?: (value: SheetCellValue) => void,
+        tableAsShape = false
+    ): void => {
         if (!(info.inputs === 0 && info.outputs === 1)) {
             target.textContent = describeEffect(info.inputs, info.outputs);
             target.classList.add('is-muted');
@@ -272,7 +318,9 @@ export const createUserSheet = (
         void pending.then((result) => {
             if (current !== generation) return;
             target.classList.toggle('is-error', result.error !== undefined);
-            target.textContent = result.error ?? result.value;
+            target.textContent = tableAsShape && result.table
+                ? describeTable(result.table)
+                : result.error ?? result.value;
             onValue?.(result);
         });
     };
@@ -290,6 +338,7 @@ export const createUserSheet = (
             ? 'formula, e.g. [ 120 80 300 ] or PRICE 3 MUL'
             : '';
         details.replaceChildren();
+        tableView.replaceChildren();
         if (name === undefined || !info) {
             details.append(element('span', 'sheet-address', selected));
             return;
@@ -301,7 +350,13 @@ export const createUserSheet = (
         const value = element('span', 'sheet-detail-value');
         const type = element('span', 'sheet-type', info.signature ?? '');
         details.append(element('span', 'sheet-address', selected), value, type, insert);
+        const shownFor = selected;
         showValue(value, name, info, (result) => {
+            if (selected !== shownFor) return;
+            if (result.table) {
+                value.textContent = describeTable(result.table);
+                tableView.replaceChildren(tableElement(result.table));
+            }
             if (result.error !== undefined || !result.suggestedType || info.signature) return;
             const suggest = element('button', 'sheet-type-suggestion', `${result.suggestedType}?`);
             suggest.type = 'button';
@@ -395,7 +450,7 @@ export const createUserSheet = (
         if (name !== address) td.append(element('span', 'sheet-cell-name', name));
         const value = element('span', 'sheet-cell-value');
         td.append(value);
-        showValue(value, name, info);
+        showValue(value, name, info, undefined, true);
         return td;
     };
 

@@ -38,7 +38,8 @@ impl AjisaiInterpreter {
     }
 
     /// What the User Word `name` leaves on an empty stack, run apart from the
-    /// session: `{ value, suggestedType }` or `{ error }`.
+    /// session: `{ value, suggestedType, table? }` or `{ error }`, `table`
+    /// being `{ columns, cells, rows }` when the value is a Record of columns.
     #[wasm_bindgen]
     pub async fn evaluate_sheet_cell(&self, name: &str) -> JsValue {
         let obj = js_sys::Object::new();
@@ -46,6 +47,7 @@ impl AjisaiInterpreter {
             CellValue::Value {
                 display,
                 suggested_type,
+                table,
             } => {
                 set_js_prop(&obj, "value", &display.into());
                 set_js_prop(
@@ -53,6 +55,24 @@ impl AjisaiInterpreter {
                     "suggestedType",
                     &suggested_type.map_or(JsValue::NULL, Into::into),
                 );
+                if let Some(table) = table {
+                    let strings = |items: &[String]| {
+                        items
+                            .iter()
+                            .map(|item| JsValue::from_str(item))
+                            .collect::<js_sys::Array>()
+                    };
+                    let shown = js_sys::Object::new();
+                    set_js_prop(&shown, "columns", &strings(&table.columns).into());
+                    let cells: js_sys::Array = table
+                        .cells
+                        .iter()
+                        .map(|row| JsValue::from(strings(row)))
+                        .collect();
+                    set_js_prop(&shown, "cells", &cells.into());
+                    set_js_prop(&shown, "rows", &JsValue::from(table.rows as u32));
+                    set_js_prop(&obj, "table", &shown.into());
+                }
             }
             CellValue::Error(message) => set_js_prop(&obj, "error", &message.into()),
         }
